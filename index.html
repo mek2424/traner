@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Trenér</title>
+<meta name="theme-color" content="#22406B">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Trenér">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F4F5F2;
+  --card:#FFFFFF;
+  --ink:#1B2430;
+  --ink-soft:#5B6472;
+  --ink-faint:#8A93A0;
+  --line:#DCDFD9;
+  --court:#22406B;
+  --court-dark:#182D4D;
+  --chalk:#E8622C;
+  --chalk-dark:#C74F1E;
+  --ok:#3F8B5C;
+  --danger:#C24545;
+  --danger-bg:#FBEAEA;
+
+  --part-rozcvicka:#A8C0DE;
+  --part-hra:#E8C468;
+  --part-dril:#7FB0AC;
+  --part-herni:#E39A8A;
+  --part-protazeni:#B8A8D4;
+  --part-posilovani:#C97B5C;
+  --part-kompenzace:#ABA875;
+  --part-prestavka:#C7C9C4;
+
+  --radius:12px;
+  --radius-sm:7px;
+  --shadow:0 1px 2px rgba(27,36,48,.07), 0 4px 14px rgba(27,36,48,.05);
+  --font-display:'Bebas Neue', sans-serif;
+  --font-body:'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--font-body);
+  font-size:15px;
+  line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+h1,h2,h3{font-family:var(--font-display);font-weight:400;letter-spacing:.02em;margin:0;}
+button{font-family:var(--font-body);cursor:pointer;}
+input,select,textarea{font-family:var(--font-body);font-size:15px;}
+a{color:var(--court);}
+.hidden{display:none !important;}
+.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);}
+
+/* ---------- Buttons ---------- */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  border:1px solid var(--line);background:var(--card);color:var(--ink);
+  border-radius:var(--radius-sm);padding:10px 16px;font-size:14px;font-weight:600;
+  transition:transform .08s ease, border-color .15s ease, background .15s ease;
+}
+.btn:active{transform:scale(.97);}
+.btn:focus-visible{outline:2px solid var(--court);outline-offset:2px;}
+.btn-primary{background:var(--court);border-color:var(--court);color:#fff;}
+.btn-primary:hover{background:var(--court-dark);}
+.btn-accent{background:var(--chalk);border-color:var(--chalk);color:#fff;}
+.btn-accent:hover{background:var(--chalk-dark);}
+.btn-ghost{background:transparent;border-color:transparent;color:var(--ink-soft);}
+.btn-ghost:hover{background:rgba(27,36,48,.05);}
+.btn-danger{background:var(--danger-bg);border-color:var(--danger-bg);color:var(--danger);}
+.btn-sm{padding:6px 11px;font-size:13px;}
+.btn-icon{padding:8px;width:36px;height:36px;}
+.btn-block{width:100%;}
+
+/* ---------- Login ---------- */
+#loginScreen{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
+  background:linear-gradient(160deg, var(--court) 0%, var(--court-dark) 100%);
+}
+.login-card{
+  background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:36px 28px;width:100%;max-width:360px;
+}
+.login-logo{font-family:var(--font-display);font-size:42px;color:var(--court);text-align:center;letter-spacing:.03em;margin-bottom:2px;}
+.login-sub{text-align:center;color:var(--ink-soft);font-size:13px;margin-bottom:24px;}
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;}
+.field input,.field select,.field textarea{
+  width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);
+  background:var(--paper);color:var(--ink);
+}
+.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--court);outline-offset:1px;border-color:var(--court);}
+.field textarea{resize:vertical;min-height:64px;}
+#loginError{color:var(--danger);font-size:13px;margin:8px 0 0;min-height:16px;}
+.login-switch{text-align:center;margin-top:16px;font-size:13px;color:var(--ink-soft);}
+.login-switch button{background:none;border:none;color:var(--court);font-weight:600;padding:0;text-decoration:underline;}
+
+/* ---------- App shell ---------- */
+#app{min-height:100vh;display:flex;flex-direction:column;}
+header.topbar{
+  background:var(--court);color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:20;
+}
+.topbar-title{font-family:var(--font-display);font-size:24px;letter-spacing:.03em;}
+.topbar-user{display:flex;align-items:center;gap:10px;font-size:12px;color:rgba(255,255,255,.75);}
+.topbar-user button{background:rgba(255,255,255,.12);border:none;color:#fff;border-radius:var(--radius-sm);padding:6px 10px;font-size:12px;}
+nav.tabs{display:flex;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:52px;z-index:19;}
+nav.tabs button{
+  flex:1;padding:13px 8px;background:none;border:none;font-size:14px;font-weight:600;color:var(--ink-faint);
+  border-bottom:3px solid transparent;
+}
+nav.tabs button.active{color:var(--court);border-bottom-color:var(--chalk);}
+main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
+
+/* ---------- Toast ---------- */
+#toast{
+  position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);
+  background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;font-size:13px;
+  opacity:0;pointer-events:none;transition:opacity .2s ease, transform .2s ease;z-index:100;box-shadow:var(--shadow);
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ---------- Library toolbar ---------- */
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;align-items:center;}
+.toolbar input[type=search]{flex:1;min-width:140px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card);}
+.toolbar select{padding:10px 10px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card);color:var(--ink);}
+.chip-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+.chip{
+  border:1px solid var(--line);background:var(--card);border-radius:999px;padding:5px 12px;font-size:12.5px;
+  color:var(--ink-soft);font-weight:600;
+}
+.chip.active{background:var(--court);border-color:var(--court);color:#fff;}
+.empty-state{text-align:center;padding:60px 20px;color:var(--ink-faint);}
+.empty-state h3{font-size:26px;color:var(--ink-soft);margin-bottom:6px;}
+
+/* ---------- Library grid ---------- */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;}
+.card{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
+  box-shadow:var(--shadow);text-align:left;display:flex;flex-direction:column;
+}
+.card-thumb{
+  aspect-ratio:16/9;background:var(--court) center/cover no-repeat;position:relative;
+  display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.85);font-size:11px;
+}
+.card-thumb .platform-badge{
+  position:absolute;top:6px;right:6px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;
+  padding:2px 7px;border-radius:999px;text-transform:uppercase;letter-spacing:.03em;
+}
+.card-body{padding:9px 10px 11px;flex:1;display:flex;flex-direction:column;gap:5px;}
+.card-title{font-size:13.5px;font-weight:600;line-height:1.3;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.card-folder{font-size:11px;color:var(--chalk-dark);font-weight:700;text-transform:uppercase;letter-spacing:.03em;}
+.card-meta{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink-faint);margin-top:auto;}
+.stars{color:var(--chalk);letter-spacing:1px;}
+.diff-dots span{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--line);margin-right:2px;}
+.diff-dots span.on{background:var(--court);}
+
+/* ---------- Modal ---------- */
+.modal-backdrop{
+  position:fixed;inset:0;background:rgba(27,36,48,.5);z-index:50;
+  display:flex;align-items:flex-end;justify-content:center;
+}
+@media(min-width:640px){.modal-backdrop{align-items:center;}}
+.modal{
+  background:var(--card);width:100%;max-width:560px;max-height:92vh;overflow-y:auto;
+  border-radius:var(--radius) var(--radius) 0 0;padding:22px 20px calc(20px + env(safe-area-inset-bottom));
+}
+@media(min-width:640px){.modal{border-radius:var(--radius);}}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.modal-head h2{font-size:26px;color:var(--court);}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:420px){.two-col{grid-template-columns:1fr;}}
+.tag-input-wrap{border:1px solid var(--line);border-radius:var(--radius-sm);padding:6px 8px;display:flex;flex-wrap:wrap;gap:5px;background:var(--paper);}
+.tag-pill{background:var(--court);color:#fff;font-size:12px;border-radius:999px;padding:3px 9px;display:flex;align-items:center;gap:5px;}
+.tag-pill button{background:none;border:none;color:#fff;opacity:.75;font-size:13px;line-height:1;padding:0;}
+.tag-input-wrap input{border:none;background:none;flex:1;min-width:70px;padding:3px;}
+.tag-input-wrap input:focus{outline:none;}
+.diff-picker,.rating-picker{display:flex;gap:6px;}
+.diff-picker button,.rating-picker button{
+  width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--paper);
+  font-size:13px;font-weight:700;color:var(--ink-soft);
+}
+.diff-picker button.on{background:var(--court);border-color:var(--court);color:#fff;}
+.rating-picker button.on{background:var(--chalk);border-color:var(--chalk);color:#fff;}
+.modal-actions{display:flex;gap:8px;margin-top:18px;}
+.modal-actions .btn{flex:1;}
+.thumb-preview{width:100%;aspect-ratio:16/9;background:var(--paper);border:1px dashed var(--line);border-radius:var(--radius-sm);
+  display:flex;align-items:center;justify-content:center;color:var(--ink-faint);font-size:12px;margin-bottom:12px;background-size:cover;background-position:center;overflow:hidden;}
+.url-row{display:flex;gap:8px;}
+.url-row input{flex:1;}
+
+/* ---------- Detail modal ---------- */
+.embed-wrap{aspect-ratio:16/9;background:#000;border-radius:var(--radius-sm);overflow:hidden;margin-bottom:14px;}
+.embed{width:100%;height:100%;border:0;display:block;}
+.fallback-link{display:flex;align-items:center;justify-content:center;height:100%;color:#fff;background:var(--court);text-decoration:none;font-weight:600;}
+.detail-title{font-size:24px;margin-bottom:8px;}
+.detail-row{margin-bottom:12px;}
+.detail-label{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-faint);font-weight:700;margin-bottom:4px;}
+.detail-text{white-space:pre-wrap;font-size:14px;}
+
+/* ---------- Trainings list ---------- */
+.training-row{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;
+  display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;box-shadow:var(--shadow);
+}
+.training-row-main{flex:1;min-width:0;}
+.training-row-title{font-size:17px;font-weight:700;margin-bottom:3px;}
+.training-row-meta{font-size:12px;color:var(--ink-faint);}
+.training-row-actions{display:flex;gap:6px;flex-shrink:0;}
+
+/* ---------- Editor ---------- */
+.editor-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+.editor-head input[type=text]{flex:1;min-width:160px;font-size:20px;font-weight:700;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card);}
+.total-badge{
+  font-family:var(--font-display);background:var(--court);color:#fff;border-radius:999px;padding:8px 16px;font-size:18px;
+  letter-spacing:.03em;white-space:nowrap;
+}
+.editor-layout{display:grid;grid-template-columns:1fr;gap:18px;}
+@media(min-width:860px){.editor-layout{grid-template-columns:280px 1fr;align-items:start;}}
+.picker-panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:12px;}
+@media(min-width:860px){.picker-panel{position:sticky;top:110px;max-height:calc(100vh - 130px);overflow-y:auto;}}
+.picker-panel h3{font-size:14px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);font-family:var(--font-body);font-weight:700;margin-bottom:8px;}
+.picker-item{
+  display:flex;gap:8px;align-items:center;padding:7px;border-radius:var(--radius-sm);border:1px solid transparent;
+}
+.picker-item:hover{background:var(--paper);}
+.picker-item img{width:46px;height:30px;object-fit:cover;border-radius:4px;background:var(--line);flex-shrink:0;}
+.picker-item-title{font-size:12.5px;font-weight:600;line-height:1.25;flex:1;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.picker-item button{flex-shrink:0;}
+
+.sequence{display:flex;flex-direction:column;gap:8px;min-height:60px;}
+.seq-item{
+  border-radius:var(--radius);padding:10px 12px;position:relative;border:1px solid rgba(0,0,0,.06);
+  box-shadow:var(--shadow);
+}
+.seq-item.is-break{
+  background:repeating-linear-gradient(135deg, var(--part-prestavka), var(--part-prestavka) 8px, #d8d9d5 8px, #d8d9d5 16px);
+  text-align:center;padding:9px 12px;
+}
+.seq-item-top{display:flex;align-items:center;gap:8px;}
+.drag-handle{cursor:grab;color:rgba(27,36,48,.4);font-size:16px;padding:2px 4px;touch-action:none;}
+.seq-thumb{width:52px;height:34px;object-fit:cover;border-radius:5px;background:rgba(0,0,0,.15);flex-shrink:0;cursor:pointer;}
+.seq-title{font-size:13.5px;font-weight:700;flex:1;min-width:0;cursor:pointer;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.seq-controls{display:flex;align-items:center;gap:5px;flex-shrink:0;}
+.seq-part-select{border:1px solid rgba(0,0,0,.15);border-radius:6px;background:rgba(255,255,255,.6);font-size:11px;padding:3px 4px;max-width:96px;}
+.seq-duration{width:46px;border:1px solid rgba(0,0,0,.15);border-radius:6px;padding:3px 4px;font-size:12px;text-align:center;}
+.seq-item-fields{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;}
+@media(max-width:420px){.seq-item-fields{grid-template-columns:1fr;}}
+.seq-item-fields input{border:1px solid rgba(0,0,0,.15);border-radius:6px;padding:5px 7px;font-size:12px;background:rgba(255,255,255,.55);}
+.seq-item-fields input::placeholder{color:rgba(27,36,48,.45);}
+.break-label{border:none;background:none;font-family:var(--font-display);font-size:16px;letter-spacing:.03em;color:var(--ink-soft);text-align:center;width:60%;}
+.seq-remove{position:absolute;top:6px;right:6px;background:rgba(255,255,255,.7);border:none;border-radius:50%;width:22px;height:22px;font-size:13px;color:var(--danger);line-height:1;}
+.sortable-ghost{opacity:.35;}
+.part-legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;font-size:11px;color:var(--ink-soft);}
+.part-legend span{display:inline-flex;align-items:center;gap:4px;}
+.part-swatch{width:10px;height:10px;border-radius:3px;display:inline-block;}
+.add-break-btn{margin-top:6px;}
+
+/* Search inside picker */
+.picker-search{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:8px;background:var(--paper);}
+.picker-list{display:flex;flex-direction:column;gap:2px;max-height:340px;overflow-y:auto;}
+@media(min-width:860px){.picker-list{max-height:none;}}
+
+::-webkit-scrollbar{width:8px;height:8px;}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px;}
+</style>
+</head>
+<body>
+
+<!-- ===================== LOGIN ===================== -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">TRENÉR</div>
+    <div class="login-sub">Knihovna cvičení &amp; skladač tréninků</div>
+    <form id="loginForm">
+      <div class="field">
+        <label for="loginEmail">E-mail</label>
+        <input type="email" id="loginEmail" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="loginPass">Heslo</label>
+        <input type="password" id="loginPass" autocomplete="current-password" required minlength="6">
+      </div>
+      <p id="loginError"></p>
+      <button type="submit" class="btn btn-primary btn-block" id="loginSubmitBtn">Přihlásit se</button>
+    </form>
+    <div class="login-switch">
+      <span id="loginSwitchText">Ještě nemáš účet?</span>
+      <button type="button" id="loginSwitchBtn">Založit účet</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div id="app" class="hidden">
+  <header class="topbar">
+    <div class="topbar-title">TRENÉR</div>
+    <div class="topbar-user">
+      <span id="userEmailLabel"></span>
+      <button id="logoutBtn">Odhlásit</button>
+    </div>
+  </header>
+  <nav class="tabs">
+    <button data-view="library" class="active">Knihovna</button>
+    <button data-view="trainings">Tréninky</button>
+  </nav>
+
+  <main>
+    <!-- ---------- LIBRARY VIEW ---------- -->
+    <section id="libraryView">
+      <div class="toolbar">
+        <input type="search" id="librarySearch" placeholder="Hledat podle názvu, štítku, složky…">
+        <select id="folderFilter"><option value="">Všechny složky</option></select>
+        <button class="btn btn-accent" id="openAddLinkBtn">+ Přidat odkaz</button>
+      </div>
+      <div class="chip-row" id="tagFilterRow"></div>
+      <div id="libraryGrid" class="grid"></div>
+    </section>
+
+    <!-- ---------- TRAININGS LIST VIEW ---------- -->
+    <section id="trainingsView" class="hidden">
+      <div class="toolbar">
+        <h2 style="flex:1;font-size:24px;color:var(--court);">Tréninky</h2>
+        <button class="btn btn-accent" id="newTrainingBtn">+ Nový trénink</button>
+      </div>
+      <div id="trainingsList"></div>
+    </section>
+
+    <!-- ---------- TRAINING EDITOR VIEW ---------- -->
+    <section id="editorView" class="hidden">
+      <button class="btn btn-ghost btn-sm" id="backToTrainingsBtn" style="margin-bottom:10px;">← Zpět na tréninky</button>
+      <div class="editor-head">
+        <input type="text" id="trainingNameInput" placeholder="Název tréninku">
+        <div class="total-badge" id="totalTimeBadge">0 min</div>
+      </div>
+      <div class="part-legend" id="partLegend"></div>
+      <div class="editor-layout">
+        <div class="picker-panel">
+          <h3>Přidat z knihovny</h3>
+          <input type="search" id="pickerSearch" class="picker-search" placeholder="Hledat…">
+          <div class="picker-list" id="pickerList"></div>
+          <button class="btn btn-ghost btn-sm btn-block add-break-btn" id="addBreakBtn">+ Přidat přestávku</button>
+        </div>
+        <div>
+          <div class="sequence" id="sequenceList"></div>
+          <div id="sequenceEmpty" class="empty-state hidden">
+            <h3>Zatím prázdno</h3>
+            <p>Přidej první video z knihovny vlevo.</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions" style="max-width:960px;">
+        <button class="btn btn-primary" id="saveTrainingBtn">Uložit trénink</button>
+        <button class="btn btn-danger" id="deleteTrainingBtn">Smazat</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ===================== ADD/EDIT LINK MODAL ===================== -->
+<div id="linkModalBackdrop" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="linkModalTitle">Přidat odkaz</h2>
+      <button class="btn btn-icon btn-ghost" id="closeLinkModalBtn">✕</button>
+    </div>
+    <form id="linkForm">
+      <div class="field">
+        <label for="linkUrl">Odkaz (YouTube, Facebook, Disk, jiné)</label>
+        <div class="url-row">
+          <input type="url" id="linkUrl" placeholder="https://…" required>
+          <button type="button" class="btn btn-sm" id="fetchMetaBtn">Načíst info</button>
+        </div>
+      </div>
+      <div class="thumb-preview" id="thumbPreview">bez náhledu</div>
+      <div class="field">
+        <label for="linkTitle">Název *</label>
+        <input type="text" id="linkTitle" required>
+      </div>
+      <div class="two-col">
+        <div class="field">
+          <label for="linkFolder">Složka</label>
+          <select id="linkFolder"></select>
+        </div>
+        <div class="field">
+          <label for="newFolderInput">…nebo nová složka</label>
+          <input type="text" id="newFolderInput" placeholder="Např. Útok">
+        </div>
+      </div>
+      <div class="field">
+        <label>Štítky</label>
+        <div class="tag-input-wrap" id="tagWrap">
+          <input type="text" id="tagInput" placeholder="napiš a Enter…">
+        </div>
+      </div>
+      <div class="field">
+        <label>Vybavení</label>
+        <div class="tag-input-wrap" id="equipWrap">
+          <input type="text" id="equipInput" placeholder="napiš a Enter…">
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="field">
+          <label>Obtížnost</label>
+          <div class="diff-picker" id="diffPicker">
+            <button type="button" data-val="1">1</button>
+            <button type="button" data-val="2">2</button>
+            <button type="button" data-val="3">3</button>
+            <button type="button" data-val="4">4</button>
+            <button type="button" data-val="5">5</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Hodnocení</label>
+          <div class="rating-picker" id="ratingPicker">
+            <button type="button" data-val="1">★</button>
+            <button type="button" data-val="2">★</button>
+            <button type="button" data-val="3">★</button>
+            <button type="button" data-val="4">★</button>
+            <button type="button" data-val="5">★</button>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label for="linkTimestamp">Čas ve videu (mm:ss, nepovinné)</label>
+        <input type="text" id="linkTimestamp" placeholder="např. 2:15" pattern="[0-9]{1,3}:[0-9]{2}">
+      </div>
+      <div class="field">
+        <label for="linkShortDesc">Krátký popis *</label>
+        <input type="text" id="linkShortDesc" required maxlength="140">
+      </div>
+      <div class="field">
+        <label for="linkLongDesc">Dlouhý popis (nepovinné)</label>
+        <textarea id="linkLongDesc"></textarea>
+      </div>
+      <div class="field">
+        <label for="linkNote">Poznámka</label>
+        <textarea id="linkNote"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button type="submit" class="btn btn-primary">Uložit</button>
+        <button type="button" class="btn btn-danger hidden" id="deleteLinkBtn">Smazat</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===================== DETAIL MODAL ===================== -->
+<div id="detailModalBackdrop" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 style="font-size:20px;">Detail</h2>
+      <button class="btn btn-icon btn-ghost" id="closeDetailModalBtn">✕</button>
+    </div>
+    <div class="embed-wrap" id="detailEmbedWrap"></div>
+    <div class="detail-title" id="detailTitle"></div>
+    <div class="detail-row" id="detailChips"></div>
+    <div class="detail-row">
+      <div class="detail-label">Popis</div>
+      <div class="detail-text" id="detailShortDesc"></div>
+    </div>
+    <div class="detail-row hidden" id="detailLongDescRow">
+      <div class="detail-label">Více info</div>
+      <div class="detail-text" id="detailLongDesc"></div>
+    </div>
+    <div class="detail-row hidden" id="detailNoteRow">
+      <div class="detail-label">Poznámka</div>
+      <div class="detail-text" id="detailNote"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="editFromDetailBtn">Upravit</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.7/Sortable.min.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+import {
+  getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+import {
+  initializeFirestore, persistentLocalCache, persistentSingleTabManager,
+  doc, getDoc, setDoc
+} from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+
+/* =========================================================
+   FIREBASE CONFIG — sem vlož konfiguraci ze svého Firebase
+   projektu (Project settings → General → Your apps → Web app)
+   ========================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyDHEDRx6jJAE1-0fvTmaMetlh4w6CeTREY",
+  authDomain: "trener-6d1b2.firebaseapp.com",
+  projectId: "trener-6d1b2",
+  storageBucket: "trener-6d1b2.firebasestorage.app",
+  messagingSenderId: "796712714371",
+  appId: "1:796712714371:web:740d1c4c73f9319f509bb6"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const auth = getAuth(fbApp);
+let db;
+try {
+  db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabManager: persistentSingleTabManager({}) }) });
+} catch (e) {
+  console.warn("Offline cache se nepodařilo zapnout, appka poběží jen online:", e);
+  db = initializeFirestore(fbApp, {});
+}
+
+/* =========================================================
+   STATE
+   ========================================================= */
+let uidCurrent = null;
+let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [] };
+let currentView = "library";
+let editingLinkId = null;       // id knihovní položky, když se edituje
+let currentTrainingId = null;   // id tréninku otevřeného v editoru
+let currentDetailId = null;     // id knihovní položky v detail modalu
+let libraryTagFilter = new Set();
+let saveTimer = null;
+let sortableInstance = null;
+
+const PARTS = {
+  rozcvicka:  { label: "Rozcvička",           css: "--part-rozcvicka" },
+  hra:        { label: "Hra na rozehřátí",    css: "--part-hra" },
+  dril:       { label: "Dril",                css: "--part-dril" },
+  herni:      { label: "Herní cvičení",       css: "--part-herni" },
+  protazeni:  { label: "Závěr – protažení",   css: "--part-protazeni" },
+  posilovani: { label: "Závěr – posilování",  css: "--part-posilovani" },
+  kompenzace: { label: "Závěr – kompenzace",  css: "--part-kompenzace" }
+};
+
+/* =========================================================
+   HELPERS
+   ========================================================= */
+function esc(s) {
+  if (s === null || s === undefined) return "";
+  return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function uid() {
+  return (crypto.randomUUID ? crypto.randomUUID() : "id-" + Date.now() + "-" + Math.random().toString(16).slice(2));
+}
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toast._tm);
+  toast._tm = setTimeout(() => t.classList.remove("show"), 2200);
+}
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveUserData, 700);
+}
+
+/* ---- URL parsing ---- */
+function detectPlatform(url) {
+  try {
+    const h = new URL(url).hostname.replace(/^www\./, "").replace(/^m\./, "");
+    if (h === "youtube.com" || h === "youtu.be") return "youtube";
+    if (h === "facebook.com" || h === "fb.watch") return "facebook";
+    if (h === "drive.google.com") return "drive";
+    return "other";
+  } catch { return "other"; }
+}
+function extractYouTubeId(url) {
+  const patterns = [
+    /youtube\.com\/watch\?[^#]*\bv=([\w-]{6,})/,
+    /youtu\.be\/([\w-]{6,})/,
+    /youtube\.com\/shorts\/([\w-]{6,})/,
+    /youtube\.com\/embed\/([\w-]{6,})/
+  ];
+  for (const p of patterns) { const m = url.match(p); if (m) return m[1]; }
+  return null;
+}
+function extractDriveId(url) {
+  let m = url.match(/drive\.google\.com\/file\/d\/([\w-]+)/);
+  if (m) return m[1];
+  m = url.match(/[?&]id=([\w-]+)/);
+  if (m) return m[1];
+  return null;
+}
+function parseTimestampToSeconds(str) {
+  if (!str) return null;
+  const m = str.trim().match(/^(\d{1,3}):([0-5]\d)$/);
+  if (!m) return null;
+  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+}
+function secondsToTimestamp(sec) {
+  if (sec === null || sec === undefined) return "";
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return m + ":" + String(s).padStart(2, "0");
+}
+async function fetchYouTubeMeta(url) {
+  try {
+    const res = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return { title: data.title || "", thumbnail: data.thumbnail_url || "" };
+  } catch { return null; }
+}
+function renderEmbedHtml(item) {
+  if (item.platform === "youtube" && item.videoId) {
+    const start = item.timestamp ? `?start=${item.timestamp}` : "";
+    return `<iframe class="embed" src="https://www.youtube-nocookie.com/embed/${esc(item.videoId)}${start}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>`;
+  }
+  if (item.platform === "drive" && item.videoId) {
+    return `<iframe class="embed" src="https://drive.google.com/file/d/${esc(item.videoId)}/preview" allow="autoplay" loading="lazy"></iframe>`;
+  }
+  if (item.platform === "facebook") {
+    return `<iframe class="embed" src="https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(item.url)}&show_text=false" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>`;
+  }
+  return `<a class="fallback-link" href="${esc(item.url)}" target="_blank" rel="noopener">Otevřít odkaz ↗</a>`;
+}
+
+/* =========================================================
+   AUTH
+   ========================================================= */
+const loginForm = document.getElementById("loginForm");
+const loginError = document.getElementById("loginError");
+const loginSwitchBtn = document.getElementById("loginSwitchBtn");
+const loginSwitchText = document.getElementById("loginSwitchText");
+const loginSubmitBtn = document.getElementById("loginSubmitBtn");
+let authMode = "login";
+
+loginSwitchBtn.addEventListener("click", () => {
+  authMode = authMode === "login" ? "register" : "login";
+  loginSubmitBtn.textContent = authMode === "login" ? "Přihlásit se" : "Založit účet";
+  loginSwitchText.textContent = authMode === "login" ? "Ještě nemáš účet?" : "Už máš účet?";
+  loginSwitchBtn.textContent = authMode === "login" ? "Založit účet" : "Přihlásit se";
+  loginError.textContent = "";
+});
+
+loginForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  loginError.textContent = "";
+  const email = document.getElementById("loginEmail").value.trim();
+  const pass = document.getElementById("loginPass").value;
+  loginSubmitBtn.disabled = true;
+  try {
+    if (authMode === "login") {
+      await signInWithEmailAndPassword(auth, email, pass);
+    } else {
+      await createUserWithEmailAndPassword(auth, email, pass);
+    }
+  } catch (err) {
+    loginError.textContent = translateAuthError(err.code);
+  } finally {
+    loginSubmitBtn.disabled = false;
+  }
+});
+
+function translateAuthError(code) {
+  const map = {
+    "auth/invalid-email": "Neplatný e-mail.",
+    "auth/user-not-found": "Účet s tímto e-mailem neexistuje.",
+    "auth/wrong-password": "Špatné heslo.",
+    "auth/invalid-credential": "Špatný e-mail nebo heslo.",
+    "auth/email-already-in-use": "Tenhle e-mail už je zaregistrovaný — zkus se přihlásit.",
+    "auth/weak-password": "Heslo musí mít alespoň 6 znaků.",
+    "auth/network-request-failed": "Problém s připojením k internetu."
+  };
+  return map[code] || ("Něco se nepovedlo (" + code + ").");
+}
+
+document.getElementById("logoutBtn").addEventListener("click", () => signOut(auth));
+
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    uidCurrent = user.uid;
+    document.getElementById("userEmailLabel").textContent = user.email || "";
+    await loadUserData();
+    document.getElementById("loginScreen").classList.add("hidden");
+    document.getElementById("app").classList.remove("hidden");
+    switchView("library");
+  } else {
+    uidCurrent = null;
+    document.getElementById("app").classList.add("hidden");
+    document.getElementById("loginScreen").classList.remove("hidden");
+  }
+});
+
+/* =========================================================
+   FIRESTORE SYNC
+   ========================================================= */
+async function loadUserData() {
+  try {
+    const snap = await getDoc(doc(db, "users", uidCurrent));
+    if (snap.exists()) {
+      const d = snap.data();
+      state = {
+        library: d.library || {},
+        trainings: d.trainings || {},
+        folders: d.folders || [],
+        tagPool: d.tagPool || [],
+        equipmentPool: d.equipmentPool || []
+      };
+    } else {
+      state = { library: {}, trainings: {}, folders: ["Útok", "Blok", "Nahrávka", "Podání", "Příjem", "Obrana", "Kondice"], tagPool: [], equipmentPool: [] };
+      await saveUserData();
+    }
+  } catch (e) {
+    console.error("Nepodařilo se načíst data:", e);
+    toast("Nepodařilo se načíst data ze serveru — zkontroluj připojení.");
+  }
+}
+async function saveUserData() {
+  if (!uidCurrent) return;
+  try {
+    await setDoc(doc(db, "users", uidCurrent), state);
+  } catch (e) {
+    console.error("Nepodařilo se uložit data:", e);
+    toast("Uložení se nepovedlo, zkusím to znovu při další změně.");
+  }
+}
+
+/* =========================================================
+   NAVIGATION
+   ========================================================= */
+document.querySelectorAll("nav.tabs button").forEach(btn => {
+  btn.addEventListener("click", () => switchView(btn.dataset.view));
+});
+function switchView(view) {
+  currentView = view;
+  document.querySelectorAll("nav.tabs button").forEach(b => b.classList.toggle("active", b.dataset.view === view));
+  document.getElementById("libraryView").classList.toggle("hidden", view !== "library");
+  document.getElementById("trainingsView").classList.toggle("hidden", view !== "trainings");
+  document.getElementById("editorView").classList.toggle("hidden", view !== "editor");
+  if (view === "library") renderLibrary();
+  if (view === "trainings") renderTrainingsList();
+}
+
+/* =========================================================
+   LIBRARY VIEW
+   ========================================================= */
+document.getElementById("librarySearch").addEventListener("input", renderLibrary);
+document.getElementById("folderFilter").addEventListener("change", renderLibrary);
+
+function renderFolderOptions() {
+  const sel = document.getElementById("folderFilter");
+  const formSel = document.getElementById("linkFolder");
+  const prevFilter = sel.value, prevForm = formSel.value;
+  sel.innerHTML = '<option value="">Všechny složky</option>' + state.folders.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join("");
+  formSel.innerHTML = '<option value="">— vyber —</option>' + state.folders.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join("");
+  if (state.folders.includes(prevFilter)) sel.value = prevFilter;
+  if (state.folders.includes(prevForm)) formSel.value = prevForm;
+}
+
+function renderTagFilterRow() {
+  const row = document.getElementById("tagFilterRow");
+  if (!state.tagPool.length) { row.innerHTML = ""; return; }
+  row.innerHTML = state.tagPool.map(t =>
+    `<button class="chip ${libraryTagFilter.has(t) ? "active" : ""}" data-tag="${esc(t)}">${esc(t)}</button>`
+  ).join("");
+  row.querySelectorAll(".chip").forEach(chip => {
+    chip.addEventListener("click", () => {
+      const t = chip.dataset.tag;
+      libraryTagFilter.has(t) ? libraryTagFilter.delete(t) : libraryTagFilter.add(t);
+      renderTagFilterRow();
+      renderLibrary();
+    });
+  });
+}
+
+function getFilteredLibraryItems() {
+  const q = document.getElementById("librarySearch").value.trim().toLowerCase();
+  const folder = document.getElementById("folderFilter").value;
+  return Object.values(state.library).filter(item => {
+    if (folder && item.folder !== folder) return false;
+    if (libraryTagFilter.size && !item.tags.some(t => libraryTagFilter.has(t))) return false;
+    if (q) {
+      const hay = [item.title, item.folder, ...(item.tags || []), item.shortDesc].join(" ").toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  }).sort((a, b) => (b.dateAdded || 0) - (a.dateAdded || 0));
+}
+
+function renderLibrary() {
+  renderFolderOptions();
+  renderTagFilterRow();
+  const grid = document.getElementById("libraryGrid");
+  const items = getFilteredLibraryItems();
+  if (!items.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><h3>Zatím žádná videa</h3><p>Přidej první odkaz tlačítkem nahoře.</p></div>`;
+    return;
+  }
+  grid.innerHTML = items.map(item => `
+    <button class="card" data-id="${esc(item.id)}" data-action="open-detail">
+      <div class="card-thumb" style="${item.thumbnail ? `background-image:url('${esc(item.thumbnail)}')` : ""}">
+        ${item.thumbnail ? "" : "bez náhledu"}
+        <span class="platform-badge">${esc(item.platform)}</span>
+      </div>
+      <div class="card-body">
+        <div class="card-title">${esc(item.title)}</div>
+        ${item.folder ? `<div class="card-folder">${esc(item.folder)}</div>` : ""}
+        <div class="card-meta">
+          <span class="diff-dots">${[1,2,3,4,5].map(n => `<span class="${n <= item.difficulty ? "on" : ""}"></span>`).join("")}</span>
+          ${item.rating ? `<span class="stars">${"★".repeat(item.rating)}</span>` : ""}
+        </div>
+      </div>
+    </button>
+  `).join("");
+}
+document.getElementById("libraryGrid").addEventListener("click", (e) => {
+  const card = e.target.closest("[data-action='open-detail']");
+  if (card) openDetailModal(card.dataset.id);
+});
+
+/* =========================================================
+   ADD / EDIT LINK MODAL
+   ========================================================= */
+const linkModalBackdrop = document.getElementById("linkModalBackdrop");
+const linkForm = document.getElementById("linkForm");
+let formTags = [], formEquip = [];
+
+document.getElementById("openAddLinkBtn").addEventListener("click", () => openLinkModal(null));
+document.getElementById("closeLinkModalBtn").addEventListener("click", closeLinkModal);
+linkModalBackdrop.addEventListener("click", (e) => { if (e.target === linkModalBackdrop) closeLinkModal(); });
+
+function openLinkModal(id) {
+  editingLinkId = id;
+  renderFolderOptions();
+  const item = id ? state.library[id] : null;
+  document.getElementById("linkModalTitle").textContent = item ? "Upravit odkaz" : "Přidat odkaz";
+  document.getElementById("linkUrl").value = item ? item.url : "";
+  document.getElementById("linkTitle").value = item ? item.title : "";
+  document.getElementById("linkFolder").value = item ? item.folder : "";
+  document.getElementById("newFolderInput").value = "";
+  document.getElementById("linkTimestamp").value = item ? secondsToTimestamp(item.timestamp) : "";
+  document.getElementById("linkShortDesc").value = item ? item.shortDesc : "";
+  document.getElementById("linkLongDesc").value = item ? item.longDesc : "";
+  document.getElementById("linkNote").value = item ? item.note : "";
+  document.getElementById("thumbPreview").style.backgroundImage = item && item.thumbnail ? `url('${item.thumbnail}')` : "none";
+  document.getElementById("thumbPreview").textContent = item && item.thumbnail ? "" : "bez náhledu";
+  document.getElementById("thumbPreview").dataset.thumb = item ? (item.thumbnail || "") : "";
+  document.getElementById("thumbPreview").dataset.platform = item ? item.platform : "";
+  document.getElementById("thumbPreview").dataset.videoId = item ? (item.videoId || "") : "";
+  document.getElementById("deleteLinkBtn").classList.toggle("hidden", !item);
+
+  formTags = item ? [...item.tags] : [];
+  formEquip = item ? [...item.equipment] : [];
+  renderTagPills();
+  renderEquipPills();
+  setDiffPicker(item ? item.difficulty : 3);
+  setRatingPicker(item ? item.rating : 0);
+
+  linkModalBackdrop.classList.remove("hidden");
+  document.getElementById("linkTitle").focus();
+}
+function closeLinkModal() { linkModalBackdrop.classList.add("hidden"); }
+
+document.getElementById("fetchMetaBtn").addEventListener("click", async () => {
+  const url = document.getElementById("linkUrl").value.trim();
+  if (!url) return;
+  const platform = detectPlatform(url);
+  document.getElementById("thumbPreview").dataset.platform = platform;
+  if (platform === "youtube") {
+    const ytId = extractYouTubeId(url);
+    document.getElementById("thumbPreview").dataset.videoId = ytId || "";
+    toast("Načítám info z YouTube…");
+    const meta = await fetchYouTubeMeta(url);
+    if (meta) {
+      if (!document.getElementById("linkTitle").value) document.getElementById("linkTitle").value = meta.title;
+      document.getElementById("thumbPreview").style.backgroundImage = `url('${meta.thumbnail}')`;
+      document.getElementById("thumbPreview").textContent = "";
+      document.getElementById("thumbPreview").dataset.thumb = meta.thumbnail;
+      toast("Načteno.");
+    } else {
+      toast("Nepodařilo se načíst — zadej název ručně.");
+    }
+  } else if (platform === "drive") {
+    document.getElementById("thumbPreview").dataset.videoId = extractDriveId(url) || "";
+    toast("Disk: titulek a náhled zadej ručně.");
+  } else {
+    document.getElementById("thumbPreview").dataset.videoId = "";
+    toast(platform === "facebook" ? "Facebook: titulek zadej ručně, embed se pokusí načíst v detailu." : "Titulek zadej ručně.");
+  }
+});
+
+function renderTagPills() {
+  const wrap = document.getElementById("tagWrap");
+  const input = document.getElementById("tagInput");
+  wrap.querySelectorAll(".tag-pill").forEach(p => p.remove());
+  formTags.forEach(t => {
+    const pill = document.createElement("span");
+    pill.className = "tag-pill";
+    pill.innerHTML = `${esc(t)} <button type="button" aria-label="Odebrat">✕</button>`;
+    pill.querySelector("button").addEventListener("click", () => { formTags = formTags.filter(x => x !== t); renderTagPills(); });
+    wrap.insertBefore(pill, input);
+  });
+}
+function renderEquipPills() {
+  const wrap = document.getElementById("equipWrap");
+  const input = document.getElementById("equipInput");
+  wrap.querySelectorAll(".tag-pill").forEach(p => p.remove());
+  formEquip.forEach(t => {
+    const pill = document.createElement("span");
+    pill.className = "tag-pill";
+    pill.innerHTML = `${esc(t)} <button type="button" aria-label="Odebrat">✕</button>`;
+    pill.querySelector("button").addEventListener("click", () => { formEquip = formEquip.filter(x => x !== t); renderEquipPills(); });
+    wrap.insertBefore(pill, input);
+  });
+}
+document.getElementById("tagInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" || e.key === ",") {
+    e.preventDefault();
+    const v = e.target.value.trim().replace(/,$/, "");
+    if (v && !formTags.includes(v)) { formTags.push(v); renderTagPills(); }
+    e.target.value = "";
+  }
+});
+document.getElementById("equipInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" || e.key === ",") {
+    e.preventDefault();
+    const v = e.target.value.trim().replace(/,$/, "");
+    if (v && !formEquip.includes(v)) { formEquip.push(v); renderEquipPills(); }
+    e.target.value = "";
+  }
+});
+
+function setDiffPicker(val) {
+  document.querySelectorAll("#diffPicker button").forEach(b => b.classList.toggle("on", parseInt(b.dataset.val) <= val));
+  document.getElementById("diffPicker").dataset.value = val;
+}
+document.querySelectorAll("#diffPicker button").forEach(b => b.addEventListener("click", () => setDiffPicker(parseInt(b.dataset.val))));
+function setRatingPicker(val) {
+  document.querySelectorAll("#ratingPicker button").forEach(b => b.classList.toggle("on", parseInt(b.dataset.val) <= val));
+  document.getElementById("ratingPicker").dataset.value = val;
+}
+document.querySelectorAll("#ratingPicker button").forEach(b => b.addEventListener("click", () => {
+  const clicked = parseInt(b.dataset.val);
+  const current = parseInt(document.getElementById("ratingPicker").dataset.value || "0");
+  setRatingPicker(current === clicked ? 0 : clicked);
+}));
+
+linkForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const url = document.getElementById("linkUrl").value.trim();
+  const platform = document.getElementById("thumbPreview").dataset.platform || detectPlatform(url);
+  let videoId = document.getElementById("thumbPreview").dataset.videoId || null;
+  if (!videoId && platform === "youtube") videoId = extractYouTubeId(url);
+  if (!videoId && platform === "drive") videoId = extractDriveId(url);
+
+  let folder = document.getElementById("newFolderInput").value.trim() || document.getElementById("linkFolder").value;
+  if (folder && !state.folders.includes(folder)) state.folders.push(folder);
+
+  formTags.forEach(t => { if (!state.tagPool.includes(t)) state.tagPool.push(t); });
+  formEquip.forEach(t => { if (!state.equipmentPool.includes(t)) state.equipmentPool.push(t); });
+
+  const id = editingLinkId || uid();
+  state.library[id] = {
+    id, url, platform, videoId,
+    title: document.getElementById("linkTitle").value.trim(),
+    thumbnail: document.getElementById("thumbPreview").dataset.thumb || "",
+    folder,
+    tags: [...formTags],
+    equipment: [...formEquip],
+    difficulty: parseInt(document.getElementById("diffPicker").dataset.value || "3"),
+    rating: parseInt(document.getElementById("ratingPicker").dataset.value || "0"),
+    shortDesc: document.getElementById("linkShortDesc").value.trim(),
+    longDesc: document.getElementById("linkLongDesc").value.trim(),
+    note: document.getElementById("linkNote").value.trim(),
+    timestamp: parseTimestampToSeconds(document.getElementById("linkTimestamp").value),
+    dateAdded: editingLinkId ? state.library[editingLinkId].dateAdded : Date.now()
+  };
+  scheduleSave();
+  closeLinkModal();
+  renderLibrary();
+  if (currentView === "editor") renderPickerList();
+  toast("Uloženo.");
+});
+
+document.getElementById("deleteLinkBtn").addEventListener("click", () => {
+  if (!editingLinkId) return;
+  if (!confirm("Smazat tento odkaz z knihovny?")) return;
+  delete state.library[editingLinkId];
+  scheduleSave();
+  closeLinkModal();
+  renderLibrary();
+  if (currentView === "editor") renderPickerList();
+  toast("Smazáno.");
+});
+
+/* =========================================================
+   DETAIL MODAL
+   ========================================================= */
+const detailModalBackdrop = document.getElementById("detailModalBackdrop");
+document.getElementById("closeDetailModalBtn").addEventListener("click", () => detailModalBackdrop.classList.add("hidden"));
+detailModalBackdrop.addEventListener("click", (e) => { if (e.target === detailModalBackdrop) detailModalBackdrop.classList.add("hidden"); });
+
+function openDetailModal(id) {
+  const item = state.library[id];
+  if (!item) return;
+  currentDetailId = id;
+  document.getElementById("detailEmbedWrap").innerHTML = renderEmbedHtml(item);
+  document.getElementById("detailTitle").textContent = item.title;
+  const chips = [];
+  if (item.folder) chips.push(`<span class="chip">${esc(item.folder)}</span>`);
+  item.tags.forEach(t => chips.push(`<span class="chip">${esc(t)}</span>`));
+  item.equipment.forEach(t => chips.push(`<span class="chip">🔧 ${esc(t)}</span>`));
+  chips.push(`<span class="chip">Obtížnost ${item.difficulty}/5</span>`);
+  if (item.rating) chips.push(`<span class="chip">${"★".repeat(item.rating)}</span>`);
+  document.getElementById("detailChips").innerHTML = `<div class="chip-row">${chips.join("")}</div>`;
+  document.getElementById("detailShortDesc").textContent = item.shortDesc;
+  document.getElementById("detailLongDescRow").classList.toggle("hidden", !item.longDesc);
+  document.getElementById("detailLongDesc").textContent = item.longDesc;
+  document.getElementById("detailNoteRow").classList.toggle("hidden", !item.note);
+  document.getElementById("detailNote").textContent = item.note;
+  detailModalBackdrop.classList.remove("hidden");
+}
+document.getElementById("editFromDetailBtn").addEventListener("click", () => {
+  detailModalBackdrop.classList.add("hidden");
+  openLinkModal(currentDetailId);
+});
+
+/* =========================================================
+   TRAININGS LIST
+   ========================================================= */
+document.getElementById("newTrainingBtn").addEventListener("click", () => {
+  const id = uid();
+  state.trainings[id] = { id, name: "Nový trénink", dateCreated: Date.now(), dateModified: Date.now(), items: [] };
+  scheduleSave();
+  openEditor(id);
+});
+document.getElementById("backToTrainingsBtn").addEventListener("click", () => switchView("trainings"));
+
+function renderTrainingsList() {
+  const list = document.getElementById("trainingsList");
+  const trainings = Object.values(state.trainings).sort((a, b) => (b.dateModified || 0) - (a.dateModified || 0));
+  if (!trainings.length) {
+    list.innerHTML = `<div class="empty-state"><h3>Zatím žádné tréninky</h3><p>Založ první tlačítkem nahoře.</p></div>`;
+    return;
+  }
+  list.innerHTML = trainings.map(t => {
+    const totalMin = t.items.reduce((s, it) => s + (it.duration || 0), 0);
+    return `
+    <div class="training-row">
+      <button class="training-row-main" data-open="${esc(t.id)}" style="background:none;border:none;text-align:left;cursor:pointer;padding:0;">
+        <div class="training-row-title">${esc(t.name)}</div>
+        <div class="training-row-meta">${t.items.length} položek · ${totalMin} min</div>
+      </button>
+      <div class="training-row-actions">
+        <button class="btn btn-sm" data-clone="${esc(t.id)}">Klonovat</button>
+        <button class="btn btn-sm btn-danger" data-del="${esc(t.id)}">Smazat</button>
+      </div>
+    </div>`;
+  }).join("");
+  list.querySelectorAll("[data-open]").forEach(b => b.addEventListener("click", () => openEditor(b.dataset.open)));
+  list.querySelectorAll("[data-clone]").forEach(b => b.addEventListener("click", () => {
+    const src = state.trainings[b.dataset.clone];
+    const id = uid();
+    state.trainings[id] = { ...structuredClone(src), id, name: src.name + " (kopie)", dateCreated: Date.now(), dateModified: Date.now() };
+    scheduleSave();
+    renderTrainingsList();
+    toast("Naklonováno.");
+  }));
+  list.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", () => {
+    if (!confirm("Smazat tento trénink?")) return;
+    delete state.trainings[b.dataset.del];
+    scheduleSave();
+    renderTrainingsList();
+    toast("Smazáno.");
+  }));
+}
+
+/* =========================================================
+   TRAINING EDITOR
+   ========================================================= */
+function openEditor(id) {
+  currentTrainingId = id;
+  switchView("editor");
+  const t = state.trainings[id];
+  document.getElementById("trainingNameInput").value = t.name;
+  renderPartLegend();
+  renderPickerList();
+  renderSequence();
+}
+document.getElementById("trainingNameInput").addEventListener("input", (e) => {
+  const t = state.trainings[currentTrainingId];
+  if (!t) return;
+  t.name = e.target.value;
+  t.dateModified = Date.now();
+  scheduleSave();
+});
+
+function renderPartLegend() {
+  document.getElementById("partLegend").innerHTML = Object.entries(PARTS).map(([key, p]) =>
+    `<span><span class="part-swatch" style="background:var(${p.css})"></span>${p.label}</span>`
+  ).join("") + `<span><span class="part-swatch" style="background:var(--part-prestavka)"></span>Přestávka</span>`;
+}
+
+document.getElementById("pickerSearch").addEventListener("input", renderPickerList);
+function renderPickerList() {
+  const q = document.getElementById("pickerSearch").value.trim().toLowerCase();
+  const items = Object.values(state.library)
+    .filter(it => !q || (it.title + " " + it.folder + " " + it.tags.join(" ")).toLowerCase().includes(q))
+    .sort((a, b) => (b.dateAdded || 0) - (a.dateAdded || 0));
+  const list = document.getElementById("pickerList");
+  if (!items.length) { list.innerHTML = `<p style="font-size:12px;color:var(--ink-faint);">Nic nenalezeno.</p>`; return; }
+  list.innerHTML = items.map(it => `
+    <div class="picker-item">
+      ${it.thumbnail ? `<img src="${esc(it.thumbnail)}" alt="">` : `<div style="width:46px;height:30px;background:var(--line);border-radius:4px;flex-shrink:0;"></div>`}
+      <div class="picker-item-title">${esc(it.title)}</div>
+      <button class="btn btn-sm btn-icon" data-add="${esc(it.id)}" aria-label="Přidat do tréninku">+</button>
+    </div>
+  `).join("");
+  list.querySelectorAll("[data-add]").forEach(b => b.addEventListener("click", () => addItemToTraining(b.dataset.add)));
+}
+
+function addItemToTraining(libraryId) {
+  const t = state.trainings[currentTrainingId];
+  if (!t) return;
+  t.items.push({ itemId: uid(), videoId: libraryId, part: "dril", duration: 10, cue: "", poznamka: "", label: "" });
+  t.dateModified = Date.now();
+  scheduleSave();
+  renderSequence();
+  toast("Přidáno do tréninku.");
+}
+document.getElementById("addBreakBtn").addEventListener("click", () => {
+  const t = state.trainings[currentTrainingId];
+  if (!t) return;
+  t.items.push({ itemId: uid(), videoId: null, part: "prestavka", duration: 5, cue: "", poznamka: "", label: "Přestávka" });
+  t.dateModified = Date.now();
+  scheduleSave();
+  renderSequence();
+});
+
+function updateTotalBadge() {
+  const t = state.trainings[currentTrainingId];
+  const total = t ? t.items.reduce((s, it) => s + (parseInt(it.duration) || 0), 0) : 0;
+  document.getElementById("totalTimeBadge").textContent = total + " min";
+}
+
+function renderSequence() {
+  const t = state.trainings[currentTrainingId];
+  const wrap = document.getElementById("sequenceList");
+  document.getElementById("sequenceEmpty").classList.toggle("hidden", t.items.length > 0);
+  updateTotalBadge();
+
+  wrap.innerHTML = t.items.map(row => {
+    if (row.part === "prestavka") {
+      return `
+      <div class="seq-item is-break" data-itemid="${esc(row.itemId)}">
+        <span class="drag-handle">⠿</span>
+        <input class="break-label" value="${esc(row.label || "Přestávka")}" data-field="label" data-itemid="${esc(row.itemId)}">
+        <input class="seq-duration" type="number" min="1" value="${row.duration}" data-field="duration" data-itemid="${esc(row.itemId)}"> min
+        <button class="seq-remove" data-remove="${esc(row.itemId)}" aria-label="Odebrat">✕</button>
+      </div>`;
+    }
+    const lib = state.library[row.videoId];
+    const partColor = PARTS[row.part] ? `var(${PARTS[row.part].css})` : "var(--line)";
+    return `
+    <div class="seq-item" data-itemid="${esc(row.itemId)}" style="background:${partColor}">
+      <button class="seq-remove" data-remove="${esc(row.itemId)}" aria-label="Odebrat">✕</button>
+      <div class="seq-item-top">
+        <span class="drag-handle">⠿</span>
+        ${lib && lib.thumbnail ? `<img class="seq-thumb" src="${esc(lib.thumbnail)}" data-open="${esc(row.videoId)}">` : `<div class="seq-thumb" data-open="${esc(row.videoId)}"></div>`}
+        <span class="seq-title" data-open="${esc(row.videoId)}">${lib ? esc(lib.title) : "(video smazáno z knihovny)"}</span>
+        <div class="seq-controls">
+          <select class="seq-part-select" data-field="part" data-itemid="${esc(row.itemId)}">
+            ${Object.entries(PARTS).map(([k, p]) => `<option value="${k}" ${row.part === k ? "selected" : ""}>${p.label}</option>`).join("")}
+          </select>
+          <input class="seq-duration" type="number" min="1" value="${row.duration}" data-field="duration" data-itemid="${esc(row.itemId)}">
+        </div>
+      </div>
+      <div class="seq-item-fields">
+        <input type="text" placeholder="Cue (co říct nahlas)" value="${esc(row.cue)}" data-field="cue" data-itemid="${esc(row.itemId)}">
+        <input type="text" placeholder="Poznámka (např. dělat jen 3. cvik)" value="${esc(row.poznamka)}" data-field="poznamka" data-itemid="${esc(row.itemId)}">
+      </div>
+    </div>`;
+  }).join("");
+
+  // znovu-navázat Sortable
+  if (sortableInstance) sortableInstance.destroy();
+  sortableInstance = Sortable.create(wrap, {
+    handle: ".drag-handle",
+    animation: 150,
+    ghostClass: "sortable-ghost",
+    onEnd: () => {
+      const order = [...wrap.querySelectorAll(".seq-item")].map(el => el.dataset.itemid);
+      const t2 = state.trainings[currentTrainingId];
+      t2.items.sort((a, b) => order.indexOf(a.itemId) - order.indexOf(b.itemId));
+      t2.dateModified = Date.now();
+      scheduleSave();
+    }
+  });
+}
+
+document.getElementById("sequenceList").addEventListener("input", (e) => {
+  const field = e.target.dataset.field, itemId = e.target.dataset.itemid;
+  if (!field || !itemId) return;
+  const t = state.trainings[currentTrainingId];
+  const row = t.items.find(it => it.itemId === itemId);
+  if (!row) return;
+  row[field] = field === "duration" ? (parseInt(e.target.value) || 0) : e.target.value;
+  t.dateModified = Date.now();
+  scheduleSave();
+  if (field === "duration") updateTotalBadge();
+  if (field === "part") renderSequence();
+});
+document.getElementById("sequenceList").addEventListener("click", (e) => {
+  const openBtn = e.target.closest("[data-open]");
+  if (openBtn && openBtn.dataset.open) { openDetailModal(openBtn.dataset.open); return; }
+  const rm = e.target.closest("[data-remove]");
+  if (rm) {
+    const t = state.trainings[currentTrainingId];
+    t.items = t.items.filter(it => it.itemId !== rm.dataset.remove);
+    t.dateModified = Date.now();
+    scheduleSave();
+    renderSequence();
+  }
+});
+
+document.getElementById("saveTrainingBtn").addEventListener("click", () => { scheduleSave(); toast("Trénink uložen."); switchView("trainings"); });
+document.getElementById("deleteTrainingBtn").addEventListener("click", () => {
+  if (!confirm("Smazat celý tento trénink?")) return;
+  delete state.trainings[currentTrainingId];
+  scheduleSave();
+  switchView("trainings");
+  toast("Smazáno.");
+});
+
+/* =========================================================
+   PWA — service worker
+   ========================================================= */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(err => console.warn("SW registrace selhala:", err));
+  });
+}
+</script>
+</body>
+</html>
