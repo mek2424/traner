@@ -1921,6 +1921,7 @@ function openDetailModal(id) {
   const embedWrap = document.getElementById("detailEmbedWrap");
   embedWrap.innerHTML = renderEmbedHtml(item);
   embedWrap.style.height = ""; // reset z případného předchozího otevření
+  embedWrap.style.maxHeight = "";
   embedWrap.style.aspectRatio = item.aspectRatio || "16/9";
   if (item.platform === "file") {
     // u přímého video souboru appka pozná skutečný poměr stran sama, jakmile se video načte
@@ -1932,14 +1933,16 @@ function openDetailModal(id) {
   if (item.platform === "drive") {
     // Disk má uvnitř náhledu svou vlastní horní lištu (název souboru, tři tečky…), která ukrajuje
     // z výšky videa — bez kompenzace to pak vypadá zmáčknuté/posunuté dolů. Přidáme prostor navíc.
+    // Modal se dá scrollovat, takže tady záměrně nešetříme místem — radši víc než uříznuté video.
     requestAnimationFrame(() => {
       const w = embedWrap.getBoundingClientRect().width;
       const [rw, rh] = (item.aspectRatio || "16/9").split("/").map(Number);
       if (w && rw && rh) {
         const videoHeight = w * (rh / rw);
-        const withHeaderBuffer = videoHeight + 48;
+        const withHeaderBuffer = Math.ceil(videoHeight + 48);
         embedWrap.style.aspectRatio = "auto";
-        embedWrap.style.height = Math.min(withHeaderBuffer, window.innerHeight * 0.75) + "px";
+        embedWrap.style.maxHeight = "none"; // přebije obecné pravidlo z CSS, které by jinak výšku tiše ořízlo
+        embedWrap.style.height = withHeaderBuffer + "px";
       }
     });
   }
