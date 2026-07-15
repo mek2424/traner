@@ -119,6 +119,11 @@ header.topbar{
 .topbar-title{font-family:var(--font-display);font-size:24px;letter-spacing:.03em;}
 .topbar-user{display:flex;align-items:center;gap:10px;font-size:12px;color:rgba(255,255,255,.75);}
 .topbar-user button{background:rgba(255,255,255,.12);border:none;color:#fff;border-radius:var(--radius-sm);padding:6px 10px;font-size:12px;}
+.avatar-btn{
+  width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.18) center/cover no-repeat;
+  display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:14px;
+  padding:0 !important;flex-shrink:0;
+}
 nav.tabs{display:flex;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:52px;z-index:19;}
 nav.tabs button{
   flex:1;padding:13px 8px;background:none;border:none;font-size:14px;font-weight:600;color:var(--ink-faint);
@@ -191,6 +196,14 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
 .tag-pill button{background:none;border:none;color:#fff;opacity:.75;font-size:13px;line-height:1;padding:0;}
 .tag-input-wrap input{border:none;background:none;flex:1;min-width:70px;padding:3px;}
 .tag-input-wrap input:focus{outline:none;}
+.autocomplete-list{
+  position:absolute;left:0;right:0;top:100%;z-index:30;background:var(--card);border:1px solid var(--line);
+  border-radius:0 0 var(--radius-sm) var(--radius-sm);box-shadow:var(--shadow);max-height:180px;overflow-y:auto;margin-top:-1px;
+}
+.autocomplete-list button{
+  display:block;width:100%;text-align:left;padding:9px 12px;border:none;background:none;font-size:13.5px;color:var(--ink);
+}
+.autocomplete-list button:hover,.autocomplete-list button:active{background:var(--paper);}
 .diff-picker,.rating-picker{display:flex;gap:6px;}
 .diff-picker button,.rating-picker button{
   width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--paper);
@@ -210,6 +223,9 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
 .manage-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
 .manage-row .swatch{width:20px;height:20px;border-radius:5px;flex-shrink:0;}
 .manage-row input{flex:1;padding:7px 9px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper);}
+.merge-row{display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:13px;}
+.merge-row .merge-name{flex:0 0 auto;max-width:35%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;}
+.merge-row select{flex:1;padding:6px 7px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper);font-size:12.5px;min-width:0;}
 
 .filter-panel{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--line);}
 .filter-panel select{width:100%;padding:7px 8px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper);font-size:12.5px;}
@@ -219,7 +235,8 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
 .url-row input{flex:1;}
 
 /* ---------- Detail modal ---------- */
-.embed-wrap{width:100%;height:min(70vh,560px);min-height:220px;background:#000;border-radius:var(--radius-sm);overflow:hidden;margin-bottom:14px;}
+.embed-wrap{width:100%;aspect-ratio:16/9;max-height:70vh;background:#000;border-radius:var(--radius-sm);overflow:hidden;margin-bottom:14px;margin-left:auto;margin-right:auto;}
+.embed-wrap.is-portrait{aspect-ratio:9/16;max-width:min(100%,360px);}
 .embed{width:100%;height:100%;border:0;display:block;}
 .fallback-link{display:flex;align-items:center;justify-content:center;height:100%;color:#fff;background:var(--court);text-decoration:none;font-weight:600;}
 .detail-title{font-size:24px;margin-bottom:8px;}
@@ -329,6 +346,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
   <header class="topbar">
     <div class="topbar-title">TRENÉR</div>
     <div class="topbar-user">
+      <button id="profileBtn" class="avatar-btn" aria-label="Profil"><span id="avatarInitial">?</span></button>
       <span id="userEmailLabel"></span>
       <button id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Odhlásit</button>
     </div>
@@ -352,6 +370,9 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
         </select>
         <button class="btn btn-accent" id="openAddLinkBtn"><i class="fa-solid fa-plus"></i> Přidat odkaz</button>
       </div>
+      <div style="text-align:right;margin-bottom:6px;">
+        <button type="button" class="manage-link" id="manageTagsBtn"><i class="fa-solid fa-code-merge"></i> Sloučit štítky / vybavení</button>
+      </div>
       <div class="chip-row" id="tagFilterRow"></div>
       <div class="chip-row" id="equipFilterRow"></div>
       <div id="libraryGrid" class="grid"></div>
@@ -372,6 +393,10 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
       <div class="editor-head">
         <input type="text" id="trainingNameInput" placeholder="Název tréninku">
         <div class="total-badge" id="totalTimeBadge">0 min</div>
+      </div>
+      <div id="readOnlyBanner" class="hidden" style="background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-sm);padding:9px 12px;font-size:12.5px;color:var(--ink-soft);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+        <span><i class="fa-solid fa-eye"></i> <span id="readOnlyBannerText"></span></span>
+        <button class="btn btn-sm btn-accent" id="cloneFromReadOnlyBtn"><i class="fa-regular fa-copy"></i> Naklonovat do mých</button>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
         <div class="part-legend" id="partLegend"></div>
@@ -426,6 +451,10 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
         <label class="btn btn-sm" for="thumbFileInput"><i class="fa-solid fa-image"></i> Nahrát vlastní náhled</label>
         <input type="file" id="thumbFileInput" accept="image/*">
       </div>
+      <div class="field" style="display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" id="linkPortrait" style="width:18px;height:18px;">
+        <label for="linkPortrait" style="margin:0;text-transform:none;font-size:13px;letter-spacing:0;font-weight:500;">Video je na výšku (mobil/Reels/Shorts)</label>
+      </div>
       <div class="field">
         <label for="linkTitle">Název *</label>
         <input type="text" id="linkTitle" required>
@@ -444,19 +473,19 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
         <label for="linkDefaultPart">Výchozí část tréninku</label>
         <select id="linkDefaultPart"></select>
       </div>
-      <div class="field">
+      <div class="field" style="position:relative;">
         <label>Štítky</label>
         <div class="tag-input-wrap" id="tagWrap">
-          <input type="text" id="tagInput" placeholder="napiš a Enter…" list="tagSuggestions">
-          <datalist id="tagSuggestions"></datalist>
+          <input type="text" id="tagInput" placeholder="napiš a Enter…" autocomplete="off">
         </div>
+        <div class="autocomplete-list hidden" id="tagAutocomplete"></div>
       </div>
-      <div class="field">
+      <div class="field" style="position:relative;">
         <label>Vybavení</label>
         <div class="tag-input-wrap" id="equipWrap">
-          <input type="text" id="equipInput" placeholder="napiš a Enter…" list="equipSuggestions">
-          <datalist id="equipSuggestions"></datalist>
+          <input type="text" id="equipInput" placeholder="napiš a Enter…" autocomplete="off">
         </div>
+        <div class="autocomplete-list hidden" id="equipAutocomplete"></div>
       </div>
       <div class="two-col">
         <div class="field">
@@ -547,6 +576,66 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
   </div>
 </div>
 
+<!-- ===================== MERGE TAGS/EQUIPMENT MODAL ===================== -->
+<div id="mergeModalBackdrop" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 style="font-size:22px;">Sloučit štítky / vybavení</h2>
+      <button class="btn btn-icon btn-ghost" id="closeMergeModalBtn">✕</button>
+    </div>
+    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:0;">Vyber položku, kterou chceš přejmenovat/sloučit do jiné už existující — všude v knihovně se nahradí a stará se smaže.</p>
+    <h3 style="font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin:14px 0 6px;">Štítky</h3>
+    <div id="mergeTagsList"></div>
+    <h3 style="font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin:14px 0 6px;">Vybavení</h3>
+    <div id="mergeEquipList"></div>
+  </div>
+</div>
+
+<!-- ===================== PROFILE MODAL ===================== -->
+<div id="profileModalBackdrop" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 style="font-size:22px;">Profil</h2>
+      <button class="btn btn-icon btn-ghost" id="closeProfileModalBtn">✕</button>
+    </div>
+    <form id="profileForm">
+      <div class="thumb-preview" id="avatarPreview" style="aspect-ratio:1/1;max-width:120px;margin:0 auto 8px;border-radius:50%;">bez fotky</div>
+      <div class="thumb-upload-row" style="justify-content:center;">
+        <label class="btn btn-sm" for="avatarFileInput"><i class="fa-solid fa-image"></i> Nahrát fotku</label>
+        <input type="file" id="avatarFileInput" accept="image/*">
+      </div>
+      <div class="field">
+        <label for="profileUsername">Uživatelské jméno</label>
+        <input type="text" id="profileUsername" placeholder="Jak tě mají vidět kolegové">
+      </div>
+      <div class="two-col">
+        <div class="field">
+          <label for="profileCategory">Kategorie</label>
+          <input type="text" id="profileCategory" placeholder="např. U14 dívky">
+        </div>
+        <div class="field">
+          <label for="profileClub">Klub</label>
+          <input type="text" id="profileClub" placeholder="např. SK Meteor Praha">
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="field">
+          <label for="profileColorPrimary">Hlavní barva appky</label>
+          <input type="color" id="profileColorPrimary" style="width:100%;height:40px;padding:2px;border:1px solid var(--line);border-radius:var(--radius-sm);">
+        </div>
+        <div class="field">
+          <label for="profileColorAccent">Zvýrazňovací barva</label>
+          <input type="color" id="profileColorAccent" style="width:100%;height:40px;padding:2px;border:1px solid var(--line);border-radius:var(--radius-sm);">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Uložit profil</button>
+        <button type="button" class="btn btn-ghost" id="resetColorsBtn">Výchozí barvy</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.7/Sortable.min.js"></script>
@@ -558,7 +647,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import {
   initializeFirestore, persistentLocalCache, persistentSingleTabManager,
-  doc, getDoc, setDoc
+  doc, getDoc, setDoc, deleteDoc, collection, collectionGroup, getDocs
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 /* =========================================================
@@ -589,10 +678,12 @@ try {
    STATE
    ========================================================= */
 let uidCurrent = null;
-let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [] };
+let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
+const DEFAULT_COLORS = { primary: "#22406B", accent: "#E8622C" };
 let currentView = "library";
 let editingLinkId = null;       // id knihovní položky, když se edituje
 let currentTrainingId = null;   // id tréninku otevřeného v editoru
+let editorReadOnly = false;     // true, když prohlížím trénink kolegy (nejde upravovat)
 let currentDetailId = null;     // id knihovní položky v detail modalu
 let libraryTagFilter = new Set();
 let libraryEquipFilter = new Set();
@@ -640,6 +731,23 @@ function scheduleSave() {
   saveTimer = setTimeout(saveUserData, 700);
 }
 
+/** Ztmaví hex barvu o daný podíl (0–1) — pro odvození tmavších variant (hover, gradient). */
+function darkenHex(hex, amount) {
+  const m = hex.replace("#", "").match(/.{1,2}/g);
+  if (!m || m.length < 3) return hex;
+  const [r, g, b] = m.map(h => Math.max(0, Math.round(parseInt(h, 16) * (1 - amount))));
+  return "#" + [r, g, b].map(v => v.toString(16).padStart(2, "0")).join("");
+}
+function applyColorScheme() {
+  const primary = (state.profile && state.profile.colorPrimary) || DEFAULT_COLORS.primary;
+  const accent = (state.profile && state.profile.colorAccent) || DEFAULT_COLORS.accent;
+  const root = document.documentElement.style;
+  root.setProperty("--court", primary);
+  root.setProperty("--court-dark", darkenHex(primary, 0.22));
+  root.setProperty("--chalk", accent);
+  root.setProperty("--chalk-dark", darkenHex(accent, 0.18));
+}
+
 /* ---- URL parsing ---- */
 function detectPlatform(url) {
   try {
@@ -683,7 +791,7 @@ async function fetchYouTubeMeta(url) {
     const res = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`);
     if (!res.ok) return null;
     const data = await res.json();
-    return { title: data.title || "", thumbnail: data.thumbnail_url || "" };
+    return { title: data.title || "", thumbnail: data.thumbnail_url || "", portrait: (data.height && data.width) ? data.height > data.width : false };
   } catch { return null; }
 }
 function renderEmbedHtml(item) {
@@ -775,6 +883,7 @@ onAuthStateChanged(auth, async (user) => {
     uidCurrent = user.uid;
     document.getElementById("userEmailLabel").textContent = user.email || "";
     await loadUserData();
+    renderTopbarIdentity();
     document.getElementById("loginScreen").classList.add("hidden");
     document.getElementById("app").classList.remove("hidden");
     switchView("library");
@@ -785,57 +894,112 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
+function renderTopbarIdentity() {
+  const p = state.profile || {};
+  document.getElementById("userEmailLabel").textContent = p.username || (auth.currentUser && auth.currentUser.email) || "";
+  const btn = document.getElementById("profileBtn");
+  if (p.avatarUrl) {
+    btn.style.backgroundImage = `url('${p.avatarUrl}')`;
+    document.getElementById("avatarInitial").textContent = "";
+  } else {
+    btn.style.backgroundImage = "none";
+    const initial = (p.username || (auth.currentUser && auth.currentUser.email) || "?").trim().charAt(0).toUpperCase();
+    document.getElementById("avatarInitial").textContent = initial || "?";
+  }
+}
+
 /* =========================================================
    FIRESTORE SYNC
    ========================================================= */
 async function loadUserData() {
   try {
-    const snap = await getDoc(doc(db, "users", uidCurrent));
-    if (snap.exists()) {
-      const d = snap.data();
-      state = {
-        library: d.library || {},
-        trainings: d.trainings || {},
-        folders: d.folders || [],
-        tagPool: d.tagPool || [],
-        equipmentPool: d.equipmentPool || [],
-        parts: (d.parts && d.parts.length) ? d.parts : structuredClone(DEFAULT_PARTS)
-      };
-      // migrace ze staršího pevného seznamu částí (protažení/posilování/kompenzace -> Závěr)
-      const legacyMap = { protazeni: "zaver", posilovani: "zaver", kompenzace: "zaver" };
-      let migrated = false;
-      Object.values(state.trainings).forEach(t => {
-        (t.items || []).forEach(it => {
-          if (legacyMap[it.part]) { it.part = legacyMap[it.part]; migrated = true; }
-        });
-      });
-      Object.values(state.library).forEach(it => {
-        if (it.defaultPart === undefined) { it.defaultPart = state.parts[2] ? state.parts[2].key : state.parts[0].key; migrated = true; }
-        if (legacyMap[it.defaultPart]) { it.defaultPart = legacyMap[it.defaultPart]; migrated = true; }
-      });
-      if (!d.parts || !d.parts.length || migrated) scheduleSave();
+    const legacySnap = await getDoc(doc(db, "users", uidCurrent));
+    const legacy = legacySnap.exists() ? legacySnap.data() : {};
+
+    state.profile = {
+      username: legacy.username || "",
+      category: legacy.category || "",
+      club: legacy.club || "",
+      avatarUrl: legacy.avatarUrl || "",
+      colorPrimary: legacy.colorPrimary || DEFAULT_COLORS.primary,
+      colorAccent: legacy.colorAccent || DEFAULT_COLORS.accent
+    };
+    applyColorScheme();
+
+    // 1) sdílená knihovna — pokud ještě neexistuje, povýšíme na ni moje dosavadní osobní data
+    const sharedRef = doc(db, "shared", "data");
+    let sharedSnap = await getDoc(sharedRef);
+    let shared;
+    if (sharedSnap.exists()) {
+      shared = sharedSnap.data();
     } else {
-      state = {
-        library: {}, trainings: {},
-        folders: ["Útok", "Blok", "Nahrávka", "Podání", "Příjem", "Obrana", "Kondice"],
-        tagPool: [], equipmentPool: [],
-        parts: structuredClone(DEFAULT_PARTS)
+      shared = {
+        library: legacy.library || {},
+        folders: legacy.folders || ["Útok", "Blok", "Nahrávka", "Podání", "Příjem", "Obrana", "Kondice"],
+        tagPool: legacy.tagPool || [],
+        equipmentPool: legacy.equipmentPool || [],
+        parts: (legacy.parts && legacy.parts.length) ? legacy.parts : structuredClone(DEFAULT_PARTS)
       };
-      await saveUserData();
+      await setDoc(sharedRef, shared);
     }
+    state.library = shared.library || {};
+    state.folders = shared.folders || [];
+    state.tagPool = shared.tagPool || [];
+    state.equipmentPool = shared.equipmentPool || [];
+    state.parts = (shared.parts && shared.parts.length) ? shared.parts : structuredClone(DEFAULT_PARTS);
+
+    // 2) tréninky — subkolekce per uživatel; jednorázová migrace ze staré mapy, pokud subkolekce ještě prázdná
+    const myTrainingsCol = collection(db, "users", uidCurrent, "trainings");
+    let mySnap = await getDocs(myTrainingsCol);
+    if (mySnap.empty && legacy.trainings && Object.keys(legacy.trainings).length) {
+      const label = (state.profile && state.profile.username) || (auth.currentUser && auth.currentUser.email) || uidCurrent;
+      for (const t of Object.values(legacy.trainings)) {
+        await setDoc(doc(myTrainingsCol, t.id), { ...t, ownerUid: uidCurrent, ownerLabel: label });
+      }
+      mySnap = await getDocs(myTrainingsCol);
+    }
+
+    // 3) načíst tréninky úplně všech uživatelů (moje i kolegů) přes collection group
+    state.trainings = {};
+    const allSnap = await getDocs(collectionGroup(db, "trainings"));
+    allSnap.forEach(d => { state.trainings[d.id] = d.data(); });
+
+    // migrace ze staršího pevného seznamu částí (protažení/posilování/kompenzace -> Závěr) + defaultPart na starších videích
+    const legacyMap = { protazeni: "zaver", posilovani: "zaver", kompenzace: "zaver" };
+    let migratedParts = false, migratedTrainings = false;
+    Object.values(state.trainings).forEach(t => {
+      (t.items || []).forEach(it => { if (legacyMap[it.part]) { it.part = legacyMap[it.part]; migratedTrainings = true; } });
+    });
+    Object.values(state.library).forEach(it => {
+      if (it.defaultPart === undefined) { it.defaultPart = state.parts[2] ? state.parts[2].key : state.parts[0].key; migratedParts = true; }
+      if (legacyMap[it.defaultPart]) { it.defaultPart = legacyMap[it.defaultPart]; migratedParts = true; }
+      if (it.portrait === undefined) it.portrait = false;
+    });
+    if (migratedParts) scheduleSave();
+    if (migratedTrainings) { Object.values(state.trainings).filter(t => t.ownerUid === uidCurrent).forEach(t => setDoc(doc(myTrainingsCol, t.id), t)); }
   } catch (e) {
     console.error("Nepodařilo se načíst data:", e);
-    toast("Nepodařilo se načíst data ze serveru — zkontroluj připojení.");
+    toast("Nepodařilo se načíst data ze serveru — zkontroluj připojení a Firestore pravidla.");
   }
 }
+
 async function saveUserData() {
   if (!uidCurrent) return;
   try {
-    await setDoc(doc(db, "users", uidCurrent), state);
+    await setDoc(doc(db, "shared", "data"), {
+      library: state.library, folders: state.folders,
+      tagPool: state.tagPool, equipmentPool: state.equipmentPool, parts: state.parts
+    });
+    const mine = Object.values(state.trainings).filter(t => t.ownerUid === uidCurrent);
+    await Promise.all(mine.map(t => setDoc(doc(db, "users", uidCurrent, "trainings", t.id), t)));
   } catch (e) {
     console.error("Nepodařilo se uložit data:", e);
     toast("Uložení se nepovedlo, zkusím to znovu při další změně.");
   }
+}
+async function deleteTrainingRemote(trainingId) {
+  try { await deleteDoc(doc(db, "users", uidCurrent, "trainings", trainingId)); }
+  catch (e) { console.error("Smazání tréninku selhalo:", e); toast("Smazání na serveru selhalo, zkontroluj připojení."); }
 }
 
 /* =========================================================
@@ -974,8 +1138,6 @@ function openLinkModal(id) {
   editingLinkId = id;
   renderFolderOptions();
   renderPartSelectOptions();
-  renderTagSuggestions();
-  renderEquipSuggestions();
   pendingThumbUpload = null;
   document.getElementById("thumbFileInput").value = "";
   const item = id ? state.library[id] : null;
@@ -985,6 +1147,7 @@ function openLinkModal(id) {
   document.getElementById("linkFolder").value = item ? item.folder : "";
   document.getElementById("newFolderInput").value = "";
   document.getElementById("linkDefaultPart").value = item ? item.defaultPart : (state.parts[2] ? state.parts[2].key : state.parts[0].key);
+  document.getElementById("linkPortrait").checked = item ? !!item.portrait : false;
   document.getElementById("linkTimestamp").value = item ? secondsToTimestamp(item.timestamp) : "";
   document.getElementById("linkShortDesc").value = item ? item.shortDesc : "";
   document.getElementById("linkLongDesc").value = item ? item.longDesc : "";
@@ -1023,6 +1186,7 @@ document.getElementById("fetchMetaBtn").addEventListener("click", async () => {
       document.getElementById("thumbPreview").style.backgroundImage = `url('${meta.thumbnail}')`;
       document.getElementById("thumbPreview").textContent = "";
       document.getElementById("thumbPreview").dataset.thumb = meta.thumbnail;
+      document.getElementById("linkPortrait").checked = !!meta.portrait;
       toast("Načteno.");
     } else {
       toast("Nepodařilo se načíst — zadej název ručně.");
@@ -1035,6 +1199,45 @@ document.getElementById("fetchMetaBtn").addEventListener("click", async () => {
     toast(platform === "facebook" ? "Facebook: titulek zadej ručně, embed se pokusí načíst v detailu." : "Titulek zadej ručně.");
   }
 });
+
+function normalizeAgainstPool(value, pool) {
+  const existing = pool.find(p => p.toLowerCase() === value.toLowerCase());
+  return existing || value;
+}
+function addTag(v) {
+  v = normalizeAgainstPool(v.trim(), state.tagPool);
+  if (v && !formTags.includes(v)) { formTags.push(v); renderTagPills(); }
+}
+function addEquip(v) {
+  v = normalizeAgainstPool(v.trim(), state.equipmentPool);
+  if (v && !formEquip.includes(v)) { formEquip.push(v); renderEquipPills(); }
+}
+
+/** Vlastní dropdown našeptávač — na rozdíl od <datalist> spolehlivě funguje i na mobilu. */
+function setupAutocomplete(inputId, dropId, getPool, getCurrent, addFn) {
+  const input = document.getElementById(inputId);
+  const drop = document.getElementById(dropId);
+  function showMatches() {
+    const q = input.value.trim().toLowerCase();
+    const current = getCurrent();
+    const matches = getPool().filter(t => !current.includes(t) && (!q || t.toLowerCase().includes(q))).slice(0, 8);
+    if (!matches.length) { drop.classList.add("hidden"); drop.innerHTML = ""; return; }
+    drop.innerHTML = matches.map(t => `<button type="button" data-v="${esc(t)}">${esc(t)}</button>`).join("");
+    drop.classList.remove("hidden");
+  }
+  input.addEventListener("input", showMatches);
+  input.addEventListener("focus", showMatches);
+  input.addEventListener("blur", () => setTimeout(() => drop.classList.add("hidden"), 200));
+  drop.addEventListener("pointerdown", (e) => {
+    const btn = e.target.closest("button[data-v]");
+    if (!btn) return;
+    e.preventDefault(); // ať input neztratí focus (jinak by blur schoval nabídku dřív, než stihne proběhnout klik)
+    addFn(btn.dataset.v);
+    input.value = "";
+    showMatches();
+  });
+  return showMatches;
+}
 
 function renderTagPills() {
   const wrap = document.getElementById("tagWrap");
@@ -1060,35 +1263,22 @@ function renderEquipPills() {
     wrap.insertBefore(pill, input);
   });
 }
-function normalizeAgainstPool(value, pool) {
-  const existing = pool.find(p => p.toLowerCase() === value.toLowerCase());
-  return existing || value;
-}
-function renderTagSuggestions() {
-  document.getElementById("tagSuggestions").innerHTML = state.tagPool.map(t => `<option value="${esc(t)}">`).join("");
-}
-function renderEquipSuggestions() {
-  document.getElementById("equipSuggestions").innerHTML = state.equipmentPool.map(t => `<option value="${esc(t)}">`).join("");
-}
+setupAutocomplete("tagInput", "tagAutocomplete", () => state.tagPool, () => formTags, addTag);
+setupAutocomplete("equipInput", "equipAutocomplete", () => state.equipmentPool, () => formEquip, addEquip);
+
 document.getElementById("tagInput").addEventListener("keydown", (e) => {
   if (e.key === "Enter" || e.key === ",") {
     e.preventDefault();
-    let v = e.target.value.trim().replace(/,$/, "");
-    if (v) {
-      v = normalizeAgainstPool(v, state.tagPool);
-      if (!formTags.includes(v)) { formTags.push(v); renderTagPills(); }
-    }
+    const v = e.target.value.trim().replace(/,$/, "");
+    if (v) addTag(v);
     e.target.value = "";
   }
 });
 document.getElementById("equipInput").addEventListener("keydown", (e) => {
   if (e.key === "Enter" || e.key === ",") {
     e.preventDefault();
-    let v = e.target.value.trim().replace(/,$/, "");
-    if (v) {
-      v = normalizeAgainstPool(v, state.equipmentPool);
-      if (!formEquip.includes(v)) { formEquip.push(v); renderEquipPills(); }
-    }
+    const v = e.target.value.trim().replace(/,$/, "");
+    if (v) addEquip(v);
     e.target.value = "";
   }
 });
@@ -1155,6 +1345,7 @@ linkForm.addEventListener("submit", (e) => {
     thumbnail: pendingThumbUpload || document.getElementById("thumbPreview").dataset.thumb || "",
     folder,
     defaultPart: document.getElementById("linkDefaultPart").value,
+    portrait: document.getElementById("linkPortrait").checked,
     tags: [...formTags],
     equipment: [...formEquip],
     difficulty: parseInt(document.getElementById("diffPicker").dataset.value || "3"),
@@ -1195,6 +1386,7 @@ function openDetailModal(id) {
   if (!item) return;
   currentDetailId = id;
   document.getElementById("detailEmbedWrap").innerHTML = renderEmbedHtml(item);
+  document.getElementById("detailEmbedWrap").classList.toggle("is-portrait", !!item.portrait);
   document.getElementById("detailFbFallback").innerHTML = item.platform === "facebook"
     ? `<a class="btn btn-sm" style="margin-bottom:14px;" href="${esc(item.url)}" target="_blank" rel="noopener"><i class="fa-brands fa-facebook"></i> Nejde přehrát? Otevřít přímo na Facebooku ↗</a>`
     : "";
@@ -1223,7 +1415,8 @@ document.getElementById("editFromDetailBtn").addEventListener("click", () => {
    ========================================================= */
 document.getElementById("newTrainingBtn").addEventListener("click", () => {
   const id = uid();
-  state.trainings[id] = { id, name: "Nový trénink", dateCreated: Date.now(), dateModified: Date.now(), items: [] };
+  const label = (state.profile && state.profile.username) || (auth.currentUser && auth.currentUser.email) || uidCurrent;
+  state.trainings[id] = { id, name: "Nový trénink", dateCreated: Date.now(), dateModified: Date.now(), items: [], ownerUid: uidCurrent, ownerLabel: label };
   scheduleSave();
   openEditor(id);
 });
@@ -1238,15 +1431,16 @@ function renderTrainingsList() {
   }
   list.innerHTML = trainings.map(t => {
     const totalMin = t.items.reduce((s, it) => s + (it.duration || 0), 0);
+    const mine = t.ownerUid === uidCurrent;
     return `
     <div class="training-row">
       <button class="training-row-main" data-open="${esc(t.id)}" style="background:none;border:none;text-align:left;cursor:pointer;padding:0;">
-        <div class="training-row-title">${esc(t.name)}</div>
+        <div class="training-row-title">${esc(t.name)}${!mine ? ` <span style="font-size:11px;font-weight:600;color:var(--ink-faint);">· ${esc(t.ownerLabel || "kolega")}</span>` : ""}</div>
         <div class="training-row-meta">${t.items.length} položek · ${totalMin} min</div>
       </button>
       <div class="training-row-actions">
         <button class="btn btn-sm" data-clone="${esc(t.id)}"><i class="fa-regular fa-copy"></i> Klonovat</button>
-        <button class="btn btn-sm btn-danger" data-del="${esc(t.id)}"><i class="fa-solid fa-trash"></i> Smazat</button>
+        ${mine ? `<button class="btn btn-sm btn-danger" data-del="${esc(t.id)}"><i class="fa-solid fa-trash"></i> Smazat</button>` : ""}
       </div>
     </div>`;
   }).join("");
@@ -1254,7 +1448,8 @@ function renderTrainingsList() {
   list.querySelectorAll("[data-clone]").forEach(b => b.addEventListener("click", () => {
     const src = state.trainings[b.dataset.clone];
     const id = uid();
-    state.trainings[id] = { ...structuredClone(src), id, name: src.name + " (kopie)", dateCreated: Date.now(), dateModified: Date.now() };
+    const label = (state.profile && state.profile.username) || (auth.currentUser && auth.currentUser.email) || uidCurrent;
+    state.trainings[id] = { ...structuredClone(src), id, name: src.name + " (kopie)", dateCreated: Date.now(), dateModified: Date.now(), ownerUid: uidCurrent, ownerLabel: label };
     scheduleSave();
     renderTrainingsList();
     toast("Naklonováno.");
@@ -1262,7 +1457,7 @@ function renderTrainingsList() {
   list.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", () => {
     if (!confirm("Smazat tento trénink?")) return;
     delete state.trainings[b.dataset.del];
-    scheduleSave();
+    deleteTrainingRemote(b.dataset.del);
     renderTrainingsList();
     toast("Smazáno.");
   }));
@@ -1275,7 +1470,14 @@ function openEditor(id) {
   currentTrainingId = id;
   switchView("editor");
   const t = state.trainings[id];
+  editorReadOnly = t.ownerUid !== uidCurrent;
   document.getElementById("trainingNameInput").value = t.name;
+  document.getElementById("trainingNameInput").disabled = editorReadOnly;
+  document.getElementById("readOnlyBanner").classList.toggle("hidden", !editorReadOnly);
+  if (editorReadOnly) document.getElementById("readOnlyBannerText").textContent = `Trénink uživatele ${t.ownerLabel || "kolega"} — jen ke čtení.`;
+  document.querySelector(".picker-panel").classList.toggle("hidden", editorReadOnly);
+  document.getElementById("saveTrainingBtn").classList.toggle("hidden", editorReadOnly);
+  document.getElementById("deleteTrainingBtn").classList.toggle("hidden", editorReadOnly);
   pickerTagFilter.clear();
   pickerEquipFilter.clear();
   document.getElementById("pickerSearch").value = "";
@@ -1285,9 +1487,18 @@ function openEditor(id) {
   renderPickerList();
   renderSequence();
 }
+document.getElementById("cloneFromReadOnlyBtn").addEventListener("click", () => {
+  const src = state.trainings[currentTrainingId];
+  const id = uid();
+  const label = (state.profile && state.profile.username) || (auth.currentUser && auth.currentUser.email) || uidCurrent;
+  state.trainings[id] = { ...structuredClone(src), id, name: src.name + " (kopie)", dateCreated: Date.now(), dateModified: Date.now(), ownerUid: uidCurrent, ownerLabel: label };
+  scheduleSave();
+  toast("Naklonováno do tvých tréninků.");
+  openEditor(id);
+});
 document.getElementById("trainingNameInput").addEventListener("input", (e) => {
   const t = state.trainings[currentTrainingId];
-  if (!t) return;
+  if (!t || editorReadOnly) return;
   t.name = e.target.value;
   t.dateModified = Date.now();
   scheduleSave();
@@ -1367,54 +1578,58 @@ function renderSequence() {
   const wrap = document.getElementById("sequenceList");
   document.getElementById("sequenceEmpty").classList.toggle("hidden", t.items.length > 0);
   updateTotalBadge();
+  const ro = editorReadOnly;
+  const dis = ro ? "disabled" : "";
 
   wrap.innerHTML = t.items.map(row => {
     if (row.part === "prestavka") {
       return `
       <div class="seq-item is-break" data-itemid="${esc(row.itemId)}">
-        <span class="drag-handle"><i class="fa-solid fa-grip-lines"></i></span>
-        <input class="break-label" value="${esc(row.label || "Přestávka")}" data-field="label" data-itemid="${esc(row.itemId)}">
-        <input class="seq-duration" type="number" min="1" value="${row.duration}" data-field="duration" data-itemid="${esc(row.itemId)}"> min
-        <button class="seq-remove" data-remove="${esc(row.itemId)}" aria-label="Odebrat"><i class="fa-solid fa-xmark"></i></button>
+        ${ro ? "" : `<span class="drag-handle"><i class="fa-solid fa-grip-lines"></i></span>`}
+        <input class="break-label" value="${esc(row.label || "Přestávka")}" data-field="label" data-itemid="${esc(row.itemId)}" ${dis}>
+        <input class="seq-duration" type="number" min="1" value="${row.duration}" data-field="duration" data-itemid="${esc(row.itemId)}" ${dis}> min
+        ${ro ? "" : `<button class="seq-remove" data-remove="${esc(row.itemId)}" aria-label="Odebrat"><i class="fa-solid fa-xmark"></i></button>`}
       </div>`;
     }
     const lib = state.library[row.videoId];
     const partColor = getPart(row.part).color;
     return `
     <div class="seq-item" data-itemid="${esc(row.itemId)}" style="background:${esc(partColor)}">
-      <button class="seq-remove" data-remove="${esc(row.itemId)}" aria-label="Odebrat"><i class="fa-solid fa-xmark"></i></button>
+      ${ro ? "" : `<button class="seq-remove" data-remove="${esc(row.itemId)}" aria-label="Odebrat"><i class="fa-solid fa-xmark"></i></button>`}
       <div class="seq-item-top">
-        <span class="drag-handle"><i class="fa-solid fa-grip-lines"></i></span>
+        ${ro ? "" : `<span class="drag-handle"><i class="fa-solid fa-grip-lines"></i></span>`}
         ${lib && lib.thumbnail ? `<img class="seq-thumb" src="${esc(lib.thumbnail)}" data-open="${esc(row.videoId)}">` : `<div class="seq-thumb" data-open="${esc(row.videoId)}"></div>`}
         <span class="seq-title" data-open="${esc(row.videoId)}">${lib ? esc(lib.title) : "(video smazáno z knihovny)"}</span>
         <div class="seq-controls">
-          <select class="seq-part-select" data-field="part" data-itemid="${esc(row.itemId)}">
+          <select class="seq-part-select" data-field="part" data-itemid="${esc(row.itemId)}" ${dis}>
             ${state.parts.map(p => `<option value="${esc(p.key)}" ${row.part === p.key ? "selected" : ""}>${esc(p.label)}</option>`).join("")}
           </select>
-          <input class="seq-duration" type="number" min="1" value="${row.duration}" data-field="duration" data-itemid="${esc(row.itemId)}">
+          <input class="seq-duration" type="number" min="1" value="${row.duration}" data-field="duration" data-itemid="${esc(row.itemId)}" ${dis}>
         </div>
       </div>
       <div class="seq-item-fields">
-        <input type="text" placeholder="Cue (co říct nahlas)" value="${esc(row.cue)}" data-field="cue" data-itemid="${esc(row.itemId)}">
-        <input type="text" placeholder="Poznámka (např. dělat jen 3. cvik)" value="${esc(row.poznamka)}" data-field="poznamka" data-itemid="${esc(row.itemId)}">
+        <input type="text" placeholder="Cue (co říct nahlas)" value="${esc(row.cue)}" data-field="cue" data-itemid="${esc(row.itemId)}" ${dis}>
+        <input type="text" placeholder="Poznámka (např. dělat jen 3. cvik)" value="${esc(row.poznamka)}" data-field="poznamka" data-itemid="${esc(row.itemId)}" ${dis}>
       </div>
     </div>`;
   }).join("");
 
-  // znovu-navázat Sortable
-  if (sortableInstance) sortableInstance.destroy();
-  sortableInstance = Sortable.create(wrap, {
-    handle: ".drag-handle",
-    animation: 150,
-    ghostClass: "sortable-ghost",
-    onEnd: () => {
-      const order = [...wrap.querySelectorAll(".seq-item")].map(el => el.dataset.itemid);
-      const t2 = state.trainings[currentTrainingId];
-      t2.items.sort((a, b) => order.indexOf(a.itemId) - order.indexOf(b.itemId));
-      t2.dateModified = Date.now();
-      scheduleSave();
-    }
-  });
+  // znovu-navázat Sortable (u cizího tréninku vůbec nepřipojíme, ať nejde měnit pořadí)
+  if (sortableInstance) { sortableInstance.destroy(); sortableInstance = null; }
+  if (!ro) {
+    sortableInstance = Sortable.create(wrap, {
+      handle: ".drag-handle",
+      animation: 150,
+      ghostClass: "sortable-ghost",
+      onEnd: () => {
+        const order = [...wrap.querySelectorAll(".seq-item")].map(el => el.dataset.itemid);
+        const t2 = state.trainings[currentTrainingId];
+        t2.items.sort((a, b) => order.indexOf(a.itemId) - order.indexOf(b.itemId));
+        t2.dateModified = Date.now();
+        scheduleSave();
+      }
+    });
+  }
 }
 
 document.getElementById("sequenceList").addEventListener("input", (e) => {
@@ -1449,6 +1664,145 @@ document.getElementById("deleteTrainingBtn").addEventListener("click", () => {
   scheduleSave();
   switchView("trainings");
   toast("Smazáno.");
+});
+
+/* =========================================================
+   SLOUČENÍ ŠTÍTKŮ / VYBAVENÍ
+   ========================================================= */
+const mergeModalBackdrop = document.getElementById("mergeModalBackdrop");
+document.getElementById("manageTagsBtn").addEventListener("click", () => { renderMergeLists(); mergeModalBackdrop.classList.remove("hidden"); });
+document.getElementById("closeMergeModalBtn").addEventListener("click", () => mergeModalBackdrop.classList.add("hidden"));
+mergeModalBackdrop.addEventListener("click", (e) => { if (e.target === mergeModalBackdrop) mergeModalBackdrop.classList.add("hidden"); });
+
+function renderMergeLists() {
+  renderMergeList("mergeTagsList", state.tagPool, mergeTag);
+  renderMergeList("mergeEquipList", state.equipmentPool, mergeEquip);
+}
+function renderMergeList(containerId, pool, mergeFn) {
+  const wrap = document.getElementById(containerId);
+  if (pool.length < 2) { wrap.innerHTML = `<p style="font-size:12px;color:var(--ink-faint);">Potřebuješ aspoň dvě položky, aby šlo něco sloučit.</p>`; return; }
+  wrap.innerHTML = pool.map(name => `
+    <div class="merge-row">
+      <span class="merge-name" title="${esc(name)}">${esc(name)}</span>
+      <span>→</span>
+      <select data-from="${esc(name)}">
+        <option value="">sloučit do…</option>
+        ${pool.filter(p => p !== name).map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join("")}
+      </select>
+    </div>
+  `).join("");
+  wrap.querySelectorAll("select").forEach(sel => {
+    sel.addEventListener("change", () => {
+      if (!sel.value) return;
+      if (!confirm(`Sloučit „${sel.dataset.from}" do „${sel.value}"? Projeví se to ve všech videích v knihovně.`)) { sel.value = ""; return; }
+      mergeFn(sel.dataset.from, sel.value);
+      renderMergeLists();
+    });
+  });
+}
+function mergeTag(from, to) {
+  Object.values(state.library).forEach(it => {
+    if (it.tags.includes(from)) {
+      it.tags = it.tags.filter(t => t !== from);
+      if (!it.tags.includes(to)) it.tags.push(to);
+    }
+  });
+  state.tagPool = state.tagPool.filter(t => t !== from);
+  libraryTagFilter.delete(from); pickerTagFilter.delete(from);
+  scheduleSave();
+  renderLibrary();
+  toast("Štítky sloučeny.");
+}
+function mergeEquip(from, to) {
+  Object.values(state.library).forEach(it => {
+    if (it.equipment.includes(from)) {
+      it.equipment = it.equipment.filter(t => t !== from);
+      if (!it.equipment.includes(to)) it.equipment.push(to);
+    }
+  });
+  state.equipmentPool = state.equipmentPool.filter(t => t !== from);
+  libraryEquipFilter.delete(from); pickerEquipFilter.delete(from);
+  scheduleSave();
+  renderLibrary();
+  toast("Vybavení sloučeno.");
+}
+
+/* =========================================================
+   PROFIL
+   ========================================================= */
+const profileModalBackdrop = document.getElementById("profileModalBackdrop");
+let pendingAvatarUpload = null;
+
+document.getElementById("profileBtn").addEventListener("click", openProfileModal);
+document.getElementById("closeProfileModalBtn").addEventListener("click", () => profileModalBackdrop.classList.add("hidden"));
+profileModalBackdrop.addEventListener("click", (e) => { if (e.target === profileModalBackdrop) profileModalBackdrop.classList.add("hidden"); });
+
+function openProfileModal() {
+  const p = state.profile || {};
+  pendingAvatarUpload = null;
+  document.getElementById("avatarFileInput").value = "";
+  document.getElementById("profileUsername").value = p.username || "";
+  document.getElementById("profileCategory").value = p.category || "";
+  document.getElementById("profileClub").value = p.club || "";
+  document.getElementById("profileColorPrimary").value = p.colorPrimary || DEFAULT_COLORS.primary;
+  document.getElementById("profileColorAccent").value = p.colorAccent || DEFAULT_COLORS.accent;
+  const prev = document.getElementById("avatarPreview");
+  if (p.avatarUrl) { prev.style.backgroundImage = `url('${p.avatarUrl}')`; prev.textContent = ""; }
+  else { prev.style.backgroundImage = "none"; prev.textContent = "bez fotky"; }
+  profileModalBackdrop.classList.remove("hidden");
+}
+
+document.getElementById("avatarFileInput").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    img.onload = () => {
+      const size = 300;
+      const canvas = document.createElement("canvas");
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      // ořízne na čtverec ze středu obrázku, ať se vejde do kulatého avataru bez zkreslení
+      const s = Math.min(img.width, img.height);
+      ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, size, size);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      pendingAvatarUpload = dataUrl;
+      const prev = document.getElementById("avatarPreview");
+      prev.style.backgroundImage = `url('${dataUrl}')`;
+      prev.textContent = "";
+      toast("Fotka nahrána.");
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById("resetColorsBtn").addEventListener("click", () => {
+  document.getElementById("profileColorPrimary").value = DEFAULT_COLORS.primary;
+  document.getElementById("profileColorAccent").value = DEFAULT_COLORS.accent;
+});
+
+document.getElementById("profileForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  state.profile = {
+    username: document.getElementById("profileUsername").value.trim(),
+    category: document.getElementById("profileCategory").value.trim(),
+    club: document.getElementById("profileClub").value.trim(),
+    avatarUrl: pendingAvatarUpload || (state.profile && state.profile.avatarUrl) || "",
+    colorPrimary: document.getElementById("profileColorPrimary").value,
+    colorAccent: document.getElementById("profileColorAccent").value
+  };
+  applyColorScheme();
+  renderTopbarIdentity();
+  try {
+    await setDoc(doc(db, "users", uidCurrent), state.profile, { merge: true });
+    toast("Profil uložen.");
+  } catch (err) {
+    console.error(err);
+    toast("Uložení profilu selhalo, zkontroluj připojení.");
+  }
+  profileModalBackdrop.classList.add("hidden");
 });
 
 /* =========================================================
