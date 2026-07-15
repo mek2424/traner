@@ -782,6 +782,10 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
         <button type="button" class="btn btn-ghost" id="resetColorsBtn">Výchozí barvy</button>
       </div>
     </form>
+    <div style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line);">
+      <button type="button" class="btn btn-danger btn-block" id="deleteAccountBtn"><i class="fa-solid fa-user-xmark"></i> Smazat účet natrvalo</button>
+      <p style="font-size:11.5px;color:var(--ink-faint);margin:6px 0 0;">Smaže tvůj profil, tréninky a tvoje hodnocení/poznámky ve sdílené knihovně. Nevratné.</p>
+    </div>
   </div>
 </div>
 
@@ -814,7 +818,8 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
 import {
   getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  onAuthStateChanged, signOut, sendPasswordResetEmail, setPersistence, browserLocalPersistence
+  onAuthStateChanged, signOut, sendPasswordResetEmail, setPersistence, browserLocalPersistence,
+  deleteUser, EmailAuthProvider, reauthenticateWithCredential
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import {
   initializeFirestore, persistentLocalCache, persistentSingleTabManager,
@@ -2415,6 +2420,45 @@ document.getElementById("profileForm").addEventListener("submit", async (e) => {
     toast("Uložení profilu selhalo, zkontroluj připojení.");
   }
   profileModalBackdrop.classList.add("hidden");
+});
+
+document.getElementById("deleteAccountBtn").addEventListener("click", async () => {
+  const email = auth.currentUser.email;
+  if (!confirm(`Opravdu natrvalo smazat účet ${email}?\n\nSmaže se tvůj profil, všechny tvoje tréninky a tvoje hodnocení/obtížnost/poznámky u videí ve sdílené knihovně (samotná videa zůstanou). Nedá se vrátit zpět.`)) return;
+  const password = prompt(`Pro potvrzení zadej heslo k účtu ${email}:`);
+  if (!password) return;
+  try {
+    await reauthenticateWithCredential(auth.currentUser, EmailAuthProvider.credential(email, password));
+  } catch (err) {
+    toast("Heslo nesedí, účet nebyl smazán (" + translateAuthError(err.code) + ").", 6000);
+    return;
+  }
+  try {
+    // 1) smazat vlastní tréninky
+    const myTrainingsSnap = await getDocs(collection(db, "users", uidCurrent, "trainings"));
+    await Promise.all(myTrainingsSnap.docs.map(d => deleteDoc(d.ref)));
+    // 2) odstranit svoje hodnocení/obtížnost/poznámky ze sdílené knihovny
+    const sharedRef = doc(db, "shared", "data");
+    const sharedSnap = await getDoc(sharedRef);
+    if (sharedSnap.exists()) {
+      const shared = sharedSnap.data();
+      let changed = false;
+      Object.values(shared.library || {}).forEach(it => {
+        if (it.ratings && it.ratings[uidCurrent] !== undefined) { delete it.ratings[uidCurrent]; changed = true; }
+        if (it.difficulties && it.difficulties[uidCurrent] !== undefined) { delete it.difficulties[uidCurrent]; changed = true; }
+        if (it.notesByCoach && it.notesByCoach[uidCurrent] !== undefined) { delete it.notesByCoach[uidCurrent]; changed = true; }
+      });
+      if (changed) await setDoc(sharedRef, shared);
+    }
+    // 3) smazat profil
+    await deleteDoc(doc(db, "users", uidCurrent));
+    // 4) smazat samotný přihlašovací účet
+    await deleteUser(auth.currentUser);
+    toast("Účet smazán.");
+  } catch (err) {
+    console.error(err);
+    alert("Něco se nepovedlo dokončit (" + (err.code || err.message) + "). Zkontroluj připojení a zkus to prosím znovu — ať nezůstanou data napůl smazaná.");
+  }
 });
 
 /* =========================================================
