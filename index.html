@@ -1271,6 +1271,32 @@ async function loadUserData() {
     if (migratedLib) scheduleSave();
   } catch (e) { console.error("Migrace knihovních položek selhala:", e); }
 
+  // --- jednorázové přeřazení "legacy" hodnocení/obtížnosti/poznámek na skutečného autora
+  //     (appku před zapnutím sdílení používal jen admin, takže "legacy" = on) ---
+  try {
+    if (uidCurrent === ADMIN_UID) {
+      let migratedLegacy = false;
+      Object.values(state.library).forEach(it => {
+        if (it.ratings && it.ratings.legacy !== undefined) {
+          if (it.ratings[uidCurrent] === undefined) it.ratings[uidCurrent] = it.ratings.legacy;
+          delete it.ratings.legacy;
+          migratedLegacy = true;
+        }
+        if (it.difficulties && it.difficulties.legacy !== undefined) {
+          if (it.difficulties[uidCurrent] === undefined) it.difficulties[uidCurrent] = it.difficulties.legacy;
+          delete it.difficulties.legacy;
+          migratedLegacy = true;
+        }
+        if (it.notesByCoach && it.notesByCoach.legacy) {
+          if (it.notesByCoach[uidCurrent] === undefined) it.notesByCoach[uidCurrent] = { ...it.notesByCoach.legacy, authorLabel: myLabel() };
+          delete it.notesByCoach.legacy;
+          migratedLegacy = true;
+        }
+      });
+      if (migratedLegacy) scheduleSave();
+    }
+  } catch (e) { console.error("Přeřazení předchozích záznamů selhalo:", e); }
+
   // --- jednorázový úklid starých duplicitních polí z users/{uid} (pravděpodobný důvod, proč dokument narostl přes limit) ---
   try {
     const toClear = {};
