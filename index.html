@@ -1802,6 +1802,7 @@ function openDetailModal(id) {
   currentDetailId = id;
   const embedWrap = document.getElementById("detailEmbedWrap");
   embedWrap.innerHTML = renderEmbedHtml(item);
+  embedWrap.style.height = ""; // reset z případného předchozího otevření
   embedWrap.style.aspectRatio = item.aspectRatio || "16/9";
   if (item.platform === "file") {
     // u přímého video souboru appka pozná skutečný poměr stran sama, jakmile se video načte
@@ -1809,6 +1810,20 @@ function openDetailModal(id) {
     if (videoEl) videoEl.addEventListener("loadedmetadata", () => {
       if (videoEl.videoWidth && videoEl.videoHeight) embedWrap.style.aspectRatio = `${videoEl.videoWidth} / ${videoEl.videoHeight}`;
     }, { once: true });
+  }
+  if (item.platform === "drive") {
+    // Disk má uvnitř náhledu svou vlastní horní lištu (název souboru, tři tečky…), která ukrajuje
+    // z výšky videa — bez kompenzace to pak vypadá zmáčknuté/posunuté dolů. Přidáme prostor navíc.
+    requestAnimationFrame(() => {
+      const w = embedWrap.getBoundingClientRect().width;
+      const [rw, rh] = (item.aspectRatio || "16/9").split("/").map(Number);
+      if (w && rw && rh) {
+        const videoHeight = w * (rh / rw);
+        const withHeaderBuffer = videoHeight + 48;
+        embedWrap.style.aspectRatio = "auto";
+        embedWrap.style.height = Math.min(withHeaderBuffer, window.innerHeight * 0.75) + "px";
+      }
+    });
   }
   const hint = document.getElementById("detailTimestampHint");
   if (item.timestamp) { hint.textContent = `Cvičení začíná v ${secondsToTimestamp(item.timestamp)}`; hint.classList.remove("hidden"); }
