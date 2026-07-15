@@ -327,8 +327,14 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
 .detail-row{margin-bottom:12px;}
 .detail-label{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-faint);font-weight:700;margin-bottom:4px;}
 .detail-text{white-space:pre-wrap;font-size:14px;}
-.coach-note{background:var(--paper);border-left:3px solid var(--court);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:8px 12px;margin-bottom:8px;}
-.coach-note-author{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--court);margin-bottom:3px;}
+.coach-note{display:flex;gap:9px;align-items:flex-start;padding:7px 0;}
+.coach-note + .coach-note{border-top:1px solid var(--line);}
+.coach-note-avatar{
+  width:26px;height:26px;border-radius:50%;background:var(--line) center/cover no-repeat;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:12px;color:#fff;margin-top:1px;
+}
+.coach-note-body{flex:1;font-size:13.5px;line-height:1.45;min-width:0;}
+.coach-note-author{font-weight:700;margin-right:5px;}
 
 /* ---------- Trainings list ---------- */
 .training-row{
@@ -886,6 +892,21 @@ function avgOf(map) {
 }
 function myLabel() {
   return (state.profile && state.profile.username) || (auth.currentUser && auth.currentUser.email) || "Trenér";
+}
+const profileCache = {}; // uid -> {username, avatarUrl, colorPrimary}
+async function getCoachProfile(coachUid) {
+  if (coachUid === uidCurrent) return state.profile || {};
+  if (profileCache[coachUid]) return profileCache[coachUid];
+  try {
+    const snap = await getDoc(doc(db, "users", coachUid));
+    const d = snap.exists() ? snap.data() : {};
+    const p = { username: d.username || "", avatarUrl: d.avatarUrl || "", colorPrimary: d.colorPrimary || DEFAULT_COLORS.primary };
+    profileCache[coachUid] = p;
+    return p;
+  } catch (e) {
+    console.warn("Nepodařilo se načíst profil kolegy:", e);
+    return {};
+  }
 }
 function nextFolderColor() {
   return FOLDER_COLORS[state.folders.length % FOLDER_COLORS.length];
@@ -1854,14 +1875,29 @@ function openDetailModal(id) {
   document.getElementById("detailShortDesc").textContent = item.shortDesc;
   document.getElementById("detailLongDescRow").classList.toggle("hidden", !item.longDesc);
   document.getElementById("detailLongDesc").textContent = item.longDesc;
-  const notes = Object.values(item.notesByCoach || {}).sort((a, b) => (a.date || 0) - (b.date || 0));
-  document.getElementById("detailNoteRow").classList.toggle("hidden", !notes.length);
-  document.getElementById("detailNote").innerHTML = notes.map(n => `
-    <div class="coach-note">
-      <div class="coach-note-author">${esc(n.authorLabel || "Trenér")}</div>
-      <div>${esc(n.text)}</div>
+  const noteEntries = Object.entries(item.notesByCoach || {}).sort((a, b) => (a[1].date || 0) - (b[1].date || 0));
+  document.getElementById("detailNoteRow").classList.toggle("hidden", !noteEntries.length);
+  document.getElementById("detailNote").innerHTML = noteEntries.map(([coachUid, n]) => `
+    <div class="coach-note" data-coach="${esc(coachUid)}">
+      <span class="coach-note-avatar" style="background-color:${esc(DEFAULT_COLORS.primary)}">${esc((n.authorLabel || "?").trim().charAt(0).toUpperCase())}</span>
+      <div class="coach-note-body"><span class="coach-note-author">${esc(n.authorLabel || "Trenér")}</span>${esc(n.text)}</div>
     </div>
   `).join("");
+  // doplní avatar a osobní barvu každého trenéra, jakmile se (rychle, z cache) načte jeho profil
+  noteEntries.forEach(([coachUid]) => {
+    if (coachUid === "legacy") return;
+    getCoachProfile(coachUid).then(p => {
+      if (currentDetailId !== id) return; // mezitím se otevřelo jiné video
+      const row = document.querySelector(`.coach-note[data-coach="${CSS.escape(coachUid)}"]`);
+      if (!row || !p) return;
+      const avatar = row.querySelector(".coach-note-avatar");
+      const author = row.querySelector(".coach-note-author");
+      if (p.avatarUrl) { avatar.style.backgroundImage = `url('${p.avatarUrl}')`; avatar.textContent = ""; }
+      const color = p.colorPrimary || DEFAULT_COLORS.primary;
+      avatar.style.backgroundColor = color;
+      if (author) author.style.color = color;
+    });
+  });
   detailModalBackdrop.classList.remove("hidden");
 }
 document.getElementById("editFromDetailBtn").addEventListener("click", () => {
