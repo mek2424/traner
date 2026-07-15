@@ -720,12 +720,12 @@ function esc(s) {
 function uid() {
   return (crypto.randomUUID ? crypto.randomUUID() : "id-" + Date.now() + "-" + Math.random().toString(16).slice(2));
 }
-function toast(msg) {
+function toast(msg, durationMs = 2200) {
   const t = document.getElementById("toast");
   t.textContent = msg;
   t.classList.add("show");
   clearTimeout(toast._tm);
-  toast._tm = setTimeout(() => t.classList.remove("show"), 2200);
+  toast._tm = setTimeout(() => t.classList.remove("show"), durationMs);
 }
 function scheduleSave() {
   clearTimeout(saveTimer);
@@ -922,7 +922,7 @@ async function loadUserData() {
     legacy = legacySnap.exists() ? legacySnap.data() : {};
   } catch (e) {
     console.error("Nepodařilo se načíst uživatelský dokument:", e);
-    loadErrors.push("profil");
+    loadErrors.push(`profil (${e.code || e.message || "?"})`);
   }
 
   state.profile = {
@@ -961,7 +961,7 @@ async function loadUserData() {
     sharedOk = true;
   } catch (e) {
     console.error("Nepodařilo se načíst sdílenou knihovnu:", e);
-    loadErrors.push("knihovna");
+    loadErrors.push(`knihovna (${e.code || e.message || "?"})`);
   }
 
   // --- tréninky (moje subkolekce + jednorázová migrace ze staré mapy + všechny přes collection group) ---
@@ -990,7 +990,7 @@ async function loadUserData() {
     trainingsOk = true;
   } catch (e) {
     console.error("Nepodařilo se načíst tréninky:", e);
-    loadErrors.push("tréninky");
+    loadErrors.push(`tréninky (${e.code || e.message || "?"})`);
   }
 
   // --- drobná migrace polí přímo na knihovních položkách (defaultPart / portrait) ---
@@ -1017,7 +1017,7 @@ async function loadUserData() {
   } catch (e) { console.error("Úklid starých dat se nepovedl (nic se neztratilo, jen to zabírá víc místa):", e); }
 
   if (loadErrors.length) {
-    toast("Nepodařilo se plně načíst: " + loadErrors.join(", ") + ". Zkus appku obnovit (F5) nebo zkontroluj připojení a Firestore pravidla.");
+    toast("Nepodařilo se plně načíst: " + loadErrors.join("; ") + ". Zkus obnovit (F5) nebo zkontroluj Firestore pravidla.", 12000);
   }
 }
 
