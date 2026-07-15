@@ -358,6 +358,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
 }
 .editor-layout{display:grid;grid-template-columns:1fr;gap:18px;}
 @media(min-width:860px){.editor-layout{grid-template-columns:280px 1fr;align-items:start;}}
+@media(min-width:860px){.editor-layout.no-picker{grid-template-columns:1fr;}}
 .picker-panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:12px;}
 @media(min-width:860px){.picker-panel{position:sticky;top:110px;max-height:calc(100vh - 130px);overflow-y:auto;}}
 .picker-panel h3{font-size:14px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);font-family:var(--font-body);font-weight:700;margin-bottom:8px;}
@@ -373,18 +374,18 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
 .sequence{display:flex;flex-direction:column;gap:8px;min-height:60px;}
 .seq-item{
   border-radius:var(--radius);padding:10px 12px;position:relative;border:1px solid rgba(0,0,0,.06);
-  box-shadow:var(--shadow);
+  box-shadow:var(--shadow);overflow:hidden;max-width:100%;
 }
 .seq-item.is-break{
   background:repeating-linear-gradient(135deg, var(--part-prestavka), var(--part-prestavka) 8px, #d8d9d5 8px, #d8d9d5 16px);
   text-align:center;padding:9px 12px;
 }
-.seq-item-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.seq-item-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-width:100%;}
 .drag-handle{cursor:grab;color:rgba(27,36,48,.4);font-size:15px;padding:2px 4px;touch-action:none;flex-shrink:0;}
 .seq-thumb{width:52px;height:34px;object-fit:cover;border-radius:5px;background:rgba(0,0,0,.15);flex-shrink:0;cursor:pointer;}
 .seq-title{font-size:13.5px;font-weight:700;flex:1 1 120px;min-width:0;cursor:pointer;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.seq-controls{display:flex;align-items:center;gap:5px;flex-shrink:0;margin-left:auto;}
+.seq-controls{display:flex;align-items:center;gap:5px;flex-shrink:0;}
 .seq-part-select{border:1px solid rgba(0,0,0,.15);border-radius:6px;background:rgba(255,255,255,.6);font-size:11px;padding:3px 4px;max-width:96px;}
 .seq-duration{width:46px;border:1px solid rgba(0,0,0,.15);border-radius:6px;padding:3px 4px;font-size:12px;text-align:center;}
 .seq-item-fields{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;}
@@ -392,6 +393,10 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
 .seq-item-fields input{border:1px solid rgba(0,0,0,.15);border-radius:6px;padding:5px 7px;font-size:12px;background:rgba(255,255,255,.55);}
 .seq-item-fields input::placeholder{color:rgba(27,36,48,.45);}
 .break-label{border:none;background:none;font-family:var(--font-display);font-size:16px;letter-spacing:.03em;color:var(--ink-soft);text-align:center;width:60%;}
+.seq-part-select:disabled,.seq-duration:disabled,.seq-item-fields input:disabled,.break-label:disabled{
+  opacity:.55;cursor:not-allowed;-webkit-text-fill-color:currentColor;
+}
+.editor-head input[type=text]:disabled{opacity:.6;cursor:not-allowed;background:var(--paper);}
 .seq-remove{position:absolute;top:6px;right:6px;background:rgba(255,255,255,.7);border:none;border-radius:50%;width:22px;height:22px;font-size:13px;color:var(--danger);line-height:1;}
 .sortable-ghost{opacity:.35;}
 .part-legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;font-size:11px;color:var(--ink-soft);}
@@ -530,7 +535,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
         <div class="part-legend" id="partLegend"></div>
         <button type="button" class="manage-link" id="managePartsBtn"><i class="fa-solid fa-sliders"></i> Spravovat části tréninku</button>
       </div>
-      <div class="editor-layout">
+      <div class="editor-layout" id="editorLayout">
         <div class="picker-panel">
           <h3>Přidat z knihovny</h3>
           <input type="search" id="pickerSearch" class="picker-search" placeholder="Hledat…">
@@ -2088,6 +2093,7 @@ function openEditor(id) {
   document.getElementById("readOnlyBanner").classList.toggle("hidden", !editorReadOnly);
   if (editorReadOnly) document.getElementById("readOnlyBannerText").textContent = `Trénink uživatele ${t.ownerLabel || "kolega"} — jen ke čtení.`;
   document.querySelector(".picker-panel").classList.toggle("hidden", editorReadOnly);
+  document.getElementById("editorLayout").classList.toggle("no-picker", editorReadOnly);
   document.getElementById("saveTrainingBtn").classList.toggle("hidden", editorReadOnly);
   document.getElementById("deleteTrainingBtn").classList.toggle("hidden", editorReadOnly);
   pickerTagFilter.clear();
