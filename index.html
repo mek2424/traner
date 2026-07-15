@@ -14,6 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
 <style>
 :root{
   --paper:#F4F5F2;
@@ -105,6 +106,9 @@ a{color:var(--court);}
 #loginError{color:var(--danger);font-size:13px;margin:8px 0 0;min-height:16px;}
 .login-switch{text-align:center;margin-top:16px;font-size:13px;color:var(--ink-soft);}
 .login-switch button{background:none;border:none;color:var(--court);font-weight:600;padding:0;text-decoration:underline;}
+.forgot-pass{text-align:right;margin:-8px 0 14px;}
+.forgot-pass button{background:none;border:none;color:var(--ink-soft);font-size:12.5px;text-decoration:underline;padding:0;}
+#loginInfo{color:var(--ok);font-size:13px;margin:8px 0 0;min-height:16px;}
 
 /* ---------- App shell ---------- */
 #app{min-height:100vh;display:flex;flex-direction:column;}
@@ -155,8 +159,8 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
   display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.85);font-size:11px;
 }
 .card-thumb .platform-badge{
-  position:absolute;top:6px;right:6px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;
-  padding:2px 7px;border-radius:999px;text-transform:uppercase;letter-spacing:.03em;
+  position:absolute;top:6px;right:6px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;
+  width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:50%;
 }
 .card-body{padding:9px 10px 11px;flex:1;display:flex;flex-direction:column;gap:5px;}
 .card-title{font-size:13.5px;font-weight:600;line-height:1.3;
@@ -197,12 +201,25 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
 .modal-actions{display:flex;gap:8px;margin-top:18px;}
 .modal-actions .btn{flex:1;}
 .thumb-preview{width:100%;aspect-ratio:16/9;background:var(--paper);border:1px dashed var(--line);border-radius:var(--radius-sm);
-  display:flex;align-items:center;justify-content:center;color:var(--ink-faint);font-size:12px;margin-bottom:12px;background-size:cover;background-position:center;overflow:hidden;}
+  display:flex;align-items:center;justify-content:center;color:var(--ink-faint);font-size:12px;margin-bottom:8px;background-size:cover;background-position:center;overflow:hidden;}
+.thumb-upload-row{display:flex;gap:8px;margin-bottom:12px;}
+.thumb-upload-row label.btn{flex:1;text-align:center;}
+.thumb-upload-row input[type=file]{display:none;}
+
+.manage-link{background:none;border:none;color:var(--court);font-size:12.5px;font-weight:600;text-decoration:underline;padding:4px 0;}
+.manage-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.manage-row .swatch{width:20px;height:20px;border-radius:5px;flex-shrink:0;}
+.manage-row input{flex:1;padding:7px 9px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper);}
+
+.filter-panel{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--line);}
+.filter-panel select{width:100%;padding:7px 8px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper);font-size:12.5px;}
+.filter-panel .chip-row{margin-bottom:0;}
+.filter-panel .chip{padding:3px 9px;font-size:11.5px;}
 .url-row{display:flex;gap:8px;}
 .url-row input{flex:1;}
 
 /* ---------- Detail modal ---------- */
-.embed-wrap{aspect-ratio:16/9;background:#000;border-radius:var(--radius-sm);overflow:hidden;margin-bottom:14px;}
+.embed-wrap{width:100%;height:min(70vh,560px);min-height:220px;background:#000;border-radius:var(--radius-sm);overflow:hidden;margin-bottom:14px;}
 .embed{width:100%;height:100%;border:0;display:block;}
 .fallback-link{display:flex;align-items:center;justify-content:center;height:100%;color:#fff;background:var(--court);text-decoration:none;font-weight:600;}
 .detail-title{font-size:24px;margin-bottom:8px;}
@@ -250,12 +267,12 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
   background:repeating-linear-gradient(135deg, var(--part-prestavka), var(--part-prestavka) 8px, #d8d9d5 8px, #d8d9d5 16px);
   text-align:center;padding:9px 12px;
 }
-.seq-item-top{display:flex;align-items:center;gap:8px;}
-.drag-handle{cursor:grab;color:rgba(27,36,48,.4);font-size:16px;padding:2px 4px;touch-action:none;}
+.seq-item-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.drag-handle{cursor:grab;color:rgba(27,36,48,.4);font-size:15px;padding:2px 4px;touch-action:none;flex-shrink:0;}
 .seq-thumb{width:52px;height:34px;object-fit:cover;border-radius:5px;background:rgba(0,0,0,.15);flex-shrink:0;cursor:pointer;}
-.seq-title{font-size:13.5px;font-weight:700;flex:1;min-width:0;cursor:pointer;
+.seq-title{font-size:13.5px;font-weight:700;flex:1 1 120px;min-width:0;cursor:pointer;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.seq-controls{display:flex;align-items:center;gap:5px;flex-shrink:0;}
+.seq-controls{display:flex;align-items:center;gap:5px;flex-shrink:0;margin-left:auto;}
 .seq-part-select{border:1px solid rgba(0,0,0,.15);border-radius:6px;background:rgba(255,255,255,.6);font-size:11px;padding:3px 4px;max-width:96px;}
 .seq-duration{width:46px;border:1px solid rgba(0,0,0,.15);border-radius:6px;padding:3px 4px;font-size:12px;text-align:center;}
 .seq-item-fields{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;}
@@ -295,8 +312,10 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
         <label for="loginPass">Heslo</label>
         <input type="password" id="loginPass" autocomplete="current-password" required minlength="6">
       </div>
+      <div class="forgot-pass"><button type="button" id="forgotPassBtn">Zapomenuté heslo?</button></div>
       <p id="loginError"></p>
-      <button type="submit" class="btn btn-primary btn-block" id="loginSubmitBtn">Přihlásit se</button>
+      <p id="loginInfo"></p>
+      <button type="submit" class="btn btn-primary btn-block" id="loginSubmitBtn"><i class="fa-solid fa-right-to-bracket"></i> Přihlásit se</button>
     </form>
     <div class="login-switch">
       <span id="loginSwitchText">Ještě nemáš účet?</span>
@@ -311,12 +330,12 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
     <div class="topbar-title">TRENÉR</div>
     <div class="topbar-user">
       <span id="userEmailLabel"></span>
-      <button id="logoutBtn">Odhlásit</button>
+      <button id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Odhlásit</button>
     </div>
   </header>
   <nav class="tabs">
-    <button data-view="library" class="active">Knihovna</button>
-    <button data-view="trainings">Tréninky</button>
+    <button data-view="library" class="active"><i class="fa-solid fa-video"></i> Knihovna</button>
+    <button data-view="trainings"><i class="fa-solid fa-list-check"></i> Tréninky</button>
   </nav>
 
   <main>
@@ -325,9 +344,16 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
       <div class="toolbar">
         <input type="search" id="librarySearch" placeholder="Hledat podle názvu, štítku, složky…">
         <select id="folderFilter"><option value="">Všechny složky</option></select>
-        <button class="btn btn-accent" id="openAddLinkBtn">+ Přidat odkaz</button>
+        <select id="librarySort">
+          <option value="date-desc">Nejnovější</option>
+          <option value="date-asc">Nejstarší</option>
+          <option value="az">A–Z</option>
+          <option value="za">Z–A</option>
+        </select>
+        <button class="btn btn-accent" id="openAddLinkBtn"><i class="fa-solid fa-plus"></i> Přidat odkaz</button>
       </div>
       <div class="chip-row" id="tagFilterRow"></div>
+      <div class="chip-row" id="equipFilterRow"></div>
       <div id="libraryGrid" class="grid"></div>
     </section>
 
@@ -335,25 +361,34 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
     <section id="trainingsView" class="hidden">
       <div class="toolbar">
         <h2 style="flex:1;font-size:24px;color:var(--court);">Tréninky</h2>
-        <button class="btn btn-accent" id="newTrainingBtn">+ Nový trénink</button>
+        <button class="btn btn-accent" id="newTrainingBtn"><i class="fa-solid fa-plus"></i> Nový trénink</button>
       </div>
       <div id="trainingsList"></div>
     </section>
 
     <!-- ---------- TRAINING EDITOR VIEW ---------- -->
     <section id="editorView" class="hidden">
-      <button class="btn btn-ghost btn-sm" id="backToTrainingsBtn" style="margin-bottom:10px;">← Zpět na tréninky</button>
+      <button class="btn btn-ghost btn-sm" id="backToTrainingsBtn" style="margin-bottom:10px;"><i class="fa-solid fa-arrow-left"></i> Zpět na tréninky</button>
       <div class="editor-head">
         <input type="text" id="trainingNameInput" placeholder="Název tréninku">
         <div class="total-badge" id="totalTimeBadge">0 min</div>
       </div>
-      <div class="part-legend" id="partLegend"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+        <div class="part-legend" id="partLegend"></div>
+        <button type="button" class="manage-link" id="managePartsBtn"><i class="fa-solid fa-sliders"></i> Spravovat části tréninku</button>
+      </div>
       <div class="editor-layout">
         <div class="picker-panel">
           <h3>Přidat z knihovny</h3>
           <input type="search" id="pickerSearch" class="picker-search" placeholder="Hledat…">
+          <div class="filter-panel">
+            <select id="pickerFolderFilter"><option value="">Všechny složky</option></select>
+            <select id="pickerPartFilter"><option value="">Jakákoli část</option></select>
+            <div class="chip-row" id="pickerTagFilterRow"></div>
+            <div class="chip-row" id="pickerEquipFilterRow"></div>
+          </div>
           <div class="picker-list" id="pickerList"></div>
-          <button class="btn btn-ghost btn-sm btn-block add-break-btn" id="addBreakBtn">+ Přidat přestávku</button>
+          <button class="btn btn-ghost btn-sm btn-block add-break-btn" id="addBreakBtn"><i class="fa-solid fa-mug-hot"></i> Přidat přestávku</button>
         </div>
         <div>
           <div class="sequence" id="sequenceList"></div>
@@ -364,8 +399,8 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
         </div>
       </div>
       <div class="modal-actions" style="max-width:960px;">
-        <button class="btn btn-primary" id="saveTrainingBtn">Uložit trénink</button>
-        <button class="btn btn-danger" id="deleteTrainingBtn">Smazat</button>
+        <button class="btn btn-primary" id="saveTrainingBtn"><i class="fa-solid fa-floppy-disk"></i> Uložit trénink</button>
+        <button class="btn btn-danger" id="deleteTrainingBtn"><i class="fa-solid fa-trash"></i> Smazat</button>
       </div>
     </section>
   </main>
@@ -383,10 +418,14 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
         <label for="linkUrl">Odkaz (YouTube, Facebook, Disk, jiné)</label>
         <div class="url-row">
           <input type="url" id="linkUrl" placeholder="https://…" required>
-          <button type="button" class="btn btn-sm" id="fetchMetaBtn">Načíst info</button>
+          <button type="button" class="btn btn-sm" id="fetchMetaBtn"><i class="fa-solid fa-arrow-rotate-right"></i> Načíst info</button>
         </div>
       </div>
       <div class="thumb-preview" id="thumbPreview">bez náhledu</div>
+      <div class="thumb-upload-row">
+        <label class="btn btn-sm" for="thumbFileInput"><i class="fa-solid fa-image"></i> Nahrát vlastní náhled</label>
+        <input type="file" id="thumbFileInput" accept="image/*">
+      </div>
       <div class="field">
         <label for="linkTitle">Název *</label>
         <input type="text" id="linkTitle" required>
@@ -402,15 +441,21 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
         </div>
       </div>
       <div class="field">
+        <label for="linkDefaultPart">Výchozí část tréninku</label>
+        <select id="linkDefaultPart"></select>
+      </div>
+      <div class="field">
         <label>Štítky</label>
         <div class="tag-input-wrap" id="tagWrap">
-          <input type="text" id="tagInput" placeholder="napiš a Enter…">
+          <input type="text" id="tagInput" placeholder="napiš a Enter…" list="tagSuggestions">
+          <datalist id="tagSuggestions"></datalist>
         </div>
       </div>
       <div class="field">
         <label>Vybavení</label>
         <div class="tag-input-wrap" id="equipWrap">
-          <input type="text" id="equipInput" placeholder="napiš a Enter…">
+          <input type="text" id="equipInput" placeholder="napiš a Enter…" list="equipSuggestions">
+          <datalist id="equipSuggestions"></datalist>
         </div>
       </div>
       <div class="two-col">
@@ -452,8 +497,8 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
         <textarea id="linkNote"></textarea>
       </div>
       <div class="modal-actions">
-        <button type="submit" class="btn btn-primary">Uložit</button>
-        <button type="button" class="btn btn-danger hidden" id="deleteLinkBtn">Smazat</button>
+        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Uložit</button>
+        <button type="button" class="btn btn-danger hidden" id="deleteLinkBtn"><i class="fa-solid fa-trash"></i> Smazat</button>
       </div>
     </form>
   </div>
@@ -467,6 +512,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
       <button class="btn btn-icon btn-ghost" id="closeDetailModalBtn">✕</button>
     </div>
     <div class="embed-wrap" id="detailEmbedWrap"></div>
+    <div id="detailFbFallback"></div>
     <div class="detail-title" id="detailTitle"></div>
     <div class="detail-row" id="detailChips"></div>
     <div class="detail-row">
@@ -482,7 +528,21 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
       <div class="detail-text" id="detailNote"></div>
     </div>
     <div class="modal-actions">
-      <button class="btn btn-primary" id="editFromDetailBtn">Upravit</button>
+      <button class="btn btn-primary" id="editFromDetailBtn"><i class="fa-solid fa-pen"></i> Upravit</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MANAGE PARTS MODAL ===================== -->
+<div id="partsModalBackdrop" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 style="font-size:22px;">Části tréninku</h2>
+      <button class="btn btn-icon btn-ghost" id="closePartsModalBtn">✕</button>
+    </div>
+    <div id="partsManageList"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-primary btn-block" id="addPartBtn"><i class="fa-solid fa-plus"></i> Přidat novou část</button>
     </div>
   </div>
 </div>
@@ -494,7 +554,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
 import {
   getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  onAuthStateChanged, signOut
+  onAuthStateChanged, signOut, sendPasswordResetEmail, setPersistence, browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import {
   initializeFirestore, persistentLocalCache, persistentSingleTabManager,
@@ -516,6 +576,7 @@ const firebaseConfig = {
 
 const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp);
+try { await setPersistence(auth, browserLocalPersistence); } catch (e) { console.warn("Persistence se nepodařilo nastavit:", e); }
 let db;
 try {
   db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabManager: persistentSingleTabManager({}) }) });
@@ -528,24 +589,34 @@ try {
    STATE
    ========================================================= */
 let uidCurrent = null;
-let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [] };
+let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [] };
 let currentView = "library";
 let editingLinkId = null;       // id knihovní položky, když se edituje
 let currentTrainingId = null;   // id tréninku otevřeného v editoru
 let currentDetailId = null;     // id knihovní položky v detail modalu
 let libraryTagFilter = new Set();
+let libraryEquipFilter = new Set();
+let pickerTagFilter = new Set();
+let pickerEquipFilter = new Set();
 let saveTimer = null;
 let sortableInstance = null;
+let pendingThumbUpload = null; // data URL vlastního nahraného náhledu, čeká na uložení formuláře
 
-const PARTS = {
-  rozcvicka:  { label: "Rozcvička",           css: "--part-rozcvicka" },
-  hra:        { label: "Hra na rozehřátí",    css: "--part-hra" },
-  dril:       { label: "Dril",                css: "--part-dril" },
-  herni:      { label: "Herní cvičení",       css: "--part-herni" },
-  protazeni:  { label: "Závěr – protažení",   css: "--part-protazeni" },
-  posilovani: { label: "Závěr – posilování",  css: "--part-posilovani" },
-  kompenzace: { label: "Závěr – kompenzace",  css: "--part-kompenzace" }
-};
+const DEFAULT_PARTS = [
+  { key: "rozcvicka", label: "Rozcvička",          color: "#A8C0DE" },
+  { key: "hra",        label: "Hra na rozehřátí",  color: "#E8C468" },
+  { key: "dril",        label: "Dril",             color: "#7FB0AC" },
+  { key: "herni",       label: "Herní cvičení",    color: "#E39A8A" },
+  { key: "zaver",       label: "Závěr",             color: "#B8A8D4" }
+];
+const EXTRA_PART_COLORS = ["#C97B5C", "#ABA875", "#8FB0D9", "#D9A6C2", "#9FC2A6", "#C9B458", "#B0A0D6", "#E0966E"];
+function getPart(key) {
+  return state.parts.find(p => p.key === key) || { key, label: key, color: "#C7C9C4" };
+}
+function nextPartColor() {
+  const used = state.parts.length;
+  return EXTRA_PART_COLORS[used % EXTRA_PART_COLORS.length];
+}
 
 /* =========================================================
    HELPERS
@@ -641,10 +712,28 @@ let authMode = "login";
 
 loginSwitchBtn.addEventListener("click", () => {
   authMode = authMode === "login" ? "register" : "login";
-  loginSubmitBtn.textContent = authMode === "login" ? "Přihlásit se" : "Založit účet";
+  loginSubmitBtn.innerHTML = authMode === "login" ? '<i class="fa-solid fa-right-to-bracket"></i> Přihlásit se' : '<i class="fa-solid fa-user-plus"></i> Založit účet';
   loginSwitchText.textContent = authMode === "login" ? "Ještě nemáš účet?" : "Už máš účet?";
   loginSwitchBtn.textContent = authMode === "login" ? "Založit účet" : "Přihlásit se";
   loginError.textContent = "";
+  document.getElementById("loginInfo").textContent = "";
+});
+
+document.getElementById("forgotPassBtn").addEventListener("click", async () => {
+  const email = document.getElementById("loginEmail").value.trim();
+  const infoEl = document.getElementById("loginInfo");
+  loginError.textContent = "";
+  infoEl.textContent = "";
+  if (!email) {
+    loginError.textContent = "Nejdřív napiš svůj e-mail nahoře, pak klikni na tohle znovu.";
+    return;
+  }
+  try {
+    await sendPasswordResetEmail(auth, email);
+    infoEl.textContent = "Odesláno — mrkni do e-mailu (i do spamu) na odkaz pro nastavení nového hesla.";
+  } catch (err) {
+    loginError.textContent = translateAuthError(err.code);
+  }
 });
 
 loginForm.addEventListener("submit", async (e) => {
@@ -709,10 +798,29 @@ async function loadUserData() {
         trainings: d.trainings || {},
         folders: d.folders || [],
         tagPool: d.tagPool || [],
-        equipmentPool: d.equipmentPool || []
+        equipmentPool: d.equipmentPool || [],
+        parts: (d.parts && d.parts.length) ? d.parts : structuredClone(DEFAULT_PARTS)
       };
+      // migrace ze staršího pevného seznamu částí (protažení/posilování/kompenzace -> Závěr)
+      const legacyMap = { protazeni: "zaver", posilovani: "zaver", kompenzace: "zaver" };
+      let migrated = false;
+      Object.values(state.trainings).forEach(t => {
+        (t.items || []).forEach(it => {
+          if (legacyMap[it.part]) { it.part = legacyMap[it.part]; migrated = true; }
+        });
+      });
+      Object.values(state.library).forEach(it => {
+        if (it.defaultPart === undefined) { it.defaultPart = state.parts[2] ? state.parts[2].key : state.parts[0].key; migrated = true; }
+        if (legacyMap[it.defaultPart]) { it.defaultPart = legacyMap[it.defaultPart]; migrated = true; }
+      });
+      if (!d.parts || !d.parts.length || migrated) scheduleSave();
     } else {
-      state = { library: {}, trainings: {}, folders: ["Útok", "Blok", "Nahrávka", "Podání", "Příjem", "Obrana", "Kondice"], tagPool: [], equipmentPool: [] };
+      state = {
+        library: {}, trainings: {},
+        folders: ["Útok", "Blok", "Nahrávka", "Podání", "Příjem", "Obrana", "Kondice"],
+        tagPool: [], equipmentPool: [],
+        parts: structuredClone(DEFAULT_PARTS)
+      };
       await saveUserData();
     }
   } catch (e) {
@@ -755,57 +863,84 @@ document.getElementById("folderFilter").addEventListener("change", renderLibrary
 function renderFolderOptions() {
   const sel = document.getElementById("folderFilter");
   const formSel = document.getElementById("linkFolder");
-  const prevFilter = sel.value, prevForm = formSel.value;
-  sel.innerHTML = '<option value="">Všechny složky</option>' + state.folders.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join("");
-  formSel.innerHTML = '<option value="">— vyber —</option>' + state.folders.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join("");
+  const pickerSel = document.getElementById("pickerFolderFilter");
+  const prevFilter = sel.value, prevForm = formSel.value, prevPicker = pickerSel ? pickerSel.value : "";
+  const opts = state.folders.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join("");
+  sel.innerHTML = '<option value="">Všechny složky</option>' + opts;
+  formSel.innerHTML = '<option value="">— vyber —</option>' + opts;
+  if (pickerSel) pickerSel.innerHTML = '<option value="">Všechny složky</option>' + opts;
   if (state.folders.includes(prevFilter)) sel.value = prevFilter;
   if (state.folders.includes(prevForm)) formSel.value = prevForm;
+  if (pickerSel && state.folders.includes(prevPicker)) pickerSel.value = prevPicker;
 }
 
-function renderTagFilterRow() {
-  const row = document.getElementById("tagFilterRow");
-  if (!state.tagPool.length) { row.innerHTML = ""; return; }
-  row.innerHTML = state.tagPool.map(t =>
-    `<button class="chip ${libraryTagFilter.has(t) ? "active" : ""}" data-tag="${esc(t)}">${esc(t)}</button>`
+function renderPartSelectOptions() {
+  const opts = state.parts.map(p => `<option value="${esc(p.key)}">${esc(p.label)}</option>`).join("");
+  const defSel = document.getElementById("linkDefaultPart");
+  const pickerSel = document.getElementById("pickerPartFilter");
+  if (defSel) { const prev = defSel.value; defSel.innerHTML = opts; if ([...defSel.options].some(o => o.value === prev)) defSel.value = prev; }
+  if (pickerSel) { const prev = pickerSel.value; pickerSel.innerHTML = '<option value="">Jakákoli část</option>' + opts; if ([...pickerSel.options].some(o => o.value === prev)) pickerSel.value = prev; }
+}
+
+/** Obecný render aktivních filtrovacích chipů (štítky/vybavení, knihovna i editor). */
+function renderFilterChips(containerId, pool, filterSet, onChange) {
+  const row = document.getElementById(containerId);
+  if (!row) return;
+  if (!pool.length) { row.innerHTML = ""; return; }
+  row.innerHTML = pool.map(t =>
+    `<button type="button" class="chip ${filterSet.has(t) ? "active" : ""}" data-val="${esc(t)}">${esc(t)}</button>`
   ).join("");
   row.querySelectorAll(".chip").forEach(chip => {
     chip.addEventListener("click", () => {
-      const t = chip.dataset.tag;
-      libraryTagFilter.has(t) ? libraryTagFilter.delete(t) : libraryTagFilter.add(t);
-      renderTagFilterRow();
-      renderLibrary();
+      const v = chip.dataset.val;
+      filterSet.has(v) ? filterSet.delete(v) : filterSet.add(v);
+      onChange();
     });
   });
 }
+function renderTagFilterRow() { renderFilterChips("tagFilterRow", state.tagPool, libraryTagFilter, () => { renderTagFilterRow(); renderEquipFilterRow(); renderLibrary(); }); }
+function renderEquipFilterRow() { renderFilterChips("equipFilterRow", state.equipmentPool, libraryEquipFilter, () => { renderTagFilterRow(); renderEquipFilterRow(); renderLibrary(); }); }
 
 function getFilteredLibraryItems() {
   const q = document.getElementById("librarySearch").value.trim().toLowerCase();
   const folder = document.getElementById("folderFilter").value;
-  return Object.values(state.library).filter(item => {
+  const sortMode = document.getElementById("librarySort").value;
+  const items = Object.values(state.library).filter(item => {
     if (folder && item.folder !== folder) return false;
-    if (libraryTagFilter.size && !item.tags.some(t => libraryTagFilter.has(t))) return false;
+    if (libraryTagFilter.size && ![...libraryTagFilter].every(t => item.tags.includes(t))) return false;
+    if (libraryEquipFilter.size && ![...libraryEquipFilter].every(t => item.equipment.includes(t))) return false;
     if (q) {
       const hay = [item.title, item.folder, ...(item.tags || []), item.shortDesc].join(" ").toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
-  }).sort((a, b) => (b.dateAdded || 0) - (a.dateAdded || 0));
+  });
+  const sorters = {
+    "date-desc": (a, b) => (b.dateAdded || 0) - (a.dateAdded || 0),
+    "date-asc": (a, b) => (a.dateAdded || 0) - (b.dateAdded || 0),
+    "az": (a, b) => a.title.localeCompare(b.title, "cs"),
+    "za": (a, b) => b.title.localeCompare(a.title, "cs")
+  };
+  return items.sort(sorters[sortMode] || sorters["date-desc"]);
 }
+
+const PLATFORM_ICONS = { youtube: "fa-brands fa-youtube", facebook: "fa-brands fa-facebook", drive: "fa-brands fa-google-drive", other: "fa-solid fa-link" };
 
 function renderLibrary() {
   renderFolderOptions();
   renderTagFilterRow();
+  renderEquipFilterRow();
   const grid = document.getElementById("libraryGrid");
   const items = getFilteredLibraryItems();
   if (!items.length) {
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><h3>Zatím žádná videa</h3><p>Přidej první odkaz tlačítkem nahoře.</p></div>`;
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><h3>Zatím žádná videa</h3><p>Přidej první odkaz tlačítkem nahoře, nebo zkus uvolnit filtry.</p></div>`;
     return;
   }
   grid.innerHTML = items.map(item => `
     <button class="card" data-id="${esc(item.id)}" data-action="open-detail">
       <div class="card-thumb" style="${item.thumbnail ? `background-image:url('${esc(item.thumbnail)}')` : ""}">
         ${item.thumbnail ? "" : "bez náhledu"}
-        <span class="platform-badge">${esc(item.platform)}</span>
+        <span class="platform-badge"><i class="${PLATFORM_ICONS[item.platform] || PLATFORM_ICONS.other}"></i></span>
       </div>
       <div class="card-body">
         <div class="card-title">${esc(item.title)}</div>
@@ -822,6 +957,7 @@ document.getElementById("libraryGrid").addEventListener("click", (e) => {
   const card = e.target.closest("[data-action='open-detail']");
   if (card) openDetailModal(card.dataset.id);
 });
+document.getElementById("librarySort").addEventListener("change", renderLibrary);
 
 /* =========================================================
    ADD / EDIT LINK MODAL
@@ -837,12 +973,18 @@ linkModalBackdrop.addEventListener("click", (e) => { if (e.target === linkModalB
 function openLinkModal(id) {
   editingLinkId = id;
   renderFolderOptions();
+  renderPartSelectOptions();
+  renderTagSuggestions();
+  renderEquipSuggestions();
+  pendingThumbUpload = null;
+  document.getElementById("thumbFileInput").value = "";
   const item = id ? state.library[id] : null;
   document.getElementById("linkModalTitle").textContent = item ? "Upravit odkaz" : "Přidat odkaz";
   document.getElementById("linkUrl").value = item ? item.url : "";
   document.getElementById("linkTitle").value = item ? item.title : "";
   document.getElementById("linkFolder").value = item ? item.folder : "";
   document.getElementById("newFolderInput").value = "";
+  document.getElementById("linkDefaultPart").value = item ? item.defaultPart : (state.parts[2] ? state.parts[2].key : state.parts[0].key);
   document.getElementById("linkTimestamp").value = item ? secondsToTimestamp(item.timestamp) : "";
   document.getElementById("linkShortDesc").value = item ? item.shortDesc : "";
   document.getElementById("linkLongDesc").value = item ? item.longDesc : "";
@@ -918,21 +1060,63 @@ function renderEquipPills() {
     wrap.insertBefore(pill, input);
   });
 }
+function normalizeAgainstPool(value, pool) {
+  const existing = pool.find(p => p.toLowerCase() === value.toLowerCase());
+  return existing || value;
+}
+function renderTagSuggestions() {
+  document.getElementById("tagSuggestions").innerHTML = state.tagPool.map(t => `<option value="${esc(t)}">`).join("");
+}
+function renderEquipSuggestions() {
+  document.getElementById("equipSuggestions").innerHTML = state.equipmentPool.map(t => `<option value="${esc(t)}">`).join("");
+}
 document.getElementById("tagInput").addEventListener("keydown", (e) => {
   if (e.key === "Enter" || e.key === ",") {
     e.preventDefault();
-    const v = e.target.value.trim().replace(/,$/, "");
-    if (v && !formTags.includes(v)) { formTags.push(v); renderTagPills(); }
+    let v = e.target.value.trim().replace(/,$/, "");
+    if (v) {
+      v = normalizeAgainstPool(v, state.tagPool);
+      if (!formTags.includes(v)) { formTags.push(v); renderTagPills(); }
+    }
     e.target.value = "";
   }
 });
 document.getElementById("equipInput").addEventListener("keydown", (e) => {
   if (e.key === "Enter" || e.key === ",") {
     e.preventDefault();
-    const v = e.target.value.trim().replace(/,$/, "");
-    if (v && !formEquip.includes(v)) { formEquip.push(v); renderEquipPills(); }
+    let v = e.target.value.trim().replace(/,$/, "");
+    if (v) {
+      v = normalizeAgainstPool(v, state.equipmentPool);
+      if (!formEquip.includes(v)) { formEquip.push(v); renderEquipPills(); }
+    }
     e.target.value = "";
   }
+});
+
+document.getElementById("thumbFileInput").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    img.onload = () => {
+      const maxW = 480;
+      const scale = Math.min(1, maxW / img.width);
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+      pendingThumbUpload = dataUrl;
+      const tp = document.getElementById("thumbPreview");
+      tp.style.backgroundImage = `url('${dataUrl}')`;
+      tp.textContent = "";
+      toast("Náhled nahrán.");
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
 });
 
 function setDiffPicker(val) {
@@ -968,8 +1152,9 @@ linkForm.addEventListener("submit", (e) => {
   state.library[id] = {
     id, url, platform, videoId,
     title: document.getElementById("linkTitle").value.trim(),
-    thumbnail: document.getElementById("thumbPreview").dataset.thumb || "",
+    thumbnail: pendingThumbUpload || document.getElementById("thumbPreview").dataset.thumb || "",
     folder,
+    defaultPart: document.getElementById("linkDefaultPart").value,
     tags: [...formTags],
     equipment: [...formEquip],
     difficulty: parseInt(document.getElementById("diffPicker").dataset.value || "3"),
@@ -1010,11 +1195,14 @@ function openDetailModal(id) {
   if (!item) return;
   currentDetailId = id;
   document.getElementById("detailEmbedWrap").innerHTML = renderEmbedHtml(item);
+  document.getElementById("detailFbFallback").innerHTML = item.platform === "facebook"
+    ? `<a class="btn btn-sm" style="margin-bottom:14px;" href="${esc(item.url)}" target="_blank" rel="noopener"><i class="fa-brands fa-facebook"></i> Nejde přehrát? Otevřít přímo na Facebooku ↗</a>`
+    : "";
   document.getElementById("detailTitle").textContent = item.title;
   const chips = [];
   if (item.folder) chips.push(`<span class="chip">${esc(item.folder)}</span>`);
   item.tags.forEach(t => chips.push(`<span class="chip">${esc(t)}</span>`));
-  item.equipment.forEach(t => chips.push(`<span class="chip">🔧 ${esc(t)}</span>`));
+  item.equipment.forEach(t => chips.push(`<span class="chip"><i class="fa-solid fa-wrench"></i> ${esc(t)}</span>`));
   chips.push(`<span class="chip">Obtížnost ${item.difficulty}/5</span>`);
   if (item.rating) chips.push(`<span class="chip">${"★".repeat(item.rating)}</span>`);
   document.getElementById("detailChips").innerHTML = `<div class="chip-row">${chips.join("")}</div>`;
@@ -1057,8 +1245,8 @@ function renderTrainingsList() {
         <div class="training-row-meta">${t.items.length} položek · ${totalMin} min</div>
       </button>
       <div class="training-row-actions">
-        <button class="btn btn-sm" data-clone="${esc(t.id)}">Klonovat</button>
-        <button class="btn btn-sm btn-danger" data-del="${esc(t.id)}">Smazat</button>
+        <button class="btn btn-sm" data-clone="${esc(t.id)}"><i class="fa-regular fa-copy"></i> Klonovat</button>
+        <button class="btn btn-sm btn-danger" data-del="${esc(t.id)}"><i class="fa-solid fa-trash"></i> Smazat</button>
       </div>
     </div>`;
   }).join("");
@@ -1088,6 +1276,11 @@ function openEditor(id) {
   switchView("editor");
   const t = state.trainings[id];
   document.getElementById("trainingNameInput").value = t.name;
+  pickerTagFilter.clear();
+  pickerEquipFilter.clear();
+  document.getElementById("pickerSearch").value = "";
+  renderFolderOptions();
+  renderPartSelectOptions();
   renderPartLegend();
   renderPickerList();
   renderSequence();
@@ -1101,24 +1294,43 @@ document.getElementById("trainingNameInput").addEventListener("input", (e) => {
 });
 
 function renderPartLegend() {
-  document.getElementById("partLegend").innerHTML = Object.entries(PARTS).map(([key, p]) =>
-    `<span><span class="part-swatch" style="background:var(${p.css})"></span>${p.label}</span>`
+  document.getElementById("partLegend").innerHTML = state.parts.map(p =>
+    `<span><span class="part-swatch" style="background:${esc(p.color)}"></span>${esc(p.label)}</span>`
   ).join("") + `<span><span class="part-swatch" style="background:var(--part-prestavka)"></span>Přestávka</span>`;
 }
 
-document.getElementById("pickerSearch").addEventListener("input", renderPickerList);
+["pickerSearch", "pickerFolderFilter", "pickerPartFilter"].forEach(id => {
+  document.getElementById(id).addEventListener("input", renderPickerList);
+  document.getElementById(id).addEventListener("change", renderPickerList);
+});
+
+function renderPickerFilterChips() {
+  renderFilterChips("pickerTagFilterRow", state.tagPool, pickerTagFilter, () => { renderPickerFilterChips(); renderPickerList(); });
+  renderFilterChips("pickerEquipFilterRow", state.equipmentPool, pickerEquipFilter, () => { renderPickerFilterChips(); renderPickerList(); });
+}
+
 function renderPickerList() {
+  renderPickerFilterChips();
   const q = document.getElementById("pickerSearch").value.trim().toLowerCase();
+  const folder = document.getElementById("pickerFolderFilter").value;
+  const part = document.getElementById("pickerPartFilter").value;
   const items = Object.values(state.library)
-    .filter(it => !q || (it.title + " " + it.folder + " " + it.tags.join(" ")).toLowerCase().includes(q))
+    .filter(it => {
+      if (folder && it.folder !== folder) return false;
+      if (part && it.defaultPart !== part) return false;
+      if (pickerTagFilter.size && ![...pickerTagFilter].every(t => it.tags.includes(t))) return false;
+      if (pickerEquipFilter.size && ![...pickerEquipFilter].every(t => it.equipment.includes(t))) return false;
+      if (q && !(it.title + " " + it.folder + " " + it.tags.join(" ")).toLowerCase().includes(q)) return false;
+      return true;
+    })
     .sort((a, b) => (b.dateAdded || 0) - (a.dateAdded || 0));
   const list = document.getElementById("pickerList");
-  if (!items.length) { list.innerHTML = `<p style="font-size:12px;color:var(--ink-faint);">Nic nenalezeno.</p>`; return; }
+  if (!items.length) { list.innerHTML = `<p style="font-size:12px;color:var(--ink-faint);">Nic nenalezeno — zkus uvolnit filtry.</p>`; return; }
   list.innerHTML = items.map(it => `
     <div class="picker-item">
       ${it.thumbnail ? `<img src="${esc(it.thumbnail)}" alt="">` : `<div style="width:46px;height:30px;background:var(--line);border-radius:4px;flex-shrink:0;"></div>`}
       <div class="picker-item-title">${esc(it.title)}</div>
-      <button class="btn btn-sm btn-icon" data-add="${esc(it.id)}" aria-label="Přidat do tréninku">+</button>
+      <button class="btn btn-sm btn-icon" data-add="${esc(it.id)}" aria-label="Přidat do tréninku"><i class="fa-solid fa-plus"></i></button>
     </div>
   `).join("");
   list.querySelectorAll("[data-add]").forEach(b => b.addEventListener("click", () => addItemToTraining(b.dataset.add)));
@@ -1127,7 +1339,9 @@ function renderPickerList() {
 function addItemToTraining(libraryId) {
   const t = state.trainings[currentTrainingId];
   if (!t) return;
-  t.items.push({ itemId: uid(), videoId: libraryId, part: "dril", duration: 10, cue: "", poznamka: "", label: "" });
+  const lib = state.library[libraryId];
+  const part = (lib && lib.defaultPart && getPart(lib.defaultPart)) ? lib.defaultPart : state.parts[0].key;
+  t.items.push({ itemId: uid(), videoId: libraryId, part, duration: 10, cue: "", poznamka: "", label: "" });
   t.dateModified = Date.now();
   scheduleSave();
   renderSequence();
@@ -1158,24 +1372,24 @@ function renderSequence() {
     if (row.part === "prestavka") {
       return `
       <div class="seq-item is-break" data-itemid="${esc(row.itemId)}">
-        <span class="drag-handle">⠿</span>
+        <span class="drag-handle"><i class="fa-solid fa-grip-lines"></i></span>
         <input class="break-label" value="${esc(row.label || "Přestávka")}" data-field="label" data-itemid="${esc(row.itemId)}">
         <input class="seq-duration" type="number" min="1" value="${row.duration}" data-field="duration" data-itemid="${esc(row.itemId)}"> min
-        <button class="seq-remove" data-remove="${esc(row.itemId)}" aria-label="Odebrat">✕</button>
+        <button class="seq-remove" data-remove="${esc(row.itemId)}" aria-label="Odebrat"><i class="fa-solid fa-xmark"></i></button>
       </div>`;
     }
     const lib = state.library[row.videoId];
-    const partColor = PARTS[row.part] ? `var(${PARTS[row.part].css})` : "var(--line)";
+    const partColor = getPart(row.part).color;
     return `
-    <div class="seq-item" data-itemid="${esc(row.itemId)}" style="background:${partColor}">
-      <button class="seq-remove" data-remove="${esc(row.itemId)}" aria-label="Odebrat">✕</button>
+    <div class="seq-item" data-itemid="${esc(row.itemId)}" style="background:${esc(partColor)}">
+      <button class="seq-remove" data-remove="${esc(row.itemId)}" aria-label="Odebrat"><i class="fa-solid fa-xmark"></i></button>
       <div class="seq-item-top">
-        <span class="drag-handle">⠿</span>
+        <span class="drag-handle"><i class="fa-solid fa-grip-lines"></i></span>
         ${lib && lib.thumbnail ? `<img class="seq-thumb" src="${esc(lib.thumbnail)}" data-open="${esc(row.videoId)}">` : `<div class="seq-thumb" data-open="${esc(row.videoId)}"></div>`}
         <span class="seq-title" data-open="${esc(row.videoId)}">${lib ? esc(lib.title) : "(video smazáno z knihovny)"}</span>
         <div class="seq-controls">
           <select class="seq-part-select" data-field="part" data-itemid="${esc(row.itemId)}">
-            ${Object.entries(PARTS).map(([k, p]) => `<option value="${k}" ${row.part === k ? "selected" : ""}>${p.label}</option>`).join("")}
+            ${state.parts.map(p => `<option value="${esc(p.key)}" ${row.part === p.key ? "selected" : ""}>${esc(p.label)}</option>`).join("")}
           </select>
           <input class="seq-duration" type="number" min="1" value="${row.duration}" data-field="duration" data-itemid="${esc(row.itemId)}">
         </div>
@@ -1235,6 +1449,41 @@ document.getElementById("deleteTrainingBtn").addEventListener("click", () => {
   scheduleSave();
   switchView("trainings");
   toast("Smazáno.");
+});
+
+/* =========================================================
+   SPRÁVA ČÁSTÍ TRÉNINKU
+   ========================================================= */
+const partsModalBackdrop = document.getElementById("partsModalBackdrop");
+document.getElementById("managePartsBtn").addEventListener("click", () => { renderPartsManageList(); partsModalBackdrop.classList.remove("hidden"); });
+document.getElementById("closePartsModalBtn").addEventListener("click", () => partsModalBackdrop.classList.add("hidden"));
+partsModalBackdrop.addEventListener("click", (e) => { if (e.target === partsModalBackdrop) partsModalBackdrop.classList.add("hidden"); });
+
+function renderPartsManageList() {
+  const wrap = document.getElementById("partsManageList");
+  wrap.innerHTML = state.parts.map(p => `
+    <div class="manage-row">
+      <span class="swatch" style="background:${esc(p.color)}"></span>
+      <input type="text" value="${esc(p.label)}" data-key="${esc(p.key)}">
+    </div>
+  `).join("");
+  wrap.querySelectorAll("input").forEach(inp => {
+    inp.addEventListener("change", () => {
+      const p = state.parts.find(x => x.key === inp.dataset.key);
+      if (p && inp.value.trim()) { p.label = inp.value.trim(); scheduleSave(); renderPartLegend(); renderPickerList(); if (currentView === "editor") renderSequence(); toast("Uloženo."); }
+    });
+  });
+}
+document.getElementById("addPartBtn").addEventListener("click", () => {
+  const label = prompt("Název nové části tréninku:");
+  if (!label || !label.trim()) return;
+  state.parts.push({ key: uid(), label: label.trim(), color: nextPartColor() });
+  scheduleSave();
+  renderPartsManageList();
+  renderPartLegend();
+  renderPartSelectOptions();
+  renderPickerList();
+  toast("Přidáno.");
 });
 
 /* =========================================================
