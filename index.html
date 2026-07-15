@@ -153,6 +153,12 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
 .chip.active{background:var(--court);border-color:var(--court);color:#fff;}
 .empty-state{text-align:center;padding:60px 20px;color:var(--ink-faint);}
 
+.subtabs{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--line);}
+.subtab-btn{background:none;border:none;padding:8px 4px;margin-right:18px;font-size:14px;font-weight:600;color:var(--ink-faint);border-bottom:2px solid transparent;}
+.subtab-btn.active{color:var(--court);border-bottom-color:var(--chalk);}
+.owner-group-header{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin:16px 0 8px;}
+.owner-group-header:first-child{margin-top:0;}
+
 .filter-toggle-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;}
 .filter-toggle-btn{
   display:inline-flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--line);
@@ -211,7 +217,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
   display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.85);font-size:11px;
 }
 .card-thumb .platform-badge{
-  position:absolute;top:6px;right:6px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;
+  position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;
   width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:50%;
 }
 .card-body{padding:9px 10px 11px;flex:1;display:flex;flex-direction:column;gap:5px;}
@@ -480,6 +486,10 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
       <div class="toolbar">
         <h2 style="flex:1;font-size:24px;color:var(--court);">Tréninky</h2>
         <button class="btn btn-accent" id="newTrainingBtn"><i class="fa-solid fa-plus"></i> Nový trénink</button>
+      </div>
+      <div class="subtabs">
+        <button type="button" class="subtab-btn active" data-subtab="mine">Moje tréninky</button>
+        <button type="button" class="subtab-btn" data-subtab="others">Tréninky ostatních</button>
       </div>
       <div id="trainingsList"></div>
     </section>
@@ -1871,20 +1881,21 @@ document.getElementById("newTrainingBtn").addEventListener("click", () => {
 });
 document.getElementById("backToTrainingsBtn").addEventListener("click", () => switchView("trainings"));
 
-function renderTrainingsList() {
-  const list = document.getElementById("trainingsList");
-  const trainings = Object.values(state.trainings).sort((a, b) => (b.dateModified || 0) - (a.dateModified || 0));
-  if (!trainings.length) {
-    list.innerHTML = `<div class="empty-state"><h3>Zatím žádné tréninky</h3><p>Založ první tlačítkem nahoře.</p></div>`;
-    return;
-  }
-  list.innerHTML = trainings.map(t => {
-    const totalMin = t.items.reduce((s, it) => s + (it.duration || 0), 0);
-    const mine = t.ownerUid === uidCurrent;
-    return `
+let trainingsSubTab = "mine";
+document.querySelectorAll(".subtab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    trainingsSubTab = btn.dataset.subtab;
+    document.querySelectorAll(".subtab-btn").forEach(b => b.classList.toggle("active", b === btn));
+    renderTrainingsList();
+  });
+});
+
+function renderTrainingRow(t, mine) {
+  const totalMin = t.items.reduce((s, it) => s + (it.duration || 0), 0);
+  return `
     <div class="training-row">
       <button class="training-row-main" data-open="${esc(t.id)}" style="background:none;border:none;text-align:left;cursor:pointer;padding:0;">
-        <div class="training-row-title">${esc(t.name)}${!mine ? ` <span style="font-size:11px;font-weight:600;color:var(--ink-faint);">· ${esc(t.ownerLabel || "kolega")}</span>` : ""}</div>
+        <div class="training-row-title">${esc(t.name)}</div>
         <div class="training-row-meta">${t.items.length} položek · ${totalMin} min</div>
       </button>
       <div class="training-row-actions">
@@ -1892,7 +1903,33 @@ function renderTrainingsList() {
         ${mine ? `<button class="btn btn-sm btn-danger" data-del="${esc(t.id)}"><i class="fa-solid fa-trash"></i> Smazat</button>` : ""}
       </div>
     </div>`;
-  }).join("");
+}
+
+function renderTrainingsList() {
+  const list = document.getElementById("trainingsList");
+  const all = Object.values(state.trainings);
+  const mineList = all.filter(t => t.ownerUid === uidCurrent).sort((a, b) => (b.dateModified || 0) - (a.dateModified || 0));
+  const othersList = all.filter(t => t.ownerUid !== uidCurrent).sort((a, b) => (b.dateModified || 0) - (a.dateModified || 0));
+
+  if (trainingsSubTab === "mine") {
+    list.innerHTML = mineList.length
+      ? mineList.map(t => renderTrainingRow(t, true)).join("")
+      : `<div class="empty-state"><h3>Zatím žádné tréninky</h3><p>Založ první tlačítkem nahoře.</p></div>`;
+  } else if (!othersList.length) {
+    list.innerHTML = `<div class="empty-state"><h3>Zatím nic od kolegů</h3><p>Jakmile někdo jiný založí trénink, objeví se tady.</p></div>`;
+  } else {
+    const groups = {};
+    othersList.forEach(t => {
+      const key = t.ownerUid;
+      if (!groups[key]) groups[key] = { label: t.ownerLabel || "Kolega", items: [] };
+      groups[key].items.push(t);
+    });
+    list.innerHTML = Object.values(groups).map(g => `
+      <div class="owner-group-header">${esc(g.label)}</div>
+      ${g.items.map(t => renderTrainingRow(t, false)).join("")}
+    `).join("");
+  }
+
   list.querySelectorAll("[data-open]").forEach(b => b.addEventListener("click", () => openEditor(b.dataset.open)));
   list.querySelectorAll("[data-clone]").forEach(b => b.addEventListener("click", () => {
     const src = state.trainings[b.dataset.clone];
