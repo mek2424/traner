@@ -227,6 +227,16 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
 .merge-row .merge-name{flex:0 0 auto;max-width:35%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;}
 .merge-row select{flex:1;padding:6px 7px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper);font-size:12.5px;min-width:0;}
 
+.crop-viewport{
+  width:260px;height:260px;margin:4px auto 0;border-radius:50%;overflow:hidden;position:relative;
+  background:#000;border:2px solid var(--line);touch-action:none;cursor:grab;
+}
+.crop-viewport.dragging{cursor:grabbing;}
+.crop-viewport img{
+  position:absolute;left:50%;top:50%;transform-origin:center center;
+  user-select:none;-webkit-user-drag:none;pointer-events:none;max-width:none;
+}
+
 .filter-panel{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--line);}
 .filter-panel select{width:100%;padding:7px 8px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper);font-size:12.5px;}
 .filter-panel .chip-row{margin-bottom:0;}
@@ -237,7 +247,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
 /* ---------- Detail modal ---------- */
 .embed-wrap{width:100%;aspect-ratio:16/9;max-height:70vh;background:#000;border-radius:var(--radius-sm);overflow:hidden;margin-bottom:14px;margin-left:auto;margin-right:auto;}
 .embed-wrap.is-portrait{aspect-ratio:9/16;max-width:min(100%,360px);}
-.embed{width:100%;height:100%;border:0;display:block;}
+.embed{width:100%;height:100%;border:0;display:block;object-fit:contain;background:#000;}
 .fallback-link{display:flex;align-items:center;justify-content:center;height:100%;color:#fff;background:var(--court);text-decoration:none;font-weight:600;}
 .detail-title{font-size:24px;margin-bottom:8px;}
 .detail-row{margin-bottom:12px;}
@@ -636,6 +646,28 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
   </div>
 </div>
 
+<!-- ===================== CROP AVATAR MODAL ===================== -->
+<div id="cropModalBackdrop" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 style="font-size:22px;">Ořez fotky</h2>
+      <button class="btn btn-icon btn-ghost" id="closeCropModalBtn">✕</button>
+    </div>
+    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:0;">Přetáhni fotku, jak potřebuješ, a přibliž posuvníkem.</p>
+    <div class="crop-viewport" id="cropViewport">
+      <img id="cropImg" alt="" draggable="false">
+    </div>
+    <div class="field" style="margin-top:16px;">
+      <label for="cropZoom">Přiblížení</label>
+      <input type="range" id="cropZoom" min="100" max="300" value="100" style="width:100%;">
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-primary" id="confirmCropBtn"><i class="fa-solid fa-check"></i> Použít ořez</button>
+      <button type="button" class="btn btn-ghost" id="cancelCropBtn">Zrušit</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.7/Sortable.min.js"></script>
@@ -750,12 +782,15 @@ function applyColorScheme() {
 }
 
 /* ---- URL parsing ---- */
+const VIDEO_FILE_EXT = /\.(mp4|webm|ogv|ogg|mov|m4v)$/i;
 function detectPlatform(url) {
   try {
-    const h = new URL(url).hostname.replace(/^www\./, "").replace(/^m\./, "");
+    const u = new URL(url);
+    const h = u.hostname.replace(/^www\./, "").replace(/^m\./, "");
     if (h === "youtube.com" || h === "youtu.be") return "youtube";
     if (h === "facebook.com" || h === "fb.watch") return "facebook";
     if (h === "drive.google.com") return "drive";
+    if (VIDEO_FILE_EXT.test(u.pathname)) return "file";
     return "other";
   } catch { return "other"; }
 }
@@ -805,6 +840,10 @@ function renderEmbedHtml(item) {
   }
   if (item.platform === "facebook") {
     return `<iframe class="embed" src="https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(item.url)}&show_text=false" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>`;
+  }
+  if (item.platform === "file") {
+    const start = item.timestamp ? `#t=${item.timestamp}` : "";
+    return `<video class="embed" src="${esc(item.url)}${start}" controls playsinline preload="metadata"></video>`;
   }
   return `<a class="fallback-link" href="${esc(item.url)}" target="_blank" rel="noopener">Otevřít odkaz ↗</a>`;
 }
@@ -993,7 +1032,7 @@ async function loadUserData() {
     loadErrors.push(`tréninky (${e.code || e.message || "?"})`);
   }
 
-  // --- drobná migrace polí přímo na knihovních položkách (defaultPart / portrait) ---
+  // --- drobná migrace polí přímo na knihovních položkách (defaultPart / portrait / detekce přímých video souborů) ---
   try {
     const legacyPartMap = { protazeni: "zaver", posilovani: "zaver", kompenzace: "zaver" };
     let migratedLib = false;
@@ -1001,6 +1040,7 @@ async function loadUserData() {
       if (it.defaultPart === undefined) { it.defaultPart = state.parts[0] ? state.parts[0].key : ""; migratedLib = true; }
       if (legacyPartMap[it.defaultPart]) { it.defaultPart = legacyPartMap[it.defaultPart]; migratedLib = true; }
       if (it.portrait === undefined) it.portrait = false;
+      if (it.platform === "other" && it.url && detectPlatform(it.url) === "file") { it.platform = "file"; migratedLib = true; }
     });
     if (migratedLib) scheduleSave();
   } catch (e) { console.error("Migrace knihovních položek selhala:", e); }
@@ -1126,7 +1166,7 @@ function getFilteredLibraryItems() {
   return items.sort(sorters[sortMode] || sorters["date-desc"]);
 }
 
-const PLATFORM_ICONS = { youtube: "fa-brands fa-youtube", facebook: "fa-brands fa-facebook", drive: "fa-brands fa-google-drive", other: "fa-solid fa-link" };
+const PLATFORM_ICONS = { youtube: "fa-brands fa-youtube", facebook: "fa-brands fa-facebook", drive: "fa-brands fa-google-drive", file: "fa-solid fa-film", other: "fa-solid fa-link" };
 
 function renderLibrary() {
   renderFolderOptions();
@@ -1232,6 +1272,8 @@ document.getElementById("fetchMetaBtn").addEventListener("click", async () => {
   } else if (platform === "drive") {
     document.getElementById("thumbPreview").dataset.videoId = extractDriveId(url) || "";
     toast("Disk: titulek a náhled zadej ručně.");
+  } else if (platform === "file") {
+    toast("Přímý odkaz na video soubor — přehraje se rovnou, titulek a náhled zadej ručně.");
   } else {
     document.getElementById("thumbPreview").dataset.videoId = "";
     toast(platform === "facebook" ? "Facebook: titulek zadej ručně, embed se pokusí načíst v detailu." : "Titulek zadej ručně.");
@@ -1793,27 +1835,92 @@ function openProfileModal() {
 document.getElementById("avatarFileInput").addEventListener("change", (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  const img = new Image();
   const reader = new FileReader();
-  reader.onload = (ev) => {
-    img.onload = () => {
-      const size = 300;
-      const canvas = document.createElement("canvas");
-      canvas.width = size; canvas.height = size;
-      const ctx = canvas.getContext("2d");
-      // ořízne na čtverec ze středu obrázku, ať se vejde do kulatého avataru bez zkreslení
-      const s = Math.min(img.width, img.height);
-      ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, size, size);
-      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
-      pendingAvatarUpload = dataUrl;
-      const prev = document.getElementById("avatarPreview");
-      prev.style.backgroundImage = `url('${dataUrl}')`;
-      prev.textContent = "";
-      toast("Fotka nahrána.");
-    };
-    img.src = ev.target.result;
-  };
+  reader.onload = (ev) => openCropModal(ev.target.result);
   reader.readAsDataURL(file);
+  e.target.value = ""; // ať jde přes stejný soubor otevřít znovu, kdyby se chtěl ořez předělat
+});
+
+/* ---- interaktivní ořez avataru (posun + zoom, žádná externí knihovna) ---- */
+const CROP_VIEWPORT = 260;
+const cropState = { natW: 0, natH: 0, baseScale: 1, zoom: 1, offsetX: 0, offsetY: 0, dragging: false, startX: 0, startY: 0, startOffX: 0, startOffY: 0 };
+const cropViewportEl = document.getElementById("cropViewport");
+const cropImgEl = document.getElementById("cropImg");
+
+function openCropModal(dataUrl) {
+  cropImgEl.onload = () => {
+    cropState.natW = cropImgEl.naturalWidth;
+    cropState.natH = cropImgEl.naturalHeight;
+    cropState.baseScale = CROP_VIEWPORT / Math.min(cropState.natW, cropState.natH);
+    cropState.zoom = 1;
+    cropState.offsetX = 0;
+    cropState.offsetY = 0;
+    document.getElementById("cropZoom").value = 100;
+    applyCropTransform();
+  };
+  cropImgEl.src = dataUrl;
+  profileModalBackdrop.classList.add("hidden");
+  document.getElementById("cropModalBackdrop").classList.remove("hidden");
+}
+function closeCropModal() {
+  document.getElementById("cropModalBackdrop").classList.add("hidden");
+  profileModalBackdrop.classList.remove("hidden");
+}
+function applyCropTransform() {
+  const scale = cropState.baseScale * cropState.zoom;
+  cropImgEl.style.width = (cropState.natW * scale) + "px";
+  cropImgEl.style.height = (cropState.natH * scale) + "px";
+  cropImgEl.style.transform = `translate(calc(-50% + ${cropState.offsetX}px), calc(-50% + ${cropState.offsetY}px))`;
+}
+function clampCropOffsets() {
+  const scale = cropState.baseScale * cropState.zoom;
+  const maxX = Math.max(0, (cropState.natW * scale - CROP_VIEWPORT) / 2);
+  const maxY = Math.max(0, (cropState.natH * scale - CROP_VIEWPORT) / 2);
+  cropState.offsetX = Math.max(-maxX, Math.min(maxX, cropState.offsetX));
+  cropState.offsetY = Math.max(-maxY, Math.min(maxY, cropState.offsetY));
+}
+cropViewportEl.addEventListener("pointerdown", (e) => {
+  if (!cropState.natW) return;
+  cropState.dragging = true;
+  cropViewportEl.classList.add("dragging");
+  cropViewportEl.setPointerCapture(e.pointerId);
+  cropState.startX = e.clientX; cropState.startY = e.clientY;
+  cropState.startOffX = cropState.offsetX; cropState.startOffY = cropState.offsetY;
+});
+cropViewportEl.addEventListener("pointermove", (e) => {
+  if (!cropState.dragging) return;
+  cropState.offsetX = cropState.startOffX + (e.clientX - cropState.startX);
+  cropState.offsetY = cropState.startOffY + (e.clientY - cropState.startY);
+  clampCropOffsets();
+  applyCropTransform();
+});
+["pointerup", "pointercancel"].forEach(evt => cropViewportEl.addEventListener(evt, () => {
+  cropState.dragging = false;
+  cropViewportEl.classList.remove("dragging");
+}));
+document.getElementById("cropZoom").addEventListener("input", (e) => {
+  cropState.zoom = parseInt(e.target.value, 10) / 100;
+  clampCropOffsets();
+  applyCropTransform();
+});
+document.getElementById("cancelCropBtn").addEventListener("click", closeCropModal);
+document.getElementById("closeCropModalBtn").addEventListener("click", closeCropModal);
+document.getElementById("confirmCropBtn").addEventListener("click", () => {
+  const scale = cropState.baseScale * cropState.zoom;
+  const srcSize = CROP_VIEWPORT / scale;
+  const srcX = (cropState.natW / 2) - (cropState.offsetX / scale) - (srcSize / 2);
+  const srcY = (cropState.natH / 2) - (cropState.offsetY / scale) - (srcSize / 2);
+  const outSize = 300;
+  const canvas = document.createElement("canvas");
+  canvas.width = outSize; canvas.height = outSize;
+  canvas.getContext("2d").drawImage(cropImgEl, srcX, srcY, srcSize, srcSize, 0, 0, outSize, outSize);
+  const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+  pendingAvatarUpload = dataUrl;
+  const prev = document.getElementById("avatarPreview");
+  prev.style.backgroundImage = `url('${dataUrl}')`;
+  prev.textContent = "";
+  closeCropModal();
+  toast("Ořez použit — nezapomeň dole uložit profil.");
 });
 
 document.getElementById("resetColorsBtn").addEventListener("click", () => {
