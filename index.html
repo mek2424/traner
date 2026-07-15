@@ -647,7 +647,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import {
   initializeFirestore, persistentLocalCache, persistentSingleTabManager,
-  doc, getDoc, setDoc, deleteDoc, collection, collectionGroup, getDocs
+  doc, getDoc, setDoc, deleteDoc, deleteField, collection, collectionGroup, getDocs
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 /* =========================================================
@@ -708,6 +708,7 @@ function nextPartColor() {
   const used = state.parts.length;
   return EXTRA_PART_COLORS[used % EXTRA_PART_COLORS.length];
 }
+state.parts = structuredClone(DEFAULT_PARTS); // bezpečný výchozí stav, přepíše se po načtení dat
 
 /* =========================================================
    HELPERS
@@ -912,23 +913,33 @@ function renderTopbarIdentity() {
    FIRESTORE SYNC
    ========================================================= */
 async function loadUserData() {
+  let legacy = {};
+  const loadErrors = [];
+
+  // --- starý dokument: zdroj profilu a (jen jednou) zdroj pro migraci ---
   try {
     const legacySnap = await getDoc(doc(db, "users", uidCurrent));
-    const legacy = legacySnap.exists() ? legacySnap.data() : {};
+    legacy = legacySnap.exists() ? legacySnap.data() : {};
+  } catch (e) {
+    console.error("Nepodařilo se načíst uživatelský dokument:", e);
+    loadErrors.push("profil");
+  }
 
-    state.profile = {
-      username: legacy.username || "",
-      category: legacy.category || "",
-      club: legacy.club || "",
-      avatarUrl: legacy.avatarUrl || "",
-      colorPrimary: legacy.colorPrimary || DEFAULT_COLORS.primary,
-      colorAccent: legacy.colorAccent || DEFAULT_COLORS.accent
-    };
-    applyColorScheme();
+  state.profile = {
+    username: legacy.username || "",
+    category: legacy.category || "",
+    club: legacy.club || "",
+    avatarUrl: legacy.avatarUrl || "",
+    colorPrimary: legacy.colorPrimary || DEFAULT_COLORS.primary,
+    colorAccent: legacy.colorAccent || DEFAULT_COLORS.accent
+  };
+  applyColorScheme();
 
-    // 1) sdílená knihovna — pokud ještě neexistuje, povýšíme na ni moje dosavadní osobní data
+  // --- sdílená knihovna ---
+  let sharedOk = false;
+  try {
     const sharedRef = doc(db, "shared", "data");
-    let sharedSnap = await getDoc(sharedRef);
+    const sharedSnap = await getDoc(sharedRef);
     let shared;
     if (sharedSnap.exists()) {
       shared = sharedSnap.data();
@@ -947,39 +958,66 @@ async function loadUserData() {
     state.tagPool = shared.tagPool || [];
     state.equipmentPool = shared.equipmentPool || [];
     state.parts = (shared.parts && shared.parts.length) ? shared.parts : structuredClone(DEFAULT_PARTS);
+    sharedOk = true;
+  } catch (e) {
+    console.error("Nepodařilo se načíst sdílenou knihovnu:", e);
+    loadErrors.push("knihovna");
+  }
 
-    // 2) tréninky — subkolekce per uživatel; jednorázová migrace ze staré mapy, pokud subkolekce ještě prázdná
-    const myTrainingsCol = collection(db, "users", uidCurrent, "trainings");
+  // --- tréninky (moje subkolekce + jednorázová migrace ze staré mapy + všechny přes collection group) ---
+  let trainingsOk = false;
+  const myTrainingsCol = collection(db, "users", uidCurrent, "trainings");
+  try {
     let mySnap = await getDocs(myTrainingsCol);
     if (mySnap.empty && legacy.trainings && Object.keys(legacy.trainings).length) {
       const label = (state.profile && state.profile.username) || (auth.currentUser && auth.currentUser.email) || uidCurrent;
       for (const t of Object.values(legacy.trainings)) {
         await setDoc(doc(myTrainingsCol, t.id), { ...t, ownerUid: uidCurrent, ownerLabel: label });
       }
-      mySnap = await getDocs(myTrainingsCol);
     }
-
-    // 3) načíst tréninky úplně všech uživatelů (moje i kolegů) přes collection group
     state.trainings = {};
     const allSnap = await getDocs(collectionGroup(db, "trainings"));
     allSnap.forEach(d => { state.trainings[d.id] = d.data(); });
 
-    // migrace ze staršího pevného seznamu částí (protažení/posilování/kompenzace -> Závěr) + defaultPart na starších videích
-    const legacyMap = { protazeni: "zaver", posilovani: "zaver", kompenzace: "zaver" };
-    let migratedParts = false, migratedTrainings = false;
+    const legacyPartMap = { protazeni: "zaver", posilovani: "zaver", kompenzace: "zaver" };
+    let migratedTrainings = false;
     Object.values(state.trainings).forEach(t => {
-      (t.items || []).forEach(it => { if (legacyMap[it.part]) { it.part = legacyMap[it.part]; migratedTrainings = true; } });
+      (t.items || []).forEach(it => { if (legacyPartMap[it.part]) { it.part = legacyPartMap[it.part]; migratedTrainings = true; } });
     });
+    if (migratedTrainings) {
+      Object.values(state.trainings).filter(t => t.ownerUid === uidCurrent).forEach(t => setDoc(doc(myTrainingsCol, t.id), t));
+    }
+    trainingsOk = true;
+  } catch (e) {
+    console.error("Nepodařilo se načíst tréninky:", e);
+    loadErrors.push("tréninky");
+  }
+
+  // --- drobná migrace polí přímo na knihovních položkách (defaultPart / portrait) ---
+  try {
+    const legacyPartMap = { protazeni: "zaver", posilovani: "zaver", kompenzace: "zaver" };
+    let migratedLib = false;
     Object.values(state.library).forEach(it => {
-      if (it.defaultPart === undefined) { it.defaultPart = state.parts[2] ? state.parts[2].key : state.parts[0].key; migratedParts = true; }
-      if (legacyMap[it.defaultPart]) { it.defaultPart = legacyMap[it.defaultPart]; migratedParts = true; }
+      if (it.defaultPart === undefined) { it.defaultPart = state.parts[0] ? state.parts[0].key : ""; migratedLib = true; }
+      if (legacyPartMap[it.defaultPart]) { it.defaultPart = legacyPartMap[it.defaultPart]; migratedLib = true; }
       if (it.portrait === undefined) it.portrait = false;
     });
-    if (migratedParts) scheduleSave();
-    if (migratedTrainings) { Object.values(state.trainings).filter(t => t.ownerUid === uidCurrent).forEach(t => setDoc(doc(myTrainingsCol, t.id), t)); }
-  } catch (e) {
-    console.error("Nepodařilo se načíst data:", e);
-    toast("Nepodařilo se načíst data ze serveru — zkontroluj připojení a Firestore pravidla.");
+    if (migratedLib) scheduleSave();
+  } catch (e) { console.error("Migrace knihovních položek selhala:", e); }
+
+  // --- jednorázový úklid starých duplicitních polí z users/{uid} (pravděpodobný důvod, proč dokument narostl přes limit) ---
+  try {
+    const toClear = {};
+    if (sharedOk) { toClear.library = deleteField(); toClear.folders = deleteField(); toClear.tagPool = deleteField(); toClear.equipmentPool = deleteField(); toClear.parts = deleteField(); }
+    if (trainingsOk) toClear.trainings = deleteField();
+    const hasLegacyLeftovers = legacy.library || legacy.trainings || legacy.folders || legacy.tagPool || legacy.equipmentPool || legacy.parts;
+    if (Object.keys(toClear).length && hasLegacyLeftovers) {
+      await setDoc(doc(db, "users", uidCurrent), toClear, { merge: true });
+    }
+  } catch (e) { console.error("Úklid starých dat se nepovedl (nic se neztratilo, jen to zabírá víc místa):", e); }
+
+  if (loadErrors.length) {
+    toast("Nepodařilo se plně načíst: " + loadErrors.join(", ") + ". Zkus appku obnovit (F5) nebo zkontroluj připojení a Firestore pravidla.");
   }
 }
 
@@ -1146,7 +1184,7 @@ function openLinkModal(id) {
   document.getElementById("linkTitle").value = item ? item.title : "";
   document.getElementById("linkFolder").value = item ? item.folder : "";
   document.getElementById("newFolderInput").value = "";
-  document.getElementById("linkDefaultPart").value = item ? item.defaultPart : (state.parts[2] ? state.parts[2].key : state.parts[0].key);
+  document.getElementById("linkDefaultPart").value = item ? item.defaultPart : (state.parts[0] ? state.parts[0].key : "");
   document.getElementById("linkPortrait").checked = item ? !!item.portrait : false;
   document.getElementById("linkTimestamp").value = item ? secondsToTimestamp(item.timestamp) : "";
   document.getElementById("linkShortDesc").value = item ? item.shortDesc : "";
