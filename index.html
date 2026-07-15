@@ -120,7 +120,8 @@ header.topbar{
 .topbar-user{display:flex;align-items:center;gap:10px;font-size:12px;color:rgba(255,255,255,.75);}
 .topbar-user button{background:rgba(255,255,255,.12);border:none;color:#fff;border-radius:var(--radius-sm);padding:6px 10px;font-size:12px;}
 .avatar-btn{
-  width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.18) center/cover no-repeat;
+  width:30px;height:30px;border-radius:50% !important;background-color:rgba(255,255,255,.18);
+  background-position:center !important;background-size:cover !important;background-repeat:no-repeat !important;
   display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:14px;
   padding:0 !important;flex-shrink:0;
 }
@@ -151,6 +152,50 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
 }
 .chip.active{background:var(--court);border-color:var(--court);color:#fff;}
 .empty-state{text-align:center;padding:60px 20px;color:var(--ink-faint);}
+
+.filter-toggle-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;}
+.filter-toggle-btn{
+  display:inline-flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--line);
+  border-radius:999px;padding:6px 12px;font-size:12.5px;font-weight:600;color:var(--ink-soft);
+}
+.filter-toggle-btn i.fa-chevron-down{font-size:9px;transition:transform .2s ease;}
+.filter-toggle-btn.open{color:var(--court);border-color:var(--court);}
+.filter-toggle-btn.open i.fa-chevron-down{transform:rotate(180deg);}
+.chip-collapse{max-height:0;overflow:hidden;transition:max-height .28s ease, margin-bottom .28s ease;margin-bottom:0;}
+.chip-collapse.open{max-height:400px;margin-bottom:10px;}
+
+#bulkActionBar{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--paper);border:1px solid var(--line);
+  border-radius:var(--radius-sm);padding:9px 12px;margin-bottom:10px;font-size:13px;font-weight:600;
+}
+#bulkActionBar.hidden{display:none;}
+
+.card-select-box{
+  position:absolute;top:8px;left:8px;z-index:5;width:22px;height:22px;border-radius:6px;
+  background:#fff;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;color:#fff;
+}
+.card-select-box.checked{background:var(--court);border-color:var(--court);}
+.card-menu-btn{
+  position:absolute;top:6px;right:6px;z-index:5;width:26px;height:26px;border-radius:50%;
+  background:rgba(0,0,0,.5);color:#fff;border:none;display:flex;align-items:center;justify-content:center;font-size:13px;
+}
+.card-context-menu{
+  position:absolute;z-index:60;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);
+  box-shadow:var(--shadow);min-width:170px;overflow:hidden;
+}
+.card-context-menu button{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:10px 14px;background:none;border:none;font-size:13.5px;color:var(--ink);}
+.card-context-menu button:hover{background:var(--paper);}
+.card-context-menu button.danger{color:var(--danger);}
+
+.grid.list-mode{display:flex;flex-direction:column;gap:8px;}
+.grid.list-mode .card{
+  flex-direction:row;align-items:center;border-left:4px solid var(--line);
+}
+.grid.list-mode .card-thumb{width:84px;aspect-ratio:auto;height:56px;flex-shrink:0;}
+.grid.list-mode .card-body{flex-direction:row;align-items:center;gap:10px;padding:8px 12px;flex:1;min-width:0;}
+.grid.list-mode .card-title{flex:1;min-width:0;-webkit-line-clamp:1;}
+.grid.list-mode .card-folder{flex-shrink:0;}
+.grid.list-mode .card-meta{margin-top:0;flex-shrink:0;}
 .empty-state h3{font-size:26px;color:var(--ink-soft);margin-bottom:6px;}
 
 /* ---------- Library grid ---------- */
@@ -160,6 +205,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
   box-shadow:var(--shadow);text-align:left;display:flex;flex-direction:column;position:relative;
   border-left:4px solid var(--line);
 }
+.card [data-action="open-detail"]{cursor:pointer;}
 .card-thumb{
   aspect-ratio:16/9;background:var(--court) center/cover no-repeat;position:relative;
   display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.85);font-size:11px;
@@ -266,14 +312,17 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
 .url-row input{flex:1;}
 
 /* ---------- Detail modal ---------- */
-.embed-wrap{width:100%;aspect-ratio:16/9;max-height:70vh;background:#000;border-radius:var(--radius-sm);overflow:hidden;margin-bottom:14px;margin-left:auto;margin-right:auto;}
-.embed-wrap.is-portrait{aspect-ratio:9/16;max-width:min(100%,360px);}
+.embed-wrap{width:100%;aspect-ratio:16/9;max-height:70vh;background:#000;border-radius:var(--radius-sm);overflow:hidden;margin-bottom:6px;margin-left:auto;margin-right:auto;}
+.embed-wrap[style*="9 / 16"],.embed-wrap[style*="9/16"]{max-width:min(100%,360px);}
 .embed{width:100%;height:100%;border:0;display:block;object-fit:contain;background:#000;}
+.embed-timestamp-hint{font-size:11.5px;color:var(--ink-faint);margin-bottom:10px;}
 .fallback-link{display:flex;align-items:center;justify-content:center;height:100%;color:#fff;background:var(--court);text-decoration:none;font-weight:600;}
 .detail-title{font-size:24px;margin-bottom:8px;}
 .detail-row{margin-bottom:12px;}
 .detail-label{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-faint);font-weight:700;margin-bottom:4px;}
 .detail-text{white-space:pre-wrap;font-size:14px;}
+.coach-note{background:var(--paper);border-left:3px solid var(--court);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:8px 12px;margin-bottom:8px;}
+.coach-note-author{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--court);margin-bottom:3px;}
 
 /* ---------- Trainings list ---------- */
 .training-row{
@@ -398,18 +447,31 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
           <option value="date-asc">Nejstarší</option>
           <option value="az">A–Z</option>
           <option value="za">Z–A</option>
+          <option value="rating-desc">Nejlépe hodnocené</option>
+          <option value="difficulty-asc">Nejsnazší</option>
+          <option value="difficulty-desc">Nejtěžší</option>
         </select>
+        <button class="btn btn-icon" id="toggleViewModeBtn" aria-label="Přepnout zobrazení"><i class="fa-solid fa-list"></i></button>
+        <button class="btn btn-icon" id="toggleSelectModeBtn" aria-label="Vybrat více"><i class="fa-regular fa-square-check"></i></button>
         <button class="btn btn-accent" id="openAddLinkBtn"><i class="fa-solid fa-plus"></i> Přidat odkaz</button>
       </div>
       <div id="activeFolderBar" class="hidden" style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:13px;">
         <span>Složka: <strong id="activeFolderLabel"></strong></span>
         <button type="button" class="manage-link" id="clearFolderFilterBtn">zrušit filtr</button>
       </div>
-      <div style="text-align:right;margin-bottom:6px;">
-        <button type="button" class="manage-link" id="manageTagsBtn"><i class="fa-solid fa-code-merge"></i> Sloučit štítky / vybavení</button>
+      <div id="bulkActionBar" class="hidden">
+        <span id="bulkCount">0 vybráno</span>
+        <button type="button" class="btn btn-sm" id="bulkMoveBtn"><i class="fa-solid fa-folder"></i> Přesunout</button>
+        <button type="button" class="btn btn-sm btn-danger" id="bulkDeleteBtn"><i class="fa-solid fa-trash"></i> Smazat</button>
+        <button type="button" class="btn btn-sm btn-ghost" id="bulkCancelBtn">Zrušit výběr</button>
       </div>
-      <div class="chip-row" id="tagFilterRow"></div>
-      <div class="chip-row" id="equipFilterRow"></div>
+      <div class="filter-toggle-row">
+        <button type="button" class="filter-toggle-btn" id="toggleTagFilterBtn"><i class="fa-solid fa-tag"></i> Štítky <i class="fa-solid fa-chevron-down"></i></button>
+        <button type="button" class="filter-toggle-btn" id="toggleEquipFilterBtn"><i class="fa-solid fa-wrench"></i> Vybavení <i class="fa-solid fa-chevron-down"></i></button>
+        <button type="button" class="manage-link" id="manageTagsBtn" style="margin-left:auto;"><i class="fa-solid fa-code-merge"></i> Sloučit</button>
+      </div>
+      <div class="chip-collapse" id="tagFilterCollapse"><div class="chip-row" id="tagFilterRow"></div></div>
+      <div class="chip-collapse" id="equipFilterCollapse"><div class="chip-row" id="equipFilterRow"></div></div>
       <div id="libraryGrid" class="grid"></div>
     </section>
 
@@ -486,9 +548,14 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
         <label class="btn btn-sm" for="thumbFileInput"><i class="fa-solid fa-image"></i> Nahrát vlastní náhled</label>
         <input type="file" id="thumbFileInput" accept="image/*">
       </div>
-      <div class="field" style="display:flex;align-items:center;gap:8px;">
-        <input type="checkbox" id="linkPortrait" style="width:18px;height:18px;">
-        <label for="linkPortrait" style="margin:0;text-transform:none;font-size:13px;letter-spacing:0;font-weight:500;">Video je na výšku (mobil/Reels/Shorts)</label>
+      <div class="field">
+        <label for="linkAspectRatio">Tvar videa (u YouTube pozná appka sama)</label>
+        <select id="linkAspectRatio">
+          <option value="16/9">Na šířku (16:9)</option>
+          <option value="9/16">Na výšku (9:16 — mobil/Reels/Shorts)</option>
+          <option value="1/1">Čtvercové (1:1)</option>
+          <option value="4/3">Klasické (4:3)</option>
+        </select>
       </div>
       <div class="field">
         <label for="linkTitle">Název *</label>
@@ -524,7 +591,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
       </div>
       <div class="two-col">
         <div class="field">
-          <label>Obtížnost</label>
+          <label>Moje obtížnost</label>
           <div class="diff-picker" id="diffPicker">
             <button type="button" data-val="1">1</button>
             <button type="button" data-val="2">2</button>
@@ -534,7 +601,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
           </div>
         </div>
         <div class="field">
-          <label>Hodnocení</label>
+          <label>Moje hodnocení</label>
           <div class="rating-picker" id="ratingPicker">
             <button type="button" data-val="1">★</button>
             <button type="button" data-val="2">★</button>
@@ -557,7 +624,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
         <textarea id="linkLongDesc"></textarea>
       </div>
       <div class="field">
-        <label for="linkNote">Poznámka</label>
+        <label for="linkNote">Moje poznámka <span style="text-transform:none;font-weight:400;">(uvidí i ostatní trenéři, každý pod svým jménem)</span></label>
         <textarea id="linkNote"></textarea>
       </div>
       <div class="modal-actions">
@@ -576,6 +643,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
       <button class="btn btn-icon btn-ghost" id="closeDetailModalBtn">✕</button>
     </div>
     <div class="embed-wrap" id="detailEmbedWrap"></div>
+    <div id="detailTimestampHint" class="embed-timestamp-hint hidden"></div>
     <div id="detailFbFallback"></div>
     <div class="detail-title" id="detailTitle"></div>
     <div class="detail-row" id="detailChips"></div>
@@ -801,10 +869,23 @@ const FOLDER_COLORS = ["#7FB0AC", "#E8C468", "#A8C0DE", "#E39A8A", "#B8A8D4", "#
 function getFolder(key) {
   return state.folders.find(f => f.key === key) || null;
 }
+function avgOf(map) {
+  const vals = Object.values(map || {});
+  if (!vals.length) return { avg: 0, count: 0 };
+  return { avg: vals.reduce((a, b) => a + b, 0) / vals.length, count: vals.length };
+}
+function myLabel() {
+  return (state.profile && state.profile.username) || (auth.currentUser && auth.currentUser.email) || "Trenér";
+}
 function nextFolderColor() {
   return FOLDER_COLORS[state.folders.length % FOLDER_COLORS.length];
 }
 let activeFolderFilter = null; // key vybrané složky v postranním panelu, null = vše
+const ADMIN_UID = "WIw1KfRofOOrbYF7Xl8YzgQrTZd2"; // mazání složek smí jen tenhle účet
+let libraryViewMode = "grid"; // "grid" | "list"
+let selectMode = false;
+let selectedIds = new Set();
+let openContextMenuEl = null;
 
 /* =========================================================
    HELPERS
@@ -1147,8 +1228,14 @@ async function loadUserData() {
     Object.values(state.library).forEach(it => {
       if (it.defaultPart === undefined) { it.defaultPart = state.parts[0] ? state.parts[0].key : ""; migratedLib = true; }
       if (legacyPartMap[it.defaultPart]) { it.defaultPart = legacyPartMap[it.defaultPart]; migratedLib = true; }
-      if (it.portrait === undefined) it.portrait = false;
+      if (it.aspectRatio === undefined) { it.aspectRatio = it.portrait ? "9/16" : "16/9"; migratedLib = true; }
+      delete it.portrait;
       if (it.platform === "other" && it.url && detectPlatform(it.url) === "file") { it.platform = "file"; migratedLib = true; }
+      // hodnocení/obtížnost/poznámka od jednoho sdíleného čísla/textu na "za trenéra"
+      if (it.ratings === undefined) { it.ratings = (typeof it.rating === "number" && it.rating > 0) ? { legacy: it.rating } : {}; migratedLib = true; }
+      if (it.difficulties === undefined) { it.difficulties = (typeof it.difficulty === "number" && it.difficulty > 0) ? { legacy: it.difficulty } : {}; migratedLib = true; }
+      if (it.notesByCoach === undefined) { it.notesByCoach = it.note ? { legacy: { text: it.note, authorLabel: "Předchozí poznámka", date: it.dateAdded || Date.now() } } : {}; migratedLib = true; }
+      delete it.rating; delete it.difficulty; delete it.note;
     });
     if (migratedLib) scheduleSave();
   } catch (e) { console.error("Migrace knihovních položek selhala:", e); }
@@ -1232,7 +1319,7 @@ function renderPartSelectOptions() {
 function renderFilterChips(containerId, pool, filterSet, onChange) {
   const row = document.getElementById(containerId);
   if (!row) return;
-  if (!pool.length) { row.innerHTML = ""; return; }
+  if (!pool.length) { row.innerHTML = `<span style="font-size:12px;color:var(--ink-faint);">Žádné k dispozici.</span>`; return; }
   row.innerHTML = pool.map(t =>
     `<button type="button" class="chip ${filterSet.has(t) ? "active" : ""}" data-val="${esc(t)}">${esc(t)}</button>`
   ).join("");
@@ -1244,8 +1331,15 @@ function renderFilterChips(containerId, pool, filterSet, onChange) {
     });
   });
 }
-function renderTagFilterRow() { renderFilterChips("tagFilterRow", state.tagPool, libraryTagFilter, () => { renderTagFilterRow(); renderEquipFilterRow(); renderLibrary(); }); }
-function renderEquipFilterRow() { renderFilterChips("equipFilterRow", state.equipmentPool, libraryEquipFilter, () => { renderTagFilterRow(); renderEquipFilterRow(); renderLibrary(); }); }
+function tagsUsedInActiveFolder(field) {
+  if (!activeFolderFilter) return field === "tags" ? state.tagPool : state.equipmentPool;
+  const used = new Set();
+  Object.values(state.library).filter(it => it.folderId === activeFolderFilter).forEach(it => (it[field] || []).forEach(t => used.add(t)));
+  const pool = field === "tags" ? state.tagPool : state.equipmentPool;
+  return pool.filter(t => used.has(t));
+}
+function renderTagFilterRow() { renderFilterChips("tagFilterRow", tagsUsedInActiveFolder("tags"), libraryTagFilter, () => { renderTagFilterRow(); renderEquipFilterRow(); renderLibrary(); }); }
+function renderEquipFilterRow() { renderFilterChips("equipFilterRow", tagsUsedInActiveFolder("equipment"), libraryEquipFilter, () => { renderTagFilterRow(); renderEquipFilterRow(); renderLibrary(); }); }
 
 function getFilteredLibraryItems() {
   const q = document.getElementById("librarySearch").value.trim().toLowerCase();
@@ -1265,7 +1359,10 @@ function getFilteredLibraryItems() {
     "date-desc": (a, b) => (b.dateAdded || 0) - (a.dateAdded || 0),
     "date-asc": (a, b) => (a.dateAdded || 0) - (b.dateAdded || 0),
     "az": (a, b) => a.title.localeCompare(b.title, "cs"),
-    "za": (a, b) => b.title.localeCompare(a.title, "cs")
+    "za": (a, b) => b.title.localeCompare(a.title, "cs"),
+    "rating-desc": (a, b) => avgOf(b.ratings).avg - avgOf(a.ratings).avg,
+    "difficulty-asc": (a, b) => (avgOf(a.difficulties).avg || 99) - (avgOf(b.difficulties).avg || 99),
+    "difficulty-desc": (a, b) => avgOf(b.difficulties).avg - avgOf(a.difficulties).avg
   };
   return items.sort(sorters[sortMode] || sorters["date-desc"]);
 }
@@ -1281,7 +1378,9 @@ function renderLibrary() {
   bar.classList.toggle("hidden", !activeFolder);
   if (activeFolder) document.getElementById("activeFolderLabel").textContent = activeFolder.label;
   const grid = document.getElementById("libraryGrid");
+  grid.classList.toggle("list-mode", libraryViewMode === "list");
   const items = getFilteredLibraryItems();
+  updateBulkBar();
   if (!items.length) {
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><h3>Zatím žádná videa</h3><p>Přidej první odkaz tlačítkem nahoře, nebo zkus uvolnit filtry.</p></div>`;
     return;
@@ -1289,30 +1388,135 @@ function renderLibrary() {
   grid.innerHTML = items.map(item => {
     const folder = getFolder(item.folderId);
     const stripeColor = folder ? folder.color : "var(--line)";
+    const r = avgOf(item.ratings), d = avgOf(item.difficulties);
+    const diffRounded = Math.round(d.avg) || 0;
+    const isSelected = selectedIds.has(item.id);
     return `
-    <button class="card" data-id="${esc(item.id)}" data-action="open-detail" style="border-left-color:${esc(stripeColor)}">
-      <div class="card-thumb" style="${item.thumbnail ? `background-image:url('${esc(item.thumbnail)}')` : ""}">
+    <div class="card" data-id="${esc(item.id)}" style="border-left-color:${esc(stripeColor)}">
+      <button type="button" class="card-select-box ${selectMode ? "" : "hidden"} ${isSelected ? "checked" : ""}" data-action="toggle-select" aria-label="Vybrat">${isSelected ? '<i class="fa-solid fa-check"></i>' : ""}</button>
+      <button type="button" class="card-menu-btn" data-action="open-menu" aria-label="Menu"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+      <div class="card-thumb" data-action="open-detail" style="${item.thumbnail ? `background-image:url('${esc(item.thumbnail)}')` : ""}">
         ${item.thumbnail ? "" : "bez náhledu"}
         <span class="platform-badge"><i class="${PLATFORM_ICONS[item.platform] || PLATFORM_ICONS.other}"></i></span>
       </div>
-      <div class="card-body">
+      <div class="card-body" data-action="open-detail">
         <div class="card-title">${esc(item.title)}</div>
         ${folder ? `<div class="card-folder" style="color:${esc(folder.color)}">${esc(folder.label)}</div>` : ""}
         <div class="card-meta">
-          <span class="diff-dots">${[1,2,3,4,5].map(n => `<span class="${n <= item.difficulty ? "on" : ""}"></span>`).join("")}</span>
-          ${item.rating ? `<span class="stars">${"★".repeat(item.rating)}</span>` : ""}
+          <span class="diff-dots">${[1,2,3,4,5].map(n => `<span class="${n <= diffRounded ? "on" : ""}"></span>`).join("")}</span>
+          ${r.count ? `<span class="stars">${"★".repeat(Math.round(r.avg))}</span><span style="color:var(--ink-faint);">(${r.count})</span>` : ""}
         </div>
       </div>
-    </button>
+    </div>
   `;
   }).join("");
 }
 document.getElementById("clearFolderFilterBtn").addEventListener("click", () => { activeFolderFilter = null; renderLibrary(); });
 document.getElementById("libraryGrid").addEventListener("click", (e) => {
-  const card = e.target.closest("[data-action='open-detail']");
-  if (card) openDetailModal(card.dataset.id);
+  const card = e.target.closest(".card");
+  if (!card) return;
+  const id = card.dataset.id;
+  if (e.target.closest("[data-action='open-menu']")) { openCardContextMenu(id, e.target.closest("[data-action='open-menu']")); return; }
+  if (e.target.closest("[data-action='toggle-select']") || selectMode) {
+    if (selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id);
+    renderLibrary();
+    return;
+  }
+  if (e.target.closest("[data-action='open-detail']")) openDetailModal(id);
 });
 document.getElementById("librarySort").addEventListener("change", renderLibrary);
+
+/* ---- přepínač zobrazení, výběr, rozbalovací filtry ---- */
+document.getElementById("toggleViewModeBtn").addEventListener("click", () => {
+  libraryViewMode = libraryViewMode === "grid" ? "list" : "grid";
+  document.getElementById("toggleViewModeBtn").innerHTML = libraryViewMode === "grid" ? '<i class="fa-solid fa-list"></i>' : '<i class="fa-solid fa-grip"></i>';
+  renderLibrary();
+});
+document.getElementById("toggleSelectModeBtn").addEventListener("click", () => {
+  selectMode = !selectMode;
+  if (!selectMode) selectedIds.clear();
+  document.getElementById("toggleSelectModeBtn").classList.toggle("btn-accent", selectMode);
+  renderLibrary();
+});
+function updateBulkBar() {
+  const bar = document.getElementById("bulkActionBar");
+  bar.classList.toggle("hidden", !selectMode || selectedIds.size === 0);
+  document.getElementById("bulkCount").textContent = `${selectedIds.size} vybráno`;
+}
+document.getElementById("bulkCancelBtn").addEventListener("click", () => { selectMode = false; selectedIds.clear(); document.getElementById("toggleSelectModeBtn").classList.remove("btn-accent"); renderLibrary(); });
+document.getElementById("bulkDeleteBtn").addEventListener("click", () => {
+  if (!confirm(`Smazat ${selectedIds.size} vybraných videí z knihovny?`)) return;
+  selectedIds.forEach(id => delete state.library[id]);
+  selectedIds.clear();
+  scheduleSave();
+  renderLibrary();
+  toast("Smazáno.");
+});
+document.getElementById("bulkMoveBtn").addEventListener("click", () => {
+  if (!state.folders.length) { toast("Nejdřív si založ aspoň jednu složku."); return; }
+  const list = state.folders.map((f, i) => `${i + 1}. ${f.label}`).join("\n");
+  const answer = prompt(`Přesunout ${selectedIds.size} videí do složky — napiš číslo:\n${list}`);
+  const idx = parseInt(answer) - 1;
+  if (!state.folders[idx]) return;
+  selectedIds.forEach(id => { if (state.library[id]) state.library[id].folderId = state.folders[idx].key; });
+  scheduleSave();
+  renderLibrary();
+  toast(`Přesunuto do „${state.folders[idx].label}".`);
+});
+
+function setupFilterToggle(btnId, collapseId) {
+  const btn = document.getElementById(btnId), collapse = document.getElementById(collapseId);
+  btn.addEventListener("click", () => {
+    const open = collapse.classList.toggle("open");
+    btn.classList.toggle("open", open);
+  });
+}
+setupFilterToggle("toggleTagFilterBtn", "tagFilterCollapse");
+setupFilterToggle("toggleEquipFilterBtn", "equipFilterCollapse");
+
+/* ---- kontextové menu na kartě ---- */
+function closeCardContextMenu() { if (openContextMenuEl) { openContextMenuEl.remove(); openContextMenuEl = null; } }
+document.addEventListener("click", (e) => {
+  if (openContextMenuEl && !e.target.closest(".card-context-menu") && !e.target.closest("[data-action='open-menu']")) closeCardContextMenu();
+});
+function openCardContextMenu(itemId, anchorBtn) {
+  closeCardContextMenu();
+  const item = state.library[itemId];
+  if (!item) return;
+  const menu = document.createElement("div");
+  menu.className = "card-context-menu";
+  menu.innerHTML = `
+    <button type="button" data-act="edit"><i class="fa-solid fa-pen"></i> Upravit</button>
+    <button type="button" data-act="move"><i class="fa-solid fa-folder"></i> Přesunout do složky</button>
+    <button type="button" class="danger" data-act="delete"><i class="fa-solid fa-trash"></i> Smazat</button>
+  `;
+  document.body.appendChild(menu);
+  const r = anchorBtn.getBoundingClientRect();
+  menu.style.top = (window.scrollY + r.bottom + 4) + "px";
+  menu.style.left = Math.max(8, window.scrollX + r.right - menu.offsetWidth) + "px";
+  openContextMenuEl = menu;
+  menu.querySelector("[data-act='edit']").addEventListener("click", () => { closeCardContextMenu(); openLinkModal(itemId); });
+  menu.querySelector("[data-act='delete']").addEventListener("click", () => {
+    closeCardContextMenu();
+    if (!confirm(`Smazat „${item.title}" z knihovny?`)) return;
+    delete state.library[itemId];
+    scheduleSave();
+    renderLibrary();
+    toast("Smazáno.");
+  });
+  menu.querySelector("[data-act='move']").addEventListener("click", () => {
+    closeCardContextMenu();
+    if (!state.folders.length) { toast("Nejdřív si založ aspoň jednu složku."); return; }
+    const list = state.folders.map((f, i) => `${i + 1}. ${f.label}`).join("\n");
+    const answer = prompt(`Přesunout „${item.title}" do složky — napiš číslo:\n${list}`);
+    const idx = parseInt(answer) - 1;
+    if (!state.folders[idx]) return;
+    item.folderId = state.folders[idx].key;
+    scheduleSave();
+    renderLibrary();
+    toast(`Přesunuto do „${state.folders[idx].label}".`);
+  });
+}
 
 /* =========================================================
    ADD / EDIT LINK MODAL
@@ -1338,11 +1542,11 @@ function openLinkModal(id) {
   document.getElementById("linkFolder").value = item ? item.folderId : "";
   document.getElementById("newFolderInput").value = "";
   document.getElementById("linkDefaultPart").value = item ? item.defaultPart : (state.parts[0] ? state.parts[0].key : "");
-  document.getElementById("linkPortrait").checked = item ? !!item.portrait : false;
+  document.getElementById("linkAspectRatio").value = item ? (item.aspectRatio || "16/9") : "16/9";
   document.getElementById("linkTimestamp").value = item ? secondsToTimestamp(item.timestamp) : "";
   document.getElementById("linkShortDesc").value = item ? item.shortDesc : "";
   document.getElementById("linkLongDesc").value = item ? item.longDesc : "";
-  document.getElementById("linkNote").value = item ? item.note : "";
+  document.getElementById("linkNote").value = (item && item.notesByCoach && item.notesByCoach[uidCurrent]) ? item.notesByCoach[uidCurrent].text : "";
   document.getElementById("thumbPreview").style.backgroundImage = item && item.thumbnail ? `url('${item.thumbnail}')` : "none";
   document.getElementById("thumbPreview").textContent = item && item.thumbnail ? "" : "bez náhledu";
   document.getElementById("thumbPreview").dataset.thumb = item ? (item.thumbnail || "") : "";
@@ -1354,8 +1558,8 @@ function openLinkModal(id) {
   formEquip = item ? [...item.equipment] : [];
   renderTagPills();
   renderEquipPills();
-  setDiffPicker(item ? item.difficulty : 3);
-  setRatingPicker(item ? item.rating : 0);
+  setDiffPicker(item && item.difficulties && item.difficulties[uidCurrent] ? item.difficulties[uidCurrent] : 3);
+  setRatingPicker(item && item.ratings && item.ratings[uidCurrent] ? item.ratings[uidCurrent] : 0);
 
   linkModalBackdrop.classList.remove("hidden");
   document.getElementById("linkTitle").focus();
@@ -1377,7 +1581,7 @@ document.getElementById("fetchMetaBtn").addEventListener("click", async () => {
       document.getElementById("thumbPreview").style.backgroundImage = `url('${meta.thumbnail}')`;
       document.getElementById("thumbPreview").textContent = "";
       document.getElementById("thumbPreview").dataset.thumb = meta.thumbnail;
-      document.getElementById("linkPortrait").checked = !!meta.portrait;
+      document.getElementById("linkAspectRatio").value = meta.portrait ? "9/16" : "16/9";
       toast("Načteno.");
     } else {
       toast("Nepodařilo se načíst — zadej název ručně.");
@@ -1537,20 +1741,29 @@ linkForm.addEventListener("submit", (e) => {
   formEquip.forEach(t => { if (!state.equipmentPool.includes(t)) state.equipmentPool.push(t); });
 
   const id = editingLinkId || uid();
+  const existing = editingLinkId ? state.library[editingLinkId] : null;
+  const ratings = { ...(existing ? existing.ratings : {}) };
+  const difficulties = { ...(existing ? existing.difficulties : {}) };
+  const notesByCoach = { ...(existing ? existing.notesByCoach : {}) };
+  const myDiff = parseInt(document.getElementById("diffPicker").dataset.value || "3");
+  const myRating = parseInt(document.getElementById("ratingPicker").dataset.value || "0");
+  const myNote = document.getElementById("linkNote").value.trim();
+  difficulties[uidCurrent] = myDiff;
+  if (myRating) ratings[uidCurrent] = myRating; else delete ratings[uidCurrent];
+  if (myNote) notesByCoach[uidCurrent] = { text: myNote, authorLabel: myLabel(), date: Date.now() }; else delete notesByCoach[uidCurrent];
+
   state.library[id] = {
     id, url, platform, videoId,
     title: document.getElementById("linkTitle").value.trim(),
     thumbnail: pendingThumbUpload || document.getElementById("thumbPreview").dataset.thumb || "",
     folderId,
     defaultPart: document.getElementById("linkDefaultPart").value,
-    portrait: document.getElementById("linkPortrait").checked,
+    aspectRatio: document.getElementById("linkAspectRatio").value,
     tags: [...formTags],
     equipment: [...formEquip],
-    difficulty: parseInt(document.getElementById("diffPicker").dataset.value || "3"),
-    rating: parseInt(document.getElementById("ratingPicker").dataset.value || "0"),
+    difficulties, ratings, notesByCoach,
     shortDesc: document.getElementById("linkShortDesc").value.trim(),
     longDesc: document.getElementById("linkLongDesc").value.trim(),
-    note: document.getElementById("linkNote").value.trim(),
     timestamp: parseTimestampToSeconds(document.getElementById("linkTimestamp").value),
     dateAdded: editingLinkId ? state.library[editingLinkId].dateAdded : Date.now()
   };
@@ -1576,15 +1789,30 @@ document.getElementById("deleteLinkBtn").addEventListener("click", () => {
    DETAIL MODAL
    ========================================================= */
 const detailModalBackdrop = document.getElementById("detailModalBackdrop");
-document.getElementById("closeDetailModalBtn").addEventListener("click", () => detailModalBackdrop.classList.add("hidden"));
-detailModalBackdrop.addEventListener("click", (e) => { if (e.target === detailModalBackdrop) detailModalBackdrop.classList.add("hidden"); });
+function closeDetailModal() {
+  detailModalBackdrop.classList.add("hidden");
+  document.getElementById("detailEmbedWrap").innerHTML = ""; // zastaví přehrávání na pozadí
+}
+document.getElementById("closeDetailModalBtn").addEventListener("click", closeDetailModal);
+detailModalBackdrop.addEventListener("click", (e) => { if (e.target === detailModalBackdrop) closeDetailModal(); });
 
 function openDetailModal(id) {
   const item = state.library[id];
   if (!item) return;
   currentDetailId = id;
-  document.getElementById("detailEmbedWrap").innerHTML = renderEmbedHtml(item);
-  document.getElementById("detailEmbedWrap").classList.toggle("is-portrait", !!item.portrait);
+  const embedWrap = document.getElementById("detailEmbedWrap");
+  embedWrap.innerHTML = renderEmbedHtml(item);
+  embedWrap.style.aspectRatio = item.aspectRatio || "16/9";
+  if (item.platform === "file") {
+    // u přímého video souboru appka pozná skutečný poměr stran sama, jakmile se video načte
+    const videoEl = embedWrap.querySelector("video");
+    if (videoEl) videoEl.addEventListener("loadedmetadata", () => {
+      if (videoEl.videoWidth && videoEl.videoHeight) embedWrap.style.aspectRatio = `${videoEl.videoWidth} / ${videoEl.videoHeight}`;
+    }, { once: true });
+  }
+  const hint = document.getElementById("detailTimestampHint");
+  if (item.timestamp) { hint.textContent = `Cvičení začíná v ${secondsToTimestamp(item.timestamp)}`; hint.classList.remove("hidden"); }
+  else { hint.classList.add("hidden"); }
   document.getElementById("detailFbFallback").innerHTML = item.platform === "facebook"
     ? `<a class="btn btn-sm" style="margin-bottom:14px;" href="${esc(item.url)}" target="_blank" rel="noopener"><i class="fa-brands fa-facebook"></i> Nejde přehrát? Otevřít přímo na Facebooku ↗</a>`
     : "";
@@ -1594,18 +1822,25 @@ function openDetailModal(id) {
   if (detailFolder) chips.push(`<span class="chip" style="border-color:${esc(detailFolder.color)};color:${esc(detailFolder.color)};">${esc(detailFolder.label)}</span>`);
   item.tags.forEach(t => chips.push(`<span class="chip">${esc(t)}</span>`));
   item.equipment.forEach(t => chips.push(`<span class="chip"><i class="fa-solid fa-wrench"></i> ${esc(t)}</span>`));
-  chips.push(`<span class="chip">Obtížnost ${item.difficulty}/5</span>`);
-  if (item.rating) chips.push(`<span class="chip">${"★".repeat(item.rating)}</span>`);
+  const dAvg = avgOf(item.difficulties), rAvg = avgOf(item.ratings);
+  chips.push(`<span class="chip">Obtížnost ${dAvg.count ? dAvg.avg.toFixed(1) : "—"}/5${dAvg.count > 1 ? ` (${dAvg.count}×)` : ""}</span>`);
+  if (rAvg.count) chips.push(`<span class="chip">${"★".repeat(Math.round(rAvg.avg))} ${rAvg.avg.toFixed(1)}${rAvg.count > 1 ? ` (${rAvg.count}×)` : ""}</span>`);
   document.getElementById("detailChips").innerHTML = `<div class="chip-row">${chips.join("")}</div>`;
   document.getElementById("detailShortDesc").textContent = item.shortDesc;
   document.getElementById("detailLongDescRow").classList.toggle("hidden", !item.longDesc);
   document.getElementById("detailLongDesc").textContent = item.longDesc;
-  document.getElementById("detailNoteRow").classList.toggle("hidden", !item.note);
-  document.getElementById("detailNote").textContent = item.note;
+  const notes = Object.values(item.notesByCoach || {}).sort((a, b) => (a.date || 0) - (b.date || 0));
+  document.getElementById("detailNoteRow").classList.toggle("hidden", !notes.length);
+  document.getElementById("detailNote").innerHTML = notes.map(n => `
+    <div class="coach-note">
+      <div class="coach-note-author">${esc(n.authorLabel || "Trenér")}</div>
+      <div>${esc(n.text)}</div>
+    </div>
+  `).join("");
   detailModalBackdrop.classList.remove("hidden");
 }
 document.getElementById("editFromDetailBtn").addEventListener("click", () => {
-  detailModalBackdrop.classList.add("hidden");
+  closeDetailModal();
   openLinkModal(currentDetailId);
 });
 
@@ -2127,7 +2362,9 @@ function setupFolderDragDrop() {
     sort: false,
     animation: 150,
     delay: 120,
-    delayOnTouchOnly: true
+    delayOnTouchOnly: true,
+    filter: ".card-select-box, .card-menu-btn",
+    preventOnFilter: false
   });
   folderSortableInstance = Sortable.create(list, {
     group: { name: "folderMove", pull: false, put: true },
@@ -2162,12 +2399,14 @@ foldersModalBackdrop.addEventListener("click", (e) => { if (e.target === folders
 
 function renderFoldersManageList() {
   const wrap = document.getElementById("foldersManageList");
+  const isAdmin = uidCurrent === ADMIN_UID;
   wrap.innerHTML = state.folders.map(f => `
     <div class="folder-manage-row" data-key="${esc(f.key)}">
       <span class="drag-handle"><i class="fa-solid fa-grip-lines"></i></span>
       <input type="color" value="${esc(f.color)}" data-field="color">
       <input type="text" class="folder-name-input" value="${esc(f.label)}" placeholder="Název" data-field="label">
       <input type="text" class="folder-note-input" value="${esc(f.note || "")}" placeholder="Poznámka (nepovinné)" data-field="note">
+      ${isAdmin ? `<button type="button" class="btn btn-icon btn-danger" data-delete-folder="${esc(f.key)}" aria-label="Smazat složku"><i class="fa-solid fa-trash"></i></button>` : ""}
     </div>
   `).join("");
   wrap.querySelectorAll("input").forEach(inp => {
@@ -2181,6 +2420,25 @@ function renderFoldersManageList() {
       renderLibrary();
       if (currentView === "editor") renderPickerList();
       toast("Uloženo.");
+    });
+  });
+  wrap.querySelectorAll("[data-delete-folder]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const key = btn.dataset.deleteFolder;
+      const f = getFolder(key);
+      if (!f) return;
+      const count = Object.values(state.library).filter(it => it.folderId === key).length;
+      const msg = count
+        ? `Smazat složku „${f.label}"? ${count} video(í) v ní zůstane bez složky.`
+        : `Smazat složku „${f.label}"?`;
+      if (!confirm(msg)) return;
+      state.folders = state.folders.filter(x => x.key !== key);
+      Object.values(state.library).forEach(it => { if (it.folderId === key) it.folderId = ""; });
+      if (activeFolderFilter === key) activeFolderFilter = null;
+      scheduleSave();
+      renderFoldersManageList();
+      renderLibrary();
+      toast("Složka smazána.");
     });
   });
   if (foldersSortable) { foldersSortable.destroy(); foldersSortable = null; }
