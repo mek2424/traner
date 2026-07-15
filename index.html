@@ -157,7 +157,8 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;}
 .card{
   background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
-  box-shadow:var(--shadow);text-align:left;display:flex;flex-direction:column;
+  box-shadow:var(--shadow);text-align:left;display:flex;flex-direction:column;position:relative;
+  border-left:4px solid var(--line);
 }
 .card-thumb{
   aspect-ratio:16/9;background:var(--court) center/cover no-repeat;position:relative;
@@ -223,6 +224,26 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
 .manage-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
 .manage-row .swatch{width:20px;height:20px;border-radius:5px;flex-shrink:0;}
 .manage-row input{flex:1;padding:7px 9px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper);}
+
+.folder-sidebar{
+  background:var(--card);width:min(300px,84vw);height:100%;padding:16px;overflow-y:auto;
+  box-shadow:var(--shadow);
+}
+.folder-row{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:1px solid transparent;
+  border-radius:var(--radius-sm);padding:9px 8px;font-size:14px;color:var(--ink);margin-bottom:2px;
+}
+.folder-row:hover,.folder-row.drag-over{background:var(--paper);border-color:var(--line);}
+.folder-row.active{background:var(--paper);border-color:var(--court);font-weight:700;}
+.folder-row .swatch{width:14px;height:14px;border-radius:4px;flex-shrink:0;}
+.folder-row-all{border-bottom:1px solid var(--line);border-radius:0;margin-bottom:8px;padding-bottom:12px;}
+.folder-manage-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+.folder-manage-row .drag-handle{color:rgba(27,36,48,.4);flex-shrink:0;}
+.folder-manage-row input[type=color]{width:34px;height:34px;padding:2px;border:1px solid var(--line);border-radius:6px;flex-shrink:0;}
+.folder-manage-row .folder-name-input{flex:1 1 40%;padding:7px 9px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper);min-width:0;}
+.folder-manage-row .folder-note-input{flex-basis:100%;order:5;margin-left:42px;width:calc(100% - 42px);padding:7px 9px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper);font-size:12.5px;}
+@media(min-width:480px){.folder-manage-row .folder-note-input{flex:1 1 45%;flex-basis:0;order:0;margin-left:0;width:auto;min-width:0;}}
+.folder-manage-row .btn-danger{flex-shrink:0;}
 .merge-row{display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:13px;}
 .merge-row .merge-name{flex:0 0 auto;max-width:35%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;}
 .merge-row select{flex:1;padding:6px 7px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper);font-size:12.5px;min-width:0;}
@@ -370,8 +391,8 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
     <!-- ---------- LIBRARY VIEW ---------- -->
     <section id="libraryView">
       <div class="toolbar">
+        <button class="btn btn-icon" id="openFolderSidebarBtn" aria-label="Složky"><i class="fa-solid fa-folder"></i></button>
         <input type="search" id="librarySearch" placeholder="Hledat podle názvu, štítku, složky…">
-        <select id="folderFilter"><option value="">Všechny složky</option></select>
         <select id="librarySort">
           <option value="date-desc">Nejnovější</option>
           <option value="date-asc">Nejstarší</option>
@@ -379,6 +400,10 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
           <option value="za">Z–A</option>
         </select>
         <button class="btn btn-accent" id="openAddLinkBtn"><i class="fa-solid fa-plus"></i> Přidat odkaz</button>
+      </div>
+      <div id="activeFolderBar" class="hidden" style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:13px;">
+        <span>Složka: <strong id="activeFolderLabel"></strong></span>
+        <button type="button" class="manage-link" id="clearFolderFilterBtn">zrušit filtr</button>
       </div>
       <div style="text-align:right;margin-bottom:6px;">
         <button type="button" class="manage-link" id="manageTagsBtn"><i class="fa-solid fa-code-merge"></i> Sloučit štítky / vybavení</button>
@@ -572,6 +597,36 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
   </div>
 </div>
 
+<!-- ===================== FOLDER SIDEBAR ===================== -->
+<div id="folderSidebarBackdrop" class="modal-backdrop hidden" style="align-items:stretch;justify-content:flex-start;">
+  <div class="folder-sidebar">
+    <div class="modal-head" style="margin-bottom:10px;">
+      <h2 style="font-size:20px;">Složky</h2>
+      <button class="btn btn-icon btn-ghost" id="closeFolderSidebarBtn">✕</button>
+    </div>
+    <p style="font-size:11.5px;color:var(--ink-soft);margin:0 0 10px;">Klepnutím filtruješ, přetažením karty sem přesuneš video.</p>
+    <button type="button" class="folder-row folder-row-all" id="folderRowAll">
+      <span class="swatch" style="background:var(--line);"></span> Všechny složky
+    </button>
+    <div id="folderSidebarList"></div>
+    <button type="button" class="manage-link" id="manageFoldersBtn" style="margin-top:10px;"><i class="fa-solid fa-sliders"></i> Spravovat složky</button>
+  </div>
+</div>
+
+<!-- ===================== MANAGE FOLDERS MODAL ===================== -->
+<div id="foldersModalBackdrop" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 style="font-size:22px;">Složky</h2>
+      <button class="btn btn-icon btn-ghost" id="closeFoldersModalBtn">✕</button>
+    </div>
+    <div id="foldersManageList"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-primary btn-block" id="addFolderBtn"><i class="fa-solid fa-plus"></i> Přidat novou složku</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===================== MANAGE PARTS MODAL ===================== -->
 <div id="partsModalBackdrop" class="modal-backdrop hidden">
   <div class="modal">
@@ -742,6 +797,15 @@ function nextPartColor() {
 }
 state.parts = structuredClone(DEFAULT_PARTS); // bezpečný výchozí stav, přepíše se po načtení dat
 
+const FOLDER_COLORS = ["#7FB0AC", "#E8C468", "#A8C0DE", "#E39A8A", "#B8A8D4", "#C97B5C", "#ABA875", "#9FC2A6", "#D9A6C2", "#8FB0D9"];
+function getFolder(key) {
+  return state.folders.find(f => f.key === key) || null;
+}
+function nextFolderColor() {
+  return FOLDER_COLORS[state.folders.length % FOLDER_COLORS.length];
+}
+let activeFolderFilter = null; // key vybrané složky v postranním panelu, null = vše
+
 /* =========================================================
    HELPERS
    ========================================================= */
@@ -770,6 +834,26 @@ function darkenHex(hex, amount) {
   if (!m || m.length < 3) return hex;
   const [r, g, b] = m.map(h => Math.max(0, Math.round(parseInt(h, 16) * (1 - amount))));
   return "#" + [r, g, b].map(v => v.toString(16).padStart(2, "0")).join("");
+}
+/** Načte soubor jako obrázek se správně opravenou orientací podle EXIF (canvas.drawImage
+    to sám od sebe u fotek z mobilu často nedělá) a vrátí čistý, už opravený data URL. */
+async function fileToOrientedDataUrl(file, mimeType = "image/jpeg", quality = 0.9) {
+  try {
+    const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+    const canvas = document.createElement("canvas");
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    canvas.getContext("2d").drawImage(bitmap, 0, 0);
+    return canvas.toDataURL(mimeType, quality);
+  } catch (err) {
+    console.warn("createImageBitmap selhalo, čtu soubor napřímo:", err);
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => resolve(ev.target.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
 }
 function applyColorScheme() {
   const primary = (state.profile && state.profile.colorPrimary) || DEFAULT_COLORS.primary;
@@ -1032,6 +1116,30 @@ async function loadUserData() {
     loadErrors.push(`tréninky (${e.code || e.message || "?"})`);
   }
 
+  // --- migrace složek ze starého seznamu textů na objekty {key,label,color,note} ---
+  try {
+    if (state.folders.length && typeof state.folders[0] === "string") {
+      const nameToKey = {};
+      state.folders = state.folders.map((name, i) => {
+        const key = uid();
+        nameToKey[name] = key;
+        return { key, label: name, color: FOLDER_COLORS[i % FOLDER_COLORS.length], note: "" };
+      });
+      Object.values(state.library).forEach(it => {
+        if (it.folder) {
+          if (!nameToKey[it.folder]) {
+            const key = uid();
+            state.folders.push({ key, label: it.folder, color: nextFolderColor(), note: "" });
+            nameToKey[it.folder] = key;
+          }
+          it.folderId = nameToKey[it.folder];
+        }
+        delete it.folder;
+      });
+      scheduleSave();
+    }
+  } catch (e) { console.error("Migrace složek selhala:", e); }
+
   // --- drobná migrace polí přímo na knihovních položkách (defaultPart / portrait / detekce přímých video souborů) ---
   try {
     const legacyPartMap = { protazeni: "zaver", posilovani: "zaver", kompenzace: "zaver" };
@@ -1100,20 +1208,16 @@ function switchView(view) {
    LIBRARY VIEW
    ========================================================= */
 document.getElementById("librarySearch").addEventListener("input", renderLibrary);
-document.getElementById("folderFilter").addEventListener("change", renderLibrary);
 
 function renderFolderOptions() {
-  const sel = document.getElementById("folderFilter");
   const formSel = document.getElementById("linkFolder");
   const pickerSel = document.getElementById("pickerFolderFilter");
-  const prevFilter = sel.value, prevForm = formSel.value, prevPicker = pickerSel ? pickerSel.value : "";
-  const opts = state.folders.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join("");
-  sel.innerHTML = '<option value="">Všechny složky</option>' + opts;
+  const prevForm = formSel.value, prevPicker = pickerSel ? pickerSel.value : "";
+  const opts = state.folders.map(f => `<option value="${esc(f.key)}">${esc(f.label)}</option>`).join("");
   formSel.innerHTML = '<option value="">— vyber —</option>' + opts;
   if (pickerSel) pickerSel.innerHTML = '<option value="">Všechny složky</option>' + opts;
-  if (state.folders.includes(prevFilter)) sel.value = prevFilter;
-  if (state.folders.includes(prevForm)) formSel.value = prevForm;
-  if (pickerSel && state.folders.includes(prevPicker)) pickerSel.value = prevPicker;
+  if (state.folders.some(f => f.key === prevForm)) formSel.value = prevForm;
+  if (pickerSel && state.folders.some(f => f.key === prevPicker)) pickerSel.value = prevPicker;
 }
 
 function renderPartSelectOptions() {
@@ -1145,14 +1249,14 @@ function renderEquipFilterRow() { renderFilterChips("equipFilterRow", state.equi
 
 function getFilteredLibraryItems() {
   const q = document.getElementById("librarySearch").value.trim().toLowerCase();
-  const folder = document.getElementById("folderFilter").value;
   const sortMode = document.getElementById("librarySort").value;
   const items = Object.values(state.library).filter(item => {
-    if (folder && item.folder !== folder) return false;
+    if (activeFolderFilter && item.folderId !== activeFolderFilter) return false;
     if (libraryTagFilter.size && ![...libraryTagFilter].every(t => item.tags.includes(t))) return false;
     if (libraryEquipFilter.size && ![...libraryEquipFilter].every(t => item.equipment.includes(t))) return false;
     if (q) {
-      const hay = [item.title, item.folder, ...(item.tags || []), item.shortDesc].join(" ").toLowerCase();
+      const folderLabel = getFolder(item.folderId) ? getFolder(item.folderId).label : "";
+      const hay = [item.title, folderLabel, ...(item.tags || []), item.shortDesc].join(" ").toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -1172,29 +1276,38 @@ function renderLibrary() {
   renderFolderOptions();
   renderTagFilterRow();
   renderEquipFilterRow();
+  const bar = document.getElementById("activeFolderBar");
+  const activeFolder = activeFolderFilter ? getFolder(activeFolderFilter) : null;
+  bar.classList.toggle("hidden", !activeFolder);
+  if (activeFolder) document.getElementById("activeFolderLabel").textContent = activeFolder.label;
   const grid = document.getElementById("libraryGrid");
   const items = getFilteredLibraryItems();
   if (!items.length) {
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><h3>Zatím žádná videa</h3><p>Přidej první odkaz tlačítkem nahoře, nebo zkus uvolnit filtry.</p></div>`;
     return;
   }
-  grid.innerHTML = items.map(item => `
-    <button class="card" data-id="${esc(item.id)}" data-action="open-detail">
+  grid.innerHTML = items.map(item => {
+    const folder = getFolder(item.folderId);
+    const stripeColor = folder ? folder.color : "var(--line)";
+    return `
+    <button class="card" data-id="${esc(item.id)}" data-action="open-detail" style="border-left-color:${esc(stripeColor)}">
       <div class="card-thumb" style="${item.thumbnail ? `background-image:url('${esc(item.thumbnail)}')` : ""}">
         ${item.thumbnail ? "" : "bez náhledu"}
         <span class="platform-badge"><i class="${PLATFORM_ICONS[item.platform] || PLATFORM_ICONS.other}"></i></span>
       </div>
       <div class="card-body">
         <div class="card-title">${esc(item.title)}</div>
-        ${item.folder ? `<div class="card-folder">${esc(item.folder)}</div>` : ""}
+        ${folder ? `<div class="card-folder" style="color:${esc(folder.color)}">${esc(folder.label)}</div>` : ""}
         <div class="card-meta">
           <span class="diff-dots">${[1,2,3,4,5].map(n => `<span class="${n <= item.difficulty ? "on" : ""}"></span>`).join("")}</span>
           ${item.rating ? `<span class="stars">${"★".repeat(item.rating)}</span>` : ""}
         </div>
       </div>
     </button>
-  `).join("");
+  `;
+  }).join("");
 }
+document.getElementById("clearFolderFilterBtn").addEventListener("click", () => { activeFolderFilter = null; renderLibrary(); });
 document.getElementById("libraryGrid").addEventListener("click", (e) => {
   const card = e.target.closest("[data-action='open-detail']");
   if (card) openDetailModal(card.dataset.id);
@@ -1222,7 +1335,7 @@ function openLinkModal(id) {
   document.getElementById("linkModalTitle").textContent = item ? "Upravit odkaz" : "Přidat odkaz";
   document.getElementById("linkUrl").value = item ? item.url : "";
   document.getElementById("linkTitle").value = item ? item.title : "";
-  document.getElementById("linkFolder").value = item ? item.folder : "";
+  document.getElementById("linkFolder").value = item ? item.folderId : "";
   document.getElementById("newFolderInput").value = "";
   document.getElementById("linkDefaultPart").value = item ? item.defaultPart : (state.parts[0] ? state.parts[0].key : "");
   document.getElementById("linkPortrait").checked = item ? !!item.portrait : false;
@@ -1363,30 +1476,26 @@ document.getElementById("equipInput").addEventListener("keydown", (e) => {
   }
 });
 
-document.getElementById("thumbFileInput").addEventListener("change", (e) => {
+document.getElementById("thumbFileInput").addEventListener("change", async (e) => {
   const file = e.target.files[0];
   if (!file) return;
+  const orientedDataUrl = await fileToOrientedDataUrl(file, "image/jpeg", 0.95);
   const img = new Image();
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    img.onload = () => {
-      const maxW = 480;
-      const scale = Math.min(1, maxW / img.width);
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
-      pendingThumbUpload = dataUrl;
-      const tp = document.getElementById("thumbPreview");
-      tp.style.backgroundImage = `url('${dataUrl}')`;
-      tp.textContent = "";
-      toast("Náhled nahrán.");
-    };
-    img.src = ev.target.result;
+  img.onload = () => {
+    const maxW = 480;
+    const scale = Math.min(1, maxW / img.width);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(img.width * scale);
+    canvas.height = Math.round(img.height * scale);
+    canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+    pendingThumbUpload = dataUrl;
+    const tp = document.getElementById("thumbPreview");
+    tp.style.backgroundImage = `url('${dataUrl}')`;
+    tp.textContent = "";
+    toast("Náhled nahrán.");
   };
-  reader.readAsDataURL(file);
+  img.src = orientedDataUrl;
 });
 
 function setDiffPicker(val) {
@@ -1412,8 +1521,17 @@ linkForm.addEventListener("submit", (e) => {
   if (!videoId && platform === "youtube") videoId = extractYouTubeId(url);
   if (!videoId && platform === "drive") videoId = extractDriveId(url);
 
-  let folder = document.getElementById("newFolderInput").value.trim() || document.getElementById("linkFolder").value;
-  if (folder && !state.folders.includes(folder)) state.folders.push(folder);
+  const newFolderName = document.getElementById("newFolderInput").value.trim();
+  let folderId = document.getElementById("linkFolder").value;
+  if (newFolderName) {
+    const existing = state.folders.find(f => f.label.toLowerCase() === newFolderName.toLowerCase());
+    if (existing) { folderId = existing.key; }
+    else {
+      const key = uid();
+      state.folders.push({ key, label: newFolderName, color: nextFolderColor(), note: "" });
+      folderId = key;
+    }
+  }
 
   formTags.forEach(t => { if (!state.tagPool.includes(t)) state.tagPool.push(t); });
   formEquip.forEach(t => { if (!state.equipmentPool.includes(t)) state.equipmentPool.push(t); });
@@ -1423,7 +1541,7 @@ linkForm.addEventListener("submit", (e) => {
     id, url, platform, videoId,
     title: document.getElementById("linkTitle").value.trim(),
     thumbnail: pendingThumbUpload || document.getElementById("thumbPreview").dataset.thumb || "",
-    folder,
+    folderId,
     defaultPart: document.getElementById("linkDefaultPart").value,
     portrait: document.getElementById("linkPortrait").checked,
     tags: [...formTags],
@@ -1472,7 +1590,8 @@ function openDetailModal(id) {
     : "";
   document.getElementById("detailTitle").textContent = item.title;
   const chips = [];
-  if (item.folder) chips.push(`<span class="chip">${esc(item.folder)}</span>`);
+  const detailFolder = getFolder(item.folderId);
+  if (detailFolder) chips.push(`<span class="chip" style="border-color:${esc(detailFolder.color)};color:${esc(detailFolder.color)};">${esc(detailFolder.label)}</span>`);
   item.tags.forEach(t => chips.push(`<span class="chip">${esc(t)}</span>`));
   item.equipment.forEach(t => chips.push(`<span class="chip"><i class="fa-solid fa-wrench"></i> ${esc(t)}</span>`));
   chips.push(`<span class="chip">Obtížnost ${item.difficulty}/5</span>`);
@@ -1607,11 +1726,11 @@ function renderPickerList() {
   const part = document.getElementById("pickerPartFilter").value;
   const items = Object.values(state.library)
     .filter(it => {
-      if (folder && it.folder !== folder) return false;
+      if (folder && it.folderId !== folder) return false;
       if (part && it.defaultPart !== part) return false;
       if (pickerTagFilter.size && ![...pickerTagFilter].every(t => it.tags.includes(t))) return false;
       if (pickerEquipFilter.size && ![...pickerEquipFilter].every(t => it.equipment.includes(t))) return false;
-      if (q && !(it.title + " " + it.folder + " " + it.tags.join(" ")).toLowerCase().includes(q)) return false;
+      if (q && !(it.title + " " + (getFolder(it.folderId) ? getFolder(it.folderId).label : "") + " " + it.tags.join(" ")).toLowerCase().includes(q)) return false;
       return true;
     })
     .sort((a, b) => (b.dateAdded || 0) - (a.dateAdded || 0));
@@ -1832,13 +1951,12 @@ function openProfileModal() {
   profileModalBackdrop.classList.remove("hidden");
 }
 
-document.getElementById("avatarFileInput").addEventListener("change", (e) => {
+document.getElementById("avatarFileInput").addEventListener("change", async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => openCropModal(ev.target.result);
-  reader.readAsDataURL(file);
   e.target.value = ""; // ať jde přes stejný soubor otevřít znovu, kdyby se chtěl ořez předělat
+  const dataUrl = await fileToOrientedDataUrl(file);
+  openCropModal(dataUrl);
 });
 
 /* ---- interaktivní ořez avataru (posun + zoom, žádná externí knihovna) ---- */
@@ -1948,6 +2066,143 @@ document.getElementById("profileForm").addEventListener("submit", async (e) => {
     toast("Uložení profilu selhalo, zkontroluj připojení.");
   }
   profileModalBackdrop.classList.add("hidden");
+});
+
+/* =========================================================
+   POSTRANNÍ PANEL SLOŽEK (filtr + cíl pro přetažení)
+   ========================================================= */
+const folderSidebarBackdrop = document.getElementById("folderSidebarBackdrop");
+let librarySortableInstance = null, folderSortableInstance = null;
+
+document.getElementById("openFolderSidebarBtn").addEventListener("click", () => {
+  renderFolderSidebar();
+  folderSidebarBackdrop.classList.remove("hidden");
+});
+function closeFolderSidebar() {
+  folderSidebarBackdrop.classList.add("hidden");
+  if (librarySortableInstance) { librarySortableInstance.destroy(); librarySortableInstance = null; }
+  if (folderSortableInstance) { folderSortableInstance.destroy(); folderSortableInstance = null; }
+}
+document.getElementById("closeFolderSidebarBtn").addEventListener("click", closeFolderSidebar);
+folderSidebarBackdrop.addEventListener("click", (e) => { if (e.target === folderSidebarBackdrop) closeFolderSidebar(); });
+document.getElementById("folderRowAll").addEventListener("click", () => {
+  activeFolderFilter = null;
+  closeFolderSidebar();
+  renderLibrary();
+});
+document.getElementById("manageFoldersBtn").addEventListener("click", () => {
+  closeFolderSidebar();
+  renderFoldersManageList();
+  document.getElementById("foldersModalBackdrop").classList.remove("hidden");
+});
+
+function renderFolderSidebar() {
+  document.getElementById("folderRowAll").classList.toggle("active", !activeFolderFilter);
+  const list = document.getElementById("folderSidebarList");
+  list.innerHTML = state.folders.map(f => `
+    <button type="button" class="folder-row ${activeFolderFilter === f.key ? "active" : ""}" data-key="${esc(f.key)}">
+      <span class="swatch" style="background:${esc(f.color)}"></span> ${esc(f.label)}
+    </button>
+  `).join("");
+  list.querySelectorAll(".folder-row").forEach(row => {
+    row.addEventListener("click", () => {
+      activeFolderFilter = row.dataset.key;
+      folderSidebarBackdrop.classList.add("hidden");
+      renderLibrary();
+    });
+  });
+  setupFolderDragDrop();
+}
+
+/** Umožní přetáhnout kartu z knihovny na složku v postranním panelu, čímž se jí přiřadí. */
+let lastHoveredFolderKey = null;
+function setupFolderDragDrop() {
+  const grid = document.getElementById("libraryGrid");
+  const list = document.getElementById("folderSidebarList");
+  if (librarySortableInstance) { librarySortableInstance.destroy(); librarySortableInstance = null; }
+  if (folderSortableInstance) { folderSortableInstance.destroy(); folderSortableInstance = null; }
+  if (!grid || !list) return;
+  librarySortableInstance = Sortable.create(grid, {
+    group: { name: "folderMove", pull: "clone", put: false },
+    sort: false,
+    animation: 150,
+    delay: 120,
+    delayOnTouchOnly: true
+  });
+  folderSortableInstance = Sortable.create(list, {
+    group: { name: "folderMove", pull: false, put: true },
+    sort: false,
+    animation: 150,
+    onMove: (evt) => {
+      const row = evt.related && evt.related.closest ? evt.related.closest(".folder-row") : null;
+      list.querySelectorAll(".folder-row").forEach(r => r.classList.remove("drag-over"));
+      if (row) { row.classList.add("drag-over"); lastHoveredFolderKey = row.dataset.key; }
+      return true;
+    },
+    onAdd: (evt) => {
+      evt.item.remove(); // zahodit dočasně vloženou kopii, přeřazení se projeví přes normální re-render
+      list.querySelectorAll(".folder-row").forEach(r => r.classList.remove("drag-over"));
+      const itemId = evt.item.dataset.id;
+      if (itemId && lastHoveredFolderKey && state.library[itemId]) {
+        state.library[itemId].folderId = lastHoveredFolderKey;
+        scheduleSave();
+        toast(`Přesunuto do složky „${getFolder(lastHoveredFolderKey).label}".`);
+        renderLibrary();
+      }
+    }
+  });
+}
+
+/* =========================================================
+   SPRÁVA SLOŽEK
+   ========================================================= */
+const foldersModalBackdrop = document.getElementById("foldersModalBackdrop");
+document.getElementById("closeFoldersModalBtn").addEventListener("click", () => foldersModalBackdrop.classList.add("hidden"));
+foldersModalBackdrop.addEventListener("click", (e) => { if (e.target === foldersModalBackdrop) foldersModalBackdrop.classList.add("hidden"); });
+
+function renderFoldersManageList() {
+  const wrap = document.getElementById("foldersManageList");
+  wrap.innerHTML = state.folders.map(f => `
+    <div class="folder-manage-row" data-key="${esc(f.key)}">
+      <span class="drag-handle"><i class="fa-solid fa-grip-lines"></i></span>
+      <input type="color" value="${esc(f.color)}" data-field="color">
+      <input type="text" class="folder-name-input" value="${esc(f.label)}" placeholder="Název" data-field="label">
+      <input type="text" class="folder-note-input" value="${esc(f.note || "")}" placeholder="Poznámka (nepovinné)" data-field="note">
+    </div>
+  `).join("");
+  wrap.querySelectorAll("input").forEach(inp => {
+    inp.addEventListener("change", () => {
+      const row = inp.closest(".folder-manage-row");
+      const f = state.folders.find(x => x.key === row.dataset.key);
+      if (!f) return;
+      const field = inp.dataset.field;
+      f[field] = field === "label" ? (inp.value.trim() || f.label) : inp.value;
+      scheduleSave();
+      renderLibrary();
+      if (currentView === "editor") renderPickerList();
+      toast("Uloženo.");
+    });
+  });
+  if (foldersSortable) { foldersSortable.destroy(); foldersSortable = null; }
+  foldersSortable = Sortable.create(wrap, {
+    handle: ".drag-handle",
+    animation: 150,
+    onEnd: () => {
+      const order = [...wrap.querySelectorAll(".folder-manage-row")].map(el => el.dataset.key);
+      state.folders.sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key));
+      scheduleSave();
+    }
+  });
+}
+let foldersSortable = null;
+document.getElementById("addFolderBtn").addEventListener("click", () => {
+  const label = prompt("Název nové složky:");
+  if (!label || !label.trim()) return;
+  state.folders.push({ key: uid(), label: label.trim(), color: nextFolderColor(), note: "" });
+  scheduleSave();
+  renderFoldersManageList();
+  renderLibrary();
+  toast("Přidáno.");
 });
 
 /* =========================================================
