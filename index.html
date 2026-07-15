@@ -85,7 +85,7 @@ a{color:var(--court);}
 .btn-block{width:100%;}
 
 /* ---------- Login ---------- */
-#loginScreen{
+#loginScreen,#pendingScreen{
   min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
   background:linear-gradient(160deg, var(--court) 0%, var(--court-dark) 100%);
 }
@@ -154,6 +154,9 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
 .empty-state{text-align:center;padding:60px 20px;color:var(--ink-faint);}
 
 .subtabs{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--line);}
+.pending-approval-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;}
+.pending-approval-row:last-child{border-bottom:none;}
+.pending-approval-email{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .subtab-btn{background:none;border:none;padding:8px 4px;margin-right:18px;font-size:14px;font-weight:600;color:var(--ink-faint);border-bottom:2px solid transparent;}
 .subtab-btn.active{color:var(--court);border-bottom-color:var(--chalk);}
 .owner-group-header{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin:16px 0 8px;}
@@ -430,6 +433,18 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
       <span id="loginSwitchText">Ještě nemáš účet?</span>
       <button type="button" id="loginSwitchBtn">Založit účet</button>
     </div>
+  </div>
+</div>
+
+<div id="pendingScreen" class="hidden">
+  <div class="login-card">
+    <div class="login-logo">TRENÉR</div>
+    <p style="text-align:center;font-size:14px;color:var(--ink-soft);margin:8px 0 20px;">
+      <i class="fa-regular fa-clock" style="font-size:26px;color:var(--court);display:block;margin-bottom:10px;"></i>
+      Účet je založený, ale ještě čeká na schválení od administrátora appky. Jakmile tě schválí, stačí appku znovu otevřít nebo obnovit.
+    </p>
+    <button type="button" class="btn btn-primary btn-block" id="pendingRecheckBtn"><i class="fa-solid fa-rotate"></i> Zkontrolovat znovu</button>
+    <button type="button" class="btn btn-ghost btn-block" id="pendingLogoutBtn" style="margin-top:8px;">Odhlásit</button>
   </div>
 </div>
 
@@ -782,6 +797,10 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
         <button type="button" class="btn btn-ghost" id="resetColorsBtn">Výchozí barvy</button>
       </div>
     </form>
+    <div id="adminPendingSection" class="hidden" style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line);">
+      <h3 style="font-size:14px;font-family:var(--font-body);font-weight:700;color:var(--ink-soft);margin:0 0 8px;">Čekají na schválení</h3>
+      <div id="pendingApprovalsList"></div>
+    </div>
     <div style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line);">
       <button type="button" class="btn btn-danger btn-block" id="deleteAccountBtn"><i class="fa-solid fa-user-xmark"></i> Smazat účet natrvalo</button>
       <p style="font-size:11.5px;color:var(--ink-faint);margin:6px 0 0;">Smaže tvůj profil, tréninky a tvoje hodnocení/poznámky ve sdílené knihovně. Nevratné.</p>
@@ -1123,17 +1142,54 @@ onAuthStateChanged(auth, async (user) => {
   if (user) {
     uidCurrent = user.uid;
     document.getElementById("userEmailLabel").textContent = user.email || "";
-    await loadUserData();
-    renderTopbarIdentity();
-    document.getElementById("loginScreen").classList.add("hidden");
-    document.getElementById("app").classList.remove("hidden");
-    switchView("library");
+    await checkMembershipAndProceed();
   } else {
     uidCurrent = null;
     document.getElementById("app").classList.add("hidden");
+    document.getElementById("pendingScreen").classList.add("hidden");
     document.getElementById("loginScreen").classList.remove("hidden");
   }
 });
+
+async function checkMembershipAndProceed() {
+  const isAdmin = uidCurrent === ADMIN_UID;
+  const membersRef = doc(db, "shared", "members");
+  let approved = false;
+  try {
+    const snap = await getDoc(membersRef);
+    if (!snap.exists()) {
+      if (isAdmin) {
+        await setDoc(membersRef, { approved: { [ADMIN_UID]: true } });
+        approved = true;
+      }
+    } else {
+      approved = !!(snap.data().approved || {})[uidCurrent];
+    }
+  } catch (e) {
+    console.error("Nepodařilo se ověřit členství:", e);
+    toast("Nepodařilo se ověřit přístup — zkontroluj připojení.", 6000);
+    return;
+  }
+
+  if (!approved) {
+    try {
+      await setDoc(doc(db, "pendingRequests", uidCurrent), { email: auth.currentUser.email || "", requestedAt: Date.now() }, { merge: true });
+    } catch (e) { console.error("Nepodařilo se zaznamenat žádost o přístup:", e); }
+    document.getElementById("loginScreen").classList.add("hidden");
+    document.getElementById("app").classList.add("hidden");
+    document.getElementById("pendingScreen").classList.remove("hidden");
+    return;
+  }
+
+  await loadUserData();
+  renderTopbarIdentity();
+  document.getElementById("loginScreen").classList.add("hidden");
+  document.getElementById("pendingScreen").classList.add("hidden");
+  document.getElementById("app").classList.remove("hidden");
+  switchView("library");
+}
+document.getElementById("pendingRecheckBtn").addEventListener("click", checkMembershipAndProceed);
+document.getElementById("pendingLogoutBtn").addEventListener("click", () => signOut(auth));
 
 function renderTopbarIdentity() {
   const p = state.profile || {};
@@ -2302,7 +2358,53 @@ function openProfileModal() {
   const prev = document.getElementById("avatarPreview");
   if (p.avatarUrl) { prev.style.backgroundImage = `url('${p.avatarUrl}')`; prev.textContent = ""; }
   else { prev.style.backgroundImage = "none"; prev.textContent = "bez fotky"; }
+  const adminSection = document.getElementById("adminPendingSection");
+  adminSection.classList.toggle("hidden", uidCurrent !== ADMIN_UID);
+  if (uidCurrent === ADMIN_UID) renderPendingApprovals();
   profileModalBackdrop.classList.remove("hidden");
+}
+
+async function renderPendingApprovals() {
+  const wrap = document.getElementById("pendingApprovalsList");
+  wrap.innerHTML = `<p style="font-size:12.5px;color:var(--ink-faint);">Načítám…</p>`;
+  let docs = [];
+  try {
+    const snap = await getDocs(collection(db, "pendingRequests"));
+    docs = snap.docs;
+  } catch (e) {
+    console.error("Nepodařilo se načíst žádosti:", e);
+    wrap.innerHTML = `<p style="font-size:12.5px;color:var(--danger);">Nepodařilo se načíst žádosti.</p>`;
+    return;
+  }
+  if (!docs.length) { wrap.innerHTML = `<p style="font-size:12.5px;color:var(--ink-faint);">Nikdo aktuálně nečeká.</p>`; return; }
+  wrap.innerHTML = docs.map(d => `
+    <div class="pending-approval-row" data-uid="${esc(d.id)}">
+      <span class="pending-approval-email">${esc(d.data().email || d.id)}</span>
+      <button type="button" class="btn btn-sm btn-primary" data-approve="${esc(d.id)}"><i class="fa-solid fa-check"></i> Schválit</button>
+      <button type="button" class="btn btn-sm btn-ghost" data-reject="${esc(d.id)}">Zamítnout</button>
+    </div>
+  `).join("");
+  wrap.querySelectorAll("[data-approve]").forEach(btn => btn.addEventListener("click", async () => {
+    const uidToApprove = btn.dataset.approve;
+    try {
+      const membersRef = doc(db, "shared", "members");
+      const snap = await getDoc(membersRef);
+      const approved = (snap.exists() ? snap.data().approved : {}) || {};
+      approved[uidToApprove] = true;
+      await setDoc(membersRef, { approved }, { merge: true });
+      await deleteDoc(doc(db, "pendingRequests", uidToApprove));
+      toast("Schváleno.");
+      renderPendingApprovals();
+    } catch (e) { console.error(e); toast("Schválení se nepovedlo."); }
+  }));
+  wrap.querySelectorAll("[data-reject]").forEach(btn => btn.addEventListener("click", async () => {
+    if (!confirm("Zamítnout tuhle žádost o přístup?")) return;
+    try {
+      await deleteDoc(doc(db, "pendingRequests", btn.dataset.reject));
+      toast("Zamítnuto.");
+      renderPendingApprovals();
+    } catch (e) { console.error(e); toast("Nepovedlo se."); }
+  }));
 }
 
 document.getElementById("avatarFileInput").addEventListener("change", async (e) => {
