@@ -2840,6 +2840,14 @@ if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("sw.js").catch(err => console.warn("SW registrace selhala:", err));
   });
+  // Jakmile převezme vládu nová verze appky (sw.js), appka se sama jednou obnoví,
+  // ať se nikdy nestane, že by "oprava" tiše zůstala v uložené staré verzi.
+  let refreshedOnce = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (refreshedOnce) return;
+    refreshedOnce = true;
+    window.location.reload();
+  });
 }
 </script>
 </body>
