@@ -2362,24 +2362,43 @@ function buildTrainingExportHtml(t) {
 document.getElementById("exportTrainingBtn").addEventListener("click", () => {
   const t = state.trainings[currentTrainingId];
   if (!t) return;
-  toast("Připravuji PDF…", 5000);
+  toast("Připravuji PDF…", 6000);
   const holder = document.createElement("div");
   holder.style.cssText = "position:fixed;left:0;top:0;background:#fff;z-index:-1;opacity:.001;pointer-events:none;";
   holder.innerHTML = buildTrainingExportHtml(t);
   document.body.appendChild(holder);
-  // krátká prodleva, ať appka stihne obsah opravdu vykreslit, než se z něj udělá snímek pro PDF
   requestAnimationFrame(() => requestAnimationFrame(() => {
-    const doc = new window.jspdf.jsPDF({ unit: "pt", format: "a4" });
-    doc.html(holder, {
-      x: 20, y: 20,
-      width: 555,
-      windowWidth: 780,
-      callback: (doc) => {
-        holder.remove();
-        const safeName = (t.name || "trenink").replace(/[^\p{L}\p{N}]+/gu, "-").toLowerCase();
-        doc.save(`${safeName}.pdf`);
-        toast("PDF staženo.");
+    window.html2canvas(holder, { scale: 2, backgroundColor: "#ffffff", useCORS: true }).then((canvas) => {
+      holder.remove();
+      const doc = new window.jspdf.jsPDF({ unit: "pt", format: "a4" });
+      const margin = 24;
+      const pageW = doc.internal.pageSize.getWidth();
+      const pageH = doc.internal.pageSize.getHeight();
+      const usableW = pageW - margin * 2;
+      const usableH = pageH - margin * 2;
+      const pxToPt = usableW / canvas.width;               // poměr: kolik "pt" v PDF odpovídá 1 pixelu obrázku
+      const pageHeightInPx = usableH / pxToPt;              // výška jedné stránky vyjádřená v pixelech zdrojového obrázku
+      let renderedPx = 0;
+      let firstPage = true;
+      while (renderedPx < canvas.height) {
+        const sliceHeightPx = Math.min(pageHeightInPx, canvas.height - renderedPx);
+        const sliceCanvas = document.createElement("canvas");
+        sliceCanvas.width = canvas.width;
+        sliceCanvas.height = sliceHeightPx;
+        sliceCanvas.getContext("2d").drawImage(canvas, 0, renderedPx, canvas.width, sliceHeightPx, 0, 0, canvas.width, sliceHeightPx);
+        const sliceData = sliceCanvas.toDataURL("image/jpeg", 0.92);
+        if (!firstPage) doc.addPage();
+        doc.addImage(sliceData, "JPEG", margin, margin, usableW, sliceHeightPx * pxToPt);
+        renderedPx += sliceHeightPx;
+        firstPage = false;
       }
+      const safeName = (t.name || "trenink").replace(/[^\p{L}\p{N}]+/gu, "-").toLowerCase();
+      doc.save(`${safeName}.pdf`);
+      toast("PDF staženo.");
+    }).catch((err) => {
+      holder.remove();
+      console.error(err);
+      toast("Vytvoření PDF selhalo, zkus to prosím znovu.");
     });
   }));
 });
