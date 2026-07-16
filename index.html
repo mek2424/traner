@@ -1061,7 +1061,8 @@ function renderEmbedHtml(item) {
     return `<iframe class="embed" src="https://www.youtube-nocookie.com/embed/${esc(item.videoId)}${start}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>`;
   }
   if (item.platform === "drive" && item.videoId) {
-    return `<iframe class="embed" src="https://drive.google.com/file/d/${esc(item.videoId)}/preview" allow="autoplay; picture-in-picture 'none'" loading="lazy"></iframe>`;
+    const fallback = `https://drive.google.com/file/d/${esc(item.videoId)}/preview`;
+    return `<video class="embed" controls playsinline preload="metadata" src="https://drive.google.com/uc?export=download&id=${esc(item.videoId)}" data-drive-fallback="${fallback}"></video>`;
   }
   if (item.platform === "facebook") {
     return `<iframe class="embed" src="https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(item.url)}&show_text=false" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>`;
@@ -1938,16 +1939,35 @@ function openDetailModal(id) {
   if (item.platform === "drive") {
     // Ověřeno v praxi: pevná výška v pixelech (ne dopočítávaná podle šířky/poměru) dělá Disku
     // na mobilu mnohem líp než cokoliv "chytřejšího". Bary nahoře/dole nevadí, hlavně ať nic neuřízne.
+    // Tohle je jen výchozí odhad, než appka zjistí víc (buď skutečné rozměry, nebo že přímé video nejde).
     const DRIVE_HEIGHT_PX = { "16/9": 480, "4/3": 480, "1/1": 560, "9/16": 640 };
     embedWrap.style.aspectRatio = "auto";
     embedWrap.style.maxHeight = "none"; // přebije obecné pravidlo z CSS, které by jinak výšku tiše ořízlo
     embedWrap.style.height = (DRIVE_HEIGHT_PX[item.aspectRatio] || 480) + "px";
+    const driveVideoEl = embedWrap.querySelector("video[data-drive-fallback]");
+    if (driveVideoEl) {
+      driveVideoEl.addEventListener("error", () => {
+        if (currentDetailId !== id) return; // mezitím se otevřelo jiné video
+        embedWrap.innerHTML = `<iframe class="embed" src="${driveVideoEl.dataset.driveFallback}" allow="autoplay; picture-in-picture 'none'" loading="lazy"></iframe>`;
+      }, { once: true });
+      driveVideoEl.addEventListener("loadedmetadata", () => {
+        // přímé přehrání vyšlo — appka teď zná skutečný poměr stran, přesnější než odhad
+        if (currentDetailId !== id) return;
+        if (driveVideoEl.videoWidth && driveVideoEl.videoHeight) {
+          embedWrap.style.height = "";
+          embedWrap.style.maxHeight = "";
+          embedWrap.style.aspectRatio = `${driveVideoEl.videoWidth} / ${driveVideoEl.videoHeight}`;
+        }
+      }, { once: true });
+    }
   }
   const hint = document.getElementById("detailTimestampHint");
   if (item.timestamp) { hint.textContent = `Cvičení začíná v ${secondsToTimestamp(item.timestamp)}`; hint.classList.remove("hidden"); }
   else { hint.classList.add("hidden"); }
   document.getElementById("detailFbFallback").innerHTML = item.platform === "facebook"
     ? `<a class="btn btn-sm" style="margin-bottom:14px;" href="${esc(item.url)}" target="_blank" rel="noopener"><i class="fa-brands fa-facebook"></i> Nejde přehrát? Otevřít přímo na Facebooku ↗</a>`
+    : item.platform === "drive"
+    ? `<a class="btn btn-sm" style="margin-bottom:14px;" href="${esc(item.url)}" target="_blank" rel="noopener"><i class="fa-brands fa-google-drive"></i> Nejde přehrát dobře? Otevřít přímo na Disku ↗</a>`
     : "";
   document.getElementById("detailTitle").textContent = item.title;
   const chips = [];
