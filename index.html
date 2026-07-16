@@ -806,6 +806,14 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
       <h3 style="font-size:14px;font-family:var(--font-body);font-weight:700;color:var(--ink-soft);margin:0 0 8px;">Čekají na schválení</h3>
       <div id="pendingApprovalsList"></div>
     </div>
+    <div id="adminDriveKeySection" class="hidden" style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line);">
+      <h3 style="font-size:14px;font-family:var(--font-body);font-weight:700;color:var(--ink-soft);margin:0 0 8px;">Google Drive API klíč</h3>
+      <div class="field">
+        <input type="text" id="driveApiKeyInput" placeholder="AIzaSy…">
+      </div>
+      <button type="button" class="btn btn-primary btn-sm" id="saveDriveApiKeyBtn">Uložit klíč</button>
+      <p style="font-size:11.5px;color:var(--ink-faint);margin:6px 0 0;">Používá se pro přímé přehrávání videí z Disku. Vidíš jen ty jako admin.</p>
+    </div>
     <div style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line);">
       <button type="button" class="btn btn-danger btn-block" id="deleteAccountBtn"><i class="fa-solid fa-user-xmark"></i> Smazat účet natrvalo</button>
       <p style="font-size:11.5px;color:var(--ink-faint);margin:6px 0 0;">Smaže tvůj profil, tréninky a tvoje hodnocení/poznámky ve sdílené knihovně. Nevratné.</p>
@@ -1062,7 +1070,11 @@ function renderEmbedHtml(item) {
   }
   if (item.platform === "drive" && item.videoId) {
     const fallback = `https://drive.google.com/file/d/${esc(item.videoId)}/preview`;
-    return `<video class="embed" controls playsinline preload="metadata" src="https://drive.google.com/uc?export=download&id=${esc(item.videoId)}" data-drive-fallback="${fallback}"></video>`;
+    const directSrc = state.driveApiKey
+      ? `https://www.googleapis.com/drive/v3/files/${esc(item.videoId)}?alt=media&key=${esc(state.driveApiKey)}`
+      : "";
+    if (!directSrc) return `<iframe class="embed" src="${fallback}" allow="autoplay; picture-in-picture 'none'" loading="lazy"></iframe>`;
+    return `<video class="embed" controls playsinline preload="metadata" src="${directSrc}" data-drive-fallback="${fallback}"></video>`;
   }
   if (item.platform === "facebook") {
     return `<iframe class="embed" src="https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(item.url)}&show_text=false" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>`;
@@ -1257,6 +1269,7 @@ async function loadUserData() {
     }
     state.library = shared.library || {};
     state.folders = shared.folders || [];
+    state.driveApiKey = shared.driveApiKey || "";
     state.tagPool = shared.tagPool || [];
     state.equipmentPool = shared.equipmentPool || [];
     state.parts = (shared.parts && shared.parts.length) ? shared.parts : structuredClone(DEFAULT_PARTS);
@@ -2380,10 +2393,21 @@ function openProfileModal() {
   if (p.avatarUrl) { prev.style.backgroundImage = `url('${p.avatarUrl}')`; prev.textContent = ""; }
   else { prev.style.backgroundImage = "none"; prev.textContent = "bez fotky"; }
   const adminSection = document.getElementById("adminPendingSection");
-  adminSection.classList.toggle("hidden", uidCurrent !== ADMIN_UID);
-  if (uidCurrent === ADMIN_UID) renderPendingApprovals();
+  const isAdmin = uidCurrent === ADMIN_UID;
+  adminSection.classList.toggle("hidden", !isAdmin);
+  document.getElementById("adminDriveKeySection").classList.toggle("hidden", !isAdmin);
+  document.getElementById("driveApiKeyInput").value = state.driveApiKey || "";
+  if (isAdmin) renderPendingApprovals();
   profileModalBackdrop.classList.remove("hidden");
 }
+document.getElementById("saveDriveApiKeyBtn").addEventListener("click", async () => {
+  const key = document.getElementById("driveApiKeyInput").value.trim();
+  state.driveApiKey = key;
+  try {
+    await setDoc(doc(db, "shared", "data"), { driveApiKey: key }, { merge: true });
+    toast("API klíč uložen.");
+  } catch (e) { console.error(e); toast("Uložení klíče selhalo."); }
+});
 
 async function renderPendingApprovals() {
   const wrap = document.getElementById("pendingApprovalsList");
