@@ -1074,15 +1074,16 @@ function darkenHex(hex, amount) {
     z nich napřed obří meziverzi v plné velikosti dokázalo appku na mobilu spolehlivě zaseknout. */
 async function fileToOrientedDataUrl(file, maxDimension = 1600, mimeType = "image/jpeg", quality = 0.88) {
   try {
-    const bitmap = await createImageBitmap(file, {
-      imageOrientation: "from-image",
-      resizeWidth: maxDimension,
-      resizeQuality: "medium"
-    });
+    // Rozděleno na dva kroky schválně: spojení "oprav orientaci" + "rovnou zmenši" do jednoho
+    // volání se ukázalo nespolehlivé právě u portrétových (na výšku otočených) fotek z mobilu.
+    const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+    const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
+    const targetW = Math.max(1, Math.round(bitmap.width * scale));
+    const targetH = Math.max(1, Math.round(bitmap.height * scale));
     const canvas = document.createElement("canvas");
-    canvas.width = bitmap.width;
-    canvas.height = bitmap.height;
-    canvas.getContext("2d").drawImage(bitmap, 0, 0);
+    canvas.width = targetW;
+    canvas.height = targetH;
+    canvas.getContext("2d").drawImage(bitmap, 0, 0, targetW, targetH);
     bitmap.close && bitmap.close();
     return canvas.toDataURL(mimeType, quality);
   } catch (err) {
@@ -2361,23 +2362,26 @@ function buildTrainingExportHtml(t) {
 document.getElementById("exportTrainingBtn").addEventListener("click", () => {
   const t = state.trainings[currentTrainingId];
   if (!t) return;
-  toast("Připravuji PDF…", 4000);
+  toast("Připravuji PDF…", 5000);
   const holder = document.createElement("div");
-  holder.style.cssText = "position:fixed;left:-9999px;top:0;background:#fff;";
+  holder.style.cssText = "position:fixed;left:0;top:0;background:#fff;z-index:-1;opacity:.001;pointer-events:none;";
   holder.innerHTML = buildTrainingExportHtml(t);
   document.body.appendChild(holder);
-  const doc = new window.jspdf.jsPDF({ unit: "pt", format: "a4" });
-  doc.html(holder, {
-    x: 20, y: 20,
-    width: 555,
-    windowWidth: 780,
-    callback: (doc) => {
-      holder.remove();
-      const safeName = (t.name || "trenink").replace(/[^\p{L}\p{N}]+/gu, "-").toLowerCase();
-      doc.save(`${safeName}.pdf`);
-      toast("PDF staženo.");
-    }
-  });
+  // krátká prodleva, ať appka stihne obsah opravdu vykreslit, než se z něj udělá snímek pro PDF
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const doc = new window.jspdf.jsPDF({ unit: "pt", format: "a4" });
+    doc.html(holder, {
+      x: 20, y: 20,
+      width: 555,
+      windowWidth: 780,
+      callback: (doc) => {
+        holder.remove();
+        const safeName = (t.name || "trenink").replace(/[^\p{L}\p{N}]+/gu, "-").toLowerCase();
+        doc.save(`${safeName}.pdf`);
+        toast("PDF staženo.");
+      }
+    });
+  }));
 });
 
 function openEditor(id) {
