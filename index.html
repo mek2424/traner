@@ -1071,8 +1071,12 @@ function darkenHex(hex, amount) {
     to sám od sebe u fotek z mobilu často nedělá), a rovnou ho zmenší na maxDimension.
     Zmenšení už při čtení (ne až dodatečně z plného rozlišení) je důležité hlavně na mobilu —
     fotky přímo z telefonu mívají mnohem větší rozlišení než cokoliv sdílené z PC, a vytvořit
-    z nich napřed obří meziverzi v plné velikosti dokázalo appku na mobilu spolehlivě zaseknout. */
+    z nich napřed obří meziverzi v plné velikosti dokázalo appku na mobilu spolehlivě zaseknout.
+    Zmenšuje i záložní cesta (dřív to nedělala), a na konci je ještě pojistka, co obrázek dál
+    zmenší, kdyby byl výsledek pořád zbytečně velký — appčina sdílená databáze má limit velikosti
+    na celý dokument, takže jedna obří fotka dokázala shodit ukládání úplně všem. */
 async function fileToOrientedDataUrl(file, maxDimension = 1600, mimeType = "image/jpeg", quality = 0.88) {
+  let dataUrl;
   try {
     // Rozděleno na dva kroky schválně: spojení "oprav orientaci" + "rovnou zmenši" do jednoho
     // volání se ukázalo nespolehlivé právě u portrétových (na výšku otočených) fotek z mobilu.
@@ -1085,16 +1089,54 @@ async function fileToOrientedDataUrl(file, maxDimension = 1600, mimeType = "imag
     canvas.height = targetH;
     canvas.getContext("2d").drawImage(bitmap, 0, 0, targetW, targetH);
     bitmap.close && bitmap.close();
-    return canvas.toDataURL(mimeType, quality);
+    dataUrl = canvas.toDataURL(mimeType, quality);
   } catch (err) {
-    console.warn("createImageBitmap selhalo, čtu soubor napřímo:", err);
-    return await new Promise((resolve, reject) => {
+    console.warn("createImageBitmap selhalo, zkouším to přes Image:", err);
+    // I záložní cesta MUSÍ zmenšit — dřív vracela soubor v plné, nezmenšené velikosti,
+    // což byl nejspíš skutečný důvod, proč se velké fotky nedaly uložit.
+    const rawDataUrl = await new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (ev) => resolve(ev.target.result);
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
+    dataUrl = await new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxDimension / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL(mimeType, quality));
+      };
+      img.onerror = () => resolve(rawDataUrl); // fakt nejde nic jiného — vrátíme aspoň originál
+      img.src = rawDataUrl;
+    });
   }
+  // Pojistka: kdyby byl výsledek i tak zbytečně velký (např. hodně detailní fotka), ještě
+  // jednou ho zmenšíme — radši menší náhled než shozené ukládání celé sdílené knihovny.
+  const SAFE_BYTES = 350000;
+  let guard = 0;
+  while (dataUrl.length * 0.75 > SAFE_BYTES && guard < 4) {
+    dataUrl = await shrinkDataUrl(dataUrl, 0.7, mimeType, Math.max(0.5, quality - guard * 0.1));
+    guard++;
+  }
+  return dataUrl;
+}
+function shrinkDataUrl(dataUrl, factor, mimeType, quality) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(img.width * factor));
+      canvas.height = Math.max(1, Math.round(img.height * factor));
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL(mimeType, quality));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
 }
 function applyColorScheme() {
   const primary = (state.profile && state.profile.colorPrimary) || DEFAULT_COLORS.primary;
@@ -1512,7 +1554,12 @@ async function saveUserData() {
     await Promise.all(mine.map(t => setDoc(doc(db, "users", uidCurrent, "trainings", t.id), t)));
   } catch (e) {
     console.error("Nepodařilo se uložit data:", e);
-    toast("Uložení se nepovedlo, zkusím to znovu při další změně.");
+    const msg = String(e && (e.message || e.code) || "");
+    if (/size|large|exceed|bytes|1048487|1 ?MB/i.test(msg)) {
+      toast("Uložení selhalo — sdílená data jsou moc velká (nejspíš kvůli nějaké obří fotce). Zkus zmenšit/nahradit poslední přidanou fotku.", 10000);
+    } else {
+      toast("Uložení se nepovedlo, zkusím to znovu při další změně.");
+    }
   }
 }
 async function deleteTrainingRemote(trainingId) {
