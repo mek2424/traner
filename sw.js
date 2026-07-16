@@ -1,4 +1,4 @@
-const CACHE_NAME = "trener-v2";
+const CACHE_NAME = "trener-v3";
 const APP_SHELL = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (event) => {
@@ -21,20 +21,18 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
 
-  // Cizí domény (Firebase, YouTube, Google Fonts, Disk...) necháváme jít přímo na síť —
-  // appku samotnou (shell) kešujeme, aby šla otevřít i bez signálu.
+  // Cizí domény (Firebase, YouTube, Google Fonts, Disk...) necháváme jít přímo na síť.
   if (url.origin !== location.origin) return;
 
+  // Appka samotná (shell): napřed vždycky zkusit síť, ať appka nezůstává tiše na staré verzi.
+  // Uložená verze slouží jen jako záchranná síť, když appka fakt nemá signál.
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const network = fetch(event.request)
-        .then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          return response;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
+    fetch(event.request)
+      .then((response) => {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });

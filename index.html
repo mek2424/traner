@@ -585,7 +585,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
         <input type="file" id="thumbFileInput" accept="image/*">
       </div>
       <div class="field">
-        <label for="linkAspectRatio">Tvar videa (u YouTube pozná appka sama)</label>
+        <label for="linkAspectRatio">Tvar videa (u YouTube, Disku a nahraných souborů appka pozná sama, tohle je jen pro Facebook a ostatní)</label>
         <select id="linkAspectRatio">
           <option value="16/9">Na šířku (16:9)</option>
           <option value="9/16">Na výšku (9:16 — mobil/Reels/Shorts)</option>
@@ -1023,9 +1023,19 @@ function detectPlatform(url) {
     if (h === "youtube.com" || h === "youtu.be") return "youtube";
     if (h === "facebook.com" || h === "fb.watch") return "facebook";
     if (h === "drive.google.com") return "drive";
+    if (h === "instagram.com") return "instagram";
+    if (h === "tiktok.com" || h === "vm.tiktok.com") return "tiktok";
     if (VIDEO_FILE_EXT.test(u.pathname)) return "file";
     return "other";
   } catch { return "other"; }
+}
+function extractInstagramId(url) {
+  const m = url.match(/instagram\.com\/(?:p|reel|tv)\/([\w-]+)/);
+  return m ? m[1] : null;
+}
+function extractTikTokId(url) {
+  const m = url.match(/tiktok\.com\/@[\w.-]+\/video\/(\d+)/);
+  return m ? m[1] : null;
 }
 function extractYouTubeId(url) {
   const patterns = [
@@ -1078,6 +1088,12 @@ function renderEmbedHtml(item) {
   }
   if (item.platform === "facebook") {
     return `<iframe class="embed" src="https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(item.url)}&show_text=false" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>`;
+  }
+  if (item.platform === "instagram" && item.videoId) {
+    return `<iframe class="embed" src="https://www.instagram.com/p/${esc(item.videoId)}/embed" allowfullscreen loading="lazy"></iframe>`;
+  }
+  if (item.platform === "tiktok" && item.videoId) {
+    return `<iframe class="embed" src="https://www.tiktok.com/player/v1/${esc(item.videoId)}" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>`;
   }
   if (item.platform === "file") {
     const start = item.timestamp ? `#t=${item.timestamp}` : "";
@@ -1504,7 +1520,7 @@ function getFilteredLibraryItems() {
   return items.sort(sorters[sortMode] || sorters["date-desc"]);
 }
 
-const PLATFORM_ICONS = { youtube: "fa-brands fa-youtube", facebook: "fa-brands fa-facebook", drive: "fa-brands fa-google-drive", file: "fa-solid fa-film", other: "fa-solid fa-link" };
+const PLATFORM_ICONS = { youtube: "fa-brands fa-youtube", facebook: "fa-brands fa-facebook", drive: "fa-brands fa-google-drive", instagram: "fa-brands fa-instagram", tiktok: "fa-brands fa-tiktok", file: "fa-solid fa-film", other: "fa-solid fa-link" };
 
 function renderLibrary() {
   renderFolderOptions();
@@ -1726,6 +1742,13 @@ document.getElementById("fetchMetaBtn").addEventListener("click", async () => {
   } else if (platform === "drive") {
     document.getElementById("thumbPreview").dataset.videoId = extractDriveId(url) || "";
     toast("Disk: titulek a náhled zadej ručně.");
+  } else if (platform === "instagram") {
+    document.getElementById("thumbPreview").dataset.videoId = extractInstagramId(url) || "";
+    toast("Instagram: titulek a náhled zadej ručně.");
+  } else if (platform === "tiktok") {
+    document.getElementById("thumbPreview").dataset.videoId = extractTikTokId(url) || "";
+    document.getElementById("linkAspectRatio").value = "9/16";
+    toast(extractTikTokId(url) ? "TikTok: titulek a náhled zadej ručně." : "Krátký TikTok odkaz appka nerozpozná — vlož prosím ten dlouhý, s /video/ v adrese.");
   } else if (platform === "file") {
     toast("Přímý odkaz na video soubor — přehraje se rovnou, titulek a náhled zadej ručně.");
   } else {
@@ -1861,6 +1884,8 @@ linkForm.addEventListener("submit", (e) => {
   let videoId = document.getElementById("thumbPreview").dataset.videoId || null;
   if (!videoId && platform === "youtube") videoId = extractYouTubeId(url);
   if (!videoId && platform === "drive") videoId = extractDriveId(url);
+  if (!videoId && platform === "instagram") videoId = extractInstagramId(url);
+  if (!videoId && platform === "tiktok") videoId = extractTikTokId(url);
 
   const newFolderName = document.getElementById("newFolderInput").value.trim();
   let folderId = document.getElementById("linkFolder").value;
@@ -1977,10 +2002,15 @@ function openDetailModal(id) {
   const hint = document.getElementById("detailTimestampHint");
   if (item.timestamp) { hint.textContent = `Cvičení začíná v ${secondsToTimestamp(item.timestamp)}`; hint.classList.remove("hidden"); }
   else { hint.classList.add("hidden"); }
-  document.getElementById("detailFbFallback").innerHTML = item.platform === "facebook"
-    ? `<a class="btn btn-sm" style="margin-bottom:14px;" href="${esc(item.url)}" target="_blank" rel="noopener"><i class="fa-brands fa-facebook"></i> Nejde přehrát? Otevřít přímo na Facebooku ↗</a>`
-    : item.platform === "drive"
-    ? `<a class="btn btn-sm" style="margin-bottom:14px;" href="${esc(item.url)}" target="_blank" rel="noopener"><i class="fa-brands fa-google-drive"></i> Nejde přehrát dobře? Otevřít přímo na Disku ↗</a>`
+  const fbEl = document.getElementById("detailFbFallback");
+  const fallbackLinks = {
+    facebook: `<i class="fa-brands fa-facebook"></i> Nejde přehrát? Otevřít přímo na Facebooku ↗`,
+    drive: `<i class="fa-brands fa-google-drive"></i> Nejde přehrát dobře? Otevřít přímo na Disku ↗`,
+    instagram: `<i class="fa-brands fa-instagram"></i> Nejde přehrát? Otevřít přímo na Instagramu ↗`,
+    tiktok: `<i class="fa-brands fa-tiktok"></i> Nejde přehrát? Otevřít přímo na TikToku ↗`
+  };
+  fbEl.innerHTML = fallbackLinks[item.platform]
+    ? `<a class="btn btn-sm" style="margin-bottom:14px;" href="${esc(item.url)}" target="_blank" rel="noopener">${fallbackLinks[item.platform]}</a>`
     : "";
   document.getElementById("detailTitle").textContent = item.title;
   const chips = [];
