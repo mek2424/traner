@@ -1,5 +1,5 @@
-const CACHE_NAME = "trener-v3";
-const APP_SHELL = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
+const CACHE_NAME = "trener-v4";
+const APP_SHELL = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./club-logo.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

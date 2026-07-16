@@ -23,8 +23,8 @@
   --ink-soft:#5B6472;
   --ink-faint:#8A93A0;
   --line:#DCDFD9;
-  --court:#22406B;
-  --court-dark:#182D4D;
+  --court:#339933;
+  --court-dark:#216321;
   --chalk:#E8622C;
   --chalk-dark:#C74F1E;
   --ok:#3F8B5C;
@@ -118,6 +118,8 @@ header.topbar{
   background:var(--court);color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;
   position:sticky;top:0;z-index:20;
 }
+.topbar-title-group{display:flex;align-items:center;gap:10px;}
+.club-logo{width:34px;height:34px;border-radius:50%;flex-shrink:0;}
 .topbar-title{font-family:var(--font-display);font-size:24px;letter-spacing:.03em;}
 .topbar-user{display:flex;align-items:center;gap:10px;font-size:12px;color:rgba(255,255,255,.75);}
 .topbar-user button{background:rgba(255,255,255,.12);border:none;color:#fff;border-radius:var(--radius-sm);padding:6px 10px;font-size:12px;}
@@ -491,7 +493,10 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 <!-- ===================== APP ===================== -->
 <div id="app" class="hidden">
   <header class="topbar">
-    <div class="topbar-title">TRENÉR</div>
+    <div class="topbar-title-group">
+      <img src="club-logo.png" alt="Znak SK Meteor Praha" class="club-logo">
+      <div class="topbar-title">TRENÉR</div>
+    </div>
     <div class="topbar-user">
       <button id="profileBtn" class="avatar-btn" aria-label="Profil"><span id="avatarInitial">?</span></button>
       <span id="userEmailLabel"></span>
@@ -958,7 +963,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const DEFAULT_COLORS = { primary: "#22406B", accent: "#E8622C" };
+const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
 let editingLinkId = null;       // id knihovní položky, když se edituje
 let currentTrainingId = null;   // id tréninku otevřeného v editoru
