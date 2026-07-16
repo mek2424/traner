@@ -131,7 +131,7 @@ nav.tabs button{
   border-bottom:3px solid transparent;
 }
 nav.tabs button.active{color:var(--court);border-bottom-color:var(--chalk);}
-main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
+main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 
 /* ---------- Toast ---------- */
 #toast{
@@ -371,10 +371,10 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;}
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 .picker-item button{flex-shrink:0;}
 
-.sequence{display:flex;flex-direction:column;gap:8px;min-height:60px;}
+.sequence{display:flex;flex-direction:column;gap:8px;min-height:60px;min-width:0;}
 .seq-item{
   border-radius:var(--radius);padding:10px 12px;position:relative;border:1px solid rgba(0,0,0,.06);
-  box-shadow:var(--shadow);overflow:hidden;max-width:100%;
+  box-shadow:var(--shadow);overflow:hidden;max-width:100%;min-width:0;
 }
 .seq-item.is-break{
   background:repeating-linear-gradient(135deg, var(--part-prestavka), var(--part-prestavka) 8px, #d8d9d5 8px, #d8d9d5 16px);
