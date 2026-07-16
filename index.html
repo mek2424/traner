@@ -1061,7 +1061,7 @@ function renderEmbedHtml(item) {
     return `<iframe class="embed" src="https://www.youtube-nocookie.com/embed/${esc(item.videoId)}${start}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>`;
   }
   if (item.platform === "drive" && item.videoId) {
-    return `<iframe class="embed" src="https://drive.google.com/file/d/${esc(item.videoId)}/preview" allow="autoplay" loading="lazy"></iframe>`;
+    return `<iframe class="embed" src="https://drive.google.com/file/d/${esc(item.videoId)}/preview" allow="autoplay; picture-in-picture 'none'" loading="lazy"></iframe>`;
   }
   if (item.platform === "facebook") {
     return `<iframe class="embed" src="https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(item.url)}&show_text=false" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>`;
