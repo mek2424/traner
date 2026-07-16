@@ -1947,8 +1947,6 @@ function openDetailModal(id) {
     const driveVideoEl = embedWrap.querySelector("video[data-drive-fallback]");
     if (driveVideoEl) {
       driveVideoEl.addEventListener("error", () => {
-      console.warn("Direct video failed, retrying before iframe fallback");
-      if(!driveVideoEl.dataset.retried){driveVideoEl.dataset.retried="1"; driveVideoEl.src=driveVideoEl.src+"&confirm=t"; driveVideoEl.load(); return;}
         if (currentDetailId !== id) return; // mezitím se otevřelo jiné video
         embedWrap.innerHTML = `<iframe class="embed" src="${driveVideoEl.dataset.driveFallback}" allow="autoplay; picture-in-picture 'none'" loading="lazy"></iframe>`;
       }, { once: true });
