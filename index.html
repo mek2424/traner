@@ -46,6 +46,18 @@
   --font-display:'Bebas Neue', sans-serif;
   --font-body:'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 }
+body.dark-mode{
+  --paper:#151A21;
+  --card:#1F2630;
+  --ink:#E9ECEF;
+  --ink-soft:#9BA4B0;
+  --ink-faint:#6B7280;
+  --line:#2E3640;
+  --ok:#5CAD79;
+  --danger:#E06666;
+  --danger-bg:#3D2020;
+  --shadow:0 1px 2px rgba(0,0,0,.45), 0 4px 14px rgba(0,0,0,.3);
+}
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;}
 html{overflow-x:hidden;}
@@ -844,6 +856,10 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
           <input type="color" id="profileColorAccent" style="width:100%;height:40px;padding:2px;border:1px solid var(--line);border-radius:var(--radius-sm);">
         </div>
       </div>
+      <div class="field" style="display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" id="profileDarkMode" style="width:18px;height:18px;">
+        <label for="profileDarkMode" style="margin:0;text-transform:none;font-size:13px;letter-spacing:0;font-weight:500;">Tmavý režim</label>
+      </div>
       <div class="modal-actions">
         <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Uložit profil</button>
         <button type="button" class="btn btn-ghost" id="resetColorsBtn">Výchozí barvy</button>
@@ -1149,6 +1165,7 @@ function applyColorScheme() {
   root.setProperty("--court-dark", darkenHex(primary, 0.22));
   root.setProperty("--chalk", accent);
   root.setProperty("--chalk-dark", darkenHex(accent, 0.18));
+  document.body.classList.toggle("dark-mode", !!(state.profile && state.profile.darkMode));
 }
 
 /* ---- URL parsing ---- */
@@ -1398,7 +1415,8 @@ async function loadUserData() {
     club: legacy.club || "",
     avatarUrl: legacy.avatarUrl || "",
     colorPrimary: legacy.colorPrimary || DEFAULT_COLORS.primary,
-    colorAccent: legacy.colorAccent || DEFAULT_COLORS.accent
+    colorAccent: legacy.colorAccent || DEFAULT_COLORS.accent,
+    darkMode: !!legacy.darkMode
   };
   applyColorScheme();
 
@@ -2697,6 +2715,7 @@ function openProfileModal() {
   document.getElementById("profileClub").value = p.club || "";
   document.getElementById("profileColorPrimary").value = p.colorPrimary || DEFAULT_COLORS.primary;
   document.getElementById("profileColorAccent").value = p.colorAccent || DEFAULT_COLORS.accent;
+  document.getElementById("profileDarkMode").checked = !!p.darkMode;
   const prev = document.getElementById("avatarPreview");
   if (p.avatarUrl) { prev.style.backgroundImage = `url('${p.avatarUrl}')`; prev.textContent = ""; }
   else { prev.style.backgroundImage = "none"; prev.textContent = "bez fotky"; }
@@ -2876,7 +2895,8 @@ document.getElementById("profileForm").addEventListener("submit", async (e) => {
     club: document.getElementById("profileClub").value.trim(),
     avatarUrl: pendingAvatarUpload || (state.profile && state.profile.avatarUrl) || "",
     colorPrimary: document.getElementById("profileColorPrimary").value,
-    colorAccent: document.getElementById("profileColorAccent").value
+    colorAccent: document.getElementById("profileColorAccent").value,
+    darkMode: document.getElementById("profileDarkMode").checked
   };
   applyColorScheme();
   renderTopbarIdentity();
