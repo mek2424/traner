@@ -190,6 +190,11 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   position:absolute;top:6px;right:6px;z-index:5;width:26px;height:26px;border-radius:50%;
   background:rgba(0,0,0,.5);color:#fff;border:none;display:flex;align-items:center;justify-content:center;font-size:13px;
 }
+.card-fav-btn{
+  position:absolute;bottom:6px;left:6px;z-index:5;width:26px;height:26px;border-radius:50%;
+  background:rgba(0,0,0,.45);color:rgba(255,255,255,.55);border:none;display:flex;align-items:center;justify-content:center;font-size:13px;
+}
+.card-fav-btn.on{color:#F4C542;}
 .card-context-menu{
   position:absolute;z-index:60;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);
   box-shadow:var(--shadow);min-width:170px;overflow:hidden;
@@ -341,6 +346,33 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .coach-note-body{flex:1;font-size:13.5px;line-height:1.45;min-width:0;}
 .coach-note-author{font-weight:700;margin-right:5px;}
 
+/* ---------- Tréninkový režim ---------- */
+#trainingModeView{
+  position:fixed;inset:0;z-index:200;background:var(--paper);display:flex;flex-direction:column;
+}
+.tm-header{
+  display:flex;align-items:center;justify-content:space-between;padding:14px 16px;
+  padding-top:calc(14px + env(safe-area-inset-top));flex-shrink:0;
+}
+.tm-exit{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.06);border:none;color:var(--ink-soft);font-size:18px;display:flex;align-items:center;justify-content:center;}
+.tm-progress{font-family:var(--font-display);font-size:18px;color:var(--ink-soft);letter-spacing:.03em;}
+.tm-body{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  padding:24px 20px;overflow-y:auto;min-height:0;transition:background .25s ease;
+}
+.tm-part-label{font-family:var(--font-display);font-size:16px;letter-spacing:.08em;color:rgba(27,36,48,.6);margin-bottom:10px;}
+.tm-title{font-family:var(--font-display);font-size:clamp(26px,7vw,40px);line-height:1.15;color:var(--ink);margin-bottom:18px;max-width:100%;overflow-wrap:anywhere;}
+.tm-cue{font-size:clamp(18px,5vw,24px);font-weight:700;color:var(--court);margin-bottom:10px;max-width:100%;overflow-wrap:anywhere;}
+.tm-note{font-size:15px;color:var(--ink-soft);max-width:100%;overflow-wrap:anywhere;}
+.tm-timer-wrap{display:flex;align-items:center;justify-content:center;gap:22px;padding:18px 16px;flex-shrink:0;}
+.tm-timer{font-family:var(--font-display);font-size:clamp(48px,14vw,72px);color:var(--ink);min-width:180px;text-align:center;font-variant-numeric:tabular-nums;}
+.tm-timer.tm-timer-done{color:var(--chalk);}
+.tm-timer-btn{width:56px;height:56px;border-radius:50%;background:var(--court);color:#fff;border:none;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.tm-nav{display:flex;gap:10px;padding:12px 16px calc(16px + env(safe-area-inset-bottom));flex-shrink:0;}
+.tm-nav-btn{flex:1;padding:16px;border-radius:var(--radius);border:1px solid var(--line);background:var(--card);font-family:var(--font-display);font-size:16px;color:var(--ink);letter-spacing:.02em;}
+.tm-nav-btn:disabled{opacity:.35;}
+.tm-nav-next{background:var(--chalk);color:#fff;border-color:var(--chalk);}
+
 /* ---------- Trainings list ---------- */
 .training-row{
   background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;
@@ -486,6 +518,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
           <option value="difficulty-desc">Nejtěžší</option>
         </select>
         <button class="btn btn-icon" id="toggleViewModeBtn" aria-label="Přepnout zobrazení"><i class="fa-solid fa-list"></i></button>
+        <button class="btn btn-icon" id="toggleFavFilterBtn" aria-label="Jen oblíbené"><i class="fa-regular fa-star"></i></button>
         <button class="btn btn-icon" id="toggleSelectModeBtn" aria-label="Vybrat více"><i class="fa-regular fa-square-check"></i></button>
         <button class="btn btn-accent" id="openAddLinkBtn"><i class="fa-solid fa-plus"></i> Přidat odkaz</button>
       </div>
@@ -529,13 +562,19 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
         <input type="text" id="trainingNameInput" placeholder="Název tréninku">
         <div class="total-badge" id="totalTimeBadge">0 min</div>
       </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <button type="button" class="btn btn-primary" id="startTrainingModeBtn" style="flex:1;"><i class="fa-solid fa-play"></i> Spustit trénink</button>
+      </div>
       <div id="readOnlyBanner" class="hidden" style="background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-sm);padding:9px 12px;font-size:12.5px;color:var(--ink-soft);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
         <span><i class="fa-solid fa-eye"></i> <span id="readOnlyBannerText"></span></span>
         <button class="btn btn-sm btn-accent" id="cloneFromReadOnlyBtn"><i class="fa-regular fa-copy"></i> Naklonovat do mých</button>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
         <div class="part-legend" id="partLegend"></div>
-        <button type="button" class="manage-link" id="managePartsBtn"><i class="fa-solid fa-sliders"></i> Spravovat části tréninku</button>
+        <div style="display:flex;gap:14px;">
+          <button type="button" class="manage-link" id="exportTrainingBtn"><i class="fa-solid fa-file-lines"></i> Export jako text</button>
+          <button type="button" class="manage-link" id="managePartsBtn"><i class="fa-solid fa-sliders"></i> Spravovat části tréninku</button>
+        </div>
       </div>
       <div class="editor-layout" id="editorLayout">
         <div class="picker-panel">
@@ -804,6 +843,10 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
         <button type="button" class="btn btn-ghost" id="resetColorsBtn">Výchozí barvy</button>
       </div>
     </form>
+    <div style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line);">
+      <button type="button" class="btn btn-ghost btn-block" id="backupLibraryBtn"><i class="fa-solid fa-download"></i> Stáhnout zálohu knihovny</button>
+      <p style="font-size:11.5px;color:var(--ink-faint);margin:6px 0 0;">Stáhne celou sdílenou knihovnu (odkazy, štítky, složky) jako soubor pro klid duše.</p>
+    </div>
     <div id="adminPendingSection" class="hidden" style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line);">
       <h3 style="font-size:14px;font-family:var(--font-body);font-weight:700;color:var(--ink-soft);margin:0 0 8px;">Čekají na schválení</h3>
       <div id="pendingApprovalsList"></div>
@@ -820,6 +863,30 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
       <button type="button" class="btn btn-danger btn-block" id="deleteAccountBtn"><i class="fa-solid fa-user-xmark"></i> Smazat účet natrvalo</button>
       <p style="font-size:11.5px;color:var(--ink-faint);margin:6px 0 0;">Smaže tvůj profil, tréninky a tvoje hodnocení/poznámky ve sdílené knihovně. Nevratné.</p>
     </div>
+  </div>
+</div>
+
+<!-- ===================== TRÉNINKOVÝ REŽIM ===================== -->
+<div id="trainingModeView" class="hidden">
+  <div class="tm-header">
+    <button type="button" class="tm-exit" id="tmExitBtn" aria-label="Zavřít"><i class="fa-solid fa-xmark"></i></button>
+    <div class="tm-progress" id="tmProgress">1 / 1</div>
+    <div style="width:44px;"></div>
+  </div>
+  <div class="tm-body" id="tmBody">
+    <div class="tm-part-label" id="tmPartLabel"></div>
+    <div class="tm-title" id="tmTitle"></div>
+    <div class="tm-cue" id="tmCue"></div>
+    <div class="tm-note" id="tmNote"></div>
+  </div>
+  <div class="tm-timer-wrap">
+    <button type="button" class="tm-timer-btn" id="tmTimerToggle" aria-label="Pauza/pokračovat"><i class="fa-solid fa-pause"></i></button>
+    <div class="tm-timer" id="tmTimer">10:00</div>
+    <button type="button" class="tm-timer-btn" id="tmTimerReset" aria-label="Restartovat čas"><i class="fa-solid fa-rotate-left"></i></button>
+  </div>
+  <div class="tm-nav">
+    <button type="button" class="tm-nav-btn" id="tmPrevBtn"><i class="fa-solid fa-arrow-left"></i> Předchozí</button>
+    <button type="button" class="tm-nav-btn tm-nav-next" id="tmNextBtn">Další <i class="fa-solid fa-arrow-right"></i></button>
   </div>
 </div>
 
@@ -929,6 +996,15 @@ function avgOf(map) {
   if (!vals.length) return { avg: 0, count: 0 };
   return { avg: vals.reduce((a, b) => a + b, 0) / vals.length, count: vals.length };
 }
+/** Spustí stažení textového obsahu jako soubor (appka nemá vlastní server, takže jde vždy o soubor v prohlížeči). */
+function downloadTextFile(filename, content, mime = "application/octet-stream") {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
 function myLabel() {
   return (state.profile && state.profile.username) || (auth.currentUser && auth.currentUser.email) || "Trenér";
 }
@@ -954,6 +1030,7 @@ let activeFolderFilter = null; // key vybrané složky v postranním panelu, nul
 const ADMIN_UID = "WIw1KfRofOOrbYF7Xl8YzgQrTZd2"; // mazání složek smí jen tenhle účet
 let libraryViewMode = "grid"; // "grid" | "list"
 let selectMode = false;
+let favOnlyFilter = false;
 let selectedIds = new Set();
 let openContextMenuEl = null;
 
@@ -1500,6 +1577,7 @@ function getFilteredLibraryItems() {
   const q = document.getElementById("librarySearch").value.trim().toLowerCase();
   const sortMode = document.getElementById("librarySort").value;
   const items = Object.values(state.library).filter(item => {
+    if (favOnlyFilter && !item.favorite) return false;
     if (activeFolderFilter && item.folderId !== activeFolderFilter) return false;
     if (libraryTagFilter.size && ![...libraryTagFilter].every(t => item.tags.includes(t))) return false;
     if (libraryEquipFilter.size && ![...libraryEquipFilter].every(t => item.equipment.includes(t))) return false;
@@ -1552,6 +1630,7 @@ function renderLibrary() {
       <button type="button" class="card-menu-btn" data-action="open-menu" aria-label="Menu"><i class="fa-solid fa-ellipsis-vertical"></i></button>
       <div class="card-thumb" data-action="open-detail" style="${item.thumbnail ? `background-image:url('${esc(item.thumbnail)}')` : ""}">
         ${item.thumbnail ? "" : "bez náhledu"}
+        <button type="button" class="card-fav-btn ${item.favorite ? "on" : ""}" data-action="toggle-fav" aria-label="Oblíbené"><i class="fa-solid fa-star"></i></button>
         <span class="platform-badge"><i class="${PLATFORM_ICONS[item.platform] || PLATFORM_ICONS.other}"></i></span>
       </div>
       <div class="card-body" data-action="open-detail">
@@ -1572,6 +1651,11 @@ document.getElementById("libraryGrid").addEventListener("click", (e) => {
   if (!card) return;
   const id = card.dataset.id;
   if (e.target.closest("[data-action='open-menu']")) { openCardContextMenu(id, e.target.closest("[data-action='open-menu']")); return; }
+  if (e.target.closest("[data-action='toggle-fav']")) {
+    const it = state.library[id];
+    if (it) { it.favorite = !it.favorite; scheduleSave(); renderLibrary(); }
+    return;
+  }
   if (e.target.closest("[data-action='toggle-select']") || selectMode) {
     if (selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id);
     renderLibrary();
@@ -1585,6 +1669,13 @@ document.getElementById("librarySort").addEventListener("change", renderLibrary)
 document.getElementById("toggleViewModeBtn").addEventListener("click", () => {
   libraryViewMode = libraryViewMode === "grid" ? "list" : "grid";
   document.getElementById("toggleViewModeBtn").innerHTML = libraryViewMode === "grid" ? '<i class="fa-solid fa-list"></i>' : '<i class="fa-solid fa-grip"></i>';
+  renderLibrary();
+});
+document.getElementById("toggleFavFilterBtn").addEventListener("click", () => {
+  favOnlyFilter = !favOnlyFilter;
+  const btn = document.getElementById("toggleFavFilterBtn");
+  btn.classList.toggle("btn-accent", favOnlyFilter);
+  btn.innerHTML = favOnlyFilter ? '<i class="fa-solid fa-star"></i>' : '<i class="fa-regular fa-star"></i>';
   renderLibrary();
 });
 document.getElementById("toggleSelectModeBtn").addEventListener("click", () => {
@@ -1641,6 +1732,7 @@ function openCardContextMenu(itemId, anchorBtn) {
   const menu = document.createElement("div");
   menu.className = "card-context-menu";
   menu.innerHTML = `
+    <button type="button" data-act="fav"><i class="fa-solid fa-star"></i> ${item.favorite ? "Odebrat z oblíbených" : "Přidat do oblíbených"}</button>
     <button type="button" data-act="edit"><i class="fa-solid fa-pen"></i> Upravit</button>
     <button type="button" data-act="move"><i class="fa-solid fa-folder"></i> Přesunout do složky</button>
     <button type="button" class="danger" data-act="delete"><i class="fa-solid fa-trash"></i> Smazat</button>
@@ -1650,6 +1742,12 @@ function openCardContextMenu(itemId, anchorBtn) {
   menu.style.top = (window.scrollY + r.bottom + 4) + "px";
   menu.style.left = Math.max(8, window.scrollX + r.right - menu.offsetWidth) + "px";
   openContextMenuEl = menu;
+  menu.querySelector("[data-act='fav']").addEventListener("click", () => {
+    closeCardContextMenu();
+    item.favorite = !item.favorite;
+    scheduleSave();
+    renderLibrary();
+  });
   menu.querySelector("[data-act='edit']").addEventListener("click", () => { closeCardContextMenu(); openLinkModal(itemId); });
   menu.querySelector("[data-act='delete']").addEventListener("click", () => {
     closeCardContextMenu();
@@ -2140,6 +2238,130 @@ function renderTrainingsList() {
 /* =========================================================
    TRAINING EDITOR
    ========================================================= */
+/* =========================================================
+   TRÉNINKOVÝ REŽIM
+   ========================================================= */
+let trainingModeItems = [];
+let trainingModeIndex = 0;
+let trainingModeSeconds = 0;
+let trainingModeInterval = null;
+let trainingModeRunning = false;
+
+document.getElementById("startTrainingModeBtn").addEventListener("click", () => {
+  const t = state.trainings[currentTrainingId];
+  if (!t || !t.items.length) { toast("Trénink je prázdný, není co spustit."); return; }
+  trainingModeItems = t.items;
+  trainingModeIndex = 0;
+  document.getElementById("trainingModeView").classList.remove("hidden");
+  renderTrainingModeItem();
+});
+
+function renderTrainingModeItem() {
+  stopTrainingModeTimer();
+  const row = trainingModeItems[trainingModeIndex];
+  document.getElementById("tmProgress").textContent = `${trainingModeIndex + 1} / ${trainingModeItems.length}`;
+  document.getElementById("tmPrevBtn").disabled = trainingModeIndex === 0;
+  document.getElementById("tmNextBtn").innerHTML = trainingModeIndex === trainingModeItems.length - 1
+    ? 'Hotovo <i class="fa-solid fa-check"></i>'
+    : 'Další <i class="fa-solid fa-arrow-right"></i>';
+  const body = document.getElementById("tmBody");
+  if (!row.videoId) {
+    body.style.background = "var(--part-prestavka)";
+    document.getElementById("tmPartLabel").textContent = "PŘESTÁVKA";
+    document.getElementById("tmTitle").textContent = row.label || "Přestávka";
+    document.getElementById("tmCue").innerHTML = "";
+    document.getElementById("tmNote").textContent = "";
+  } else {
+    const lib = state.library[row.videoId];
+    const part = getPart(row.part);
+    body.style.background = part ? part.color : "var(--card)";
+    document.getElementById("tmPartLabel").textContent = (part ? part.label : "").toUpperCase();
+    document.getElementById("tmTitle").textContent = lib ? lib.title : "(video smazáno z knihovny)";
+    document.getElementById("tmCue").innerHTML = row.cue ? `<i class="fa-solid fa-comment"></i> ${esc(row.cue)}` : "";
+    document.getElementById("tmNote").textContent = row.poznamka || "";
+  }
+  trainingModeSeconds = Math.max(1, row.duration || 1) * 60;
+  updateTrainingModeTimerDisplay();
+  startTrainingModeTimer();
+}
+
+function updateTrainingModeTimerDisplay() {
+  const timerEl = document.getElementById("tmTimer");
+  const m = Math.floor(Math.abs(trainingModeSeconds) / 60);
+  const s = Math.abs(trainingModeSeconds) % 60;
+  const sign = trainingModeSeconds < 0 ? "+" : "";
+  timerEl.textContent = `${sign}${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  timerEl.classList.toggle("tm-timer-done", trainingModeSeconds <= 0);
+}
+function startTrainingModeTimer() {
+  trainingModeRunning = true;
+  document.getElementById("tmTimerToggle").innerHTML = '<i class="fa-solid fa-pause"></i>';
+  if (trainingModeInterval) clearInterval(trainingModeInterval);
+  trainingModeInterval = setInterval(() => {
+    trainingModeSeconds--;
+    updateTrainingModeTimerDisplay();
+    if (trainingModeSeconds === 0 && "vibrate" in navigator) { try { navigator.vibrate(400); } catch {} }
+  }, 1000);
+}
+function stopTrainingModeTimer() {
+  trainingModeRunning = false;
+  if (trainingModeInterval) { clearInterval(trainingModeInterval); trainingModeInterval = null; }
+  const btn = document.getElementById("tmTimerToggle");
+  if (btn) btn.innerHTML = '<i class="fa-solid fa-play"></i>';
+}
+document.getElementById("tmTimerToggle").addEventListener("click", () => {
+  if (trainingModeRunning) stopTrainingModeTimer(); else startTrainingModeTimer();
+});
+document.getElementById("tmTimerReset").addEventListener("click", () => {
+  const row = trainingModeItems[trainingModeIndex];
+  trainingModeSeconds = Math.max(1, row.duration || 1) * 60;
+  updateTrainingModeTimerDisplay();
+  startTrainingModeTimer();
+});
+document.getElementById("tmPrevBtn").addEventListener("click", () => {
+  if (trainingModeIndex > 0) { trainingModeIndex--; renderTrainingModeItem(); }
+});
+document.getElementById("tmNextBtn").addEventListener("click", () => {
+  if (trainingModeIndex < trainingModeItems.length - 1) { trainingModeIndex++; renderTrainingModeItem(); }
+  else closeTrainingMode();
+});
+function closeTrainingMode() {
+  stopTrainingModeTimer();
+  document.getElementById("trainingModeView").classList.add("hidden");
+}
+document.getElementById("tmExitBtn").addEventListener("click", closeTrainingMode);
+
+function exportTrainingAsText(t) {
+  const lines = [];
+  lines.push(t.name || "Trénink");
+  const totalMin = t.items.reduce((s, it) => s + (it.duration || 0), 0);
+  lines.push(`Celkem: ${totalMin} min`);
+  lines.push("");
+  t.items.forEach((row, i) => {
+    if (!row.videoId) {
+      lines.push(`— ${row.label || "Přestávka"} (${row.duration} min) —`);
+      lines.push("");
+      return;
+    }
+    const lib = state.library[row.videoId];
+    const part = getPart(row.part);
+    lines.push(`${i + 1}. [${part ? part.label : "?"}] ${lib ? lib.title : "(video smazáno z knihovny)"} — ${row.duration} min`);
+    if (lib) lines.push(`   Odkaz: ${lib.url}`);
+    if (row.cue) lines.push(`   Cue: ${row.cue}`);
+    if (row.poznamka) lines.push(`   Poznámka: ${row.poznamka}`);
+    lines.push("");
+  });
+  return lines.join("\n");
+}
+document.getElementById("exportTrainingBtn").addEventListener("click", () => {
+  const t = state.trainings[currentTrainingId];
+  if (!t) return;
+  const text = exportTrainingAsText(t);
+  const safeName = (t.name || "trenink").replace(/[^\p{L}\p{N}]+/gu, "-").toLowerCase();
+  downloadTextFile(`${safeName}.txt`, text, "text/plain");
+  toast("Staženo.");
+});
+
 function openEditor(id) {
   currentTrainingId = id;
   switchView("editor");
@@ -2574,6 +2796,19 @@ document.getElementById("confirmCropBtn").addEventListener("click", () => {
   toast("Ořez použit — nezapomeň dole uložit profil.");
 });
 
+document.getElementById("backupLibraryBtn").addEventListener("click", () => {
+  const backup = {
+    exportedAt: new Date().toISOString(),
+    library: state.library,
+    folders: state.folders,
+    tagPool: state.tagPool,
+    equipmentPool: state.equipmentPool,
+    parts: state.parts
+  };
+  const dateStr = new Date().toISOString().slice(0, 10);
+  downloadTextFile(`trener-zaloha-${dateStr}.json`, JSON.stringify(backup, null, 2), "application/json");
+  toast("Záloha stažena.");
+});
 document.getElementById("resetColorsBtn").addEventListener("click", () => {
   document.getElementById("profileColorPrimary").value = DEFAULT_COLORS.primary;
   document.getElementById("profileColorAccent").value = DEFAULT_COLORS.accent;
