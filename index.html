@@ -1787,7 +1787,7 @@ document.getElementById("bulkDeleteBtn").addEventListener("click", () => {
   if (!confirm(`Smazat ${selectedIds.size} vybraných videí z knihovny?`)) return;
   selectedIds.forEach(id => delete state.library[id]);
   selectedIds.clear();
-  scheduleSave();
+  saveUserData();
   renderLibrary();
   toast("Smazáno.");
 });
@@ -1846,7 +1846,7 @@ function openCardContextMenu(itemId, anchorBtn) {
     closeCardContextMenu();
     if (!confirm(`Smazat „${item.title}" z knihovny?`)) return;
     delete state.library[itemId];
-    scheduleSave();
+    saveUserData();
     renderLibrary();
     toast("Smazáno.");
   });
@@ -1915,7 +1915,13 @@ function closeLinkModal() { linkModalBackdrop.classList.add("hidden"); }
 document.getElementById("fetchMetaBtn").addEventListener("click", async () => {
   let url = document.getElementById("linkUrl").value.trim();
   if (!url) return;
-  if (url.includes("facebook.com")) url = normalizeFacebookUrl(url);
+  if (url.includes("facebook.com")) {
+    if (/facebook\.com\/share\//.test(url)) {
+      toast("Tenhle typ sdíleného facebookového odkazu appka bohužel nerozezná. Otevři video přímo na Facebooku a zkopíruj adresu, která bude obsahovat „/reel/“ a dlouhé číslo.", 9000);
+      return;
+    }
+    url = normalizeFacebookUrl(url);
+  }
   else if (url.includes("instagram.com")) url = normalizeInstagramUrl(url);
   document.getElementById("linkUrl").value = url;
   const platform = detectPlatform(url);
@@ -2065,6 +2071,10 @@ document.querySelectorAll("#ratingPicker button").forEach(b => b.addEventListene
 linkForm.addEventListener("submit", (e) => {
   e.preventDefault();
   let url = document.getElementById("linkUrl").value.trim();
+  if (/facebook\.com\/share\//.test(url)) {
+    toast("Tenhle typ sdíleného facebookového odkazu appka bohužel nerozezná. Otevři video přímo na Facebooku a zkopíruj adresu, která bude obsahovat „/reel/“ a dlouhé číslo.", 9000);
+    return;
+  }
   if (url.includes("facebook.com")) url = normalizeFacebookUrl(url);
   else if (url.includes("instagram.com")) url = normalizeInstagramUrl(url);
   const platform = document.getElementById("thumbPreview").dataset.platform || detectPlatform(url);
@@ -2127,7 +2137,7 @@ document.getElementById("deleteLinkBtn").addEventListener("click", () => {
   if (!editingLinkId) return;
   if (!confirm("Smazat tento odkaz z knihovny?")) return;
   delete state.library[editingLinkId];
-  scheduleSave();
+  saveUserData();
   closeLinkModal();
   renderLibrary();
   if (currentView === "editor") renderPickerList();
@@ -3098,7 +3108,7 @@ function renderFoldersManageList() {
       state.folders = state.folders.filter(x => x.key !== key);
       Object.values(state.library).forEach(it => { if (it.folderId === key) it.folderId = ""; });
       if (activeFolderFilter === key) activeFolderFilter = null;
-      scheduleSave();
+      saveUserData();
       renderFoldersManageList();
       renderLibrary();
       toast("Složka smazána.");
@@ -3164,6 +3174,15 @@ document.getElementById("addPartBtn").addEventListener("click", () => {
 /* =========================================================
    PWA — service worker
    ========================================================= */
+// Poslední pojistka: kdyby appku zavřel/opustil s ještě neuloženou (odloženou) změnou,
+// appka se ji v tu chvíli ještě pokusí urychleně doslat, místo aby čekala na odklad.
+window.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden" && saveTimer) {
+    clearTimeout(saveTimer);
+    saveUserData();
+  }
+});
+
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("sw.js").catch(err => console.warn("SW registrace selhala:", err));
