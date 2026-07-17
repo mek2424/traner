@@ -1485,6 +1485,7 @@ async function loadUserData() {
     state.tagPool = shared.tagPool || [];
     state.equipmentPool = shared.equipmentPool || [];
     state.parts = (shared.parts && shared.parts.length) ? shared.parts : structuredClone(DEFAULT_PARTS);
+    state.knownRevision = shared.revision || 0;
     sharedOk = true;
   } catch (e) {
     console.error("Nepodařilo se načíst sdílenou knihovnu:", e);
@@ -1639,6 +1640,7 @@ function applyRemoteSharedUpdate(shared) {
   state.equipmentPool = shared.equipmentPool || [];
   state.parts = (shared.parts && shared.parts.length) ? shared.parts : structuredClone(DEFAULT_PARTS);
   state.driveApiKey = shared.driveApiKey || "";
+  state.knownRevision = shared.revision || 0;
   // Schválně nepřekreslujeme, když je zrovna otevřený formulář nebo rozepsaná úprava (přidání/úprava
   // odkazu, správa složek/částí, profil) — ať živá aktualizace nesmaže rozepsaný text pod rukama.
   // Data v appce jsou i tak už aktuální, jen se to na obrazovce neprojeví, dokud se formulář nezavře.
@@ -1653,10 +1655,34 @@ function applyRemoteSharedUpdate(shared) {
 async function saveUserData() {
   if (!uidCurrent) return false;
   try {
-    await setDoc(doc(db, "shared", "data"), {
+    const sharedRef = doc(db, "shared", "data");
+    // Pojistka proti tichému přepsání: než uložíme, ověříme si čerstvě, jestli mezitím někdo jiný
+    // (třeba appka zapomenutá otevřená jinde) neuložil novější verzi, než ze které vycházíme my.
+    if (state.knownRevision !== undefined) {
+      const freshSnap = await getDoc(sharedRef);
+      const freshData = freshSnap.exists() ? freshSnap.data() : {};
+      const freshRevision = freshData.revision || 0;
+      if (freshRevision !== state.knownRevision) {
+        logDebug("[save] konflikt verzí — moje:", state.knownRevision, "na serveru:", freshRevision);
+        const keepMine = confirm(
+          "Appka zjistila, že mezitím uložil změny někdo jiný — možná appka zapomenutá otevřená jinde.\n\n" +
+          "OK = přesto uložit moji verzi (přepíše tu jeho)\n" +
+          "Zrušit = radši nejdřív načíst tu novější verzi (moje poslední změna se bude muset zopakovat)"
+        );
+        if (!keepMine) {
+          applyRemoteSharedUpdate(freshData);
+          toast("Obnoveno na nejnovější verzi. Zkus svou poslední změnu prosím zopakovat.", 9000);
+          return false;
+        }
+      }
+    }
+    const newRevision = (state.knownRevision || 0) + 1;
+    await setDoc(sharedRef, {
       library: state.library, folders: state.folders,
-      tagPool: state.tagPool, equipmentPool: state.equipmentPool, parts: state.parts
+      tagPool: state.tagPool, equipmentPool: state.equipmentPool, parts: state.parts,
+      revision: newRevision
     }, { merge: true });
+    state.knownRevision = newRevision;
     const mine = Object.values(state.trainings).filter(t => t.ownerUid === uidCurrent);
     await Promise.all(mine.map(t => setDoc(doc(db, "users", uidCurrent, "trainings", t.id), t)));
     return true;
