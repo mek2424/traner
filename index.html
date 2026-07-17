@@ -988,7 +988,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const APP_VERSION = "2026-07-17 07:41";
+const APP_VERSION = "2026-07-17 07:52";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1490,6 +1490,7 @@ async function loadUserData() {
     state.equipmentPool = shared.equipmentPool || [];
     state.parts = (shared.parts && shared.parts.length) ? shared.parts : structuredClone(DEFAULT_PARTS);
     state.knownRevision = shared.revision || 0;
+    logDebug("[login] po přihlášení: počet videí", Object.keys(state.library).length, "revize", state.knownRevision);
     sharedOk = true;
   } catch (e) {
     console.error("Nepodařilo se načíst sdílenou knihovnu:", e);
