@@ -988,7 +988,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const APP_VERSION = "2026-07-17 08:05";
+const APP_VERSION = "2026-07-17 08:18";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -3306,7 +3306,11 @@ window.addEventListener("visibilitychange", () => {
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js").catch(err => console.warn("SW registrace selhala:", err));
+    navigator.serviceWorker.register("sw.js").then((reg) => {
+      // Appka se sama, aktivně, každých pár minut zeptá, jestli nevyšla novější verze —
+      // ať appka zapomenutá otevřená na pozadí neběží donekonečna na starém kódu.
+      setInterval(() => reg.update().catch(() => {}), 5 * 60 * 1000);
+    }).catch(err => console.warn("SW registrace selhala:", err));
   });
   // Jakmile převezme vládu nová verze appky (sw.js), appka se sama jednou obnoví,
   // ať se nikdy nestane, že by "oprava" tiše zůstala v uložené staré verzi.
