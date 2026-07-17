@@ -956,7 +956,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
-  doc, getDoc, setDoc, deleteDoc, deleteField, collection, collectionGroup, getDocs, onSnapshot
+  doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, collection, collectionGroup, getDocs, onSnapshot
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 /* =========================================================
@@ -988,7 +988,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const APP_VERSION = "2026-07-17 09:15";
+const APP_VERSION = "2026-07-17 09:35";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1687,17 +1687,17 @@ async function saveUserData() {
     if (deletedIdsThisSave.size) {
       const deletePayload = { revision: workingRevision + 1 };
       deletedIdsThisSave.forEach(id => { deletePayload[`library.${id}`] = deleteField(); });
-      await setDoc(sharedRef, deletePayload, { merge: true });
+      await updateDoc(sharedRef, deletePayload);
       workingRevision += 1;
       pendingLibraryDeletions.clear();
     }
     // Krok 2: běžný zápis zbytku (nová/upravená videa, složky, štítky, vybavení, části).
     const newRevision = workingRevision + 1;
-    await setDoc(sharedRef, {
+    await updateDoc(sharedRef, {
       library: state.library, folders: state.folders,
       tagPool: state.tagPool, equipmentPool: state.equipmentPool, parts: state.parts,
       revision: newRevision
-    }, { merge: true });
+    });
     state.knownRevision = newRevision;
     // Okamžité ověření: appka se hned znovu zeptá databáze, co tam doopravdy je, místo aby jen
     // věřila tomu, že setDoc() nespadl do chyby. Dočasné, ať víme jistě, kde přesně se to láme.
