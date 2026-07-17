@@ -988,7 +988,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const APP_VERSION = "2026-07-17 07:25";
+const APP_VERSION = "2026-07-17 07:41";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1662,10 +1662,12 @@ async function saveUserData() {
     const sharedRef = doc(db, "shared", "data");
     // Pojistka proti tichému přepsání: než uložíme, ověříme si čerstvě, jestli mezitím někdo jiný
     // (třeba appka zapomenutá otevřená jinde) neuložil novější verzi, než ze které vycházíme my.
+    let baseRevision = state.knownRevision;
     if (state.knownRevision !== undefined) {
       const freshSnap = await getDoc(sharedRef);
       const freshData = freshSnap.exists() ? freshSnap.data() : {};
       const freshRevision = freshData.revision || 0;
+      baseRevision = freshRevision; // vždycky vycházíme z toho, co je na serveru TEĎ, ne z toho, co appka věděla dřív
       if (freshRevision !== state.knownRevision) {
         logDebug("[save] konflikt verzí — moje:", state.knownRevision, "na serveru:", freshRevision);
         const keepMine = confirm(
@@ -1680,7 +1682,7 @@ async function saveUserData() {
         }
       }
     }
-    const newRevision = (state.knownRevision || 0) + 1;
+    const newRevision = (baseRevision || 0) + 1;
     await setDoc(sharedRef, {
       library: state.library, folders: state.folders,
       tagPool: state.tagPool, equipmentPool: state.equipmentPool, parts: state.parts,
@@ -2873,8 +2875,11 @@ document.getElementById("saveDriveApiKeyBtn").addEventListener("click", async ()
   const key = document.getElementById("driveApiKeyInput").value.trim();
   state.driveApiKey = key;
   try {
-    const newRevision = (state.knownRevision || 0) + 1;
-    await setDoc(doc(db, "shared", "data"), { driveApiKey: key, revision: newRevision }, { merge: true });
+    const sharedRef = doc(db, "shared", "data");
+    const freshSnap = await getDoc(sharedRef);
+    const freshRevision = freshSnap.exists() ? (freshSnap.data().revision || 0) : 0;
+    const newRevision = freshRevision + 1;
+    await setDoc(sharedRef, { driveApiKey: key, revision: newRevision }, { merge: true });
     state.knownRevision = newRevision;
     toast("API klíč uložen.");
   } catch (e) { console.error(e); toast("Uložení klíče selhalo."); }
