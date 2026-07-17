@@ -1191,6 +1191,18 @@ function extractTikTokId(url) {
   const m = url.match(/tiktok\.com\/@[\w.-]+\/video\/(\d+)/);
   return m ? m[1] : null;
 }
+/** Sjednotí různé tvary FB odkazu na reel na ten jediný, o kterém víme, že appka umí spolehlivě
+    přehrát. Necháváme beze změny cokoli, co nepoznáme jistě (radši nezměnit, než rozbít). */
+function normalizeFacebookUrl(url) {
+  const m = url.match(/facebook\.com\/reel\/(\d+)/);
+  return m ? `https://www.facebook.com/reel/${m[1]}/` : url;
+}
+/** Sjednotí odkaz na Instagram příspěvek/reel (/p/, /reel/, /reels/, /tv/, i s uživatelským
+    jménem před tím) na tvar /reel/{kód}/, o kterém víme, že appka umí spolehlivě přehrát. */
+function normalizeInstagramUrl(url) {
+  const m = url.match(/instagram\.com\/(?:[\w.]+\/)?(?:p|reel|reels|tv)\/([\w-]+)/);
+  return m ? `https://www.instagram.com/reel/${m[1]}/` : url;
+}
 function extractYouTubeId(url) {
   const patterns = [
     /youtube\.com\/watch\?[^#]*\bv=([\w-]{6,})/,
@@ -1901,8 +1913,11 @@ function openLinkModal(id) {
 function closeLinkModal() { linkModalBackdrop.classList.add("hidden"); }
 
 document.getElementById("fetchMetaBtn").addEventListener("click", async () => {
-  const url = document.getElementById("linkUrl").value.trim();
+  let url = document.getElementById("linkUrl").value.trim();
   if (!url) return;
+  if (url.includes("facebook.com")) url = normalizeFacebookUrl(url);
+  else if (url.includes("instagram.com")) url = normalizeInstagramUrl(url);
+  document.getElementById("linkUrl").value = url;
   const platform = detectPlatform(url);
   document.getElementById("thumbPreview").dataset.platform = platform;
   if (platform === "youtube") {
@@ -2049,7 +2064,9 @@ document.querySelectorAll("#ratingPicker button").forEach(b => b.addEventListene
 
 linkForm.addEventListener("submit", (e) => {
   e.preventDefault();
-  const url = document.getElementById("linkUrl").value.trim();
+  let url = document.getElementById("linkUrl").value.trim();
+  if (url.includes("facebook.com")) url = normalizeFacebookUrl(url);
+  else if (url.includes("instagram.com")) url = normalizeInstagramUrl(url);
   const platform = document.getElementById("thumbPreview").dataset.platform || detectPlatform(url);
   let videoId = document.getElementById("thumbPreview").dataset.videoId || null;
   if (!videoId && platform === "youtube") videoId = extractYouTubeId(url);
