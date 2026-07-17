@@ -946,7 +946,7 @@ import {
   deleteUser, EmailAuthProvider, reauthenticateWithCredential
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import {
-  initializeFirestore, persistentLocalCache, persistentSingleTabManager,
+  initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
   doc, getDoc, setDoc, deleteDoc, deleteField, collection, collectionGroup, getDocs, onSnapshot
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
@@ -968,7 +968,7 @@ const auth = getAuth(fbApp);
 try { await setPersistence(auth, browserLocalPersistence); } catch (e) { console.warn("Persistence se nepodařilo nastavit:", e); }
 let db;
 try {
-  db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabManager: persistentSingleTabManager({}) }) });
+  db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
 } catch (e) {
   console.warn("Offline cache se nepodařilo zapnout, appka poběží jen online:", e);
   db = initializeFirestore(fbApp, {});
