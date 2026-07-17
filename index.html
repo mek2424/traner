@@ -989,7 +989,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const APP_VERSION = "2026-07-18 00:53";
+const APP_VERSION = "2026-07-18 00:59";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1066,6 +1066,7 @@ const DEV_MODE_KEY = "trener_dev_mode";
 let devModeOn = localStorage.getItem(DEV_MODE_KEY) === "1";
 function applyDevModeVisibility() {
   document.getElementById("debugLogBtn").classList.toggle("hidden", !devModeOn);
+  document.getElementById("appVersionLabel").classList.toggle("hidden", !devModeOn);
 }
 function setDevMode(on) {
   devModeOn = on;
