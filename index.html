@@ -311,7 +311,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 }
 .folder-row:hover,.folder-row.drag-over{background:var(--paper);border-color:var(--line);}
 .folder-row.active{background:var(--paper);border-color:var(--court);font-weight:700;}
-.folder-row .swatch{width:14px;height:14px;border-radius:4px;flex-shrink:0;}
+.folder-row .folder-icon{width:16px;font-size:14px;flex-shrink:0;text-align:center;}
 .folder-row-all{border-bottom:1px solid var(--line);border-radius:0;margin-bottom:8px;padding-bottom:12px;}
 .folder-manage-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
 .folder-manage-row .drag-handle{color:rgba(27,36,48,.4);flex-shrink:0;}
@@ -769,7 +769,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
     </div>
     <p style="font-size:11.5px;color:var(--ink-soft);margin:0 0 10px;">Klepnutím filtruješ, přetažením karty sem přesuneš video.</p>
     <button type="button" class="folder-row folder-row-all" id="folderRowAll">
-      <span class="swatch" style="background:var(--line);"></span> Všechny složky
+      <i class="fa-solid fa-folder-open folder-icon" style="color:var(--ink-faint);"></i> Všechny složky
     </button>
     <div id="folderSidebarList"></div>
     <button type="button" class="manage-link" id="manageFoldersBtn" style="margin-top:10px;"><i class="fa-solid fa-sliders"></i> Spravovat složky</button>
@@ -988,7 +988,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const APP_VERSION = "2026-07-17 08:18";
+const APP_VERSION = "2026-07-17 08:26";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -3130,7 +3130,7 @@ function renderFolderSidebar() {
   const list = document.getElementById("folderSidebarList");
   list.innerHTML = state.folders.map(f => `
     <button type="button" class="folder-row ${activeFolderFilter === f.key ? "active" : ""}" data-key="${esc(f.key)}">
-      <span class="swatch" style="background:${esc(f.color)}"></span> ${esc(f.label)}
+      <i class="fa-solid fa-folder folder-icon" style="color:${esc(f.color)}"></i> ${esc(f.label)}
     </button>
   `).join("");
   list.querySelectorAll(".folder-row").forEach(row => {
