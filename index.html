@@ -947,7 +947,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import {
   initializeFirestore, persistentLocalCache, persistentSingleTabManager,
-  doc, getDoc, setDoc, deleteDoc, deleteField, collection, collectionGroup, getDocs
+  doc, getDoc, setDoc, deleteDoc, deleteField, collection, collectionGroup, getDocs, onSnapshot
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 /* =========================================================
@@ -1345,6 +1345,7 @@ onAuthStateChanged(auth, async (user) => {
     await checkMembershipAndProceed();
   } else {
     uidCurrent = null;
+    unsubscribeFromSharedData();
     document.getElementById("app").classList.add("hidden");
     document.getElementById("pendingScreen").classList.add("hidden");
     document.getElementById("loginScreen").classList.remove("hidden");
@@ -1387,6 +1388,7 @@ async function checkMembershipAndProceed() {
   document.getElementById("pendingScreen").classList.add("hidden");
   document.getElementById("app").classList.remove("hidden");
   switchView("library");
+  subscribeToSharedData();
 }
 document.getElementById("pendingRecheckBtn").addEventListener("click", checkMembershipAndProceed);
 document.getElementById("pendingLogoutBtn").addEventListener("click", () => signOut(auth));
@@ -1574,6 +1576,45 @@ async function loadUserData() {
   if (loadErrors.length) {
     toast("Nepodařilo se plně načíst: " + loadErrors.join("; ") + ". Zkus obnovit (F5) nebo zkontroluj Firestore pravidla.", 12000);
   }
+}
+
+/* =========================================================
+   ŽIVÁ SYNCHRONIZACE SDÍLENÝCH DAT
+   Appka se od tohohle okamžiku drží napojená na databázi, dokud je otevřená — když někdo
+   (i appka sama v jiném okně/zařízení) něco uloží, projeví se to tady bez nutnosti se
+   znovu přihlásit nebo obnovit appku.
+   ========================================================= */
+let sharedDataUnsubscribe = null;
+function subscribeToSharedData() {
+  if (sharedDataUnsubscribe) { sharedDataUnsubscribe(); sharedDataUnsubscribe = null; }
+  let firstSnapshot = true;
+  sharedDataUnsubscribe = onSnapshot(doc(db, "shared", "data"), (snap) => {
+    if (firstSnapshot) { firstSnapshot = false; return; } // tenhle stav appka už má z počátečního načtení
+    if (!snap.exists()) return;
+    applyRemoteSharedUpdate(snap.data());
+  }, (err) => {
+    console.error("Živá synchronizace sdílených dat selhala:", err);
+  });
+}
+function unsubscribeFromSharedData() {
+  if (sharedDataUnsubscribe) { sharedDataUnsubscribe(); sharedDataUnsubscribe = null; }
+}
+function applyRemoteSharedUpdate(shared) {
+  state.library = shared.library || {};
+  state.folders = shared.folders || [];
+  state.tagPool = shared.tagPool || [];
+  state.equipmentPool = shared.equipmentPool || [];
+  state.parts = (shared.parts && shared.parts.length) ? shared.parts : structuredClone(DEFAULT_PARTS);
+  state.driveApiKey = shared.driveApiKey || "";
+  // Schválně nepřekreslujeme, když je zrovna otevřený formulář nebo rozepsaná úprava (přidání/úprava
+  // odkazu, správa složek/částí, profil) — ať živá aktualizace nesmaže rozepsaný text pod rukama.
+  // Data v appce jsou i tak už aktuální, jen se to na obrazovce neprojeví, dokud se formulář nezavře.
+  const modalOpen = !linkModalBackdrop.classList.contains("hidden")
+    || !document.getElementById("foldersModalBackdrop").classList.contains("hidden")
+    || !document.getElementById("partsModalBackdrop").classList.contains("hidden");
+  if (modalOpen) return;
+  if (currentView === "library") renderLibrary();
+  else if (currentView === "editor") renderPickerList(); // sekvence tréninku se schválně nepřekresluje (viz níž)
 }
 
 async function saveUserData() {
