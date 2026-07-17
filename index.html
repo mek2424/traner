@@ -988,7 +988,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const APP_VERSION = "2026-07-17 07:52";
+const APP_VERSION = "2026-07-17 08:05";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1663,25 +1663,20 @@ async function saveUserData() {
     const sharedRef = doc(db, "shared", "data");
     // Pojistka proti tichému přepsání: než uložíme, ověříme si čerstvě, jestli mezitím někdo jiný
     // (třeba appka zapomenutá otevřená jinde) neuložil novější verzi, než ze které vycházíme my.
+    // Schválně tu není možnost "přepsat i tak" — i jedno nevědomé kliknutí v zapomenutém okně by
+    // mohlo validně vrátit smazaná data zpátky, tak radši appka vždycky vezme tu novější verzi sama.
     let baseRevision = state.knownRevision;
     if (state.knownRevision !== undefined) {
       const freshSnap = await getDoc(sharedRef);
       const freshData = freshSnap.exists() ? freshSnap.data() : {};
       const freshRevision = freshData.revision || 0;
-      baseRevision = freshRevision; // vždycky vycházíme z toho, co je na serveru TEĎ, ne z toho, co appka věděla dřív
       if (freshRevision !== state.knownRevision) {
-        logDebug("[save] konflikt verzí — moje:", state.knownRevision, "na serveru:", freshRevision);
-        const keepMine = confirm(
-          "Appka zjistila, že mezitím uložil změny někdo jiný — možná appka zapomenutá otevřená jinde.\n\n" +
-          "OK = přesto uložit moji verzi (přepíše tu jeho)\n" +
-          "Zrušit = radši nejdřív načíst tu novější verzi (moje poslední změna se bude muset zopakovat)"
-        );
-        if (!keepMine) {
-          applyRemoteSharedUpdate(freshData);
-          toast("Obnoveno na nejnovější verzi. Zkus svou poslední změnu prosím zopakovat.", 9000);
-          return false;
-        }
+        logDebug("[save] konflikt verzí — moje:", state.knownRevision, "na serveru:", freshRevision, "— beru tu novější");
+        applyRemoteSharedUpdate(freshData);
+        toast("Mezitím se appka změnila jinde (možná zapomenuté okno) — appka se obnovila na nejnovější verzi. Zkus svou poslední změnu prosím zopakovat.", 10000);
+        return false;
       }
+      baseRevision = freshRevision;
     }
     const newRevision = (baseRevision || 0) + 1;
     await setDoc(sharedRef, {
