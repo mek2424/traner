@@ -988,7 +988,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const APP_VERSION = "2026-07-17 08:33";
+const APP_VERSION = "2026-07-17 08:52";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1685,6 +1685,17 @@ async function saveUserData() {
       revision: newRevision
     }, { merge: true });
     state.knownRevision = newRevision;
+    // Okamžité ověření: appka se hned znovu zeptá databáze, co tam doopravdy je, místo aby jen
+    // věřila tomu, že setDoc() nespadl do chyby. Dočasné, ať víme jistě, kde přesně se to láme.
+    try {
+      const verifySnap = await getDoc(sharedRef);
+      const verifyData = verifySnap.exists() ? verifySnap.data() : {};
+      logDebug("[verify] hned po uložení appka na serveru vidí: počet videí",
+        Object.keys(verifyData.library || {}).length, "revize", verifyData.revision,
+        "(appka si myslí, že poslala", Object.keys(state.library).length, "videí a revizi", newRevision, ")");
+    } catch (verifyErr) {
+      logDebug("[verify] ověření po uložení selhalo:", verifyErr.message || verifyErr.code || verifyErr);
+    }
     const mine = Object.values(state.trainings).filter(t => t.ownerUid === uidCurrent);
     await Promise.all(mine.map(t => setDoc(doc(db, "users", uidCurrent, "trainings", t.id), t)));
     return true;
