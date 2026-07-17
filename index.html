@@ -913,6 +913,14 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   </div>
 </div>
 
+<!-- ===================== DIAGNOSTICKÝ ZÁZNAM (dočasné) ===================== -->
+<button type="button" id="debugLogBtn" aria-label="Diagnostický záznam" style="position:fixed;bottom:14px;right:14px;z-index:500;width:38px;height:38px;border-radius:50%;background:rgba(27,36,48,.55);color:#fff;border:none;font-size:16px;">🐞</button>
+<div id="debugLogPanel" class="hidden" style="position:fixed;inset:0;z-index:501;background:rgba(10,12,15,.96);color:#7CFC8C;font-family:monospace;font-size:11.5px;padding:14px;overflow-y:auto;white-space:pre-wrap;">
+  <button type="button" id="closeDebugLogBtn" style="position:sticky;top:0;float:right;background:#fff;color:#000;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;">Zavřít</button>
+  <div style="clear:both;"></div>
+  <div id="debugLogContent"></div>
+</div>
+
 <!-- ===================== CROP AVATAR MODAL ===================== -->
 <div id="cropModalBackdrop" class="modal-backdrop hidden">
   <div class="modal">
@@ -1028,6 +1036,25 @@ function downloadTextFile(filename, content, mime = "application/octet-stream") 
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
+/** Zapíše zprávu do konzole (pro PC) i do panelu viditelného přímo v appce (pro mobil bez
+    propojení s PC) — dočasný diagnostický nástroj, klidně ho jednou v budoucnu odstraníme. */
+let debugLog = [];
+function logDebug(...args) {
+  const msg = args.map(a => (typeof a === "object" ? JSON.stringify(a) : String(a))).join(" ");
+  debugLog.push(`${new Date().toLocaleTimeString("cs-CZ")}  ${msg}`);
+  if (debugLog.length > 60) debugLog.shift();
+  console.log(...args);
+  const el = document.getElementById("debugLogContent");
+  if (el) el.textContent = debugLog.join("\n");
+}
+document.getElementById("debugLogBtn").addEventListener("click", () => {
+  document.getElementById("debugLogContent").textContent = debugLog.length ? debugLog.join("\n") : "(zatím žádné záznamy — proveď akci, co chceš prověřit, a pak se sem vrať)";
+  document.getElementById("debugLogPanel").classList.remove("hidden");
+});
+document.getElementById("closeDebugLogBtn").addEventListener("click", () => {
+  document.getElementById("debugLogPanel").classList.add("hidden");
+});
+
 function myLabel() {
   return (state.profile && state.profile.username) || (auth.currentUser && auth.currentUser.email) || "Trenér";
 }
@@ -1591,12 +1618,12 @@ function subscribeToSharedData() {
   sharedDataUnsubscribe = onSnapshot(doc(db, "shared", "data"), (snap) => {
     if (firstSnapshot) { firstSnapshot = false; return; } // tenhle stav appka už má z počátečního načtení
     if (snap.metadata.hasPendingWrites) {
-      console.log("[sync] ignoruji ozvěnu vlastního ještě nepotvrzeného zápisu");
+      logDebug("[sync] ignoruji ozvěnu vlastního ještě nepotvrzeného zápisu");
       return; // reagujeme jen na potvrzená data ze serveru, ne na naši vlastní optimistickou ozvěnu
     }
     if (!snap.exists()) return;
     const shared = snap.data();
-    console.log("[sync] přišla potvrzená aktualizace, počet videí v knihovně:", Object.keys(shared.library || {}).length, new Date().toISOString());
+    logDebug("[sync] přišla potvrzená aktualizace, počet videí v knihovně:", Object.keys(shared.library || {}).length, new Date().toISOString());
     applyRemoteSharedUpdate(shared);
   }, (err) => {
     console.error("Živá synchronizace sdílených dat selhala:", err);
@@ -1618,7 +1645,7 @@ function applyRemoteSharedUpdate(shared) {
   const modalOpen = !linkModalBackdrop.classList.contains("hidden")
     || !document.getElementById("foldersModalBackdrop").classList.contains("hidden")
     || !document.getElementById("partsModalBackdrop").classList.contains("hidden");
-  if (modalOpen) { console.log("[sync] formulář je otevřený, překreslení odloženo"); return; }
+  if (modalOpen) { logDebug("[sync] formulář je otevřený, překreslení odloženo"); return; }
   if (currentView === "library") renderLibrary();
   else if (currentView === "editor") renderPickerList(); // sekvence tréninku se schválně nepřekresluje (viz níž)
 }
@@ -1797,7 +1824,7 @@ document.getElementById("libraryGrid").addEventListener("click", (e) => {
     const it = state.library[id];
     if (it) {
       it.favorite = !it.favorite;
-      console.log("[fav] přepínám oblíbené u", id, "— počet videí v knihovně teď:", Object.keys(state.library).length);
+      logDebug("[fav] přepínám oblíbené u", id, "— počet videí v knihovně teď:", Object.keys(state.library).length);
       renderLibrary();
       saveUserData();
     }
@@ -1900,10 +1927,10 @@ function openCardContextMenu(itemId, anchorBtn) {
     closeCardContextMenu();
     if (!confirm(`Smazat „${item.title}" z knihovny?`)) return;
     delete state.library[itemId];
-    console.log("[delete] smazáno", itemId, "— počet videí v knihovně teď:", Object.keys(state.library).length);
+    logDebug("[delete] smazáno", itemId, "— počet videí v knihovně teď:", Object.keys(state.library).length);
     renderLibrary();
     const ok = await saveUserData();
-    console.log("[delete] uložení dokončeno, úspěch:", ok, "— počet videí v knihovně po uložení:", Object.keys(state.library).length);
+    logDebug("[delete] uložení dokončeno, úspěch:", ok, "— počet videí v knihovně po uložení:", Object.keys(state.library).length);
     if (ok) toast("Smazáno.");
   });
   menu.querySelector("[data-act='move']").addEventListener("click", () => {
@@ -2193,12 +2220,12 @@ document.getElementById("deleteLinkBtn").addEventListener("click", async () => {
   if (!editingLinkId) return;
   if (!confirm("Smazat tento odkaz z knihovny?")) return;
   delete state.library[editingLinkId];
-  console.log("[delete] smazáno (z formuláře)", editingLinkId, "— počet videí v knihovně teď:", Object.keys(state.library).length);
+  logDebug("[delete] smazáno (z formuláře)", editingLinkId, "— počet videí v knihovně teď:", Object.keys(state.library).length);
   closeLinkModal();
   renderLibrary();
   if (currentView === "editor") renderPickerList();
   const ok = await saveUserData();
-  console.log("[delete] uložení dokončeno, úspěch:", ok, "— počet videí v knihovně po uložení:", Object.keys(state.library).length);
+  logDebug("[delete] uložení dokončeno, úspěch:", ok, "— počet videí v knihovně po uložení:", Object.keys(state.library).length);
   if (ok) toast("Smazáno.");
 });
 
