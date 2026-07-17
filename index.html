@@ -773,6 +773,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
     </button>
     <div id="folderSidebarList"></div>
     <button type="button" class="manage-link" id="manageFoldersBtn" style="margin-top:10px;"><i class="fa-solid fa-sliders"></i> Spravovat složky</button>
+    <button type="button" class="manage-link" id="openTrashBtn" style="margin-top:6px;"><i class="fa-solid fa-trash-can"></i> Koš</button>
   </div>
 </div>
 
@@ -801,6 +802,18 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
     <div class="modal-actions">
       <button type="button" class="btn btn-primary btn-block" id="addPartBtn"><i class="fa-solid fa-plus"></i> Přidat novou část</button>
     </div>
+  </div>
+</div>
+
+<!-- ===================== KOŠ ===================== -->
+<div id="trashModalBackdrop" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 style="font-size:22px;">Koš</h2>
+      <button class="btn btn-icon btn-ghost" id="closeTrashModalBtn">✕</button>
+    </div>
+    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:0;">Smazaná videa tu čekají 14 dní, než appka mazání dokoná napořád — mezitím jde kterékoli vrátit zpět.</p>
+    <div id="trashList"></div>
   </div>
 </div>
 
@@ -989,7 +1002,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const APP_VERSION = "2026-07-18 00:59";
+const APP_VERSION = "2026-07-18 01:07";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1117,6 +1130,23 @@ const ADMIN_UID = "WIw1KfRofOOrbYF7Xl8YzgQrTZd2"; // mazání složek smí jen t
 let libraryViewMode = "grid"; // "grid" | "list"
 let selectMode = false;
 let pendingLibraryDeletions = new Set(); // ID položek, co appka musí na serveru výslovně smazat (ne jen vynechat)
+const TRASH_RETENTION_DAYS = 14; // po tolika dnech appka položku z koše sama nadobro odstraní
+/** "Smazání" videa z běžné knihovny je měkké — video zůstane v datech, jen označené jako
+    smazané, a pár dní čeká v Koši, než appka provede skutečné, nevratné smazání. */
+function softDeleteLibraryItem(id) {
+  const it = state.library[id];
+  if (!it) return;
+  it.deletedAt = Date.now();
+}
+function restoreLibraryItem(id) {
+  const it = state.library[id];
+  if (!it) return;
+  delete it.deletedAt;
+}
+function hardDeleteLibraryItem(id) {
+  delete state.library[id];
+  pendingLibraryDeletions.add(id);
+}
 let favOnlyFilter = false;
 let selectedIds = new Set();
 let openContextMenuEl = null;
@@ -1453,6 +1483,7 @@ async function checkMembershipAndProceed() {
   document.getElementById("app").classList.remove("hidden");
   switchView("library");
   subscribeToSharedData();
+  purgeOldTrash().catch(err => console.warn("Úklid koše selhal:", err));
 }
 document.getElementById("pendingRecheckBtn").addEventListener("click", checkMembershipAndProceed);
 document.getElementById("pendingLogoutBtn").addEventListener("click", () => signOut(auth));
@@ -1833,6 +1864,7 @@ function getFilteredLibraryItems() {
   const q = document.getElementById("librarySearch").value.trim().toLowerCase();
   const sortMode = document.getElementById("librarySort").value;
   const items = Object.values(state.library).filter(item => {
+    if (item.deletedAt) return false; // položky v koši se v běžné knihovně nezobrazují
     if (favOnlyFilter && !item.favorite) return false;
     if (activeFolderFilter && item.folderId !== activeFolderFilter) return false;
     if (libraryTagFilter.size && ![...libraryTagFilter].every(t => item.tags.includes(t))) return false;
@@ -1952,12 +1984,12 @@ function updateBulkBar() {
 }
 document.getElementById("bulkCancelBtn").addEventListener("click", () => { selectMode = false; selectedIds.clear(); document.getElementById("toggleSelectModeBtn").classList.remove("btn-accent"); renderLibrary(); });
 document.getElementById("bulkDeleteBtn").addEventListener("click", async () => {
-  if (!confirm(`Smazat ${selectedIds.size} vybraných videí z knihovny?`)) return;
-  selectedIds.forEach(id => { delete state.library[id]; pendingLibraryDeletions.add(id); });
+  if (!confirm(`Přesunout ${selectedIds.size} vybraných videí do koše?`)) return;
+  selectedIds.forEach(id => softDeleteLibraryItem(id));
   selectedIds.clear();
   renderLibrary();
   const ok = await saveUserData();
-  if (ok) toast("Smazáno.");
+  if (ok) toast("Přesunuto do koše.");
 });
 document.getElementById("bulkMoveBtn").addEventListener("click", () => {
   if (!state.folders.length) { toast("Nejdřív si založ aspoň jednu složku."); return; }
@@ -2012,14 +2044,11 @@ function openCardContextMenu(itemId, anchorBtn) {
   menu.querySelector("[data-act='edit']").addEventListener("click", () => { closeCardContextMenu(); openLinkModal(itemId); });
   menu.querySelector("[data-act='delete']").addEventListener("click", async () => {
     closeCardContextMenu();
-    if (!confirm(`Smazat „${item.title}" z knihovny?`)) return;
-    delete state.library[itemId];
-    pendingLibraryDeletions.add(itemId);
-    logDebug("[delete] smazáno", itemId, "— počet videí v knihovně teď:", Object.keys(state.library).length);
+    if (!confirm(`Přesunout „${item.title}" do koše?`)) return;
+    softDeleteLibraryItem(itemId);
     renderLibrary();
     const ok = await saveUserData();
-    logDebug("[delete] uložení dokončeno, úspěch:", ok, "— počet videí v knihovně po uložení:", Object.keys(state.library).length);
-    if (ok) toast("Smazáno.");
+    if (ok) toast("Přesunuto do koše.");
   });
   menu.querySelector("[data-act='move']").addEventListener("click", () => {
     closeCardContextMenu();
@@ -2306,16 +2335,13 @@ linkForm.addEventListener("submit", (e) => {
 
 document.getElementById("deleteLinkBtn").addEventListener("click", async () => {
   if (!editingLinkId) return;
-  if (!confirm("Smazat tento odkaz z knihovny?")) return;
-  delete state.library[editingLinkId];
-  pendingLibraryDeletions.add(editingLinkId);
-  logDebug("[delete] smazáno (z formuláře)", editingLinkId, "— počet videí v knihovně teď:", Object.keys(state.library).length);
+  if (!confirm("Přesunout tento odkaz do koše?")) return;
+  softDeleteLibraryItem(editingLinkId);
   closeLinkModal();
   renderLibrary();
   if (currentView === "editor") renderPickerList();
   const ok = await saveUserData();
-  logDebug("[delete] uložení dokončeno, úspěch:", ok, "— počet videí v knihovně po uložení:", Object.keys(state.library).length);
-  if (ok) toast("Smazáno.");
+  if (ok) toast("Přesunuto do koše.");
 });
 
 /* =========================================================
@@ -2697,6 +2723,7 @@ function renderPickerList() {
   const part = document.getElementById("pickerPartFilter").value;
   const items = Object.values(state.library)
     .filter(it => {
+      if (it.deletedAt) return false; // položky v koši nejdou vybrat do tréninku
       if (folder && it.folderId !== folder) return false;
       if (part && it.defaultPart !== part) return false;
       if (pickerTagFilter.size && ![...pickerTagFilter].every(t => it.tags.includes(t))) return false;
@@ -3356,6 +3383,70 @@ document.getElementById("addPartBtn").addEventListener("click", () => {
   renderPickerList();
   toast("Přidáno.");
 });
+
+/* =========================================================
+   KOŠ
+   ========================================================= */
+const trashModalBackdrop = document.getElementById("trashModalBackdrop");
+document.getElementById("openTrashBtn").addEventListener("click", () => {
+  folderSidebarBackdrop.classList.add("hidden");
+  renderTrashList();
+  trashModalBackdrop.classList.remove("hidden");
+});
+document.getElementById("closeTrashModalBtn").addEventListener("click", () => trashModalBackdrop.classList.add("hidden"));
+trashModalBackdrop.addEventListener("click", (e) => { if (e.target === trashModalBackdrop) trashModalBackdrop.classList.add("hidden"); });
+
+function renderTrashList() {
+  const wrap = document.getElementById("trashList");
+  const trashed = Object.entries(state.library)
+    .filter(([, it]) => it.deletedAt)
+    .sort(([, a], [, b]) => b.deletedAt - a.deletedAt);
+  if (!trashed.length) {
+    wrap.innerHTML = `<div class="empty-state"><h3>Koš je prázdný</h3><p>Smazaná videa se objeví tady.</p></div>`;
+    return;
+  }
+  wrap.innerHTML = trashed.map(([id, it]) => {
+    const daysLeft = Math.max(0, TRASH_RETENTION_DAYS - Math.floor((Date.now() - it.deletedAt) / 86400000));
+    return `
+    <div class="manage-row" data-id="${esc(id)}">
+      <span style="flex:1;min-width:0;overflow-wrap:anywhere;">
+        <strong>${esc(it.title || "(bez názvu)")}</strong><br>
+        <span style="font-size:11px;color:var(--ink-faint);">zmizí navždy za ${daysLeft} ${daysLeft === 1 ? "den" : daysLeft < 5 ? "dny" : "dní"}</span>
+      </span>
+      <button type="button" class="btn btn-ghost btn-sm" data-restore="${esc(id)}"><i class="fa-solid fa-rotate-left"></i> Obnovit</button>
+      <button type="button" class="btn btn-danger btn-sm" data-purge="${esc(id)}"><i class="fa-solid fa-trash"></i> Smazat navždy</button>
+    </div>
+  `;
+  }).join("");
+  wrap.querySelectorAll("[data-restore]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      restoreLibraryItem(btn.dataset.restore);
+      renderTrashList();
+      renderLibrary();
+      const ok = await saveUserData();
+      if (ok) toast("Video obnoveno.");
+    });
+  });
+  wrap.querySelectorAll("[data-purge]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const it = state.library[btn.dataset.purge];
+      if (!confirm(`Smazat „${it ? it.title : "toto video"}" nadobro? Tohle se už nedá vzít zpět.`)) return;
+      hardDeleteLibraryItem(btn.dataset.purge);
+      renderTrashList();
+      const ok = await saveUserData();
+      if (ok) toast("Smazáno natrvalo.");
+    });
+  });
+}
+/** Appka si při každém přihlášení tiše zkontroluje koš a videa starší než TRASH_RETENTION_DAYS
+    dní sama nadobro smaže — trenér nemusí koš sám nijak čistit. */
+async function purgeOldTrash() {
+  const cutoff = Date.now() - TRASH_RETENTION_DAYS * 86400000;
+  const toPurge = Object.entries(state.library).filter(([, it]) => it.deletedAt && it.deletedAt < cutoff);
+  if (!toPurge.length) return;
+  toPurge.forEach(([id]) => hardDeleteLibraryItem(id));
+  await saveUserData();
+}
 
 /* =========================================================
    PWA — service worker
