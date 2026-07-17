@@ -1590,8 +1590,14 @@ function subscribeToSharedData() {
   let firstSnapshot = true;
   sharedDataUnsubscribe = onSnapshot(doc(db, "shared", "data"), (snap) => {
     if (firstSnapshot) { firstSnapshot = false; return; } // tenhle stav appka už má z počátečního načtení
+    if (snap.metadata.hasPendingWrites) {
+      console.log("[sync] ignoruji ozvěnu vlastního ještě nepotvrzeného zápisu");
+      return; // reagujeme jen na potvrzená data ze serveru, ne na naši vlastní optimistickou ozvěnu
+    }
     if (!snap.exists()) return;
-    applyRemoteSharedUpdate(snap.data());
+    const shared = snap.data();
+    console.log("[sync] přišla potvrzená aktualizace, počet videí v knihovně:", Object.keys(shared.library || {}).length, new Date().toISOString());
+    applyRemoteSharedUpdate(shared);
   }, (err) => {
     console.error("Živá synchronizace sdílených dat selhala:", err);
   });
@@ -1612,7 +1618,7 @@ function applyRemoteSharedUpdate(shared) {
   const modalOpen = !linkModalBackdrop.classList.contains("hidden")
     || !document.getElementById("foldersModalBackdrop").classList.contains("hidden")
     || !document.getElementById("partsModalBackdrop").classList.contains("hidden");
-  if (modalOpen) return;
+  if (modalOpen) { console.log("[sync] formulář je otevřený, překreslení odloženo"); return; }
   if (currentView === "library") renderLibrary();
   else if (currentView === "editor") renderPickerList(); // sekvence tréninku se schválně nepřekresluje (viz níž)
 }
@@ -1789,7 +1795,12 @@ document.getElementById("libraryGrid").addEventListener("click", (e) => {
   if (e.target.closest("[data-action='open-menu']")) { openCardContextMenu(id, e.target.closest("[data-action='open-menu']")); return; }
   if (e.target.closest("[data-action='toggle-fav']")) {
     const it = state.library[id];
-    if (it) { it.favorite = !it.favorite; scheduleSave(); renderLibrary(); }
+    if (it) {
+      it.favorite = !it.favorite;
+      console.log("[fav] přepínám oblíbené u", id, "— počet videí v knihovně teď:", Object.keys(state.library).length);
+      renderLibrary();
+      saveUserData();
+    }
     return;
   }
   if (e.target.closest("[data-action='toggle-select']") || selectMode) {
@@ -1889,8 +1900,10 @@ function openCardContextMenu(itemId, anchorBtn) {
     closeCardContextMenu();
     if (!confirm(`Smazat „${item.title}" z knihovny?`)) return;
     delete state.library[itemId];
+    console.log("[delete] smazáno", itemId, "— počet videí v knihovně teď:", Object.keys(state.library).length);
     renderLibrary();
     const ok = await saveUserData();
+    console.log("[delete] uložení dokončeno, úspěch:", ok, "— počet videí v knihovně po uložení:", Object.keys(state.library).length);
     if (ok) toast("Smazáno.");
   });
   menu.querySelector("[data-act='move']").addEventListener("click", () => {
@@ -2180,10 +2193,12 @@ document.getElementById("deleteLinkBtn").addEventListener("click", async () => {
   if (!editingLinkId) return;
   if (!confirm("Smazat tento odkaz z knihovny?")) return;
   delete state.library[editingLinkId];
+  console.log("[delete] smazáno (z formuláře)", editingLinkId, "— počet videí v knihovně teď:", Object.keys(state.library).length);
   closeLinkModal();
   renderLibrary();
   if (currentView === "editor") renderPickerList();
   const ok = await saveUserData();
+  console.log("[delete] uložení dokončeno, úspěch:", ok, "— počet videí v knihovně po uložení:", Object.keys(state.library).length);
   if (ok) toast("Smazáno.");
 });
 
