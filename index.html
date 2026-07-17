@@ -1475,7 +1475,8 @@ async function loadUserData() {
         folders: legacy.folders || ["Útok", "Blok", "Nahrávka", "Podání", "Příjem", "Obrana", "Kondice"],
         tagPool: legacy.tagPool || [],
         equipmentPool: legacy.equipmentPool || [],
-        parts: (legacy.parts && legacy.parts.length) ? legacy.parts : structuredClone(DEFAULT_PARTS)
+        parts: (legacy.parts && legacy.parts.length) ? legacy.parts : structuredClone(DEFAULT_PARTS),
+        revision: 0
       };
       await setDoc(sharedRef, shared);
     }
@@ -2869,7 +2870,9 @@ document.getElementById("saveDriveApiKeyBtn").addEventListener("click", async ()
   const key = document.getElementById("driveApiKeyInput").value.trim();
   state.driveApiKey = key;
   try {
-    await setDoc(doc(db, "shared", "data"), { driveApiKey: key }, { merge: true });
+    const newRevision = (state.knownRevision || 0) + 1;
+    await setDoc(doc(db, "shared", "data"), { driveApiKey: key, revision: newRevision }, { merge: true });
+    state.knownRevision = newRevision;
     toast("API klíč uložen.");
   } catch (e) { console.error(e); toast("Uložení klíče selhalo."); }
 });
@@ -3074,7 +3077,10 @@ document.getElementById("deleteAccountBtn").addEventListener("click", async () =
         if (it.difficulties && it.difficulties[uidCurrent] !== undefined) { delete it.difficulties[uidCurrent]; changed = true; }
         if (it.notesByCoach && it.notesByCoach[uidCurrent] !== undefined) { delete it.notesByCoach[uidCurrent]; changed = true; }
       });
-      if (changed) await setDoc(sharedRef, shared);
+      if (changed) {
+        shared.revision = (shared.revision || 0) + 1;
+        await setDoc(sharedRef, shared);
+      }
     }
     // 3) smazat profil
     await deleteDoc(doc(db, "users", uidCurrent));
