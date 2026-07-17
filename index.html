@@ -988,7 +988,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const APP_VERSION = "2026-07-17 08:52";
+const APP_VERSION = "2026-07-17 09:15";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1083,6 +1083,7 @@ let activeFolderFilter = null; // key vybrané složky v postranním panelu, nul
 const ADMIN_UID = "WIw1KfRofOOrbYF7Xl8YzgQrTZd2"; // mazání složek smí jen tenhle účet
 let libraryViewMode = "grid"; // "grid" | "list"
 let selectMode = false;
+let pendingLibraryDeletions = new Set(); // ID položek, co appka musí na serveru výslovně smazat (ne jen vynechat)
 let favOnlyFilter = false;
 let selectedIds = new Set();
 let openContextMenuEl = null;
@@ -1678,7 +1679,20 @@ async function saveUserData() {
       }
       baseRevision = freshRevision;
     }
-    const newRevision = (baseRevision || 0) + 1;
+    let workingRevision = baseRevision || 0;
+    const deletedIdsThisSave = new Set(pendingLibraryDeletions);
+    // Krok 1 (jen pokud je co mazat): samostatný zápis, který smaže konkrétní položky pomocí
+    // deleteField() na přesné cestě — odděleně od hlavního zápisu, ať si nepřekáží v jednom
+    // volání s tím, že posíláme i celé pole "library" jako celek.
+    if (deletedIdsThisSave.size) {
+      const deletePayload = { revision: workingRevision + 1 };
+      deletedIdsThisSave.forEach(id => { deletePayload[`library.${id}`] = deleteField(); });
+      await setDoc(sharedRef, deletePayload, { merge: true });
+      workingRevision += 1;
+      pendingLibraryDeletions.clear();
+    }
+    // Krok 2: běžný zápis zbytku (nová/upravená videa, složky, štítky, vybavení, části).
+    const newRevision = workingRevision + 1;
     await setDoc(sharedRef, {
       library: state.library, folders: state.folders,
       tagPool: state.tagPool, equipmentPool: state.equipmentPool, parts: state.parts,
@@ -1690,9 +1704,10 @@ async function saveUserData() {
     try {
       const verifySnap = await getDoc(sharedRef);
       const verifyData = verifySnap.exists() ? verifySnap.data() : {};
+      const stillThere = [...deletedIdsThisSave].filter(id => (verifyData.library || {})[id]);
       logDebug("[verify] hned po uložení appka na serveru vidí: počet videí",
         Object.keys(verifyData.library || {}).length, "revize", verifyData.revision,
-        "(appka si myslí, že poslala", Object.keys(state.library).length, "videí a revizi", newRevision, ")");
+        "— smazané položky, co tam přesto ještě jsou:", stillThere.length ? stillThere.join(",") : "žádné");
     } catch (verifyErr) {
       logDebug("[verify] ověření po uložení selhalo:", verifyErr.message || verifyErr.code || verifyErr);
     }
@@ -1905,7 +1920,7 @@ function updateBulkBar() {
 document.getElementById("bulkCancelBtn").addEventListener("click", () => { selectMode = false; selectedIds.clear(); document.getElementById("toggleSelectModeBtn").classList.remove("btn-accent"); renderLibrary(); });
 document.getElementById("bulkDeleteBtn").addEventListener("click", async () => {
   if (!confirm(`Smazat ${selectedIds.size} vybraných videí z knihovny?`)) return;
-  selectedIds.forEach(id => delete state.library[id]);
+  selectedIds.forEach(id => { delete state.library[id]; pendingLibraryDeletions.add(id); });
   selectedIds.clear();
   renderLibrary();
   const ok = await saveUserData();
@@ -1966,6 +1981,7 @@ function openCardContextMenu(itemId, anchorBtn) {
     closeCardContextMenu();
     if (!confirm(`Smazat „${item.title}" z knihovny?`)) return;
     delete state.library[itemId];
+    pendingLibraryDeletions.add(itemId);
     logDebug("[delete] smazáno", itemId, "— počet videí v knihovně teď:", Object.keys(state.library).length);
     renderLibrary();
     const ok = await saveUserData();
@@ -2259,6 +2275,7 @@ document.getElementById("deleteLinkBtn").addEventListener("click", async () => {
   if (!editingLinkId) return;
   if (!confirm("Smazat tento odkaz z knihovny?")) return;
   delete state.library[editingLinkId];
+  pendingLibraryDeletions.add(editingLinkId);
   logDebug("[delete] smazáno (z formuláře)", editingLinkId, "— počet videí v knihovně teď:", Object.keys(state.library).length);
   closeLinkModal();
   renderLibrary();
