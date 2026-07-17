@@ -1577,7 +1577,7 @@ async function loadUserData() {
 }
 
 async function saveUserData() {
-  if (!uidCurrent) return;
+  if (!uidCurrent) return false;
   try {
     await setDoc(doc(db, "shared", "data"), {
       library: state.library, folders: state.folders,
@@ -1585,14 +1585,16 @@ async function saveUserData() {
     }, { merge: true });
     const mine = Object.values(state.trainings).filter(t => t.ownerUid === uidCurrent);
     await Promise.all(mine.map(t => setDoc(doc(db, "users", uidCurrent, "trainings", t.id), t)));
+    return true;
   } catch (e) {
     console.error("Nepodařilo se uložit data:", e);
     const msg = String(e && (e.message || e.code) || "");
     if (/size|large|exceed|bytes|1048487|1 ?MB/i.test(msg)) {
       toast("Uložení selhalo — sdílená data jsou moc velká (nejspíš kvůli nějaké obří fotce). Zkus zmenšit/nahradit poslední přidanou fotku.", 10000);
     } else {
-      toast("Uložení se nepovedlo, zkusím to znovu při další změně.");
+      toast(`Uložení se nepovedlo (${msg || "neznámá chyba"}). Screenshot téhle hlášky mi pomůže najít příčinu.`, 12000);
     }
+    return false;
   }
 }
 async function deleteTrainingRemote(trainingId) {
@@ -1783,13 +1785,13 @@ function updateBulkBar() {
   document.getElementById("bulkCount").textContent = `${selectedIds.size} vybráno`;
 }
 document.getElementById("bulkCancelBtn").addEventListener("click", () => { selectMode = false; selectedIds.clear(); document.getElementById("toggleSelectModeBtn").classList.remove("btn-accent"); renderLibrary(); });
-document.getElementById("bulkDeleteBtn").addEventListener("click", () => {
+document.getElementById("bulkDeleteBtn").addEventListener("click", async () => {
   if (!confirm(`Smazat ${selectedIds.size} vybraných videí z knihovny?`)) return;
   selectedIds.forEach(id => delete state.library[id]);
   selectedIds.clear();
-  saveUserData();
   renderLibrary();
-  toast("Smazáno.");
+  const ok = await saveUserData();
+  if (ok) toast("Smazáno.");
 });
 document.getElementById("bulkMoveBtn").addEventListener("click", () => {
   if (!state.folders.length) { toast("Nejdřív si založ aspoň jednu složku."); return; }
@@ -1842,13 +1844,13 @@ function openCardContextMenu(itemId, anchorBtn) {
     renderLibrary();
   });
   menu.querySelector("[data-act='edit']").addEventListener("click", () => { closeCardContextMenu(); openLinkModal(itemId); });
-  menu.querySelector("[data-act='delete']").addEventListener("click", () => {
+  menu.querySelector("[data-act='delete']").addEventListener("click", async () => {
     closeCardContextMenu();
     if (!confirm(`Smazat „${item.title}" z knihovny?`)) return;
     delete state.library[itemId];
-    saveUserData();
     renderLibrary();
-    toast("Smazáno.");
+    const ok = await saveUserData();
+    if (ok) toast("Smazáno.");
   });
   menu.querySelector("[data-act='move']").addEventListener("click", () => {
     closeCardContextMenu();
@@ -2133,15 +2135,15 @@ linkForm.addEventListener("submit", (e) => {
   toast("Uloženo.");
 });
 
-document.getElementById("deleteLinkBtn").addEventListener("click", () => {
+document.getElementById("deleteLinkBtn").addEventListener("click", async () => {
   if (!editingLinkId) return;
   if (!confirm("Smazat tento odkaz z knihovny?")) return;
   delete state.library[editingLinkId];
-  saveUserData();
   closeLinkModal();
   renderLibrary();
   if (currentView === "editor") renderPickerList();
-  toast("Smazáno.");
+  const ok = await saveUserData();
+  if (ok) toast("Smazáno.");
 });
 
 /* =========================================================
@@ -3096,7 +3098,7 @@ function renderFoldersManageList() {
     });
   });
   wrap.querySelectorAll("[data-delete-folder]").forEach(btn => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
       const key = btn.dataset.deleteFolder;
       const f = getFolder(key);
       if (!f) return;
@@ -3108,10 +3110,10 @@ function renderFoldersManageList() {
       state.folders = state.folders.filter(x => x.key !== key);
       Object.values(state.library).forEach(it => { if (it.folderId === key) it.folderId = ""; });
       if (activeFolderFilter === key) activeFolderFilter = null;
-      saveUserData();
       renderFoldersManageList();
       renderLibrary();
-      toast("Složka smazána.");
+      const ok = await saveUserData();
+      if (ok) toast("Složka smazána.");
     });
   });
   if (foldersSortable) { foldersSortable.destroy(); foldersSortable = null; }
