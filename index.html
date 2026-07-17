@@ -769,7 +769,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
     </div>
     <p style="font-size:11.5px;color:var(--ink-soft);margin:0 0 10px;">Klepnutím filtruješ, přetažením karty sem přesuneš video.</p>
     <button type="button" class="folder-row folder-row-all" id="folderRowAll">
-      <i class="fa-solid fa-folder-open folder-icon" style="color:var(--ink-faint);"></i> Všechny složky
+      <i class="fa-solid fa-folder-tree folder-icon" style="color:var(--ink-faint);"></i> Všechny složky
     </button>
     <div id="folderSidebarList"></div>
     <button type="button" class="manage-link" id="manageFoldersBtn" style="margin-top:10px;"><i class="fa-solid fa-sliders"></i> Spravovat složky</button>
@@ -988,7 +988,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const APP_VERSION = "2026-07-17 08:26";
+const APP_VERSION = "2026-07-17 08:33";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -3126,13 +3126,17 @@ document.getElementById("manageFoldersBtn").addEventListener("click", () => {
 });
 
 function renderFolderSidebar() {
-  document.getElementById("folderRowAll").classList.toggle("active", !activeFolderFilter);
+  const allActive = !activeFolderFilter;
+  document.getElementById("folderRowAll").classList.toggle("active", allActive);
   const list = document.getElementById("folderSidebarList");
-  list.innerHTML = state.folders.map(f => `
-    <button type="button" class="folder-row ${activeFolderFilter === f.key ? "active" : ""}" data-key="${esc(f.key)}">
-      <i class="fa-solid fa-folder folder-icon" style="color:${esc(f.color)}"></i> ${esc(f.label)}
+  list.innerHTML = state.folders.map(f => {
+    const active = activeFolderFilter === f.key;
+    return `
+    <button type="button" class="folder-row ${active ? "active" : ""}" data-key="${esc(f.key)}">
+      <i class="fa-solid ${active ? "fa-folder-open" : "fa-folder"} folder-icon" style="color:${esc(f.color)}"></i> ${esc(f.label)}
     </button>
-  `).join("");
+  `;
+  }).join("");
   list.querySelectorAll(".folder-row").forEach(row => {
     row.addEventListener("click", () => {
       activeFolderFilter = row.dataset.key;
