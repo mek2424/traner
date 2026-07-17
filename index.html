@@ -915,9 +915,10 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 
 <!-- ===================== DIAGNOSTICKÝ ZÁZNAM (dočasné) ===================== -->
 <div id="appVersionLabel" style="position:fixed;bottom:14px;left:14px;z-index:500;font-size:10.5px;color:rgba(27,36,48,.4);font-family:monospace;background:rgba(244,245,242,.85);padding:3px 7px;border-radius:5px;pointer-events:none;"></div>
-<button type="button" id="debugLogBtn" aria-label="Diagnostický záznam" style="position:fixed;bottom:14px;right:14px;z-index:500;width:38px;height:38px;border-radius:50%;background:rgba(27,36,48,.55);color:#fff;border:none;font-size:16px;">🐞</button>
+<button type="button" id="debugLogBtn" aria-label="Diagnostický záznam" class="hidden" style="position:fixed;bottom:14px;right:14px;z-index:500;width:38px;height:38px;border-radius:50%;background:rgba(27,36,48,.55);color:#fff;border:none;font-size:16px;">🐞</button>
 <div id="debugLogPanel" class="hidden" style="position:fixed;inset:0;z-index:501;background:rgba(10,12,15,.96);color:#7CFC8C;font-family:monospace;font-size:11.5px;padding:14px;overflow-y:auto;white-space:pre-wrap;">
-  <button type="button" id="closeDebugLogBtn" style="position:sticky;top:0;float:right;background:#fff;color:#000;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;">Zavřít</button>
+  <button type="button" id="closeDebugLogBtn" style="position:sticky;top:0;float:right;background:#fff;color:#000;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-left:8px;">Zavřít</button>
+  <button type="button" id="disableDevModeBtn" style="position:sticky;top:0;float:right;background:#5B2B2B;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;">Vypnout vývojářský režim</button>
   <div style="clear:both;"></div>
   <div id="debugLogContent"></div>
 </div>
@@ -988,7 +989,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const APP_VERSION = "2026-07-17 09:35";
+const APP_VERSION = "2026-07-18 00:53";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1057,6 +1058,37 @@ document.getElementById("debugLogBtn").addEventListener("click", () => {
 document.getElementById("closeDebugLogBtn").addEventListener("click", () => {
   document.getElementById("debugLogPanel").classList.add("hidden");
 });
+
+/** Vývojářský režim: skrývá/odkrývá tlačítko diagnostiky (🐞). Váže se na tohle konkrétní
+    zařízení/prohlížeč (localStorage), ne na účet — jiné zařízení stejného trenéra ho nemá,
+    dokud si ho tam sám nezapne. */
+const DEV_MODE_KEY = "trener_dev_mode";
+let devModeOn = localStorage.getItem(DEV_MODE_KEY) === "1";
+function applyDevModeVisibility() {
+  document.getElementById("debugLogBtn").classList.toggle("hidden", !devModeOn);
+}
+function setDevMode(on) {
+  devModeOn = on;
+  localStorage.setItem(DEV_MODE_KEY, on ? "1" : "0");
+  applyDevModeVisibility();
+  toast(on ? "Vývojářský režim zapnut na tomhle zařízení." : "Vývojářský režim vypnut.");
+  if (!on) document.getElementById("debugLogPanel").classList.add("hidden");
+}
+applyDevModeVisibility();
+// Skryté gesto: 7× klepnutí na logo/název appky do 3 vteřin přepne vývojářský režim.
+let logoTapCount = 0;
+let logoTapTimer = null;
+document.querySelector(".topbar-title-group").addEventListener("click", () => {
+  logoTapCount++;
+  clearTimeout(logoTapTimer);
+  logoTapTimer = setTimeout(() => { logoTapCount = 0; }, 3000);
+  if (logoTapCount >= 7) {
+    logoTapCount = 0;
+    clearTimeout(logoTapTimer);
+    setDevMode(!devModeOn);
+  }
+});
+document.getElementById("disableDevModeBtn").addEventListener("click", () => setDevMode(false));
 
 function myLabel() {
   return (state.profile && state.profile.username) || (auth.currentUser && auth.currentUser.email) || "Trenér";
