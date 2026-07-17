@@ -914,6 +914,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 </div>
 
 <!-- ===================== DIAGNOSTICKÝ ZÁZNAM (dočasné) ===================== -->
+<div id="appVersionLabel" style="position:fixed;bottom:14px;left:14px;z-index:500;font-size:10.5px;color:rgba(27,36,48,.4);font-family:monospace;background:rgba(244,245,242,.85);padding:3px 7px;border-radius:5px;pointer-events:none;"></div>
 <button type="button" id="debugLogBtn" aria-label="Diagnostický záznam" style="position:fixed;bottom:14px;right:14px;z-index:500;width:38px;height:38px;border-radius:50%;background:rgba(27,36,48,.55);color:#fff;border:none;font-size:16px;">🐞</button>
 <div id="debugLogPanel" class="hidden" style="position:fixed;inset:0;z-index:501;background:rgba(10,12,15,.96);color:#7CFC8C;font-family:monospace;font-size:11.5px;padding:14px;overflow-y:auto;white-space:pre-wrap;">
   <button type="button" id="closeDebugLogBtn" style="position:sticky;top:0;float:right;background:#fff;color:#000;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;">Zavřít</button>
@@ -987,6 +988,8 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
+const APP_VERSION = "2026-07-17 07:25";
+document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
 let editingLinkId = null;       // id knihovní položky, když se edituje
