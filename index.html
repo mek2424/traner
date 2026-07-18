@@ -77,6 +77,8 @@ input,select,textarea{font-family:var(--font-body);font-size:15px;}
 a{color:var(--court);}
 .hidden{display:none !important;}
 @keyframes viewFadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.confetti-piece{position:fixed;top:-20px;width:8px;height:14px;z-index:600;pointer-events:none;animation:confettiFall linear forwards;border-radius:2px;}
+@keyframes confettiFall{0%{transform:translateY(0) rotate(0deg);}100%{transform:translateY(105vh) rotate(540deg);}}
 .view-anim-in{animation:viewFadeIn .18s ease;}
 .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);}
 
@@ -1050,7 +1052,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const APP_VERSION = "2026-07-18 16:05";
+const APP_VERSION = "2026-07-18 16:20";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1574,6 +1576,10 @@ async function checkMembershipAndProceed() {
   switchView("library");
   subscribeToSharedData();
   purgeOldTrash().catch(err => console.warn("Úklid koše selhal:", err));
+  const nightHour = new Date().getHours();
+  if (nightHour >= 0 && nightHour < 5) {
+    toast("Ještě rozebíráš zápis, nebo už jen nemůžeš spát? 😄", 6000);
+  }
 }
 document.getElementById("pendingRecheckBtn").addEventListener("click", checkMembershipAndProceed);
 document.getElementById("pendingLogoutBtn").addEventListener("click", () => signOut(auth));
@@ -1954,8 +1960,38 @@ function tagsUsedInActiveFolder(field) {
 function renderTagFilterRow() { renderFilterChips("tagFilterRow", tagsUsedInActiveFolder("tags"), libraryTagFilter, () => { renderTagFilterRow(); renderEquipFilterRow(); renderLibrary(); }); }
 function renderEquipFilterRow() { renderFilterChips("equipFilterRow", tagsUsedInActiveFolder("equipment"), libraryEquipFilter, () => { renderTagFilterRow(); renderEquipFilterRow(); renderLibrary(); }); }
 
+/* =========================================================
+   EASTER EGGY (drobnosti, žádný vliv na běžné fungování appky)
+   ========================================================= */
+function triggerConfetti() {
+  const colors = ["#339933", "#216321", "#E8622C", "#C74F1E", "#ffffff"];
+  for (let i = 0; i < 70; i++) {
+    const piece = document.createElement("div");
+    piece.className = "confetti-piece";
+    piece.style.left = Math.random() * 100 + "vw";
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.animationDuration = (2 + Math.random() * 1.5) + "s";
+    piece.style.animationDelay = (Math.random() * 0.35) + "s";
+    document.body.appendChild(piece);
+    setTimeout(() => piece.remove(), 4200);
+  }
+}
+const raptorAudio = new Audio("raptor-sound.mp3");
+function playRaptorSound() {
+  raptorAudio.currentTime = 0;
+  raptorAudio.play().catch(() => {}); // některé prohlížeče mohou přehrání bez zvuku odmítnout, appka to nijak neřeší
+}
+let lastEasterEggQuery = "";
+function checkSearchEasterEggs(q) {
+  if (q === lastEasterEggQuery) return; // ať se to nespouští opakovaně při každém překreslení se stejným dotazem
+  lastEasterEggQuery = q;
+  if (q === "1884") triggerConfetti();
+  if (q === "raptor") playRaptorSound();
+}
+
 function getFilteredLibraryItems() {
   const q = document.getElementById("librarySearch").value.trim().toLowerCase();
+  checkSearchEasterEggs(q);
   const sortMode = document.getElementById("librarySort").value;
   const items = Object.values(state.library).filter(item => {
     if (item.deletedAt) return false; // položky v koši se v běžné knihovně nezobrazují
@@ -2003,7 +2039,11 @@ function renderLibrary() {
   const items = getFilteredLibraryItems();
   updateBulkBar();
   if (!items.length) {
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><h3>Zatím žádná videa</h3><p>Přidej první odkaz tlačítkem nahoře, nebo zkus uvolnit filtry.</p></div>`;
+    const q = document.getElementById("librarySearch").value.trim().toLowerCase();
+    const msg = q === "pivo"
+      ? { h: "Tohle appka nenajde.", p: "Ale zasloužil sis ho." }
+      : { h: "Zatím žádná videa", p: "Přidej první odkaz tlačítkem nahoře, nebo zkus uvolnit filtry." };
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><h3>${msg.h}</h3><p>${msg.p}</p></div>`;
     return;
   }
   grid.innerHTML = items.map(item => {
