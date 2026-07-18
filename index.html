@@ -311,14 +311,14 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .modal-actions .btn{flex:1;}
 .thumb-preview{width:100%;aspect-ratio:16/9;background:var(--paper);border:1px dashed var(--line);border-radius:var(--radius-sm);
   display:flex;align-items:center;justify-content:center;color:var(--ink-faint);font-size:12px;margin-bottom:8px;background-size:cover;background-position:center;overflow:hidden;}
-.thumb-suggestions{display:flex;gap:8px;margin-bottom:10px;}
+.thumb-suggestions{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:8px;margin-bottom:10px;}
 .thumb-suggestion-item{
-  flex:1;aspect-ratio:16/9;border-radius:var(--radius-sm);border:2px solid var(--line);cursor:pointer;
+  width:100%;max-width:170px;aspect-ratio:16/9;border-radius:var(--radius-sm);border:2px solid var(--line);cursor:pointer;
   background-size:cover;background-position:center;transition:border-color .15s ease,transform .08s ease;
 }
 .thumb-suggestion-item:active{transform:scale(.96);}
 .thumb-suggestion-item.selected{border-color:var(--court);}
-.thumb-suggestions-label{font-size:11px;color:var(--ink-soft);margin:0 0 6px;width:100%;}
+.thumb-suggestions-label{font-size:11px;color:var(--ink-soft);margin:0 0 6px;grid-column:1/-1;}
 .thumb-upload-row{display:flex;gap:8px;margin-bottom:12px;}
 .thumb-upload-row label.btn{flex:1;text-align:center;}
 .thumb-upload-row input[type=file]{display:none;}
@@ -1052,7 +1052,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const APP_VERSION = "2026-07-18 16:20";
+const APP_VERSION = "2026-07-18 22:29";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1402,8 +1402,9 @@ function renderThumbSuggestions(urls) {
   const wrap = document.getElementById("thumbSuggestions");
   urls = urls.filter(Boolean);
   if (!urls.length) { wrap.classList.add("hidden"); wrap.innerHTML = ""; return; }
+  const ratio = document.getElementById("linkAspectRatio").value || "16/9";
   wrap.innerHTML = `<div class="thumb-suggestions-label">Navržené náhledy — klepnutím vyber:</div>` +
-    urls.map(u => `<div class="thumb-suggestion-item" style="background-image:url('${u}')" data-thumb-url="${esc(u)}"></div>`).join("");
+    urls.map(u => `<div class="thumb-suggestion-item" style="background-image:url('${u}');aspect-ratio:${ratio}" data-thumb-url="${esc(u)}"></div>`).join("");
   wrap.classList.remove("hidden");
   wrap.querySelectorAll("[data-thumb-url]").forEach(el => {
     el.addEventListener("click", () => {
