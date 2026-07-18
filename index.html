@@ -1053,7 +1053,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const APP_VERSION = "2026-07-18 22:58";
+const APP_VERSION = "2026-07-18 23:01";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -2288,14 +2288,19 @@ function captureVideoFrameThumbnails(url) {
     video.muted = true;
     video.playsInline = true;
     video.preload = "auto";
+    // Appka video musí mít skutečně vložené do stránky (jen "v paměti" to u některých videí
+    // nevykreslí obraz vůbec) — schované mimo dohled, ale technicky součástí stránky.
+    video.style.cssText = "position:fixed;top:0;left:0;width:2px;height:2px;opacity:0;pointer-events:none;z-index:-1;";
+    document.body.appendChild(video);
     video.src = url;
     const frames = [];
-    const timeouts = setTimeout(() => resolve([]), 15000); // ať appka nečeká navěky na pomalé/nedostupné video
-    video.addEventListener("error", () => { clearTimeout(timeouts); resolve([]); });
+    const cleanup = () => { video.remove(); };
+    const timeouts = setTimeout(() => { cleanup(); resolve([]); }, 15000); // ať appka nečeká navěky na pomalé/nedostupné video
+    video.addEventListener("error", () => { clearTimeout(timeouts); cleanup(); resolve([]); });
     video.addEventListener("loadedmetadata", async () => {
       try {
         const duration = video.duration;
-        if (!duration || !isFinite(duration)) { clearTimeout(timeouts); resolve([]); return; }
+        if (!duration || !isFinite(duration)) { clearTimeout(timeouts); cleanup(); resolve([]); return; }
         const maxW = 480;
         const scale = Math.min(1, maxW / video.videoWidth);
         const canvas = document.createElement("canvas");
@@ -2319,9 +2324,11 @@ function captureVideoFrameThumbnails(url) {
           frames.push(canvas.toDataURL("image/jpeg", 0.82)); // vyhodí SecurityError, pokud video nemá povolené CORS
         }
         clearTimeout(timeouts);
+        cleanup();
         resolve(frames);
       } catch (e) {
         clearTimeout(timeouts);
+        cleanup();
         resolve([]); // typicky CORS — appka to tiše vzdá, ruční nahrání zůstává k dispozici
       }
     });
