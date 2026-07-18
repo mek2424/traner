@@ -611,8 +611,13 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
           <div class="filter-panel">
             <select id="pickerFolderFilter"><option value="">Všechny složky</option></select>
             <select id="pickerPartFilter"><option value="">Jakákoli část</option></select>
-            <div class="chip-row" id="pickerTagFilterRow"></div>
-            <div class="chip-row" id="pickerEquipFilterRow"></div>
+            <div class="filter-toggle-row">
+              <button type="button" class="filter-toggle-btn" id="pickerToggleTagFilterBtn"><i class="fa-solid fa-tag"></i> Štítky <i class="fa-solid fa-chevron-down"></i></button>
+              <button type="button" class="filter-toggle-btn" id="pickerToggleEquipFilterBtn"><i class="fa-solid fa-wrench"></i> Vybavení <i class="fa-solid fa-chevron-down"></i></button>
+              <button type="button" class="manage-link" id="pickerManageTagsBtn" style="margin-left:auto;"><i class="fa-solid fa-code-merge"></i> Sloučit</button>
+            </div>
+            <div class="chip-collapse" id="pickerTagFilterCollapse"><div class="chip-row" id="pickerTagFilterRow"></div></div>
+            <div class="chip-collapse" id="pickerEquipFilterCollapse"><div class="chip-row" id="pickerEquipFilterRow"></div></div>
           </div>
           <div class="picker-list" id="pickerList"></div>
           <button class="btn btn-ghost btn-sm btn-block add-break-btn" id="addBreakBtn"><i class="fa-solid fa-mug-hot"></i> Přidat přestávku</button>
@@ -1012,7 +1017,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const APP_VERSION = "2026-07-18 10:29";
+const APP_VERSION = "2026-07-18 10:44";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -2046,6 +2051,8 @@ function setupFilterToggle(btnId, collapseId) {
 }
 setupFilterToggle("toggleTagFilterBtn", "tagFilterCollapse");
 setupFilterToggle("toggleEquipFilterBtn", "equipFilterCollapse");
+setupFilterToggle("pickerToggleTagFilterBtn", "pickerTagFilterCollapse");
+setupFilterToggle("pickerToggleEquipFilterBtn", "pickerEquipFilterCollapse");
 
 /* ---- kontextové menu na kartě ---- */
 function closeCardContextMenu() { if (openContextMenuEl) { openContextMenuEl.remove(); openContextMenuEl = null; } }
@@ -2902,6 +2909,7 @@ document.getElementById("deleteTrainingBtn").addEventListener("click", () => {
    ========================================================= */
 const mergeModalBackdrop = document.getElementById("mergeModalBackdrop");
 document.getElementById("manageTagsBtn").addEventListener("click", () => { renderMergeLists(); mergeModalBackdrop.classList.remove("hidden"); });
+document.getElementById("pickerManageTagsBtn").addEventListener("click", () => { renderMergeLists(); mergeModalBackdrop.classList.remove("hidden"); });
 document.getElementById("closeMergeModalBtn").addEventListener("click", () => mergeModalBackdrop.classList.add("hidden"));
 mergeModalBackdrop.addEventListener("click", (e) => { if (e.target === mergeModalBackdrop) mergeModalBackdrop.classList.add("hidden"); });
 
