@@ -204,6 +204,10 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   background:#fff;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;color:#fff;
 }
 .card-select-box.checked{background:var(--court);border-color:var(--court);}
+.new-badge{
+  position:absolute;top:8px;left:8px;z-index:6;width:12px;height:12px;border-radius:50%;
+  background:var(--chalk);border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3);
+}
 .card-menu-btn{
   position:absolute;top:6px;right:6px;z-index:5;width:26px;height:26px;border-radius:50%;
   background:rgba(0,0,0,.5);color:#fff;border:none;display:flex;align-items:center;justify-content:center;font-size:13px;
@@ -309,6 +313,12 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .rating-picker button.on{background:var(--chalk);border-color:var(--chalk);color:#fff;}
 .modal-actions{display:flex;gap:8px;margin-top:18px;}
 .modal-actions .btn{flex:1;}
+.duplicate-warning{
+  display:flex;align-items:center;flex-wrap:wrap;gap:8px;background:#FBF3E5;border:1px solid #E8C468;
+  border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:10px;font-size:12.5px;color:#7A5A17;
+}
+.duplicate-warning i{color:#C99A2E;}
+.duplicate-warning span{flex:1;min-width:150px;}
 .thumb-preview{width:100%;aspect-ratio:16/9;background:var(--paper);border:1px dashed var(--line);border-radius:var(--radius-sm);
   display:flex;align-items:center;justify-content:center;color:var(--ink-faint);font-size:12px;margin-bottom:8px;background-size:cover;background-position:center;overflow:hidden;}
 .thumb-suggestions-row{display:flex;gap:8px;justify-content:center;}
@@ -425,6 +435,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 }
 .training-row-main{flex:1;min-width:0;}
 .training-row-title{font-size:17px;font-weight:700;margin-bottom:3px;}
+.new-badge-inline{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--chalk);margin-right:6px;vertical-align:middle;}
 .training-row-meta{font-size:12px;color:var(--ink-faint);}
 .training-row-actions{display:flex;gap:6px;flex-shrink:0;}
 
@@ -672,6 +683,11 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
           <input type="url" id="linkUrl" placeholder="https://…" required>
           <button type="button" class="btn btn-sm" id="fetchMetaBtn"><i class="fa-solid fa-arrow-rotate-right"></i> Načíst info</button>
         </div>
+      </div>
+      <div class="duplicate-warning hidden" id="duplicateWarning">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>Tohle video už v knihovně možná je: <strong id="duplicateWarningTitle"></strong></span>
+        <button type="button" class="btn btn-sm" id="openDuplicateBtn">Otevřít existující</button>
       </div>
       <div class="thumb-preview" id="thumbPreview">bez náhledu</div>
       <div class="thumb-suggestions hidden" id="thumbSuggestions"></div>
@@ -1053,7 +1069,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const APP_VERSION = "2026-07-18 23:10";
+const APP_VERSION = "2026-07-18 23:30";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1183,6 +1199,7 @@ const isMobileViewport = () => window.matchMedia("(max-width:640px)").matches;
 let libraryMobileCompact = localStorage.getItem("trener_mobile_compact") !== "0"; // na mobilu výchozí zapnuto
 let selectMode = false;
 let pendingLibraryDeletions = new Set(); // ID položek, co appka musí na serveru výslovně smazat (ne jen vynechat)
+let sessionBadgeThreshold = 0; // čas posledního přihlášení — cokoli novější dostane odznak "nové"
 const TRASH_RETENTION_DAYS = 14; // po tolika dnech appka položku z koše sama nadobro odstraní
 /** "Smazání" videa z běžné knihovny je měkké — video zůstane v datech, jen označené jako
     smazané, a pár dní čeká v Koši, než appka provede skutečné, nevratné smazání. */
@@ -1625,6 +1642,10 @@ async function loadUserData() {
     darkMode: !!legacy.darkMode
   };
   applyColorScheme();
+  // Práh pro odznaky "nové od posledního přihlášení" — appka si čas uloží zvlášť (ne jako
+  // součást profilu), ať se nesmaže při příští úpravě jména/barev/avataru ve formuláři profilu.
+  sessionBadgeThreshold = legacy.lastSeenAt || 0;
+  setDoc(doc(db, "users", uidCurrent), { lastSeenAt: Date.now() }, { merge: true }).catch(e => console.warn("Uložení času posledního přihlášení selhalo:", e));
 
   // --- sdílená knihovna ---
   let sharedOk = false;
@@ -2055,6 +2076,7 @@ function renderLibrary() {
     const isSelected = selectedIds.has(item.id);
     return `
     <div class="card" data-id="${esc(item.id)}" style="border-left-color:${esc(stripeColor)}">
+      ${(item.dateAdded > sessionBadgeThreshold && !selectMode) ? '<span class="new-badge" title="Nové od posledního přihlášení"></span>' : ""}
       <button type="button" class="card-select-box ${selectMode ? "" : "hidden"} ${isSelected ? "checked" : ""}" data-action="toggle-select" aria-label="Vybrat">${isSelected ? '<i class="fa-solid fa-check"></i>' : ""}</button>
       <button type="button" class="card-menu-btn" data-action="open-menu" aria-label="Menu"><i class="fa-solid fa-ellipsis-vertical"></i></button>
       <div class="card-thumb" data-action="open-detail" style="${item.thumbnail ? `background-image:url('${esc(item.thumbnail)}')` : ""}">
@@ -2263,6 +2285,7 @@ function openLinkModal(id) {
   document.getElementById("thumbPreview").dataset.platform = item ? item.platform : "";
   document.getElementById("thumbPreview").dataset.videoId = item ? (item.videoId || "") : "";
   renderThumbSuggestions([]);
+  document.getElementById("duplicateWarning").classList.add("hidden");
   document.getElementById("deleteLinkBtn").classList.toggle("hidden", !item);
 
   formTags = item ? [...item.tags] : [];
@@ -2417,6 +2440,32 @@ document.getElementById("fetchMetaBtn").addEventListener("click", async () => {
     document.getElementById("thumbPreview").dataset.videoId = "";
     toast(platform === "facebook" ? "Facebook: titulek zadej ručně, embed se pokusí načíst v detailu." : "Titulek zadej ručně.");
   }
+  checkForDuplicate(platform, document.getElementById("thumbPreview").dataset.videoId, url);
+});
+
+/** Zkontroluje, jestli appka nemá tohle video už v knihovně — porovnává platformu+ID videa,
+    a když appka ID nezná (např. neznámý formát odkazu), aspoň přesnou shodu URL. */
+function findDuplicateLibraryItem(platform, videoId, url) {
+  return Object.entries(state.library).find(([id, it]) => {
+    if (it.deletedAt) return false; // co je v koši, se za duplicitu nepočítá
+    if (editingLinkId && id === editingLinkId) return false; // sama sebe (při úpravě) nepočítat
+    if (videoId && it.platform === platform && it.videoId === videoId) return true;
+    if (!videoId && it.url === url) return true;
+    return false;
+  });
+}
+function checkForDuplicate(platform, videoId, url) {
+  const found = findDuplicateLibraryItem(platform, videoId, url);
+  const banner = document.getElementById("duplicateWarning");
+  if (!found) { banner.classList.add("hidden"); return; }
+  const [dupId, dupItem] = found;
+  document.getElementById("duplicateWarningTitle").textContent = dupItem.title || "(bez názvu)";
+  banner.dataset.dupId = dupId;
+  banner.classList.remove("hidden");
+}
+document.getElementById("openDuplicateBtn").addEventListener("click", () => {
+  const dupId = document.getElementById("duplicateWarning").dataset.dupId;
+  if (dupId) openLinkModal(dupId);
 });
 
 function normalizeAgainstPool(value, pool) {
@@ -2736,10 +2785,11 @@ document.querySelectorAll(".subtab-btn").forEach(btn => {
 
 function renderTrainingRow(t, mine) {
   const totalMin = t.items.reduce((s, it) => s + (it.duration || 0), 0);
+  const isNew = !mine && (t.dateCreated || 0) > sessionBadgeThreshold;
   return `
     <div class="training-row">
       <button class="training-row-main" data-open="${esc(t.id)}" style="background:none;border:none;text-align:left;cursor:pointer;padding:0;">
-        <div class="training-row-title">${esc(t.name)}</div>
+        <div class="training-row-title">${isNew ? '<span class="new-badge-inline" title="Nové od posledního přihlášení"></span>' : ""}${esc(t.name)}</div>
         <div class="training-row-meta">${t.items.length} položek · ${totalMin} min</div>
       </button>
       <div class="training-row-actions">
