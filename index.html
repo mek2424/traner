@@ -76,6 +76,8 @@ button{font-family:var(--font-body);cursor:pointer;}
 input,select,textarea{font-family:var(--font-body);font-size:15px;}
 a{color:var(--court);}
 .hidden{display:none !important;}
+@keyframes viewFadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.view-anim-in{animation:viewFadeIn .18s ease;}
 .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);}
 
 /* ---------- Buttons ---------- */
@@ -186,7 +188,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .filter-toggle-btn i.fa-chevron-down{font-size:9px;transition:transform .2s ease;}
 .filter-toggle-btn.open{color:var(--court);border-color:var(--court);}
 .filter-toggle-btn.open i.fa-chevron-down{transform:rotate(180deg);}
-.chip-collapse{max-height:0;overflow:hidden;transition:max-height .28s ease, margin-bottom .28s ease;margin-bottom:0;}
+.chip-collapse{max-height:0;overflow:hidden;transition:max-height .2s ease, margin-bottom .2s ease;margin-bottom:0;}
 .chip-collapse.open{max-height:400px;margin-bottom:10px;}
 
 #bulkActionBar{
@@ -243,8 +245,9 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .card{
   background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
   box-shadow:var(--shadow);text-align:left;display:flex;flex-direction:column;position:relative;
-  border-left:4px solid var(--line);
+  border-left:4px solid var(--line);transition:transform .08s ease;
 }
+.card:active{transform:scale(.98);}
 .card [data-action="open-detail"]{cursor:pointer;}
 .card-thumb{
   aspect-ratio:16/9;background:var(--court) center/cover no-repeat;position:relative;
@@ -267,12 +270,16 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .modal-backdrop{
   position:fixed;inset:0;background:rgba(27,36,48,.5);z-index:50;
   display:flex;align-items:flex-end;justify-content:center;
+  opacity:0;transition:opacity .18s ease;
 }
+.modal-backdrop.modal-anim-in{opacity:1;}
 @media(min-width:640px){.modal-backdrop{align-items:center;}}
 .modal{
   background:var(--card);width:100%;max-width:560px;max-height:92vh;overflow-y:auto;
   border-radius:var(--radius) var(--radius) 0 0;padding:22px 20px calc(20px + env(safe-area-inset-bottom));
+  transform:translateY(18px);opacity:0;transition:transform .2s ease,opacity .2s ease;
 }
+.modal-backdrop.modal-anim-in .modal{transform:translateY(0);opacity:1;}
 @media(min-width:640px){.modal{border-radius:var(--radius);}}
 .modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
 .modal-head h2{font-size:26px;color:var(--court);}
@@ -319,10 +326,12 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:1px solid transparent;
   border-radius:var(--radius-sm);padding:9px 8px;font-size:14px;color:var(--ink);margin-bottom:2px;
 }
-.folder-row:hover,.folder-row.drag-over{background:var(--paper);border-color:var(--line);}
+.folder-row:hover{background:var(--paper);border-color:var(--line);}
 .folder-row.active{background:var(--paper);border-color:var(--court);font-weight:700;}
 .folder-row .folder-icon{width:16px;font-size:14px;flex-shrink:0;text-align:center;}
 .folder-row-all{border-bottom:1px solid var(--line);border-radius:0;margin-bottom:8px;padding-bottom:12px;}
+.filter-toggle-btn,.card-fav-btn,.folder-row,.manage-link{transition:transform .08s ease, background .15s ease, border-color .15s ease, color .15s ease;}
+.filter-toggle-btn:active,.card-fav-btn:active,.folder-row:active,.manage-link:active{transform:scale(.95);}
 .folder-manage-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
 .folder-manage-row .drag-handle{color:rgba(27,36,48,.4);flex-shrink:0;}
 .folder-manage-row input[type=color]{width:34px;height:34px;padding:2px;border:1px solid var(--line);border-radius:6px;flex-shrink:0;}
@@ -782,7 +791,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
       <h2 style="font-size:20px;">Složky</h2>
       <button class="btn btn-icon btn-ghost" id="closeFolderSidebarBtn">✕</button>
     </div>
-    <p style="font-size:11.5px;color:var(--ink-soft);margin:0 0 10px;">Klepnutím filtruješ, přetažením karty sem přesuneš video.</p>
+    <p style="font-size:11.5px;color:var(--ink-soft);margin:0 0 10px;">Klepnutím filtruješ podle složky.</p>
     <button type="button" class="folder-row folder-row-all" id="folderRowAll">
       <i class="fa-solid fa-folder-tree folder-icon" style="color:var(--ink-faint);"></i> Všechny složky
     </button>
@@ -1017,7 +1026,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const APP_VERSION = "2026-07-18 10:44";
+const APP_VERSION = "2026-07-18 15:44";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1178,6 +1187,25 @@ function esc(s) {
 function uid() {
   return (crypto.randomUUID ? crypto.randomUUID() : "id-" + Date.now() + "-" + Math.random().toString(16).slice(2));
 }
+/** Automaticky animuje otevření úplně každého modálního okna v appce (sleduje třídu .hidden
+    na kterémkoli .modal-backdrop) — nemusí se řešit zvlášť u každého tlačítka/okna.
+    Důležité: appka si hlídá jen SKUTEČNÝ přechod ze skryto na viditelno, ne libovolnou změnu
+    třídy — jinak by sledovala i vlastní přidání/odebrání animační třídy a nekonečně se honila. */
+document.querySelectorAll(".modal-backdrop").forEach(backdrop => {
+  let wasHidden = backdrop.classList.contains("hidden");
+  const playEnterAnimation = () => {
+    backdrop.classList.remove("modal-anim-in");
+    void backdrop.offsetWidth; // vynutí přepočet, ať animace jde spustit i při rychlém opakovaném otevření
+    backdrop.classList.add("modal-anim-in");
+  };
+  if (!wasHidden) playEnterAnimation();
+  new MutationObserver(() => {
+    const isHidden = backdrop.classList.contains("hidden");
+    if (wasHidden && !isHidden) playEnterAnimation();
+    wasHidden = isHidden;
+  }).observe(backdrop, { attributes: true, attributeFilter: ["class"] });
+});
+
 function toast(msg, durationMs = 2200) {
   const t = document.getElementById("toast");
   t.textContent = msg;
@@ -1825,6 +1853,10 @@ function switchView(view) {
   document.getElementById("editorView").classList.toggle("hidden", view !== "editor");
   if (view === "library") renderLibrary();
   if (view === "trainings") renderTrainingsList();
+  const shownEl = document.getElementById(view + "View");
+  shownEl.classList.remove("view-anim-in");
+  void shownEl.offsetWidth;
+  shownEl.classList.add("view-anim-in");
 }
 
 /* =========================================================
@@ -2590,7 +2622,11 @@ document.getElementById("startTrainingModeBtn").addEventListener("click", () => 
   if (!t || !t.items.length) { toast("Trénink je prázdný, není co spustit."); return; }
   trainingModeItems = t.items;
   trainingModeIndex = 0;
-  document.getElementById("trainingModeView").classList.remove("hidden");
+  const tmView = document.getElementById("trainingModeView");
+  tmView.classList.remove("hidden");
+  tmView.classList.remove("view-anim-in");
+  void tmView.offsetWidth;
+  tmView.classList.add("view-anim-in");
   renderTrainingModeItem();
 });
 
@@ -3231,7 +3267,6 @@ document.getElementById("deleteAccountBtn").addEventListener("click", async () =
    POSTRANNÍ PANEL SLOŽEK (filtr + cíl pro přetažení)
    ========================================================= */
 const folderSidebarBackdrop = document.getElementById("folderSidebarBackdrop");
-let librarySortableInstance = null, folderSortableInstance = null;
 
 document.getElementById("openFolderSidebarBtn").addEventListener("click", () => {
   renderFolderSidebar();
@@ -3239,8 +3274,6 @@ document.getElementById("openFolderSidebarBtn").addEventListener("click", () => 
 });
 function closeFolderSidebar() {
   folderSidebarBackdrop.classList.add("hidden");
-  if (librarySortableInstance) { librarySortableInstance.destroy(); librarySortableInstance = null; }
-  if (folderSortableInstance) { folderSortableInstance.destroy(); folderSortableInstance = null; }
 }
 document.getElementById("closeFolderSidebarBtn").addEventListener("click", closeFolderSidebar);
 folderSidebarBackdrop.addEventListener("click", (e) => { if (e.target === folderSidebarBackdrop) closeFolderSidebar(); });
@@ -3273,48 +3306,6 @@ function renderFolderSidebar() {
       folderSidebarBackdrop.classList.add("hidden");
       renderLibrary();
     });
-  });
-  setupFolderDragDrop();
-}
-
-/** Umožní přetáhnout kartu z knihovny na složku v postranním panelu, čímž se jí přiřadí. */
-let lastHoveredFolderKey = null;
-function setupFolderDragDrop() {
-  const grid = document.getElementById("libraryGrid");
-  const list = document.getElementById("folderSidebarList");
-  if (librarySortableInstance) { librarySortableInstance.destroy(); librarySortableInstance = null; }
-  if (folderSortableInstance) { folderSortableInstance.destroy(); folderSortableInstance = null; }
-  if (!grid || !list) return;
-  librarySortableInstance = Sortable.create(grid, {
-    group: { name: "folderMove", pull: "clone", put: false },
-    sort: false,
-    animation: 150,
-    delay: 120,
-    delayOnTouchOnly: true,
-    filter: ".card-select-box, .card-menu-btn",
-    preventOnFilter: false
-  });
-  folderSortableInstance = Sortable.create(list, {
-    group: { name: "folderMove", pull: false, put: true },
-    sort: false,
-    animation: 150,
-    onMove: (evt) => {
-      const row = evt.related && evt.related.closest ? evt.related.closest(".folder-row") : null;
-      list.querySelectorAll(".folder-row").forEach(r => r.classList.remove("drag-over"));
-      if (row) { row.classList.add("drag-over"); lastHoveredFolderKey = row.dataset.key; }
-      return true;
-    },
-    onAdd: (evt) => {
-      evt.item.remove(); // zahodit dočasně vloženou kopii, přeřazení se projeví přes normální re-render
-      list.querySelectorAll(".folder-row").forEach(r => r.classList.remove("drag-over"));
-      const itemId = evt.item.dataset.id;
-      if (itemId && lastHoveredFolderKey && state.library[itemId]) {
-        state.library[itemId].folderId = lastHoveredFolderKey;
-        scheduleSave();
-        toast(`Přesunuto do složky „${getFolder(lastHoveredFolderKey).label}".`);
-        renderLibrary();
-      }
-    }
   });
 }
 
