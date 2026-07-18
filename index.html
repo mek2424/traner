@@ -230,6 +230,16 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 
 /* ---------- Library grid ---------- */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;}
+@media(max-width:640px){
+  .grid.mobile-compact{grid-template-columns:repeat(2,1fr);gap:8px;}
+  .grid.mobile-compact .card{border-left-width:3px;}
+  .grid.mobile-compact .card-body{padding:6px 8px 8px;gap:3px;}
+  .grid.mobile-compact .card-title{font-size:11.5px;-webkit-line-clamp:2;line-height:1.25;}
+  .grid.mobile-compact .card-folder{font-size:9.5px;}
+  .grid.mobile-compact .card-meta{font-size:9.5px;gap:4px;}
+  .grid.mobile-compact .card-thumb .platform-badge{width:18px;height:18px;font-size:9px;bottom:4px;right:4px;}
+  .grid.mobile-compact .card-fav-btn{width:22px;height:22px;font-size:11px;}
+}
 .card{
   background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
   box-shadow:var(--shadow);text-align:left;display:flex;flex-direction:column;position:relative;
@@ -1002,7 +1012,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const APP_VERSION = "2026-07-18 01:07";
+const APP_VERSION = "2026-07-18 10:29";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1127,7 +1137,9 @@ function nextFolderColor() {
 }
 let activeFolderFilter = null; // key vybrané složky v postranním panelu, null = vše
 const ADMIN_UID = "WIw1KfRofOOrbYF7Xl8YzgQrTZd2"; // mazání složek smí jen tenhle účet
-let libraryViewMode = "grid"; // "grid" | "list"
+let libraryViewMode = "grid"; // "grid" | "list" — týká se jen desktopu
+const isMobileViewport = () => window.matchMedia("(max-width:640px)").matches;
+let libraryMobileCompact = localStorage.getItem("trener_mobile_compact") !== "0"; // na mobilu výchozí zapnuto
 let selectMode = false;
 let pendingLibraryDeletions = new Set(); // ID položek, co appka musí na serveru výslovně smazat (ne jen vynechat)
 const TRASH_RETENTION_DAYS = 14; // po tolika dnech appka položku z koše sama nadobro odstraní
@@ -1899,7 +1911,13 @@ function renderLibrary() {
   bar.classList.toggle("hidden", !activeFolder);
   if (activeFolder) document.getElementById("activeFolderLabel").textContent = activeFolder.label;
   const grid = document.getElementById("libraryGrid");
-  grid.classList.toggle("list-mode", libraryViewMode === "list");
+  if (isMobileViewport()) {
+    grid.classList.toggle("mobile-compact", libraryMobileCompact);
+    grid.classList.remove("list-mode");
+  } else {
+    grid.classList.toggle("list-mode", libraryViewMode === "list");
+    grid.classList.remove("mobile-compact");
+  }
   const items = getFilteredLibraryItems();
   updateBulkBar();
   if (!items.length) {
@@ -1959,11 +1977,27 @@ document.getElementById("libraryGrid").addEventListener("click", (e) => {
 document.getElementById("librarySort").addEventListener("change", renderLibrary);
 
 /* ---- přepínač zobrazení, výběr, rozbalovací filtry ---- */
+function updateViewToggleBtn() {
+  const btn = document.getElementById("toggleViewModeBtn");
+  if (isMobileViewport()) {
+    btn.innerHTML = libraryMobileCompact ? '<i class="fa-solid fa-expand"></i>' : '<i class="fa-solid fa-table-cells"></i>';
+    btn.setAttribute("aria-label", libraryMobileCompact ? "Přepnout na velké karty" : "Přepnout na kompaktní zobrazení");
+  } else {
+    btn.innerHTML = libraryViewMode === "grid" ? '<i class="fa-solid fa-list"></i>' : '<i class="fa-solid fa-grip"></i>';
+    btn.setAttribute("aria-label", "Přepnout zobrazení");
+  }
+}
 document.getElementById("toggleViewModeBtn").addEventListener("click", () => {
-  libraryViewMode = libraryViewMode === "grid" ? "list" : "grid";
-  document.getElementById("toggleViewModeBtn").innerHTML = libraryViewMode === "grid" ? '<i class="fa-solid fa-list"></i>' : '<i class="fa-solid fa-grip"></i>';
+  if (isMobileViewport()) {
+    libraryMobileCompact = !libraryMobileCompact;
+    localStorage.setItem("trener_mobile_compact", libraryMobileCompact ? "1" : "0");
+  } else {
+    libraryViewMode = libraryViewMode === "grid" ? "list" : "grid";
+  }
+  updateViewToggleBtn();
   renderLibrary();
 });
+updateViewToggleBtn();
 document.getElementById("toggleFavFilterBtn").addEventListener("click", () => {
   favOnlyFilter = !favOnlyFilter;
   const btn = document.getElementById("toggleFavFilterBtn");
