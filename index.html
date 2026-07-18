@@ -1052,7 +1052,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const APP_VERSION = "2026-07-18 22:37";
+const APP_VERSION = "2026-07-18 22:50";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -2357,13 +2357,22 @@ document.getElementById("fetchMetaBtn").addEventListener("click", async () => {
     document.getElementById("thumbPreview").dataset.videoId = driveId;
     toast("Disk: titulek zadej ručně.");
     if (driveId && state.driveApiKey) {
-      try {
-        const res = await fetch(`https://www.googleapis.com/drive/v3/files/${driveId}?fields=thumbnailLink&key=${state.driveApiKey}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.thumbnailLink) renderThumbSuggestions([data.thumbnailLink]);
-        }
-      } catch (e) { console.warn("Náhled z Disku se nepodařilo najít:", e); }
+      toast("Zkouším z videa na Disku vyfotit náhledy…", 4000);
+      const directUrl = `https://www.googleapis.com/drive/v3/files/${driveId}?alt=media&key=${state.driveApiKey}`;
+      const frames = await captureVideoFrameThumbnails(directUrl);
+      if (frames.length) {
+        renderThumbSuggestions(frames);
+      } else {
+        // appka nedokázala video samo přetočit a vyfotit (např. formát, co appka jako <video> nezvládne)
+        // — zkusí to tedy aspoň s jedním náhledem, co k souboru nabízí přímo Disk
+        try {
+          const res = await fetch(`https://www.googleapis.com/drive/v3/files/${driveId}?fields=thumbnailLink&key=${state.driveApiKey}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.thumbnailLink) renderThumbSuggestions([data.thumbnailLink]);
+          }
+        } catch (e) { console.warn("Náhled z Disku se nepodařilo najít:", e); }
+      }
     }
   } else if (platform === "instagram") {
     document.getElementById("thumbPreview").dataset.videoId = extractInstagramId(url) || "";
