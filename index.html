@@ -309,6 +309,14 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .modal-actions .btn{flex:1;}
 .thumb-preview{width:100%;aspect-ratio:16/9;background:var(--paper);border:1px dashed var(--line);border-radius:var(--radius-sm);
   display:flex;align-items:center;justify-content:center;color:var(--ink-faint);font-size:12px;margin-bottom:8px;background-size:cover;background-position:center;overflow:hidden;}
+.thumb-suggestions{display:flex;gap:8px;margin-bottom:10px;}
+.thumb-suggestion-item{
+  flex:1;aspect-ratio:16/9;border-radius:var(--radius-sm);border:2px solid var(--line);cursor:pointer;
+  background-size:cover;background-position:center;transition:border-color .15s ease,transform .08s ease;
+}
+.thumb-suggestion-item:active{transform:scale(.96);}
+.thumb-suggestion-item.selected{border-color:var(--court);}
+.thumb-suggestions-label{font-size:11px;color:var(--ink-soft);margin:0 0 6px;width:100%;}
 .thumb-upload-row{display:flex;gap:8px;margin-bottom:12px;}
 .thumb-upload-row label.btn{flex:1;text-align:center;}
 .thumb-upload-row input[type=file]{display:none;}
@@ -663,6 +671,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
         </div>
       </div>
       <div class="thumb-preview" id="thumbPreview">bez náhledu</div>
+      <div class="thumb-suggestions hidden" id="thumbSuggestions"></div>
       <div class="thumb-upload-row">
         <label class="btn btn-sm" for="thumbFileInput"><i class="fa-solid fa-image"></i> Nahrát vlastní náhled</label>
         <input type="file" id="thumbFileInput" accept="image/*">
@@ -1041,7 +1050,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const APP_VERSION = "2026-07-18 15:56";
+const APP_VERSION = "2026-07-18 16:05";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1384,6 +1393,27 @@ function secondsToTimestamp(sec) {
   if (sec === null || sec === undefined) return "";
   const m = Math.floor(sec / 60), s = sec % 60;
   return m + ":" + String(s).padStart(2, "0");
+}
+/** Zobrazí appce nabídku 1-3 náhledů na výběr (jen odkazy, appka nic nestahuje) — kliknutím
+    se zvolený náhled rovnou projeví v náhledu nahoře a zapíše se, ať appka ví, co uložit. */
+function renderThumbSuggestions(urls) {
+  const wrap = document.getElementById("thumbSuggestions");
+  urls = urls.filter(Boolean);
+  if (!urls.length) { wrap.classList.add("hidden"); wrap.innerHTML = ""; return; }
+  wrap.innerHTML = `<div class="thumb-suggestions-label">Navržené náhledy — klepnutím vyber:</div>` +
+    urls.map(u => `<div class="thumb-suggestion-item" style="background-image:url('${u}')" data-thumb-url="${esc(u)}"></div>`).join("");
+  wrap.classList.remove("hidden");
+  wrap.querySelectorAll("[data-thumb-url]").forEach(el => {
+    el.addEventListener("click", () => {
+      const u = el.dataset.thumbUrl;
+      wrap.querySelectorAll(".thumb-suggestion-item").forEach(x => x.classList.toggle("selected", x === el));
+      const tp = document.getElementById("thumbPreview");
+      tp.style.backgroundImage = `url('${u}')`;
+      tp.textContent = "";
+      tp.dataset.thumb = u;
+      pendingThumbUpload = null; // vybraný návrh má přednost před dřívějším ručním nahráním
+    });
+  });
 }
 async function fetchYouTubeMeta(url) {
   try {
@@ -2191,6 +2221,7 @@ function openLinkModal(id) {
   document.getElementById("thumbPreview").dataset.thumb = item ? (item.thumbnail || "") : "";
   document.getElementById("thumbPreview").dataset.platform = item ? item.platform : "";
   document.getElementById("thumbPreview").dataset.videoId = item ? (item.videoId || "") : "";
+  renderThumbSuggestions([]);
   document.getElementById("deleteLinkBtn").classList.toggle("hidden", !item);
 
   formTags = item ? [...item.tags] : [];
@@ -2205,6 +2236,48 @@ function openLinkModal(id) {
 }
 function closeLinkModal() { linkModalBackdrop.classList.add("hidden"); }
 
+/** U přímo odkazovaného souboru appka zkusí sama "přetočit" video na 3 místa (25 %/50 %/75 %)
+    a vyfotit, co v tu chvíli běží na obrazovce. Funguje to jen když to server hostující video
+    dovolí (CORS) — když ne, appka to mlčky vzdá a zůstane jen ruční nahrání, žádná chyba se
+    neukazuje, ať to nepůsobí jako něco rozbitého. */
+function captureVideoFrameThumbnails(url) {
+  return new Promise((resolve) => {
+    const video = document.createElement("video");
+    video.crossOrigin = "anonymous";
+    video.muted = true;
+    video.preload = "auto";
+    video.src = url;
+    const frames = [];
+    const timeouts = setTimeout(() => resolve([]), 12000); // ať appka nečeká navěky na pomalé/nedostupné video
+    video.addEventListener("error", () => { clearTimeout(timeouts); resolve([]); });
+    video.addEventListener("loadedmetadata", async () => {
+      try {
+        const duration = video.duration;
+        if (!duration || !isFinite(duration)) { clearTimeout(timeouts); resolve([]); return; }
+        const maxW = 480;
+        const scale = Math.min(1, maxW / video.videoWidth);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(video.videoWidth * scale);
+        canvas.height = Math.round(video.videoHeight * scale);
+        const ctx = canvas.getContext("2d");
+        for (const frac of [0.25, 0.5, 0.75]) {
+          await new Promise((seekResolve, seekReject) => {
+            video.currentTime = duration * frac;
+            video.addEventListener("seeked", seekResolve, { once: true });
+            video.addEventListener("error", seekReject, { once: true });
+          });
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          frames.push(canvas.toDataURL("image/jpeg", 0.82)); // vyhodí SecurityError, pokud video nemá povolené CORS
+        }
+        clearTimeout(timeouts);
+        resolve(frames);
+      } catch (e) {
+        clearTimeout(timeouts);
+        resolve([]); // typicky CORS — appka to tiše vzdá, ruční nahrání zůstává k dispozici
+      }
+    });
+  });
+}
 document.getElementById("fetchMetaBtn").addEventListener("click", async () => {
   let url = document.getElementById("linkUrl").value.trim();
   if (!url) return;
@@ -2219,6 +2292,7 @@ document.getElementById("fetchMetaBtn").addEventListener("click", async () => {
   document.getElementById("linkUrl").value = url;
   const platform = detectPlatform(url);
   document.getElementById("thumbPreview").dataset.platform = platform;
+  renderThumbSuggestions([]); // vyčistit staré návrhy z předchozího odkazu, než se zjistí nové
   if (platform === "youtube") {
     const ytId = extractYouTubeId(url);
     document.getElementById("thumbPreview").dataset.videoId = ytId || "";
@@ -2234,18 +2308,55 @@ document.getElementById("fetchMetaBtn").addEventListener("click", async () => {
     } else {
       toast("Nepodařilo se načíst — zadej název ručně.");
     }
+    if (ytId) {
+      // YouTube si u většiny videí sám generuje náhledy ve třech různých okamžicích videa
+      renderThumbSuggestions([1, 2, 3].map(n => `https://img.youtube.com/vi/${ytId}/${n}.jpg`));
+    }
   } else if (platform === "drive") {
-    document.getElementById("thumbPreview").dataset.videoId = extractDriveId(url) || "";
-    toast("Disk: titulek a náhled zadej ručně.");
+    const driveId = extractDriveId(url) || "";
+    document.getElementById("thumbPreview").dataset.videoId = driveId;
+    toast("Disk: titulek zadej ručně.");
+    if (driveId && state.driveApiKey) {
+      try {
+        const res = await fetch(`https://www.googleapis.com/drive/v3/files/${driveId}?fields=thumbnailLink&key=${state.driveApiKey}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.thumbnailLink) renderThumbSuggestions([data.thumbnailLink]);
+        }
+      } catch (e) { console.warn("Náhled z Disku se nepodařilo najít:", e); }
+    }
   } else if (platform === "instagram") {
     document.getElementById("thumbPreview").dataset.videoId = extractInstagramId(url) || "";
     toast("Instagram: titulek a náhled zadej ručně.");
   } else if (platform === "tiktok") {
-    document.getElementById("thumbPreview").dataset.videoId = extractTikTokId(url) || "";
+    const tikTokId = extractTikTokId(url);
+    document.getElementById("thumbPreview").dataset.videoId = tikTokId || "";
     document.getElementById("linkAspectRatio").value = "9/16";
-    toast(extractTikTokId(url) ? "TikTok: titulek a náhled zadej ručně." : "Krátký TikTok odkaz appka nerozpozná — vlož prosím ten dlouhý, s /video/ v adrese.");
+    if (tikTokId) {
+      toast("Načítám info z TikToku…");
+      try {
+        const res = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (!document.getElementById("linkTitle").value && data.title) document.getElementById("linkTitle").value = data.title;
+          if (data.thumbnail_url) renderThumbSuggestions([data.thumbnail_url]);
+          toast("Načteno, náhled zadej ručně, pokud appka žádný nenavrhla.");
+        } else {
+          toast("TikTok: titulek a náhled zadej ručně.");
+        }
+      } catch (e) { toast("TikTok: titulek a náhled zadej ručně."); }
+    } else {
+      toast("Krátký TikTok odkaz appka nerozpozná — vlož prosím ten dlouhý, s /video/ v adrese.");
+    }
   } else if (platform === "file") {
-    toast("Přímý odkaz na video soubor — přehraje se rovnou, titulek a náhled zadej ručně.");
+    toast("Zkouším z videa vyfotit náhledy…", 4000);
+    const frames = await captureVideoFrameThumbnails(url);
+    if (frames.length) {
+      renderThumbSuggestions(frames);
+      toast("Náhledy navrženy, titulek zadej ručně.");
+    } else {
+      toast("Náhled appka automaticky nezískala (server to nedovolil) — nahraj ho prosím ručně, titulek taky.");
+    }
   } else {
     document.getElementById("thumbPreview").dataset.videoId = "";
     toast(platform === "facebook" ? "Facebook: titulek zadej ručně, embed se pokusí načíst v detailu." : "Titulek zadej ručně.");
@@ -2343,6 +2454,7 @@ document.getElementById("thumbFileInput").addEventListener("change", async (e) =
   const tp = document.getElementById("thumbPreview");
   tp.style.backgroundImage = `url('${dataUrl}')`;
   tp.textContent = "";
+  document.querySelectorAll("#thumbSuggestions .thumb-suggestion-item").forEach(x => x.classList.remove("selected"));
   toast("Náhled nahrán.");
 });
 
