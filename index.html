@@ -1026,7 +1026,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const APP_VERSION = "2026-07-18 15:44";
+const APP_VERSION = "2026-07-18 15:49";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -2100,6 +2100,7 @@ function openCardContextMenu(itemId, anchorBtn) {
   menu.innerHTML = `
     <button type="button" data-act="fav"><i class="fa-solid fa-star"></i> ${item.favorite ? "Odebrat z oblíbených" : "Přidat do oblíbených"}</button>
     <button type="button" data-act="edit"><i class="fa-solid fa-pen"></i> Upravit</button>
+    <button type="button" data-act="add-to-training"><i class="fa-solid fa-list-check"></i> Přidat do tréninku</button>
     <button type="button" data-act="move"><i class="fa-solid fa-folder"></i> Přesunout do složky</button>
     <button type="button" class="danger" data-act="delete"><i class="fa-solid fa-trash"></i> Smazat</button>
   `;
@@ -2122,6 +2123,29 @@ function openCardContextMenu(itemId, anchorBtn) {
     renderLibrary();
     const ok = await saveUserData();
     if (ok) toast("Přesunuto do koše.");
+  });
+  menu.querySelector("[data-act='add-to-training']").addEventListener("click", async () => {
+    closeCardContextMenu();
+    const myTrainings = Object.values(state.trainings)
+      .filter(t => t.ownerUid === uidCurrent)
+      .sort((a, b) => b.dateModified - a.dateModified);
+    const list = myTrainings.map((t, i) => `${i + 1}. ${t.name}`).join("\n");
+    const answer = prompt(`Přidat „${item.title}" do tréninku — napiš číslo, nebo 0 pro nový trénink:\n0. + Nový trénink\n${list}`);
+    if (answer === null) return;
+    const idx = parseInt(answer);
+    if (isNaN(idx)) return;
+    if (idx === 0) {
+      const id = uid();
+      const label = (state.profile && state.profile.username) || (auth.currentUser && auth.currentUser.email) || uidCurrent;
+      state.trainings[id] = { id, name: "Nový trénink", dateCreated: Date.now(), dateModified: Date.now(), items: [], ownerUid: uidCurrent, ownerLabel: label };
+      addLibraryItemToTraining(id, itemId);
+      const ok = await saveUserData();
+      if (ok) toast(`Založen nový trénink s „${item.title}".`);
+    } else if (myTrainings[idx - 1]) {
+      addLibraryItemToTraining(myTrainings[idx - 1].id, itemId);
+      const ok = await saveUserData();
+      if (ok) toast(`Přidáno do „${myTrainings[idx - 1].name}".`);
+    }
   });
   menu.querySelector("[data-act='move']").addEventListener("click", () => {
     closeCardContextMenu();
@@ -2821,16 +2845,23 @@ function renderPickerList() {
   list.querySelectorAll("[data-add]").forEach(b => b.addEventListener("click", () => addItemToTraining(b.dataset.add)));
 }
 
-function addItemToTraining(libraryId) {
-  const t = state.trainings[currentTrainingId];
-  if (!t) return;
+/** Přidá video z knihovny do KTERÉHOKOLI tréninku (ne nutně toho právě otevřeného v editoru) —
+    používá se jak z editoru (addItemToTraining), tak z kontextového menu karty v knihovně. */
+function addLibraryItemToTraining(trainingId, libraryId) {
+  const t = state.trainings[trainingId];
+  if (!t) return false;
   const lib = state.library[libraryId];
   const part = (lib && lib.defaultPart && getPart(lib.defaultPart)) ? lib.defaultPart : state.parts[0].key;
   t.items.push({ itemId: uid(), videoId: libraryId, part, duration: 10, cue: "", poznamka: "", label: "" });
   t.dateModified = Date.now();
-  scheduleSave();
-  renderSequence();
-  toast("Přidáno do tréninku.");
+  return true;
+}
+function addItemToTraining(libraryId) {
+  if (addLibraryItemToTraining(currentTrainingId, libraryId)) {
+    scheduleSave();
+    renderSequence();
+    toast("Přidáno do tréninku.");
+  }
 }
 document.getElementById("addBreakBtn").addEventListener("click", () => {
   const t = state.trainings[currentTrainingId];
