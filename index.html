@@ -841,6 +841,21 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   </div>
 </div>
 
+<!-- ===================== PŘIDAT DO TRÉNINKU ===================== -->
+<div id="addToTrainingModalBackdrop" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 style="font-size:22px;">Přidat do tréninku</h2>
+      <button class="btn btn-icon btn-ghost" id="closeAddToTrainingModalBtn">✕</button>
+    </div>
+    <p id="addToTrainingVideoLabel" style="font-size:12.5px;color:var(--ink-soft);margin-top:0;overflow-wrap:anywhere;"></p>
+    <button type="button" class="folder-row" id="addToTrainingNewBtn" style="border:1px dashed var(--court);color:var(--court);font-weight:700;margin-bottom:10px;">
+      <i class="fa-solid fa-plus folder-icon"></i> Nový trénink
+    </button>
+    <div id="addToTrainingList"></div>
+  </div>
+</div>
+
 <!-- ===================== MERGE TAGS/EQUIPMENT MODAL ===================== -->
 <div id="mergeModalBackdrop" class="modal-backdrop hidden">
   <div class="modal">
@@ -1026,7 +1041,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const APP_VERSION = "2026-07-18 15:49";
+const APP_VERSION = "2026-07-18 15:56";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -2124,28 +2139,9 @@ function openCardContextMenu(itemId, anchorBtn) {
     const ok = await saveUserData();
     if (ok) toast("Přesunuto do koše.");
   });
-  menu.querySelector("[data-act='add-to-training']").addEventListener("click", async () => {
+  menu.querySelector("[data-act='add-to-training']").addEventListener("click", () => {
     closeCardContextMenu();
-    const myTrainings = Object.values(state.trainings)
-      .filter(t => t.ownerUid === uidCurrent)
-      .sort((a, b) => b.dateModified - a.dateModified);
-    const list = myTrainings.map((t, i) => `${i + 1}. ${t.name}`).join("\n");
-    const answer = prompt(`Přidat „${item.title}" do tréninku — napiš číslo, nebo 0 pro nový trénink:\n0. + Nový trénink\n${list}`);
-    if (answer === null) return;
-    const idx = parseInt(answer);
-    if (isNaN(idx)) return;
-    if (idx === 0) {
-      const id = uid();
-      const label = (state.profile && state.profile.username) || (auth.currentUser && auth.currentUser.email) || uidCurrent;
-      state.trainings[id] = { id, name: "Nový trénink", dateCreated: Date.now(), dateModified: Date.now(), items: [], ownerUid: uidCurrent, ownerLabel: label };
-      addLibraryItemToTraining(id, itemId);
-      const ok = await saveUserData();
-      if (ok) toast(`Založen nový trénink s „${item.title}".`);
-    } else if (myTrainings[idx - 1]) {
-      addLibraryItemToTraining(myTrainings[idx - 1].id, itemId);
-      const ok = await saveUserData();
-      if (ok) toast(`Přidáno do „${myTrainings[idx - 1].name}".`);
-    }
+    openAddToTrainingModal(itemId);
   });
   menu.querySelector("[data-act='move']").addEventListener("click", () => {
     closeCardContextMenu();
@@ -2863,6 +2859,55 @@ function addItemToTraining(libraryId) {
     toast("Přidáno do tréninku.");
   }
 }
+
+/* =========================================================
+   PŘIDAT DO TRÉNINKU (z karty v knihovně)
+   ========================================================= */
+const addToTrainingModalBackdrop = document.getElementById("addToTrainingModalBackdrop");
+let addToTrainingItemId = null;
+function openAddToTrainingModal(itemId) {
+  addToTrainingItemId = itemId;
+  const item = state.library[itemId];
+  if (!item) return;
+  document.getElementById("addToTrainingVideoLabel").textContent = `Video: ${item.title}`;
+  const myTrainings = Object.values(state.trainings)
+    .filter(t => t.ownerUid === uidCurrent)
+    .sort((a, b) => b.dateModified - a.dateModified);
+  const list = document.getElementById("addToTrainingList");
+  if (!myTrainings.length) {
+    list.innerHTML = `<p style="font-size:12.5px;color:var(--ink-faint);margin:4px 0 0;">Zatím nemáš žádný rozpracovaný trénink.</p>`;
+  } else {
+    list.innerHTML = myTrainings.map(t => `
+      <button type="button" class="folder-row" data-training-id="${esc(t.id)}">
+        <i class="fa-solid fa-list-check folder-icon" style="color:var(--ink-faint);"></i> ${esc(t.name)}
+      </button>
+    `).join("");
+    list.querySelectorAll("[data-training-id]").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const t = state.trainings[btn.dataset.trainingId];
+        if (!t || !addToTrainingItemId) return;
+        addLibraryItemToTraining(t.id, addToTrainingItemId);
+        addToTrainingModalBackdrop.classList.add("hidden");
+        const ok = await saveUserData();
+        if (ok) toast(`Přidáno do „${t.name}".`);
+      });
+    });
+  }
+  addToTrainingModalBackdrop.classList.remove("hidden");
+}
+document.getElementById("addToTrainingNewBtn").addEventListener("click", async () => {
+  if (!addToTrainingItemId) return;
+  const id = uid();
+  const label = (state.profile && state.profile.username) || (auth.currentUser && auth.currentUser.email) || uidCurrent;
+  state.trainings[id] = { id, name: "Nový trénink", dateCreated: Date.now(), dateModified: Date.now(), items: [], ownerUid: uidCurrent, ownerLabel: label };
+  addLibraryItemToTraining(id, addToTrainingItemId);
+  addToTrainingModalBackdrop.classList.add("hidden");
+  const ok = await saveUserData();
+  if (ok) toast("Založen nový trénink.");
+});
+document.getElementById("closeAddToTrainingModalBtn").addEventListener("click", () => addToTrainingModalBackdrop.classList.add("hidden"));
+addToTrainingModalBackdrop.addEventListener("click", (e) => { if (e.target === addToTrainingModalBackdrop) addToTrainingModalBackdrop.classList.add("hidden"); });
+
 document.getElementById("addBreakBtn").addEventListener("click", () => {
   const t = state.trainings[currentTrainingId];
   if (!t) return;
