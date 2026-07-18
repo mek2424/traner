@@ -311,14 +311,15 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .modal-actions .btn{flex:1;}
 .thumb-preview{width:100%;aspect-ratio:16/9;background:var(--paper);border:1px dashed var(--line);border-radius:var(--radius-sm);
   display:flex;align-items:center;justify-content:center;color:var(--ink-faint);font-size:12px;margin-bottom:8px;background-size:cover;background-position:center;overflow:hidden;}
-.thumb-suggestions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+.thumb-suggestions-row{display:flex;gap:8px;}
 .thumb-suggestion-item{
-  width:104px;height:74px;flex-shrink:0;border-radius:var(--radius-sm);border:2px solid var(--line);cursor:pointer;
+  flex:1;min-width:0;height:72px;border-radius:var(--radius-sm);border:2px solid var(--line);cursor:pointer;
   background-size:cover;background-position:center;transition:border-color .15s ease,transform .08s ease;
 }
 .thumb-suggestion-item:active{transform:scale(.96);}
 .thumb-suggestion-item.selected{border-color:var(--court);}
-.thumb-suggestions-label{font-size:11px;color:var(--ink-soft);margin:0 0 6px;flex-basis:100%;}
+#thumbSuggestions{margin-bottom:10px;}
+.thumb-suggestions-label{font-size:11px;color:var(--ink-soft);margin:0 0 6px;}
 .thumb-upload-row{display:flex;gap:8px;margin-bottom:12px;}
 .thumb-upload-row label.btn{flex:1;text-align:center;}
 .thumb-upload-row input[type=file]{display:none;}
@@ -1052,7 +1053,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const APP_VERSION = "2026-07-18 22:50";
+const APP_VERSION = "2026-07-18 22:58";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1402,8 +1403,8 @@ function renderThumbSuggestions(urls) {
   const wrap = document.getElementById("thumbSuggestions");
   urls = urls.filter(Boolean);
   if (!urls.length) { wrap.classList.add("hidden"); wrap.innerHTML = ""; return; }
-  wrap.innerHTML = `<div class="thumb-suggestions-label">Navržené náhledy — klepnutím vyber:</div>` +
-    urls.map(u => `<div class="thumb-suggestion-item" style="background-image:url('${u}')" data-thumb-url="${esc(u)}"></div>`).join("");
+  wrap.innerHTML = `<div class="thumb-suggestions-label">Navržené náhledy — klepnutím vyber:</div>
+    <div class="thumb-suggestions-row">${urls.map(u => `<div class="thumb-suggestion-item" style="background-image:url('${u}')" data-thumb-url="${esc(u)}"></div>`).join("")}</div>`;
   wrap.classList.remove("hidden");
   wrap.querySelectorAll("[data-thumb-url]").forEach(el => {
     el.addEventListener("click", () => {
@@ -2285,10 +2286,11 @@ function captureVideoFrameThumbnails(url) {
     const video = document.createElement("video");
     video.crossOrigin = "anonymous";
     video.muted = true;
+    video.playsInline = true;
     video.preload = "auto";
     video.src = url;
     const frames = [];
-    const timeouts = setTimeout(() => resolve([]), 12000); // ať appka nečeká navěky na pomalé/nedostupné video
+    const timeouts = setTimeout(() => resolve([]), 15000); // ať appka nečeká navěky na pomalé/nedostupné video
     video.addEventListener("error", () => { clearTimeout(timeouts); resolve([]); });
     video.addEventListener("loadedmetadata", async () => {
       try {
@@ -2300,12 +2302,19 @@ function captureVideoFrameThumbnails(url) {
         canvas.width = Math.round(video.videoWidth * scale);
         canvas.height = Math.round(video.videoHeight * scale);
         const ctx = canvas.getContext("2d");
+        // Krátké přehrání hned na startu donutí prohlížeč opravdu začít dekódovat obraz — bez
+        // tohoto appka u některých videí zachytávala jen černý snímek (přetočeno technicky ano,
+        // ale vykreslený obraz ještě nebyl skutečně připravený).
+        try { await video.play(); video.pause(); } catch (e) {}
         for (const frac of [0.25, 0.5, 0.75]) {
           await new Promise((seekResolve, seekReject) => {
-            video.currentTime = duration * frac;
             video.addEventListener("seeked", seekResolve, { once: true });
             video.addEventListener("error", seekReject, { once: true });
+            video.currentTime = duration * frac;
           });
+          // Počká na dva vykreslovací tiky navíc, ať appka nezachytí snímek dřív, než ho
+          // prohlížeč fakt stihl vykreslit.
+          await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           frames.push(canvas.toDataURL("image/jpeg", 0.82)); // vyhodí SecurityError, pokud video nemá povolené CORS
         }
