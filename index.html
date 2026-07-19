@@ -1009,6 +1009,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 <div id="debugLogPanel" class="hidden" style="position:fixed;inset:0;z-index:501;background:rgba(10,12,15,.96);color:#7CFC8C;font-family:monospace;font-size:11.5px;padding:14px;overflow-y:auto;white-space:pre-wrap;">
   <button type="button" id="closeDebugLogBtn" style="position:sticky;top:0;float:right;background:#fff;color:#000;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-left:8px;">Zavřít</button>
   <button type="button" id="disableDevModeBtn" style="position:sticky;top:0;float:right;background:#5B2B2B;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;">Vypnout vývojářský režim</button>
+  <button type="button" id="shrinkOversizedBtn" class="hidden" style="position:sticky;top:0;float:right;background:#C99A2E;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Najít a zmenšit velké náhledy</button>
   <div style="clear:both;"></div>
   <div id="debugLogContent"></div>
 </div>
@@ -1079,7 +1080,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const APP_VERSION = "2026-07-19 17:09";
+const APP_VERSION = "2026-07-19 17:17";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1143,6 +1144,7 @@ function logDebug(...args) {
 }
 document.getElementById("debugLogBtn").addEventListener("click", () => {
   document.getElementById("debugLogContent").textContent = debugLog.length ? debugLog.join("\n") : "(zatím žádné záznamy — proveď akci, co chceš prověřit, a pak se sem vrať)";
+  document.getElementById("shrinkOversizedBtn").classList.toggle("hidden", uidCurrent !== ADMIN_UID);
   document.getElementById("debugLogPanel").classList.remove("hidden");
 });
 document.getElementById("closeDebugLogBtn").addEventListener("click", () => {
@@ -1180,6 +1182,37 @@ document.querySelector(".topbar-title-group").addEventListener("click", () => {
   }
 });
 document.getElementById("disableDevModeBtn").addEventListener("click", () => setDevMode(false));
+document.getElementById("shrinkOversizedBtn").addEventListener("click", async () => {
+  if (uidCurrent !== ADMIN_UID) return;
+  if (!confirm("Appka projde celou knihovnu, najde všechny ručně nahrané fotky, co jsou zbytečně velké, zmenší je a rovnou uloží. Pokračovat?")) return;
+  logDebug("[oprava] hledám předimenzované náhledy…");
+  let fixedCount = 0, totalBefore = 0, totalAfter = 0;
+  for (const [id, item] of Object.entries(state.library)) {
+    if (!item.thumbnail || !item.thumbnail.startsWith("data:")) continue; // odkazy (URL) appku nezajímají, jen vlastní nahrané fotky
+    const beforeLen = item.thumbnail.length;
+    if (beforeLen * 0.75 <= THUMB_SAFE_BYTES) continue; // tahle už je v pořádku
+    totalBefore += beforeLen;
+    const shrunk = await enforceThumbSizeBudget(item.thumbnail);
+    item.thumbnail = shrunk;
+    totalAfter += shrunk.length;
+    fixedCount++;
+    logDebug(`[oprava] „${item.title}" — ${Math.round(beforeLen * 0.75 / 1024)} KB → ${Math.round(shrunk.length * 0.75 / 1024)} KB`);
+  }
+  if (!fixedCount) {
+    logDebug("[oprava] žádný předimenzovaný náhled appka nenašla — problém je asi jinde.");
+    toast("Appka nenašla žádnou zbytečně velkou fotku v knihovně.", 6000);
+    return;
+  }
+  logDebug(`[oprava] hotovo, opraveno ${fixedCount} náhledů, ukládám…`);
+  const ok = await saveUserData();
+  logDebug(`[oprava] uložení: ${ok ? "úspěch" : "selhalo"}`);
+  if (ok) {
+    renderLibrary();
+    toast(`Opraveno ${fixedCount} náhledů (ušetřeno ~${Math.round((totalBefore - totalAfter) * 0.75 / 1024)} KB).`, 8000);
+  } else {
+    toast("Náhledy appka zmenšila, ale uložení pořád selhává — možná je na vině ještě něco jiného.", 8000);
+  }
+});
 
 function myLabel() {
   return (state.profile && state.profile.username) || (auth.currentUser && auth.currentUser.email) || "Trenér";
