@@ -1009,7 +1009,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 <div id="debugLogPanel" class="hidden" style="position:fixed;inset:0;z-index:501;background:rgba(10,12,15,.96);color:#7CFC8C;font-family:monospace;font-size:11.5px;padding:14px;overflow-y:auto;white-space:pre-wrap;">
   <button type="button" id="closeDebugLogBtn" style="position:sticky;top:0;float:right;background:#fff;color:#000;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-left:8px;">Zavřít</button>
   <button type="button" id="disableDevModeBtn" style="position:sticky;top:0;float:right;background:#5B2B2B;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;">Vypnout vývojářský režim</button>
-  <button type="button" id="shrinkOversizedBtn" class="hidden" style="position:sticky;top:0;float:right;background:#C99A2E;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Najít a zmenšit velké náhledy</button>
+  <button type="button" id="shrinkOversizedBtn" class="hidden" style="position:sticky;top:0;float:right;background:#C99A2E;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Přestěhovat staré náhledy</button>
   <button type="button" id="checkLibrarySizeBtn" class="hidden" style="position:sticky;top:0;float:right;background:#2B6CB0;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Změřit velikost knihovny</button>
   <div style="clear:both;"></div>
   <div id="debugLogContent"></div>
@@ -1080,8 +1080,8 @@ try {
    STATE
    ========================================================= */
 let uidCurrent = null;
-let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const APP_VERSION = "2026-07-19 17:35";
+let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
+const APP_VERSION = "2026-07-19 17:51";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1188,48 +1188,54 @@ document.getElementById("checkLibrarySizeBtn").addEventListener("click", () => {
   if (uidCurrent !== ADMIN_UID) return;
   const kb = (n) => Math.round(n / 1024);
   const libraryJson = JSON.stringify(state.library);
-  const thumbsJson = JSON.stringify(Object.fromEntries(Object.entries(state.library).map(([id, it]) => [id, it.thumbnail || ""])));
   const notesJson = JSON.stringify(Object.fromEntries(Object.entries(state.library).map(([id, it]) => [id, { r: it.ratings, d: it.difficulties, n: it.notesByCoach }])));
   const wholeDoc = JSON.stringify({ library: state.library, folders: state.folders, tagPool: state.tagPool, equipmentPool: state.equipmentPool, parts: state.parts });
+  const separateThumbsJson = JSON.stringify(state.thumbnails);
   logDebug("[velikost] === rozpad velikosti sdílené knihovny ===");
   logDebug(`[velikost] počet videí: ${Object.keys(state.library).length}`);
-  logDebug(`[velikost] všechny náhledy dohromady: ~${kb(thumbsJson.length)} KB`);
   logDebug(`[velikost] hodnocení+obtížnost+poznámky dohromady: ~${kb(notesJson.length)} KB`);
   logDebug(`[velikost] celé pole "library": ~${kb(libraryJson.length)} KB`);
-  logDebug(`[velikost] CELÝ dokument (library+složky+štítky+vybavení+části): ~${kb(wholeDoc.length)} KB z limitu ~1024 KB`);
-  const dataUrlCount = Object.values(state.library).filter(it => it.thumbnail && it.thumbnail.startsWith("data:")).length;
-  logDebug(`[velikost] z toho ${dataUrlCount} videí má ručně nahranou fotku (ne jen odkaz)`);
-  toast(`Celý dokument: ~${kb(wholeDoc.length)} KB z ~1024 KB limitu. Detaily v 🐞.`, 8000);
+  logDebug(`[velikost] HLAVNÍ dokument (library+složky+štítky+vybavení+části): ~${kb(wholeDoc.length)} KB z limitu ~1024 KB`);
+  logDebug(`[velikost] samostatná kolekce náhledů dohromady: ~${kb(separateThumbsJson.length)} KB (má svůj vlastní, oddělený limit na KAŽDOU fotku zvlášť)`);
+  const oldStyleCount = Object.values(state.library).filter(it => it.thumbnail && it.thumbnail.startsWith("data:")).length;
+  const newStyleCount = Object.values(state.library).filter(it => it.thumbnail && it.thumbnail.startsWith(LOCAL_THUMB_PREFIX)).length;
+  logDebug(`[velikost] náhledy ještě uložené postaru přímo v knihovně: ${oldStyleCount}${oldStyleCount ? " — spusť \"Přestěhovat staré náhledy\"" : ""}`);
+  logDebug(`[velikost] náhledy už přestěhované do samostatné kolekce: ${newStyleCount}`);
+  toast(`Hlavní dokument: ~${kb(wholeDoc.length)} KB z ~1024 KB limitu. Detaily v 🐞.`, 8000);
 });
 document.getElementById("shrinkOversizedBtn").addEventListener("click", async () => {
   if (uidCurrent !== ADMIN_UID) return;
-  if (!confirm("Appka projde celou knihovnu, najde všechny ručně nahrané fotky, co jsou zbytečně velké, zmenší je a rovnou uloží. Pokračovat?")) return;
-  logDebug("[oprava] hledám předimenzované náhledy…");
-  let fixedCount = 0, totalBefore = 0, totalAfter = 0;
+  if (!confirm("Appka projde celou knihovnu, najde staré ručně nahrané fotky uložené přímo v knihovně, přestěhuje je do samostatné kolekce (a případně ještě zmenší) a rovnou uloží. Pokračovat?")) return;
+  logDebug("[stěhování] hledám staré náhledy uložené přímo v knihovně…");
+  let fixedCount = 0;
   for (const [id, item] of Object.entries(state.library)) {
-    if (!item.thumbnail || !item.thumbnail.startsWith("data:")) continue; // odkazy (URL) appku nezajímají, jen vlastní nahrané fotky
+    if (!item.thumbnail || !item.thumbnail.startsWith("data:")) continue; // odkazy (URL) appku nezajímají, jen staré vlastní nahrané fotky
     const beforeLen = item.thumbnail.length;
-    if (beforeLen * 0.75 <= THUMB_SAFE_BYTES) continue; // tahle už je v pořádku
-    totalBefore += beforeLen;
-    const shrunk = await enforceThumbSizeBudget(item.thumbnail);
-    item.thumbnail = shrunk;
-    totalAfter += shrunk.length;
-    fixedCount++;
-    logDebug(`[oprava] „${item.title}" — ${Math.round(beforeLen * 0.75 / 1024)} KB → ${Math.round(shrunk.length * 0.75 / 1024)} KB`);
+    let dataUrl = item.thumbnail;
+    if (dataUrl.length * 0.75 > THUMB_SAFE_BYTES) dataUrl = await enforceThumbSizeBudget(dataUrl);
+    try {
+      await setDoc(doc(db, "sharedThumbnails", id), { data: dataUrl, updatedAt: Date.now() });
+      state.thumbnails[id] = dataUrl;
+      item.thumbnail = LOCAL_THUMB_PREFIX + id;
+      fixedCount++;
+      logDebug(`[stěhování] „${item.title}" přestěhováno (${Math.round(beforeLen * 0.75 / 1024)} KB → ${Math.round(dataUrl.length * 0.75 / 1024)} KB, teď mimo hlavní dokument)`);
+    } catch (err) {
+      logDebug(`[stěhování] „${item.title}" selhalo:`, err.message || err);
+    }
   }
   if (!fixedCount) {
-    logDebug("[oprava] žádný předimenzovaný náhled appka nenašla — problém je asi jinde.");
-    toast("Appka nenašla žádnou zbytečně velkou fotku v knihovně.", 6000);
+    logDebug("[stěhování] appka nenašla žádný starý náhled uložený přímo v knihovně — nejspíš už je vše přestěhované.");
+    toast("Appka nenašla žádný starý náhled ke stěhování.", 6000);
     return;
   }
-  logDebug(`[oprava] hotovo, opraveno ${fixedCount} náhledů, ukládám…`);
+  logDebug(`[stěhování] hotovo, přestěhováno ${fixedCount} náhledů, ukládám hlavní dokument…`);
   const ok = await saveUserData();
-  logDebug(`[oprava] uložení: ${ok ? "úspěch" : "selhalo"}`);
+  logDebug(`[stěhování] uložení hlavního dokumentu: ${ok ? "úspěch" : "selhalo"}`);
   if (ok) {
     renderLibrary();
-    toast(`Opraveno ${fixedCount} náhledů (ušetřeno ~${Math.round((totalBefore - totalAfter) * 0.75 / 1024)} KB).`, 8000);
+    toast(`Přestěhováno ${fixedCount} náhledů mimo hlavní dokument.`, 8000);
   } else {
-    toast("Náhledy appka zmenšila, ale uložení pořád selhává — možná je na vině ještě něco jiného.", 8000);
+    toast("Náhledy appka přestěhovala, ale uložení hlavního dokumentu selhalo — zkus to prosím znovu.", 8000);
   }
 });
 
@@ -1286,7 +1292,9 @@ function restoreLibraryItem(id) {
 }
 function hardDeleteLibraryItem(id) {
   delete state.library[id];
+  delete state.thumbnails[id];
   pendingLibraryDeletions.add(id);
+  deleteDoc(doc(db, "sharedThumbnails", id)).catch(() => {}); // nevadí, když tam žádný nebyl
 }
 let favOnlyFilter = false;
 let selectedIds = new Set();
@@ -1395,6 +1403,16 @@ async function fileToOrientedDataUrl(file, maxDimension = 1600, mimeType = "imag
     ručně nahrané fotky i pro snímky, co appka sama zachytí z videa — obojí umí být obří,
     obojí by jinak dokázalo shodit ukládání CELÉ sdílené knihovny, ne jen tuhle jednu položku. */
 const THUMB_SAFE_BYTES = 20000; // rezerva pro celou knihovnu, ne jen tuhle jednu fotku
+const LOCAL_THUMB_PREFIX = "local:";
+/** Ručně nahrané/zachycené náhledy appka neukládá přímo do knihovny (to je přesně to, co ji
+    dřív přeplnilo), ale zvlášť, do vlastní kolekce — v knihovně zůstává jen krátký odkaz
+    "local:ID". Odkazy z YouTube/Disku/TikToku zůstávají normální URL, ty appku netíží. */
+function resolveThumbnailUrl(item) {
+  if (item && item.thumbnail && item.thumbnail.startsWith(LOCAL_THUMB_PREFIX)) {
+    return state.thumbnails[item.id] || "";
+  }
+  return (item && item.thumbnail) || "";
+}
 async function enforceThumbSizeBudget(dataUrl, mimeType = "image/jpeg", quality = 0.82) {
   let guard = 0;
   while (dataUrl.length * 0.75 > THUMB_SAFE_BYTES && guard < 5) {
@@ -1627,6 +1645,7 @@ onAuthStateChanged(auth, async (user) => {
   } else {
     uidCurrent = null;
     unsubscribeFromSharedData();
+    unsubscribeFromSharedThumbnails();
     document.getElementById("app").classList.add("hidden");
     document.getElementById("pendingScreen").classList.add("hidden");
     document.getElementById("loginScreen").classList.remove("hidden");
@@ -1676,6 +1695,7 @@ async function checkMembershipAndProceed() {
   document.getElementById("app").classList.remove("hidden");
   switchView("library");
   subscribeToSharedData();
+  subscribeToSharedThumbnails();
   if (isEditor()) purgeOldTrash().catch(err => console.warn("Úklid koše selhal:", err));
   const nightHour = new Date().getHours();
   if (nightHour >= 0 && nightHour < 5) {
@@ -1761,6 +1781,17 @@ async function loadUserData() {
   } catch (e) {
     console.error("Nepodařilo se načíst sdílenou knihovnu:", e);
     loadErrors.push(`knihovna (${e.code || e.message || "?"})`);
+  }
+
+  // Ručně nahrané/zachycené náhledy žijí ve vlastní kolekci, odděleně od zbytku knihovny —
+  // proto se načítají samostatně, ne jako součást dokumentu výše.
+  try {
+    const thumbsSnap = await getDocs(collection(db, "sharedThumbnails"));
+    state.thumbnails = {};
+    thumbsSnap.forEach(d => { state.thumbnails[d.id] = (d.data() || {}).data || ""; });
+    logDebug("[login] načteno samostatných náhledů:", Object.keys(state.thumbnails).length);
+  } catch (e) {
+    console.warn("Nepodařilo se načíst samostatné náhledy (appka poběží i bez nich, jen bez fotek):", e);
   }
 
   // --- tréninky (moje subkolekce + jednorázová migrace ze staré mapy + všechny přes collection group) ---
@@ -1903,6 +1934,26 @@ function subscribeToSharedData() {
 }
 function unsubscribeFromSharedData() {
   if (sharedDataUnsubscribe) { sharedDataUnsubscribe(); sharedDataUnsubscribe = null; }
+}
+let sharedThumbsUnsubscribe = null;
+function subscribeToSharedThumbnails() {
+  if (sharedThumbsUnsubscribe) { sharedThumbsUnsubscribe(); sharedThumbsUnsubscribe = null; }
+  let firstSnapshot = true;
+  sharedThumbsUnsubscribe = onSnapshot(collection(db, "sharedThumbnails"), (snap) => {
+    if (firstSnapshot) { firstSnapshot = false; return; } // tenhle stav appka už má z počátečního načtení
+    let changed = false;
+    snap.docChanges().forEach(change => {
+      if (change.doc.metadata.hasPendingWrites) return; // ozvěna vlastního zápisu, appka to už má
+      if (change.type === "removed") { delete state.thumbnails[change.doc.id]; changed = true; }
+      else { state.thumbnails[change.doc.id] = (change.doc.data() || {}).data || ""; changed = true; }
+    });
+    if (changed && currentView === "library") renderLibrary();
+  }, (err) => {
+    console.error("Živá synchronizace náhledů selhala:", err);
+  });
+}
+function unsubscribeFromSharedThumbnails() {
+  if (sharedThumbsUnsubscribe) { sharedThumbsUnsubscribe(); sharedThumbsUnsubscribe = null; }
 }
 function applyRemoteSharedUpdate(shared) {
   state.library = shared.library || {};
@@ -2157,13 +2208,14 @@ function renderLibrary() {
     const r = avgOf(item.ratings), d = avgOf(item.difficulties);
     const diffRounded = Math.round(d.avg) || 0;
     const isSelected = selectedIds.has(item.id);
+    const thumbUrl = resolveThumbnailUrl(item);
     return `
     <div class="card" data-id="${esc(item.id)}" style="border-left-color:${esc(stripeColor)}">
       ${(item.dateAdded > sessionBadgeThreshold && !selectMode) ? '<span class="new-badge" title="Nové od posledního přihlášení"></span>' : ""}
       <button type="button" class="card-select-box ${selectMode ? "" : "hidden"} ${isSelected ? "checked" : ""}" data-action="toggle-select" aria-label="Vybrat">${isSelected ? '<i class="fa-solid fa-check"></i>' : ""}</button>
       <button type="button" class="card-menu-btn" data-action="open-menu" aria-label="Menu"><i class="fa-solid fa-ellipsis-vertical"></i></button>
-      <div class="card-thumb" data-action="open-detail" style="${item.thumbnail ? `background-image:url('${esc(item.thumbnail)}')` : ""}">
-        ${item.thumbnail ? "" : "bez náhledu"}
+      <div class="card-thumb" data-action="open-detail" style="${thumbUrl ? `background-image:url('${esc(thumbUrl)}')` : ""}">
+        ${thumbUrl ? "" : "bez náhledu"}
         ${isEditor() ? `<button type="button" class="card-fav-btn ${item.favorite ? "on" : ""}" data-action="toggle-fav" aria-label="Oblíbené"><i class="fa-solid fa-star"></i></button>` : ""}
         <span class="platform-badge"><i class="${PLATFORM_ICONS[item.platform] || PLATFORM_ICONS.other}"></i></span>
       </div>
@@ -2365,8 +2417,8 @@ function openLinkModal(id) {
   document.getElementById("linkShortDesc").value = item ? item.shortDesc : "";
   document.getElementById("linkLongDesc").value = item ? item.longDesc : "";
   document.getElementById("linkNote").value = (item && item.notesByCoach && item.notesByCoach[uidCurrent]) ? item.notesByCoach[uidCurrent].text : "";
-  document.getElementById("thumbPreview").style.backgroundImage = item && item.thumbnail ? `url('${item.thumbnail}')` : "none";
-  document.getElementById("thumbPreview").textContent = item && item.thumbnail ? "" : "bez náhledu";
+  document.getElementById("thumbPreview").style.backgroundImage = item && resolveThumbnailUrl(item) ? `url('${resolveThumbnailUrl(item)}')` : "none";
+  document.getElementById("thumbPreview").textContent = item && resolveThumbnailUrl(item) ? "" : "bez náhledu";
   document.getElementById("thumbPreview").dataset.thumb = item ? (item.thumbnail || "") : "";
   document.getElementById("thumbPreview").dataset.platform = item ? item.platform : "";
   document.getElementById("thumbPreview").dataset.videoId = item ? (item.videoId || "") : "";
@@ -2678,7 +2730,7 @@ document.querySelectorAll("#ratingPicker button").forEach(b => b.addEventListene
   setRatingPicker(current === clicked ? 0 : clicked);
 }));
 
-linkForm.addEventListener("submit", (e) => {
+linkForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   let url = document.getElementById("linkUrl").value.trim();
   if (/facebook\.com\/share\//.test(url)) {
@@ -2721,10 +2773,27 @@ linkForm.addEventListener("submit", (e) => {
   if (myRating) ratings[uidCurrent] = myRating; else delete ratings[uidCurrent];
   if (myNote) notesByCoach[uidCurrent] = { text: myNote, authorLabel: myLabel(), date: Date.now() }; else delete notesByCoach[uidCurrent];
 
+  // Nová/změněná ručně nahraná či zachycená fotka appka neukládá přímo do knihovny (to je
+  // přesně to, co ji dřív přeplnilo přes limit) — jde do vlastní, samostatné kolekce, a v
+  // knihovně po ní zůstane jen krátký odkaz. Beze změny (např. odkaz z YouTube, nebo fotka,
+  // co už tam takhle byla) appka nechává tak, jak je.
+  let thumbToSave = pendingThumbUpload || document.getElementById("thumbPreview").dataset.thumb || "";
+  if (thumbToSave.startsWith("data:")) {
+    try {
+      await setDoc(doc(db, "sharedThumbnails", id), { data: thumbToSave, updatedAt: Date.now() });
+      state.thumbnails[id] = thumbToSave;
+      thumbToSave = LOCAL_THUMB_PREFIX + id;
+    } catch (err) {
+      console.error("Uložení náhledu selhalo:", err);
+      toast("Uložení náhledu se nepovedlo, zkus to prosím znovu.", 6000);
+      return;
+    }
+  }
+
   state.library[id] = {
     id, url, platform, videoId,
     title: document.getElementById("linkTitle").value.trim(),
-    thumbnail: pendingThumbUpload || document.getElementById("thumbPreview").dataset.thumb || "",
+    thumbnail: thumbToSave,
     folderId,
     defaultPart: document.getElementById("linkDefaultPart").value,
     aspectRatio: document.getElementById("linkAspectRatio").value,
@@ -3154,7 +3223,7 @@ function renderPickerList() {
   if (!items.length) { list.innerHTML = `<p style="font-size:12px;color:var(--ink-faint);">Nic nenalezeno — zkus uvolnit filtry.</p>`; return; }
   list.innerHTML = items.map(it => `
     <div class="picker-item">
-      ${it.thumbnail ? `<img src="${esc(it.thumbnail)}" alt="">` : `<div style="width:46px;height:30px;background:var(--line);border-radius:4px;flex-shrink:0;"></div>`}
+      ${resolveThumbnailUrl(it) ? `<img src="${esc(resolveThumbnailUrl(it))}" alt="">` : `<div style="width:46px;height:30px;background:var(--line);border-radius:4px;flex-shrink:0;"></div>`}
       <div class="picker-item-title">${esc(it.title)}</div>
       <button class="btn btn-sm btn-icon" data-add="${esc(it.id)}" aria-label="Přidat do tréninku"><i class="fa-solid fa-plus"></i></button>
     </div>
@@ -3269,7 +3338,7 @@ function renderSequence() {
       ${ro ? "" : `<button class="seq-remove" data-remove="${esc(row.itemId)}" aria-label="Odebrat"><i class="fa-solid fa-xmark"></i></button>`}
       <div class="seq-item-top">
         ${ro ? "" : `<span class="drag-handle"><i class="fa-solid fa-grip-lines"></i></span>`}
-        ${lib && lib.thumbnail ? `<img class="seq-thumb" src="${esc(lib.thumbnail)}" data-open="${esc(row.videoId)}">` : `<div class="seq-thumb" data-open="${esc(row.videoId)}"></div>`}
+        ${resolveThumbnailUrl(lib) ? `<img class="seq-thumb" src="${esc(resolveThumbnailUrl(lib))}" data-open="${esc(row.videoId)}">` : `<div class="seq-thumb" data-open="${esc(row.videoId)}"></div>`}
         <span class="seq-title" data-open="${esc(row.videoId)}">${lib ? esc(lib.title) : "(video smazáno z knihovny)"}</span>
         <div class="seq-controls">
           <select class="seq-part-select" data-field="part" data-itemid="${esc(row.itemId)}" ${dis}>
