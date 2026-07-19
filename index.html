@@ -1010,6 +1010,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   <button type="button" id="closeDebugLogBtn" style="position:sticky;top:0;float:right;background:#fff;color:#000;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-left:8px;">Zavřít</button>
   <button type="button" id="disableDevModeBtn" style="position:sticky;top:0;float:right;background:#5B2B2B;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;">Vypnout vývojářský režim</button>
   <button type="button" id="shrinkOversizedBtn" class="hidden" style="position:sticky;top:0;float:right;background:#C99A2E;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Najít a zmenšit velké náhledy</button>
+  <button type="button" id="checkLibrarySizeBtn" class="hidden" style="position:sticky;top:0;float:right;background:#2B6CB0;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Změřit velikost knihovny</button>
   <div style="clear:both;"></div>
   <div id="debugLogContent"></div>
 </div>
@@ -1080,7 +1081,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const APP_VERSION = "2026-07-19 17:17";
+const APP_VERSION = "2026-07-19 17:29";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1145,6 +1146,7 @@ function logDebug(...args) {
 document.getElementById("debugLogBtn").addEventListener("click", () => {
   document.getElementById("debugLogContent").textContent = debugLog.length ? debugLog.join("\n") : "(zatím žádné záznamy — proveď akci, co chceš prověřit, a pak se sem vrať)";
   document.getElementById("shrinkOversizedBtn").classList.toggle("hidden", uidCurrent !== ADMIN_UID);
+  document.getElementById("checkLibrarySizeBtn").classList.toggle("hidden", uidCurrent !== ADMIN_UID);
   document.getElementById("debugLogPanel").classList.remove("hidden");
 });
 document.getElementById("closeDebugLogBtn").addEventListener("click", () => {
@@ -1182,6 +1184,23 @@ document.querySelector(".topbar-title-group").addEventListener("click", () => {
   }
 });
 document.getElementById("disableDevModeBtn").addEventListener("click", () => setDevMode(false));
+document.getElementById("checkLibrarySizeBtn").addEventListener("click", () => {
+  if (uidCurrent !== ADMIN_UID) return;
+  const kb = (n) => Math.round(n / 1024);
+  const libraryJson = JSON.stringify(state.library);
+  const thumbsJson = JSON.stringify(Object.fromEntries(Object.entries(state.library).map(([id, it]) => [id, it.thumbnail || ""])));
+  const notesJson = JSON.stringify(Object.fromEntries(Object.entries(state.library).map(([id, it]) => [id, { r: it.ratings, d: it.difficulties, n: it.notesByCoach }])));
+  const wholeDoc = JSON.stringify({ library: state.library, folders: state.folders, tagPool: state.tagPool, equipmentPool: state.equipmentPool, parts: state.parts });
+  logDebug("[velikost] === rozpad velikosti sdílené knihovny ===");
+  logDebug(`[velikost] počet videí: ${Object.keys(state.library).length}`);
+  logDebug(`[velikost] všechny náhledy dohromady: ~${kb(thumbsJson.length)} KB`);
+  logDebug(`[velikost] hodnocení+obtížnost+poznámky dohromady: ~${kb(notesJson.length)} KB`);
+  logDebug(`[velikost] celé pole "library": ~${kb(libraryJson.length)} KB`);
+  logDebug(`[velikost] CELÝ dokument (library+složky+štítky+vybavení+části): ~${kb(wholeDoc.length)} KB z limitu ~1024 KB`);
+  const dataUrlCount = Object.values(state.library).filter(it => it.thumbnail && it.thumbnail.startsWith("data:")).length;
+  logDebug(`[velikost] z toho ${dataUrlCount} videí má ručně nahranou fotku (ne jen odkaz)`);
+  toast(`Celý dokument: ~${kb(wholeDoc.length)} KB z ~1024 KB limitu. Detaily v 🐞.`, 8000);
+});
 document.getElementById("shrinkOversizedBtn").addEventListener("click", async () => {
   if (uidCurrent !== ADMIN_UID) return;
   if (!confirm("Appka projde celou knihovnu, najde všechny ručně nahrané fotky, co jsou zbytečně velké, zmenší je a rovnou uloží. Pokračovat?")) return;
