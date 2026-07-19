@@ -1081,7 +1081,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const APP_VERSION = "2026-07-19 17:29";
+const APP_VERSION = "2026-07-19 17:35";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1394,7 +1394,7 @@ async function fileToOrientedDataUrl(file, maxDimension = 1600, mimeType = "imag
 /** Sdílená pojistka: dokud je data URL zbytečně velké, appka ho dál zmenšuje. Používá se pro
     ručně nahrané fotky i pro snímky, co appka sama zachytí z videa — obojí umí být obří,
     obojí by jinak dokázalo shodit ukládání CELÉ sdílené knihovny, ne jen tuhle jednu položku. */
-const THUMB_SAFE_BYTES = 130000; // rezerva pro celou knihovnu, ne jen tuhle jednu fotku
+const THUMB_SAFE_BYTES = 20000; // rezerva pro celou knihovnu, ne jen tuhle jednu fotku
 async function enforceThumbSizeBudget(dataUrl, mimeType = "image/jpeg", quality = 0.82) {
   let guard = 0;
   while (dataUrl.length * 0.75 > THUMB_SAFE_BYTES && guard < 5) {
