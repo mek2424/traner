@@ -1081,7 +1081,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-19 17:51";
+const APP_VERSION = "2026-07-19 20:49";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1646,6 +1646,7 @@ onAuthStateChanged(auth, async (user) => {
     uidCurrent = null;
     unsubscribeFromSharedData();
     unsubscribeFromSharedThumbnails();
+    unsubscribeFromOwnMembership();
     document.getElementById("app").classList.add("hidden");
     document.getElementById("pendingScreen").classList.add("hidden");
     document.getElementById("loginScreen").classList.remove("hidden");
@@ -1696,6 +1697,7 @@ async function checkMembershipAndProceed() {
   switchView("library");
   subscribeToSharedData();
   subscribeToSharedThumbnails();
+  subscribeToOwnMembership();
   if (isEditor()) purgeOldTrash().catch(err => console.warn("Úklid koše selhal:", err));
   const nightHour = new Date().getHours();
   if (nightHour >= 0 && nightHour < 5) {
@@ -1954,6 +1956,35 @@ function subscribeToSharedThumbnails() {
 }
 function unsubscribeFromSharedThumbnails() {
   if (sharedThumbsUnsubscribe) { sharedThumbsUnsubscribe(); sharedThumbsUnsubscribe = null; }
+}
+/** Appka sama sebe (svou vlastní relaci) hlídá, jestli ji admin mezitím buď neodhlásil na
+    dálku (kickedAt novější, než appka naběhla), nebo jestli jí úplně neodebral přístup
+    (zmizí z approved) — v obou případech appku sama odhlásí, uživatel nemusí dělat nic. */
+let ownMembershipUnsubscribe = null;
+function subscribeToOwnMembership() {
+  if (ownMembershipUnsubscribe) { ownMembershipUnsubscribe(); ownMembershipUnsubscribe = null; }
+  const sessionStartedAt = Date.now();
+  let firstSnapshot = true;
+  ownMembershipUnsubscribe = onSnapshot(doc(db, "shared", "members"), (snap) => {
+    if (firstSnapshot) { firstSnapshot = false; return; }
+    if (snap.metadata.hasPendingWrites) return;
+    if (!snap.exists()) return;
+    const data = snap.data();
+    const approved = data.approved || {};
+    const kickedAt = data.kickedAt || {};
+    if (!approved[uidCurrent]) {
+      toast("Byl ti odebrán přístup. Odhlašuji tě…", 6000);
+      setTimeout(() => signOut(auth), 2500);
+      return;
+    }
+    if (kickedAt[uidCurrent] && kickedAt[uidCurrent] > sessionStartedAt) {
+      toast("Byl jsi odhlášen na dálku administrátorem.", 6000);
+      setTimeout(() => signOut(auth), 2500);
+    }
+  }, (err) => console.error("Sledování vlastního přístupu selhalo:", err));
+}
+function unsubscribeFromOwnMembership() {
+  if (ownMembershipUnsubscribe) { ownMembershipUnsubscribe(); ownMembershipUnsubscribe = null; }
 }
 function applyRemoteSharedUpdate(shared) {
   state.library = shared.library || {};
@@ -3582,6 +3613,8 @@ async function renderMembersRoleList() {
       <span class="pending-approval-email">${esc(r.name)}</span>
       <button type="button" class="btn btn-sm ${r.role === "editor" ? "btn-primary" : ""}" data-setrole="${esc(r.uid)}" data-role="editor"><i class="fa-solid fa-pen"></i> Editor</button>
       <button type="button" class="btn btn-sm ${r.role === "viewer" ? "btn-primary" : ""}" data-setrole="${esc(r.uid)}" data-role="viewer"><i class="fa-solid fa-eye"></i> Prohlížeč</button>
+      <button type="button" class="btn btn-sm" data-kick="${esc(r.uid)}" data-name="${esc(r.name)}"><i class="fa-solid fa-right-from-bracket"></i> Odhlásit na dálku</button>
+      <button type="button" class="btn btn-sm btn-danger" data-removeaccess="${esc(r.uid)}" data-name="${esc(r.name)}"><i class="fa-solid fa-user-slash"></i> Odebrat přístup</button>
     </div>
   `).join("");
   wrap.querySelectorAll("[data-setrole]").forEach(btn => btn.addEventListener("click", async () => {
@@ -3595,6 +3628,26 @@ async function renderMembersRoleList() {
       toast("Role změněna.");
       renderMembersRoleList();
     } catch (e) { console.error(e); toast("Změna role se nepovedla."); }
+  }));
+  wrap.querySelectorAll("[data-kick]").forEach(btn => btn.addEventListener("click", async () => {
+    const uid = btn.dataset.kick, name = btn.dataset.name;
+    if (!confirm(`Odhlásit uživatele „${name}" na dálku? Přístup mu/jí zůstane — může se rovnou zase přihlásit, tohle jen ukončí to, co má teď otevřené.`)) return;
+    try {
+      await updateDoc(doc(db, "shared", "members"), { [`kickedAt.${uid}`]: Date.now() });
+      toast("Odhlášeno na dálku (projeví se během chvíle).");
+    } catch (e) { console.error(e); toast("Odhlášení na dálku se nepovedlo."); }
+  }));
+  wrap.querySelectorAll("[data-removeaccess]").forEach(btn => btn.addEventListener("click", async () => {
+    const uid = btn.dataset.removeaccess, name = btn.dataset.name;
+    if (!confirm(`Odebrat přístup uživateli „${name}" natrvalo? Přístup se dá kdykoliv znovu udělit přes novou žádost o registraci.`)) return;
+    try {
+      // Stejná lekce jako u knihovny: appka MUSÍ smazat přesně tuhle jednu položku uvnitř
+      // mapy výslovně (deleteField na přesné cestě) — pouhé vynechání z objektu by ji
+      // nesmazalo, jen by appka nevěděla o její existenci (viz starší chyba s mazáním videí).
+      await updateDoc(doc(db, "shared", "members"), { [`approved.${uid}`]: deleteField() });
+      toast("Přístup odebrán.");
+      renderMembersRoleList();
+    } catch (e) { console.error(e); toast("Odebrání přístupu se nepovedlo."); }
   }));
 }
 
