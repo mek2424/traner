@@ -175,9 +175,9 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .empty-state{text-align:center;padding:60px 20px;color:var(--ink-faint);}
 
 .subtabs{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--line);}
-.pending-approval-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;}
+.pending-approval-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px;}
 .pending-approval-row:last-child{border-bottom:none;}
-.pending-approval-email{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pending-approval-email{flex-basis:100%;font-weight:700;font-size:14px;color:var(--ink);overflow-wrap:anywhere;}
 .subtab-btn{background:none;border:none;padding:8px 4px;margin-right:18px;font-size:14px;font-weight:600;color:var(--ink-faint);border-bottom:2px solid transparent;}
 .subtab-btn.active{color:var(--court);border-bottom-color:var(--chalk);}
 .owner-group-header{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin:16px 0 8px;}
@@ -1081,7 +1081,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-19 20:49";
+const APP_VERSION = "2026-07-19 20:55";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
