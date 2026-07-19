@@ -1079,7 +1079,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const APP_VERSION = "2026-07-19 13:46";
+const APP_VERSION = "2026-07-19 17:09";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1337,10 +1337,16 @@ async function fileToOrientedDataUrl(file, maxDimension = 1600, mimeType = "imag
   }
   // Pojistka: kdyby byl výsledek i tak zbytečně velký (např. hodně detailní fotka), ještě
   // jednou ho zmenšíme — radši menší náhled než shozené ukládání celé sdílené knihovny.
-  const SAFE_BYTES = 350000;
+  return await enforceThumbSizeBudget(dataUrl, mimeType, quality);
+}
+/** Sdílená pojistka: dokud je data URL zbytečně velké, appka ho dál zmenšuje. Používá se pro
+    ručně nahrané fotky i pro snímky, co appka sama zachytí z videa — obojí umí být obří,
+    obojí by jinak dokázalo shodit ukládání CELÉ sdílené knihovny, ne jen tuhle jednu položku. */
+const THUMB_SAFE_BYTES = 130000; // rezerva pro celou knihovnu, ne jen tuhle jednu fotku
+async function enforceThumbSizeBudget(dataUrl, mimeType = "image/jpeg", quality = 0.82) {
   let guard = 0;
-  while (dataUrl.length * 0.75 > SAFE_BYTES && guard < 4) {
-    dataUrl = await shrinkDataUrl(dataUrl, 0.7, mimeType, Math.max(0.5, quality - guard * 0.1));
+  while (dataUrl.length * 0.75 > THUMB_SAFE_BYTES && guard < 5) {
+    dataUrl = await shrinkDataUrl(dataUrl, 0.7, mimeType, Math.max(0.45, quality - guard * 0.1));
     guard++;
   }
   return dataUrl;
@@ -2385,7 +2391,8 @@ function captureVideoFrameThumbnails(url) {
           // prohlížeč fakt stihl vykreslit.
           await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          frames.push(canvas.toDataURL("image/jpeg", 0.82)); // vyhodí SecurityError, pokud video nemá povolené CORS
+          const raw = canvas.toDataURL("image/jpeg", 0.82); // vyhodí SecurityError, pokud video nemá povolené CORS
+          frames.push(await enforceThumbSizeBudget(raw));
         }
         clearTimeout(timeouts);
         cleanup();
