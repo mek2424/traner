@@ -120,6 +120,7 @@ a{color:var(--court);}
   background:var(--paper);color:var(--ink);
 }
 .field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--court);outline-offset:1px;border-color:var(--court);}
+.field input:disabled,.field select:disabled,.field textarea:disabled{background:#EBEBE8;color:var(--ink-faint);cursor:not-allowed;}
 .field textarea{resize:vertical;min-height:64px;}
 #loginError{color:var(--danger);font-size:13px;margin:8px 0 0;min-height:16px;}
 .login-switch{text-align:center;margin-top:16px;font-size:13px;color:var(--ink-soft);}
@@ -677,6 +678,10 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
       <button class="btn btn-icon btn-ghost" id="closeLinkModalBtn">✕</button>
     </div>
     <form id="linkForm">
+      <div class="duplicate-warning hidden" id="viewerLockNotice" style="background:#EAF2FB;border-color:#8FB8E0;color:#2B547A;">
+        <i class="fa-solid fa-eye"></i>
+        <span>Jako prohlížeč můžeš upravit jen svoje hodnocení, obtížnost a poznámku dole — zbytek je jen ke čtení.</span>
+      </div>
       <div class="field">
         <label for="linkUrl">Odkaz (YouTube, Facebook, Disk, jiné)</label>
         <div class="url-row">
@@ -953,6 +958,11 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
       <h3 style="font-size:14px;font-family:var(--font-body);font-weight:700;color:var(--ink-soft);margin:0 0 8px;">Čekají na schválení</h3>
       <div id="pendingApprovalsList"></div>
     </div>
+    <div id="adminMembersSection" class="hidden" style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line);">
+      <h3 style="font-size:14px;font-family:var(--font-body);font-weight:700;color:var(--ink-soft);margin:0 0 8px;">Trenéři a jejich role</h3>
+      <p style="font-size:11.5px;color:var(--ink-faint);margin:0 0 8px;">Editor smí přidávat/upravovat videa. Prohlížeč jen vidí knihovnu a tvoří vlastní tréninky.</p>
+      <div id="membersRoleList"></div>
+    </div>
     <div id="adminDriveKeySection" class="hidden" style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line);">
       <h3 style="font-size:14px;font-family:var(--font-body);font-weight:700;color:var(--ink-soft);margin:0 0 8px;">Google Drive API klíč</h3>
       <div class="field">
@@ -1069,7 +1079,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {} };
-const APP_VERSION = "2026-07-18 23:30";
+const APP_VERSION = "2026-07-19 13:46";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1194,6 +1204,15 @@ function nextFolderColor() {
 }
 let activeFolderFilter = null; // key vybrané složky v postranním panelu, null = vše
 const ADMIN_UID = "WIw1KfRofOOrbYF7Xl8YzgQrTZd2"; // mazání složek smí jen tenhle účet
+state.myRole = "editor"; // "editor" | "viewer" — zjistí se přesně při přihlášení
+const isEditor = () => state.myRole !== "viewer";
+/** Podle role (editor/prohlížeč) appka schová tlačítka pro úpravu sdílené knihovny —
+    prohlížeč knihovnu jen čte a tvoří si vlastní tréninky. */
+function applyRoleUI() {
+  const editor = isEditor();
+  ["openAddLinkBtn", "toggleSelectModeBtn", "manageTagsBtn", "pickerManageTagsBtn", "manageFoldersBtn", "openTrashBtn", "managePartsBtn"]
+    .forEach(id => { const el = document.getElementById(id); if (el) el.classList.toggle("hidden", !editor); });
+}
 let libraryViewMode = "grid"; // "grid" | "list" — týká se jen desktopu
 const isMobileViewport = () => window.matchMedia("(max-width:640px)").matches;
 let libraryMobileCompact = localStorage.getItem("trener_mobile_compact") !== "0"; // na mobilu výchozí zapnuto
@@ -1564,11 +1583,16 @@ async function checkMembershipAndProceed() {
     const snap = await getDoc(membersRef);
     if (!snap.exists()) {
       if (isAdmin) {
-        await setDoc(membersRef, { approved: { [ADMIN_UID]: true } });
+        await setDoc(membersRef, { approved: { [ADMIN_UID]: "editor" } });
         approved = true;
+        state.myRole = "editor";
       }
     } else {
-      approved = !!(snap.data().approved || {})[uidCurrent];
+      const roleVal = (snap.data().approved || {})[uidCurrent];
+      approved = !!roleVal;
+      // "true" je starší zápis (z doby před rolemi) — bereme ho jako editora, ať nikdo
+      // nečekaně nepřijde o přístup, na který byl už dřív schválený.
+      state.myRole = roleVal === "viewer" ? "viewer" : "editor";
     }
   } catch (e) {
     console.error("Nepodařilo se ověřit členství:", e);
@@ -1588,12 +1612,13 @@ async function checkMembershipAndProceed() {
 
   await loadUserData();
   renderTopbarIdentity();
+  applyRoleUI();
   document.getElementById("loginScreen").classList.add("hidden");
   document.getElementById("pendingScreen").classList.add("hidden");
   document.getElementById("app").classList.remove("hidden");
   switchView("library");
   subscribeToSharedData();
-  purgeOldTrash().catch(err => console.warn("Úklid koše selhal:", err));
+  if (isEditor()) purgeOldTrash().catch(err => console.warn("Úklid koše selhal:", err));
   const nightHour = new Date().getHours();
   if (nightHour >= 0 && nightHour < 5) {
     toast("Ještě rozebíráš zápis, nebo už jen nemůžeš spát? 😄", 6000);
@@ -2081,7 +2106,7 @@ function renderLibrary() {
       <button type="button" class="card-menu-btn" data-action="open-menu" aria-label="Menu"><i class="fa-solid fa-ellipsis-vertical"></i></button>
       <div class="card-thumb" data-action="open-detail" style="${item.thumbnail ? `background-image:url('${esc(item.thumbnail)}')` : ""}">
         ${item.thumbnail ? "" : "bez náhledu"}
-        <button type="button" class="card-fav-btn ${item.favorite ? "on" : ""}" data-action="toggle-fav" aria-label="Oblíbené"><i class="fa-solid fa-star"></i></button>
+        ${isEditor() ? `<button type="button" class="card-fav-btn ${item.favorite ? "on" : ""}" data-action="toggle-fav" aria-label="Oblíbené"><i class="fa-solid fa-star"></i></button>` : ""}
         <span class="platform-badge"><i class="${PLATFORM_ICONS[item.platform] || PLATFORM_ICONS.other}"></i></span>
       </div>
       <div class="card-body" data-action="open-detail">
@@ -2205,26 +2230,28 @@ function openCardContextMenu(itemId, anchorBtn) {
   if (!item) return;
   const menu = document.createElement("div");
   menu.className = "card-context-menu";
-  menu.innerHTML = `
+  menu.innerHTML = isEditor() ? `
     <button type="button" data-act="fav"><i class="fa-solid fa-star"></i> ${item.favorite ? "Odebrat z oblíbených" : "Přidat do oblíbených"}</button>
     <button type="button" data-act="edit"><i class="fa-solid fa-pen"></i> Upravit</button>
     <button type="button" data-act="add-to-training"><i class="fa-solid fa-list-check"></i> Přidat do tréninku</button>
     <button type="button" data-act="move"><i class="fa-solid fa-folder"></i> Přesunout do složky</button>
     <button type="button" class="danger" data-act="delete"><i class="fa-solid fa-trash"></i> Smazat</button>
+  ` : `
+    <button type="button" data-act="add-to-training"><i class="fa-solid fa-list-check"></i> Přidat do tréninku</button>
   `;
   document.body.appendChild(menu);
   const r = anchorBtn.getBoundingClientRect();
   menu.style.top = (window.scrollY + r.bottom + 4) + "px";
   menu.style.left = Math.max(8, window.scrollX + r.right - menu.offsetWidth) + "px";
   openContextMenuEl = menu;
-  menu.querySelector("[data-act='fav']").addEventListener("click", () => {
+  menu.querySelector("[data-act='fav']")?.addEventListener("click", () => {
     closeCardContextMenu();
     item.favorite = !item.favorite;
     scheduleSave();
     renderLibrary();
   });
-  menu.querySelector("[data-act='edit']").addEventListener("click", () => { closeCardContextMenu(); openLinkModal(itemId); });
-  menu.querySelector("[data-act='delete']").addEventListener("click", async () => {
+  menu.querySelector("[data-act='edit']")?.addEventListener("click", () => { closeCardContextMenu(); openLinkModal(itemId); });
+  menu.querySelector("[data-act='delete']")?.addEventListener("click", async () => {
     closeCardContextMenu();
     if (!confirm(`Přesunout „${item.title}" do koše?`)) return;
     softDeleteLibraryItem(itemId);
@@ -2236,7 +2263,7 @@ function openCardContextMenu(itemId, anchorBtn) {
     closeCardContextMenu();
     openAddToTrainingModal(itemId);
   });
-  menu.querySelector("[data-act='move']").addEventListener("click", () => {
+  menu.querySelector("[data-act='move']")?.addEventListener("click", () => {
     closeCardContextMenu();
     if (!state.folders.length) { toast("Nejdřív si založ aspoň jednu složku."); return; }
     const list = state.folders.map((f, i) => `${i + 1}. ${f.label}`).join("\n");
@@ -2262,6 +2289,7 @@ document.getElementById("closeLinkModalBtn").addEventListener("click", closeLink
 linkModalBackdrop.addEventListener("click", (e) => { if (e.target === linkModalBackdrop) closeLinkModal(); });
 
 function openLinkModal(id) {
+  if (!id && !isEditor()) return; // prohlížeč nesmí zakládat nová videa
   editingLinkId = id;
   renderFolderOptions();
   renderPartSelectOptions();
@@ -2286,7 +2314,7 @@ function openLinkModal(id) {
   document.getElementById("thumbPreview").dataset.videoId = item ? (item.videoId || "") : "";
   renderThumbSuggestions([]);
   document.getElementById("duplicateWarning").classList.add("hidden");
-  document.getElementById("deleteLinkBtn").classList.toggle("hidden", !item);
+  document.getElementById("deleteLinkBtn").classList.toggle("hidden", !item || !isEditor());
 
   formTags = item ? [...item.tags] : [];
   formEquip = item ? [...item.equipment] : [];
@@ -2295,8 +2323,21 @@ function openLinkModal(id) {
   setDiffPicker(item && item.difficulties && item.difficulties[uidCurrent] ? item.difficulties[uidCurrent] : 3);
   setRatingPicker(item && item.ratings && item.ratings[uidCurrent] ? item.ratings[uidCurrent] : 0);
 
+  // Prohlížeč smí v tomhle formuláři upravit jen svoje hodnocení/obtížnost/poznámku —
+  // zbytek appka zamkne needitovatelný, ale dál viditelný pro přehled.
+  const lockedIds = ["linkUrl", "fetchMetaBtn", "linkTitle", "linkFolder", "newFolderInput", "linkDefaultPart",
+    "linkAspectRatio", "linkTimestamp", "linkShortDesc", "linkLongDesc", "thumbFileInput", "tagInput", "equipInput"];
+  const viewerLockNotice = document.getElementById("viewerLockNotice");
+  if (isEditor()) {
+    lockedIds.forEach(fid => { const el = document.getElementById(fid); if (el) el.disabled = false; });
+    viewerLockNotice.classList.add("hidden");
+  } else {
+    lockedIds.forEach(fid => { const el = document.getElementById(fid); if (el) el.disabled = true; });
+    viewerLockNotice.classList.remove("hidden");
+  }
+
   linkModalBackdrop.classList.remove("hidden");
-  document.getElementById("linkTitle").focus();
+  document.getElementById(isEditor() ? "linkTitle" : "linkNote").focus();
 }
 function closeLinkModal() { linkModalBackdrop.classList.add("hidden"); }
 
@@ -2514,8 +2555,8 @@ function renderTagPills() {
   formTags.forEach(t => {
     const pill = document.createElement("span");
     pill.className = "tag-pill";
-    pill.innerHTML = `${esc(t)} <button type="button" aria-label="Odebrat">✕</button>`;
-    pill.querySelector("button").addEventListener("click", () => { formTags = formTags.filter(x => x !== t); renderTagPills(); });
+    pill.innerHTML = isEditor() ? `${esc(t)} <button type="button" aria-label="Odebrat">✕</button>` : esc(t);
+    if (isEditor()) pill.querySelector("button").addEventListener("click", () => { formTags = formTags.filter(x => x !== t); renderTagPills(); });
     wrap.insertBefore(pill, input);
   });
 }
@@ -2526,8 +2567,8 @@ function renderEquipPills() {
   formEquip.forEach(t => {
     const pill = document.createElement("span");
     pill.className = "tag-pill";
-    pill.innerHTML = `${esc(t)} <button type="button" aria-label="Odebrat">✕</button>`;
-    pill.querySelector("button").addEventListener("click", () => { formEquip = formEquip.filter(x => x !== t); renderEquipPills(); });
+    pill.innerHTML = isEditor() ? `${esc(t)} <button type="button" aria-label="Odebrat">✕</button>` : esc(t);
+    if (isEditor()) pill.querySelector("button").addEventListener("click", () => { formEquip = formEquip.filter(x => x !== t); renderEquipPills(); });
     wrap.insertBefore(pill, input);
   });
 }
@@ -2755,6 +2796,9 @@ function openDetailModal(id) {
       if (author) author.style.color = color;
     });
   });
+  document.getElementById("editFromDetailBtn").innerHTML = isEditor()
+    ? '<i class="fa-solid fa-pen"></i> Upravit'
+    : '<i class="fa-solid fa-star"></i> Hodnotit / poznámka';
   detailModalBackdrop.classList.remove("hidden");
 }
 document.getElementById("editFromDetailBtn").addEventListener("click", () => {
@@ -3322,9 +3366,10 @@ function openProfileModal() {
   const adminSection = document.getElementById("adminPendingSection");
   const isAdmin = uidCurrent === ADMIN_UID;
   adminSection.classList.toggle("hidden", !isAdmin);
+  document.getElementById("adminMembersSection").classList.toggle("hidden", !isAdmin);
   document.getElementById("adminDriveKeySection").classList.toggle("hidden", !isAdmin);
   document.getElementById("driveApiKeyInput").value = state.driveApiKey || "";
-  if (isAdmin) renderPendingApprovals();
+  if (isAdmin) { renderPendingApprovals(); renderMembersRoleList(); }
   profileModalBackdrop.classList.remove("hidden");
 }
 document.getElementById("saveDriveApiKeyBtn").addEventListener("click", async () => {
@@ -3357,20 +3402,22 @@ async function renderPendingApprovals() {
   wrap.innerHTML = docs.map(d => `
     <div class="pending-approval-row" data-uid="${esc(d.id)}">
       <span class="pending-approval-email">${esc(d.data().email || d.id)}</span>
-      <button type="button" class="btn btn-sm btn-primary" data-approve="${esc(d.id)}"><i class="fa-solid fa-check"></i> Schválit</button>
+      <button type="button" class="btn btn-sm btn-primary" data-approve="${esc(d.id)}" data-role="editor"><i class="fa-solid fa-check"></i> Editor</button>
+      <button type="button" class="btn btn-sm" data-approve="${esc(d.id)}" data-role="viewer"><i class="fa-solid fa-eye"></i> Prohlížeč</button>
       <button type="button" class="btn btn-sm btn-ghost" data-reject="${esc(d.id)}">Zamítnout</button>
     </div>
   `).join("");
   wrap.querySelectorAll("[data-approve]").forEach(btn => btn.addEventListener("click", async () => {
     const uidToApprove = btn.dataset.approve;
+    const role = btn.dataset.role;
     try {
       const membersRef = doc(db, "shared", "members");
       const snap = await getDoc(membersRef);
       const approved = (snap.exists() ? snap.data().approved : {}) || {};
-      approved[uidToApprove] = true;
+      approved[uidToApprove] = role;
       await setDoc(membersRef, { approved }, { merge: true });
       await deleteDoc(doc(db, "pendingRequests", uidToApprove));
-      toast("Schváleno.");
+      toast(role === "editor" ? "Schváleno jako editor." : "Schváleno jako prohlížeč.");
       renderPendingApprovals();
     } catch (e) { console.error(e); toast("Schválení se nepovedlo."); }
   }));
@@ -3381,6 +3428,45 @@ async function renderPendingApprovals() {
       toast("Zamítnuto.");
       renderPendingApprovals();
     } catch (e) { console.error(e); toast("Nepovedlo se."); }
+  }));
+}
+async function renderMembersRoleList() {
+  const wrap = document.getElementById("membersRoleList");
+  wrap.innerHTML = `<p style="font-size:12.5px;color:var(--ink-faint);">Načítám…</p>`;
+  let approved = {};
+  try {
+    const snap = await getDoc(doc(db, "shared", "members"));
+    approved = (snap.exists() ? snap.data().approved : {}) || {};
+  } catch (e) {
+    console.error("Nepodařilo se načíst trenéry:", e);
+    wrap.innerHTML = `<p style="font-size:12.5px;color:var(--danger);">Nepodařilo se načíst.</p>`;
+    return;
+  }
+  const uids = Object.keys(approved).filter(uid => uid !== ADMIN_UID);
+  if (!uids.length) { wrap.innerHTML = `<p style="font-size:12.5px;color:var(--ink-faint);">Zatím jen ty.</p>`; return; }
+  const rows = await Promise.all(uids.map(async uid => {
+    const profile = await getCoachProfile(uid);
+    const role = approved[uid] === "viewer" ? "viewer" : "editor";
+    return { uid, name: profile.username || uid, role };
+  }));
+  wrap.innerHTML = rows.map(r => `
+    <div class="pending-approval-row" data-uid="${esc(r.uid)}">
+      <span class="pending-approval-email">${esc(r.name)}</span>
+      <button type="button" class="btn btn-sm ${r.role === "editor" ? "btn-primary" : ""}" data-setrole="${esc(r.uid)}" data-role="editor"><i class="fa-solid fa-pen"></i> Editor</button>
+      <button type="button" class="btn btn-sm ${r.role === "viewer" ? "btn-primary" : ""}" data-setrole="${esc(r.uid)}" data-role="viewer"><i class="fa-solid fa-eye"></i> Prohlížeč</button>
+    </div>
+  `).join("");
+  wrap.querySelectorAll("[data-setrole]").forEach(btn => btn.addEventListener("click", async () => {
+    const uid = btn.dataset.setrole, role = btn.dataset.role;
+    try {
+      const membersRef = doc(db, "shared", "members");
+      const snap = await getDoc(membersRef);
+      const approvedNow = (snap.exists() ? snap.data().approved : {}) || {};
+      approvedNow[uid] = role;
+      await setDoc(membersRef, { approved: approvedNow }, { merge: true });
+      toast("Role změněna.");
+      renderMembersRoleList();
+    } catch (e) { console.error(e); toast("Změna role se nepovedla."); }
   }));
 }
 
