@@ -1081,7 +1081,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-19 20:55";
+const APP_VERSION = "2026-07-20 09:02";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1562,7 +1562,7 @@ function renderEmbedHtml(item) {
   }
   if (item.platform === "file") {
     const start = item.timestamp ? `#t=${item.timestamp}` : "";
-    return `<video class="embed" src="${esc(item.url)}${start}" controls playsinline preload="metadata"></video>`;
+    return `<video class="embed" src="${esc(item.url)}${start}" controls playsinline preload="metadata" referrerpolicy="no-referrer"></video>`;
   }
   return `<a class="fallback-link" href="${esc(item.url)}" target="_blank" rel="noopener">Otevřít odkaz ↗</a>`;
 }
@@ -2914,7 +2914,8 @@ function openDetailModal(id) {
     facebook: `<i class="fa-brands fa-facebook"></i> Nejde přehrát? Otevřít přímo na Facebooku ↗`,
     drive: `<i class="fa-brands fa-google-drive"></i> Nejde přehrát dobře? Otevřít přímo na Disku ↗`,
     instagram: `<i class="fa-brands fa-instagram"></i> Nejde přehrát? Otevřít přímo na Instagramu ↗`,
-    tiktok: `<i class="fa-brands fa-tiktok"></i> Nejde přehrát? Otevřít přímo na TikToku ↗`
+    tiktok: `<i class="fa-brands fa-tiktok"></i> Nejde přehrát? Otevřít přímo na TikToku ↗`,
+    file: `<i class="fa-solid fa-up-right-from-square"></i> Nejde přehrát? Otevřít video přímo ↗`
   };
   fbEl.innerHTML = fallbackLinks[item.platform]
     ? `<a class="btn btn-sm" style="margin-bottom:14px;" href="${esc(item.url)}" target="_blank" rel="noopener">${fallbackLinks[item.platform]}</a>`
