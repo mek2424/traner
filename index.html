@@ -801,6 +801,29 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
     <div class="detail-title" id="detailTitle"></div>
     <div class="detail-row" id="detailChips"></div>
     <div class="detail-row">
+      <div class="detail-label">Tvoje hodnocení a obtížnost</div>
+      <div class="two-col" style="margin-top:6px;">
+        <div class="field" style="margin-bottom:0;">
+          <div class="diff-picker" id="detailDiffPicker">
+            <button type="button" data-val="1">1</button>
+            <button type="button" data-val="2">2</button>
+            <button type="button" data-val="3">3</button>
+            <button type="button" data-val="4">4</button>
+            <button type="button" data-val="5">5</button>
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <div class="rating-picker" id="detailRatingPicker">
+            <button type="button" data-val="1">★</button>
+            <button type="button" data-val="2">★</button>
+            <button type="button" data-val="3">★</button>
+            <button type="button" data-val="4">★</button>
+            <button type="button" data-val="5">★</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="detail-row">
       <div class="detail-label">Popis</div>
       <div class="detail-text" id="detailShortDesc"></div>
     </div>
@@ -1082,7 +1105,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-20 16:55";
+const APP_VERSION = "2026-07-20 18:20";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1123,6 +1146,18 @@ function avgOf(map) {
   const vals = Object.values(map || {});
   if (!vals.length) return { avg: 0, count: 0 };
   return { avg: vals.reduce((a, b) => a + b, 0) / vals.length, count: vals.length };
+}
+/** Vykreslí 5 hvězdiček podle průměru, včetně půlky, když průměr není celé číslo
+    (zaokrouhluje na nejbližší 0,5 — např. 3,7 se zobrazí jako tři a půl hvězdičky). */
+function renderStarsHtml(avg) {
+  const rounded = Math.round(avg * 2) / 2;
+  let html = "";
+  for (let i = 1; i <= 5; i++) {
+    if (rounded >= i) html += '<i class="fa-solid fa-star"></i>';
+    else if (rounded >= i - 0.5) html += '<i class="fa-solid fa-star-half-stroke"></i>';
+    else html += '<i class="fa-regular fa-star"></i>';
+  }
+  return html;
 }
 /** Spustí stažení textového obsahu jako soubor (appka nemá vlastní server, takže jde vždy o soubor v prohlížeči). */
 function downloadTextFile(filename, content, mime = "application/octet-stream") {
@@ -2256,7 +2291,7 @@ function renderLibrary() {
         ${folder ? `<div class="card-folder" style="color:${esc(folder.color)}">${esc(folder.label)}</div>` : ""}
         <div class="card-meta">
           <span class="diff-dots">${[1,2,3,4,5].map(n => `<span class="${n <= diffRounded ? "on" : ""}"></span>`).join("")}</span>
-          ${r.count ? `<span class="stars">${"★".repeat(Math.round(r.avg))}</span><span style="color:var(--ink-faint);">(${r.count})</span>` : ""}
+          ${r.count ? `<span class="stars">${renderStarsHtml(r.avg)}</span><span style="color:var(--ink-faint);">(${r.count})</span>` : ""}
         </div>
       </div>
     </div>
@@ -2762,6 +2797,50 @@ document.querySelectorAll("#ratingPicker button").forEach(b => b.addEventListene
   setRatingPicker(current === clicked ? 0 : clicked);
 }));
 
+/** Hodnocení a obtížnost přímo v detailu videa — na rozdíl od pickerů ve formuláři úpravy
+    se ukládá hned po kliknutí, ať appka nikoho nenutí zajíždět do editace jen kvůli tomuhle. */
+function setDetailDiffPicker(val) {
+  document.querySelectorAll("#detailDiffPicker button").forEach(b => b.classList.toggle("on", parseInt(b.dataset.val) <= val));
+  document.getElementById("detailDiffPicker").dataset.value = val;
+}
+function setDetailRatingPicker(val) {
+  document.querySelectorAll("#detailRatingPicker button").forEach(b => b.classList.toggle("on", parseInt(b.dataset.val) <= val));
+  document.getElementById("detailRatingPicker").dataset.value = val;
+}
+function renderDetailChips(item) {
+  const chips = [];
+  const detailFolder = getFolder(item.folderId);
+  if (detailFolder) chips.push(`<span class="chip" style="border-color:${esc(detailFolder.color)};color:${esc(detailFolder.color)};">${esc(detailFolder.label)}</span>`);
+  item.tags.forEach(t => chips.push(`<span class="chip">${esc(t)}</span>`));
+  item.equipment.forEach(t => chips.push(`<span class="chip"><i class="fa-solid fa-wrench"></i> ${esc(t)}</span>`));
+  const dAvg = avgOf(item.difficulties), rAvg = avgOf(item.ratings);
+  chips.push(`<span class="chip">Obtížnost ${dAvg.count ? dAvg.avg.toFixed(1) : "—"}/5${dAvg.count > 1 ? ` (${dAvg.count}×)` : ""}</span>`);
+  if (rAvg.count) chips.push(`<span class="chip">${renderStarsHtml(rAvg.avg)} ${rAvg.avg.toFixed(1)}${rAvg.count > 1 ? ` (${rAvg.count}×)` : ""}</span>`);
+  document.getElementById("detailChips").innerHTML = `<div class="chip-row">${chips.join("")}</div>`;
+}
+async function saveDetailRatingChange() {
+  const item = state.library[currentDetailId];
+  if (!item) return;
+  const diffVal = parseInt(document.getElementById("detailDiffPicker").dataset.value || "3");
+  const ratingVal = parseInt(document.getElementById("detailRatingPicker").dataset.value || "0");
+  item.difficulties = { ...item.difficulties, [uidCurrent]: diffVal };
+  if (ratingVal) item.ratings = { ...item.ratings, [uidCurrent]: ratingVal };
+  else { item.ratings = { ...item.ratings }; delete item.ratings[uidCurrent]; }
+  renderDetailChips(item);
+  const ok = await saveUserData();
+  if (ok) { toast("Uloženo."); renderLibrary(); } else toast("Uložení se nepovedlo, zkus to prosím znovu.");
+}
+document.querySelectorAll("#detailDiffPicker button").forEach(b => b.addEventListener("click", () => {
+  setDetailDiffPicker(parseInt(b.dataset.val));
+  saveDetailRatingChange();
+}));
+document.querySelectorAll("#detailRatingPicker button").forEach(b => b.addEventListener("click", () => {
+  const clicked = parseInt(b.dataset.val);
+  const current = parseInt(document.getElementById("detailRatingPicker").dataset.value || "0");
+  setDetailRatingPicker(current === clicked ? 0 : clicked);
+  saveDetailRatingChange();
+}));
+
 linkForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   let url = document.getElementById("linkUrl").value.trim();
@@ -2932,15 +3011,7 @@ function openDetailModal(id) {
     ? `<a class="btn btn-sm" style="margin-bottom:14px;" href="${esc(item.url)}" target="_blank" rel="noopener">${fallbackLinks[item.platform]}</a>`
     : "";
   document.getElementById("detailTitle").textContent = item.title;
-  const chips = [];
-  const detailFolder = getFolder(item.folderId);
-  if (detailFolder) chips.push(`<span class="chip" style="border-color:${esc(detailFolder.color)};color:${esc(detailFolder.color)};">${esc(detailFolder.label)}</span>`);
-  item.tags.forEach(t => chips.push(`<span class="chip">${esc(t)}</span>`));
-  item.equipment.forEach(t => chips.push(`<span class="chip"><i class="fa-solid fa-wrench"></i> ${esc(t)}</span>`));
-  const dAvg = avgOf(item.difficulties), rAvg = avgOf(item.ratings);
-  chips.push(`<span class="chip">Obtížnost ${dAvg.count ? dAvg.avg.toFixed(1) : "—"}/5${dAvg.count > 1 ? ` (${dAvg.count}×)` : ""}</span>`);
-  if (rAvg.count) chips.push(`<span class="chip">${"★".repeat(Math.round(rAvg.avg))} ${rAvg.avg.toFixed(1)}${rAvg.count > 1 ? ` (${rAvg.count}×)` : ""}</span>`);
-  document.getElementById("detailChips").innerHTML = `<div class="chip-row">${chips.join("")}</div>`;
+  renderDetailChips(item);
   document.getElementById("detailShortDesc").textContent = item.shortDesc;
   document.getElementById("detailLongDescRow").classList.toggle("hidden", !item.longDesc);
   document.getElementById("detailLongDesc").textContent = item.longDesc;
@@ -2970,6 +3041,8 @@ function openDetailModal(id) {
   document.getElementById("editFromDetailBtn").innerHTML = isEditor()
     ? '<i class="fa-solid fa-pen"></i> Upravit'
     : '<i class="fa-solid fa-star"></i> Hodnotit / poznámka';
+  setDetailDiffPicker(item.difficulties && item.difficulties[uidCurrent] ? item.difficulties[uidCurrent] : 3);
+  setDetailRatingPicker(item.ratings && item.ratings[uidCurrent] ? item.ratings[uidCurrent] : 0);
   detailModalBackdrop.classList.remove("hidden");
 }
 document.getElementById("editFromDetailBtn").addEventListener("click", () => {
