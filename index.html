@@ -801,7 +801,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
     <div class="detail-title" id="detailTitle"></div>
     <div class="detail-row" id="detailChips"></div>
     <div class="detail-row">
-      <div class="detail-label">Tvoje hodnocení a obtížnost</div>
+      <div class="detail-label">Tvoje obtížnost a hodnocení</div>
       <div class="two-col" style="margin-top:6px;">
         <div class="field" style="margin-bottom:0;">
           <div class="diff-picker" id="detailDiffPicker">
@@ -1105,7 +1105,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-20 18:20";
+const APP_VERSION = "2026-07-20 23:59";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1737,7 +1737,7 @@ async function checkMembershipAndProceed() {
   if (isEditor()) purgeOldTrash().catch(err => console.warn("Úklid koše selhal:", err));
   const nightHour = new Date().getHours();
   if (nightHour >= 0 && nightHour < 5) {
-    toast("Ještě rozebíráš zápis, nebo už jen nemůžeš spát? 😄", 6000);
+    toast("Mazej spát, smrďochu prďochu, nebo pujdeš ráno běhat kopečky s Faunou!!!! Už je po večerce. 😄", 6000);
   }
 }
 document.getElementById("pendingRecheckBtn").addEventListener("click", checkMembershipAndProceed);
@@ -2264,7 +2264,7 @@ function renderLibrary() {
   if (!items.length) {
     const q = document.getElementById("librarySearch").value.trim().toLowerCase();
     const msg = q === "pivo"
-      ? { h: "Tohle appka nenajde.", p: "Ale zasloužil sis ho." }
+      ? { h: "Tohle appka nenajde.", p: "Ale zasloužil by sis ho.", p:"Pošli tam zrzka! }
       : { h: "Zatím žádná videa", p: "Přidej první odkaz tlačítkem nahoře, nebo zkus uvolnit filtry." };
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><h3>${msg.h}</h3><p>${msg.p}</p></div>`;
     return;
