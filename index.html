@@ -2264,7 +2264,7 @@ function renderLibrary() {
   if (!items.length) {
     const q = document.getElementById("librarySearch").value.trim().toLowerCase();
     const msg = q === "pivo"
-      ? { h: "Tohle appka nenajde.", p: "Ale zasloužil by sis ho.", p:"Pošli tam zrzka! }
+      ? { h: "Tohle appka nenajde.", p: "Ale zasloužil by sis ho.", p:"Pošli tam zrzka!" }
       : { h: "Zatím žádná videa", p: "Přidej první odkaz tlačítkem nahoře, nebo zkus uvolnit filtry." };
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><h3>${msg.h}</h3><p>${msg.p}</p></div>`;
     return;
