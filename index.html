@@ -1081,7 +1081,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-20 09:02";
+const APP_VERSION = "2026-07-20 09:55";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -2877,9 +2877,19 @@ function openDetailModal(id) {
   if (item.platform === "file") {
     // u přímého video souboru appka pozná skutečný poměr stran sama, jakmile se video načte
     const videoEl = embedWrap.querySelector("video");
-    if (videoEl) videoEl.addEventListener("loadedmetadata", () => {
-      if (videoEl.videoWidth && videoEl.videoHeight) embedWrap.style.aspectRatio = `${videoEl.videoWidth} / ${videoEl.videoHeight}`;
-    }, { once: true });
+    if (videoEl) {
+      videoEl.addEventListener("loadedmetadata", () => {
+        if (videoEl.videoWidth && videoEl.videoHeight) embedWrap.style.aspectRatio = `${videoEl.videoWidth} / ${videoEl.videoHeight}`;
+      }, { once: true });
+      // Dočasná diagnostika: appka teď zachytí a zapíše skutečný technický důvod, proč se
+      // video nepřehrálo, ne jen to, že se nepřehrálo — pomůže to najít skutečnou příčinu.
+      videoEl.addEventListener("error", () => {
+        const codes = { 1: "MEDIA_ERR_ABORTED (přerušeno)", 2: "MEDIA_ERR_NETWORK (síťová chyba)", 3: "MEDIA_ERR_DECODE (chyba dekódování)", 4: "MEDIA_ERR_SRC_NOT_SUPPORTED (server odmítl/nepodporovaný formát)" };
+        const code = videoEl.error ? videoEl.error.code : null;
+        logDebug(`[video] přehrání selhalo u „${item.title}" — kód ${code}: ${codes[code] || "neznámý"}`);
+        toast(`Video se nepřehrálo (${codes[code] || "neznámá chyba"}). Detail v 🐞.`, 8000);
+      }, { once: true });
+    }
   }
   if (item.platform === "drive") {
     // Ověřeno v praxi: pevná výška v pixelech (ne dopočítávaná podle šířky/poměru) dělá Disku
