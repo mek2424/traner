@@ -939,7 +939,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
       <h2 style="font-size:22px;">Hromadně ze složky Disku</h2>
       <button class="btn btn-icon btn-ghost" id="closeBulkDriveModalBtn">✕</button>
     </div>
-    <p style="font-size:12.5px;color:var(--ink-soft);margin:-4px 0 14px;">Zatím jen pro admina, appka to teprve zkouší. Vlož odkaz na CELOU sdílenou složku (ne na jedno video).</p>
+    <p style="font-size:12.5px;color:var(--ink-soft);margin:-4px 0 14px;">Vlož odkaz na CELOU sdílenou složku (ne na jedno video).</p>
     <div class="field">
       <label for="bulkDriveFolderUrl">Odkaz na sdílenou složku</label>
       <div class="url-row">
@@ -1196,7 +1196,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-22 09:10";
+const APP_VERSION = "2026-07-22 10:20";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1395,11 +1395,8 @@ const isEditor = () => state.myRole !== "viewer";
     prohlížeč knihovnu jen čte a tvoří si vlastní tréninky. */
 function applyRoleUI() {
   const editor = isEditor();
-  ["openAddLinkBtn", "toggleSelectModeBtn", "manageTagsBtn", "pickerManageTagsBtn", "manageFoldersBtn", "openTrashBtn", "managePartsBtn"]
+  ["openAddLinkBtn", "toggleSelectModeBtn", "manageTagsBtn", "pickerManageTagsBtn", "manageFoldersBtn", "openTrashBtn", "managePartsBtn", "openBulkDriveBtn"]
     .forEach(id => { const el = document.getElementById(id); if (el) el.classList.toggle("hidden", !editor); });
-  // Hromadný import ze složky Disku appka zatím teprve zkouší — zůstává jen pro admina.
-  const bulkDriveBtn = document.getElementById("openBulkDriveBtn");
-  if (bulkDriveBtn) bulkDriveBtn.classList.toggle("hidden", uidCurrent !== ADMIN_UID);
 }
 let libraryViewMode = "grid"; // "grid" | "list" — týká se jen desktopu
 const isMobileViewport = () => window.matchMedia("(max-width:640px)").matches;
@@ -4303,7 +4300,7 @@ let bulkDriveEquip = [];
 let bulkDriveFoundFiles = []; // { id, name, thumbnailLink, isDuplicate }
 
 function openBulkDriveModal() {
-  if (uidCurrent !== ADMIN_UID) return;
+  if (!isEditor()) return;
   document.getElementById("bulkDriveFolderUrl").value = "";
   document.getElementById("bulkDriveStatus").classList.add("hidden");
   document.getElementById("bulkDriveResultsWrap").classList.add("hidden");
