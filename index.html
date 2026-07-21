@@ -109,10 +109,36 @@ a{color:var(--court);}
 }
 .login-card{
   background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
-  padding:36px 28px;width:100%;max-width:360px;
+  padding:36px 28px;width:100%;max-width:360px;position:relative;overflow:hidden;
 }
 .login-logo{font-family:var(--font-display);font-size:42px;color:var(--court);text-align:center;letter-spacing:.03em;margin-bottom:2px;}
 .login-sub{text-align:center;color:var(--ink-soft);font-size:13px;margin-bottom:24px;}
+.login-loading-overlay{
+  position:absolute;inset:0;background:rgba(255,255,255,.97);z-index:10;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:24px;text-align:center;
+}
+.login-loading-visual{width:100%;height:56px;position:relative;display:flex;align-items:center;justify-content:center;}
+.login-loading-msg{font-size:14.5px;color:var(--ink);font-weight:600;max-width:280px;line-height:1.35;}
+/* varianta: točící se kolečko */
+.ll-spinner{width:46px;height:46px;border:5px solid var(--paper);border-top-color:var(--court);border-radius:50%;animation:llSpin .8s linear infinite;}
+@keyframes llSpin{to{transform:rotate(360deg);}}
+/* varianta: loading bar */
+.ll-bar-track{width:100%;max-width:220px;height:9px;background:var(--paper);border-radius:5px;overflow:hidden;position:relative;}
+.ll-bar-fill{position:absolute;top:0;height:100%;width:40%;background:var(--court);border-radius:5px;animation:llBar 1.1s ease-in-out infinite;}
+@keyframes llBar{0%{left:-40%;}100%{left:100%;}}
+/* varianta: skákající míč zleva doprava */
+.ll-ball-track{width:100%;max-width:220px;height:46px;position:relative;}
+.ll-ball-track::after{content:"";position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--line);}
+.ll-ball{width:20px;height:20px;border-radius:50%;background:var(--chalk);position:absolute;bottom:2px;left:0;animation:llBallMove 1.3s ease-in-out infinite;}
+@keyframes llBallMove{
+  0%{left:0%;bottom:2px;} 25%{bottom:34px;} 50%{left:calc(100% - 20px);bottom:2px;}
+  75%{bottom:34px;} 100%{left:0%;bottom:2px;}
+}
+/* varianta: trenérské stopky */
+.ll-watch{width:46px;height:46px;border-radius:50%;border:4px solid var(--court);position:relative;background:#fff;}
+.ll-watch::before{content:"";position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:12px;height:6px;background:var(--court);border-radius:2px;}
+.ll-watch-hand{position:absolute;top:50%;left:50%;width:2px;height:16px;background:var(--chalk);transform-origin:50% 100%;transform:translate(-50%,-100%) rotate(0deg);animation:llWatchTick 1.6s steps(8) infinite;}
+@keyframes llWatchTick{to{transform:translate(-50%,-100%) rotate(360deg);}}
 .field{margin-bottom:14px;}
 .field label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;}
 .field input,.field select,.field textarea{
@@ -529,6 +555,10 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
     <div class="login-switch">
       <span id="loginSwitchText">Ještě nemáš účet?</span>
       <button type="button" id="loginSwitchBtn">Založit účet</button>
+    </div>
+    <div class="login-loading-overlay hidden" id="loginLoadingOverlay">
+      <div class="login-loading-visual" id="loginLoadingVisual"></div>
+      <div class="login-loading-msg" id="loginLoadingMsg"></div>
     </div>
   </div>
 </div>
@@ -1105,7 +1135,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-20 23:59";
+const APP_VERSION = "2026-07-21 10:15";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1607,6 +1637,36 @@ function renderEmbedHtml(item) {
    AUTH
    ========================================================= */
 const loginForm = document.getElementById("loginForm");
+/** Náhodná hláška při přihlašování — sem si klidně napiš/uprav vlastní varianty,
+    appka pokaždé vybere jednu náhodně. */
+const LOGIN_LOADING_MESSAGES = [
+  "Hlásím postavení…",
+  "Rozcvičuju appku…",
+  "Natahuju sako…",
+  "Hledám klíče od skřínky…",
+  "Hledám kliku…",
+  "Kropím kurt…",
+  "Lajnuju…",
+  "Doplňuju vápno…",
+  "Stahuju síť hrablem…",
+  "Lifting, cval stranou, vánočka…"
+];
+const LOGIN_LOADING_VISUALS = {
+  spinner: '<div class="ll-spinner"></div>',
+  bar: '<div class="ll-bar-track"><div class="ll-bar-fill"></div></div>',
+  ball: '<div class="ll-ball-track"><div class="ll-ball"></div></div>',
+  watch: '<div class="ll-watch"><div class="ll-watch-hand"></div></div>'
+};
+function showLoginLoading() {
+  const keys = Object.keys(LOGIN_LOADING_VISUALS);
+  const variant = keys[Math.floor(Math.random() * keys.length)];
+  document.getElementById("loginLoadingVisual").innerHTML = LOGIN_LOADING_VISUALS[variant];
+  document.getElementById("loginLoadingMsg").textContent = LOGIN_LOADING_MESSAGES[Math.floor(Math.random() * LOGIN_LOADING_MESSAGES.length)];
+  document.getElementById("loginLoadingOverlay").classList.remove("hidden");
+}
+function hideLoginLoading() {
+  document.getElementById("loginLoadingOverlay").classList.add("hidden");
+}
 const loginError = document.getElementById("loginError");
 const loginSwitchBtn = document.getElementById("loginSwitchBtn");
 const loginSwitchText = document.getElementById("loginSwitchText");
@@ -1645,6 +1705,7 @@ loginForm.addEventListener("submit", async (e) => {
   const email = document.getElementById("loginEmail").value.trim();
   const pass = document.getElementById("loginPass").value;
   loginSubmitBtn.disabled = true;
+  showLoginLoading();
   try {
     if (authMode === "login") {
       await signInWithEmailAndPassword(auth, email, pass);
@@ -1653,6 +1714,7 @@ loginForm.addEventListener("submit", async (e) => {
     }
   } catch (err) {
     loginError.textContent = translateAuthError(err.code);
+    hideLoginLoading();
   } finally {
     loginSubmitBtn.disabled = false;
   }
@@ -1686,6 +1748,7 @@ onAuthStateChanged(auth, async (user) => {
     document.getElementById("app").classList.add("hidden");
     document.getElementById("pendingScreen").classList.add("hidden");
     document.getElementById("loginScreen").classList.remove("hidden");
+    hideLoginLoading();
   }
 });
 
@@ -1711,6 +1774,7 @@ async function checkMembershipAndProceed() {
   } catch (e) {
     console.error("Nepodařilo se ověřit členství:", e);
     toast("Nepodařilo se ověřit přístup — zkontroluj připojení.", 6000);
+    hideLoginLoading();
     return;
   }
 
@@ -1721,6 +1785,7 @@ async function checkMembershipAndProceed() {
     document.getElementById("loginScreen").classList.add("hidden");
     document.getElementById("app").classList.add("hidden");
     document.getElementById("pendingScreen").classList.remove("hidden");
+    hideLoginLoading();
     return;
   }
 
@@ -1730,6 +1795,7 @@ async function checkMembershipAndProceed() {
   document.getElementById("loginScreen").classList.add("hidden");
   document.getElementById("pendingScreen").classList.add("hidden");
   document.getElementById("app").classList.remove("hidden");
+  hideLoginLoading();
   switchView("library");
   subscribeToSharedData();
   subscribeToSharedThumbnails();
