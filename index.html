@@ -139,6 +139,12 @@ a{color:var(--court);}
 .ll-watch::before{content:"";position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:12px;height:6px;background:var(--court);border-radius:2px;}
 .ll-watch-hand{position:absolute;top:50%;left:50%;width:2px;height:16px;background:var(--chalk);transform-origin:50% 100%;transform:translate(-50%,-100%) rotate(0deg);animation:llWatchTick 1.6s steps(8) infinite;}
 @keyframes llWatchTick{to{transform:translate(-50%,-100%) rotate(360deg);}}
+/* varianta: míč poskakující na místě */
+.ll-bounce-track{width:100%;max-width:220px;height:50px;position:relative;}
+.ll-bounce-shadow{width:22px;height:6px;border-radius:50%;background:var(--line);position:absolute;bottom:2px;left:50%;margin-left:-11px;animation:llBounceShadow .55s ease-in-out infinite alternate;}
+.ll-bounce-ball{width:20px;height:20px;border-radius:50%;background:var(--chalk);position:absolute;bottom:8px;left:50%;margin-left:-10px;animation:llBounceBall .55s cubic-bezier(.5,0,1,.5) infinite alternate;}
+@keyframes llBounceBall{from{transform:translateY(0);}to{transform:translateY(-30px);}}
+@keyframes llBounceShadow{from{opacity:.55;transform:scale(1);}to{opacity:.2;transform:scale(.55);}}
 .field{margin-bottom:14px;}
 .field label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;}
 .field input,.field select,.field textarea{
@@ -1135,7 +1141,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-21 10:15";
+const APP_VERSION = "2026-07-21 11:40";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1655,7 +1661,8 @@ const LOGIN_LOADING_VISUALS = {
   spinner: '<div class="ll-spinner"></div>',
   bar: '<div class="ll-bar-track"><div class="ll-bar-fill"></div></div>',
   ball: '<div class="ll-ball-track"><div class="ll-ball"></div></div>',
-  watch: '<div class="ll-watch"><div class="ll-watch-hand"></div></div>'
+  watch: '<div class="ll-watch"><div class="ll-watch-hand"></div></div>',
+  bounce: '<div class="ll-bounce-track"><div class="ll-bounce-shadow"></div><div class="ll-bounce-ball"></div></div>'
 };
 function showLoginLoading() {
   const keys = Object.keys(LOGIN_LOADING_VISUALS);
@@ -1739,6 +1746,11 @@ onAuthStateChanged(auth, async (user) => {
   if (user) {
     uidCurrent = user.uid;
     document.getElementById("userEmailLabel").textContent = user.email || "";
+    // Appka se tohle dozví i tehdy, když se přihlásíš automaticky (např. po obnovení
+    // stránky, díky zapamatovanému přihlášení) — ne jen po ručním odeslání formuláře.
+    // Animaci proto appka ukazuje i tady, ať je vidět, že appka pracuje, i když jsi
+    // sám nic neklikal.
+    showLoginLoading();
     await checkMembershipAndProceed();
   } else {
     uidCurrent = null;
