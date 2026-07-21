@@ -526,7 +526,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .part-legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;font-size:11px;color:var(--ink-soft);}
 .part-legend span{display:inline-flex;align-items:center;gap:4px;}
 .part-swatch{width:10px;height:10px;border-radius:3px;display:inline-block;}
-.add-break-btn{margin-top:0;border-radius:0 0 var(--radius-sm) var(--radius-sm);}
+.add-break-btn{margin-bottom:8px;}
 
 /* Search inside picker */
 .picker-search{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:8px;background:var(--paper);}
@@ -677,6 +677,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
         <div class="picker-panel">
           <h3>Přidat z knihovny</h3>
           <input type="search" id="pickerSearch" class="picker-search" placeholder="Hledat…">
+          <button class="btn btn-ghost btn-sm btn-block add-break-btn" id="addBreakBtn"><i class="fa-solid fa-mug-hot"></i> Přidat přestávku</button>
           <div class="filter-panel">
             <select id="pickerFolderFilter"><option value="">Všechny složky</option></select>
             <select id="pickerPartFilter"><option value="">Jakákoli část</option></select>
@@ -689,7 +690,6 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
             <div class="chip-collapse" id="pickerEquipFilterCollapse"><div class="chip-row" id="pickerEquipFilterRow"></div></div>
           </div>
           <div class="picker-list" id="pickerList"></div>
-          <button class="btn btn-ghost btn-sm btn-block add-break-btn" id="addBreakBtn"><i class="fa-solid fa-mug-hot"></i> Přidat přestávku</button>
         </div>
         <div>
           <div class="sequence" id="sequenceList"></div>
@@ -1141,7 +1141,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-21 21:35";
+const APP_VERSION = "2026-07-21 21:55";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
