@@ -494,6 +494,11 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .new-badge-inline{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--chalk);margin-right:6px;vertical-align:middle;}
 .training-row-meta{font-size:12px;color:var(--ink-faint);}
 .training-row-actions{display:flex;gap:6px;flex-shrink:0;}
+.training-select-box{
+  width:22px;height:22px;border-radius:6px;border:2px solid var(--line);background:#fff;
+  display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0;margin-right:12px;
+}
+.training-select-box.checked{background:var(--court);border-color:var(--court);}
 
 /* ---------- Editor ---------- */
 .editor-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
@@ -680,13 +685,20 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
     <section id="trainingsView" class="hidden">
       <div class="toolbar">
         <h2 style="flex:1;font-size:24px;color:var(--court);">Tréninky</h2>
+        <button class="btn btn-icon" id="toggleTrainingSelectModeBtn" aria-label="Vybrat více"><i class="fa-regular fa-square-check"></i></button>
         <button class="btn btn-accent" id="newTrainingBtn"><i class="fa-solid fa-plus"></i> Nový trénink</button>
+      </div>
+      <div id="trainingBulkActionBar" class="hidden">
+        <span id="trainingBulkCount">0 vybráno</span>
+        <button type="button" class="btn btn-sm" id="trainingBulkArchiveBtn"><i class="fa-solid fa-box-archive"></i> Archivovat</button>
+        <button type="button" class="btn btn-sm btn-ghost" id="trainingBulkCancelBtn">Zrušit výběr</button>
       </div>
       <div class="subtabs">
         <button type="button" class="subtab-btn active" data-subtab="mine">Moje tréninky</button>
         <button type="button" class="subtab-btn" data-subtab="others">Tréninky ostatních</button>
       </div>
       <div id="trainingsList"></div>
+      <button type="button" class="manage-link hidden" id="toggleArchiveViewBtn" style="margin-top:14px;"></button>
     </section>
 
     <!-- ---------- TRAINING EDITOR VIEW ---------- -->
@@ -1256,7 +1268,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-22 16:45";
+const APP_VERSION = "2026-07-22 18:10";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -2588,6 +2600,16 @@ function getFilteredLibraryItems() {
 
 const PLATFORM_ICONS = { youtube: "fa-brands fa-youtube", facebook: "fa-brands fa-facebook", drive: "fa-brands fa-google-drive", instagram: "fa-brands fa-instagram", tiktok: "fa-brands fa-tiktok", file: "fa-solid fa-film", other: "fa-solid fa-link" };
 
+/** Spočítá, kolikrát se který video (podle ID) objevuje napříč VŠEMI tréninky (i archivovanými
+    a cizími) — appka to ukazuje jen jako tichou, informativní hodnotu na kartě, nijak to
+    needitovaně neovlivňuje řazení ani neschovává/nezvýrazňuje videa nahoře. */
+function computeVideoUsageCounts() {
+  const counts = {};
+  Object.values(state.trainings).forEach(t => {
+    (t.items || []).forEach(it => { if (it.videoId) counts[it.videoId] = (counts[it.videoId] || 0) + 1; });
+  });
+  return counts;
+}
 function renderLibrary() {
   renderFolderOptions();
   renderTagFilterRow();
@@ -2605,6 +2627,7 @@ function renderLibrary() {
     grid.classList.remove("mobile-compact");
   }
   const items = getFilteredLibraryItems();
+  const usageCounts = computeVideoUsageCounts();
   updateBulkBar();
   if (!items.length) {
     const q = document.getElementById("librarySearch").value.trim().toLowerCase();
@@ -2637,6 +2660,7 @@ function renderLibrary() {
         <div class="card-meta">
           <span class="diff-dots">${[1,2,3,4,5].map(n => `<span class="${n <= diffRounded ? "on" : ""}"></span>`).join("")}</span>
           ${r.count ? `<span class="stars">${renderStarsHtml(r.avg)}</span><span style="color:var(--ink-faint);">(${r.count})</span>` : ""}
+          ${usageCounts[item.id] ? `<span style="color:var(--ink-faint);" title="Kolikrát se objevuje v tréninku">· v tréninku ${usageCounts[item.id]}×</span>` : ""}
         </div>
       </div>
     </div>
@@ -3498,25 +3522,66 @@ document.getElementById("newTrainingBtn").addEventListener("click", () => {
 document.getElementById("backToTrainingsBtn").addEventListener("click", () => switchView("trainings"));
 
 let trainingsSubTab = "mine";
+let trainingSelectMode = false;
+let selectedTrainingIds = new Set();
+let showingArchivedTrainings = false;
 document.querySelectorAll(".subtab-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     trainingsSubTab = btn.dataset.subtab;
+    showingArchivedTrainings = false;
+    trainingSelectMode = false;
+    selectedTrainingIds.clear();
+    document.getElementById("toggleTrainingSelectModeBtn").classList.remove("btn-accent");
     document.querySelectorAll(".subtab-btn").forEach(b => b.classList.toggle("active", b === btn));
     renderTrainingsList();
   });
+});
+document.getElementById("toggleTrainingSelectModeBtn").addEventListener("click", () => {
+  trainingSelectMode = !trainingSelectMode;
+  if (!trainingSelectMode) selectedTrainingIds.clear();
+  document.getElementById("toggleTrainingSelectModeBtn").classList.toggle("btn-accent", trainingSelectMode);
+  renderTrainingsList();
+});
+document.getElementById("trainingBulkCancelBtn").addEventListener("click", () => {
+  trainingSelectMode = false;
+  selectedTrainingIds.clear();
+  document.getElementById("toggleTrainingSelectModeBtn").classList.remove("btn-accent");
+  renderTrainingsList();
+});
+document.getElementById("trainingBulkArchiveBtn").addEventListener("click", async () => {
+  selectedTrainingIds.forEach(id => { if (state.trainings[id]) state.trainings[id].archived = true; });
+  const count = selectedTrainingIds.size;
+  selectedTrainingIds.clear();
+  trainingSelectMode = false;
+  document.getElementById("toggleTrainingSelectModeBtn").classList.remove("btn-accent");
+  renderTrainingsList();
+  const ok = await saveUserData();
+  if (ok) toast(`Archivováno ${count} tréninků.`);
+  else toast("Uložení se nepovedlo, zkus to prosím znovu.");
+});
+document.getElementById("toggleArchiveViewBtn").addEventListener("click", () => {
+  showingArchivedTrainings = !showingArchivedTrainings;
+  trainingSelectMode = false;
+  selectedTrainingIds.clear();
+  document.getElementById("toggleTrainingSelectModeBtn").classList.remove("btn-accent");
+  renderTrainingsList();
 });
 
 function renderTrainingRow(t, mine) {
   const totalMin = t.items.reduce((s, it) => s + (it.duration || 0), 0);
   const isNew = !mine && (t.dateCreated || 0) > sessionBadgeThreshold;
+  const isSelected = selectedTrainingIds.has(t.id);
   return `
     <div class="training-row">
+      ${mine && trainingSelectMode ? `<button type="button" class="training-select-box ${isSelected ? "checked" : ""}" data-toggle-select="${esc(t.id)}" aria-label="Vybrat">${isSelected ? '<i class="fa-solid fa-check"></i>' : ""}</button>` : ""}
       <button class="training-row-main" data-open="${esc(t.id)}" style="background:none;border:none;text-align:left;cursor:pointer;padding:0;">
         <div class="training-row-title">${isNew ? '<span class="new-badge-inline" title="Nové od posledního přihlášení"></span>' : ""}${esc(t.name)}</div>
         <div class="training-row-meta">${t.items.length} položek · ${totalMin} min</div>
       </button>
       <div class="training-row-actions">
-        <button class="btn btn-sm" data-clone="${esc(t.id)}"><i class="fa-regular fa-copy"></i> Klonovat</button>
+        ${!showingArchivedTrainings ? `<button class="btn btn-sm" data-clone="${esc(t.id)}"><i class="fa-regular fa-copy"></i> Klonovat</button>` : ""}
+        ${mine && !showingArchivedTrainings ? `<button class="btn btn-sm" data-archive="${esc(t.id)}"><i class="fa-solid fa-box-archive"></i> Archivovat</button>` : ""}
+        ${mine && showingArchivedTrainings ? `<button class="btn btn-sm btn-primary" data-restore="${esc(t.id)}"><i class="fa-solid fa-rotate-left"></i> Obnovit</button>` : ""}
         ${mine ? `<button class="btn btn-sm btn-danger" data-del="${esc(t.id)}"><i class="fa-solid fa-trash"></i> Smazat</button>` : ""}
       </div>
     </div>`;
@@ -3525,13 +3590,23 @@ function renderTrainingRow(t, mine) {
 function renderTrainingsList() {
   const list = document.getElementById("trainingsList");
   const all = Object.values(state.trainings);
-  const mineList = all.filter(t => t.ownerUid === uidCurrent).sort((a, b) => (b.dateModified || 0) - (a.dateModified || 0));
-  const othersList = all.filter(t => t.ownerUid !== uidCurrent).sort((a, b) => (b.dateModified || 0) - (a.dateModified || 0));
+  const mineAll = all.filter(t => t.ownerUid === uidCurrent);
+  const mineList = mineAll.filter(t => !!t.archived === showingArchivedTrainings).sort((a, b) => (b.dateModified || 0) - (a.dateModified || 0));
+  const othersList = all.filter(t => t.ownerUid !== uidCurrent && !t.archived).sort((a, b) => (b.dateModified || 0) - (a.dateModified || 0));
+
+  const archiveBtn = document.getElementById("toggleArchiveViewBtn");
+  const archivedCount = mineAll.filter(t => t.archived).length;
+  archiveBtn.classList.toggle("hidden", trainingsSubTab !== "mine");
+  archiveBtn.innerHTML = showingArchivedTrainings
+    ? '<i class="fa-solid fa-arrow-left"></i> Zpátky na běžné tréninky'
+    : `<i class="fa-solid fa-box-archive"></i> Archiv (${archivedCount})`;
 
   if (trainingsSubTab === "mine") {
     list.innerHTML = mineList.length
       ? mineList.map(t => renderTrainingRow(t, true)).join("")
-      : `<div class="empty-state"><h3>Zatím žádné tréninky</h3><p>Založ první tlačítkem nahoře.</p></div>`;
+      : (showingArchivedTrainings
+        ? `<div class="empty-state"><h3>Archiv je prázdný</h3><p>Archivované tréninky se objeví tady.</p></div>`
+        : `<div class="empty-state"><h3>Zatím žádné tréninky</h3><p>Založ první tlačítkem nahoře.</p></div>`);
   } else if (!othersList.length) {
     list.innerHTML = `<div class="empty-state"><h3>Zatím nic od kolegů</h3><p>Jakmile někdo jiný založí trénink, objeví se tady.</p></div>`;
   } else {
@@ -3552,7 +3627,7 @@ function renderTrainingsList() {
     const src = state.trainings[b.dataset.clone];
     const id = uid();
     const label = (state.profile && state.profile.username) || (auth.currentUser && auth.currentUser.email) || uidCurrent;
-    state.trainings[id] = { ...structuredClone(src), id, name: src.name + " (kopie)", dateCreated: Date.now(), dateModified: Date.now(), ownerUid: uidCurrent, ownerLabel: label };
+    state.trainings[id] = { ...structuredClone(src), id, name: src.name + " (kopie)", dateCreated: Date.now(), dateModified: Date.now(), ownerUid: uidCurrent, ownerLabel: label, archived: false };
     scheduleSave();
     renderTrainingsList();
     toast("Naklonováno.");
@@ -3564,6 +3639,34 @@ function renderTrainingsList() {
     renderTrainingsList();
     toast("Smazáno.");
   }));
+  list.querySelectorAll("[data-archive]").forEach(b => b.addEventListener("click", () => {
+    const t = state.trainings[b.dataset.archive];
+    if (!t) return;
+    t.archived = true;
+    scheduleSave();
+    renderTrainingsList();
+    toast("Archivováno.");
+  }));
+  list.querySelectorAll("[data-restore]").forEach(b => b.addEventListener("click", () => {
+    const t = state.trainings[b.dataset.restore];
+    if (!t) return;
+    t.archived = false;
+    scheduleSave();
+    renderTrainingsList();
+    toast("Obnoveno.");
+  }));
+  list.querySelectorAll("[data-toggle-select]").forEach(b => b.addEventListener("click", () => {
+    const id = b.dataset.toggleSelect;
+    if (selectedTrainingIds.has(id)) selectedTrainingIds.delete(id); else selectedTrainingIds.add(id);
+    renderTrainingsList();
+    updateTrainingBulkBar();
+  }));
+  updateTrainingBulkBar();
+}
+function updateTrainingBulkBar() {
+  const bar = document.getElementById("trainingBulkActionBar");
+  bar.classList.toggle("hidden", !trainingSelectMode || selectedTrainingIds.size === 0);
+  document.getElementById("trainingBulkCount").textContent = `${selectedTrainingIds.size} vybráno`;
 }
 
 /* =========================================================
