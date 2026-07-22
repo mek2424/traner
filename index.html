@@ -1126,6 +1126,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   <button type="button" id="disableDevModeBtn" style="position:sticky;top:0;float:right;background:#5B2B2B;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;">Vypnout vývojářský režim</button>
   <button type="button" id="shrinkOversizedBtn" class="hidden" style="position:sticky;top:0;float:right;background:#C99A2E;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Přestěhovat staré náhledy</button>
   <button type="button" id="checkLibrarySizeBtn" class="hidden" style="position:sticky;top:0;float:right;background:#2B6CB0;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Změřit velikost knihovny</button>
+  <button type="button" id="adoptDriveThumbsBtn" class="hidden" style="position:sticky;top:0;float:right;background:#2F7A4F;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Uložit Disk náhledy natrvalo</button>
   <div style="clear:both;"></div>
   <div id="debugLogContent"></div>
 </div>
@@ -1196,7 +1197,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-22 11:05";
+const APP_VERSION = "2026-07-22 12:15";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1274,6 +1275,7 @@ document.getElementById("debugLogBtn").addEventListener("click", () => {
   document.getElementById("debugLogContent").textContent = debugLog.length ? debugLog.join("\n") : "(zatím žádné záznamy — proveď akci, co chceš prověřit, a pak se sem vrať)";
   document.getElementById("shrinkOversizedBtn").classList.toggle("hidden", uidCurrent !== ADMIN_UID);
   document.getElementById("checkLibrarySizeBtn").classList.toggle("hidden", uidCurrent !== ADMIN_UID);
+  document.getElementById("adoptDriveThumbsBtn").classList.toggle("hidden", !isEditor());
   document.getElementById("debugLogPanel").classList.remove("hidden");
 });
 document.getElementById("closeDebugLogBtn").addEventListener("click", () => {
@@ -1364,6 +1366,66 @@ document.getElementById("shrinkOversizedBtn").addEventListener("click", async ()
   } else {
     toast("Náhledy appka přestěhovala, ale uložení hlavního dokumentu selhalo — zkus to prosím znovu.", 8000);
   }
+});
+
+/** Appka zkusí STÁHNOUT obrázek (ne jen ho zobrazit) a převést na data URL — to je jiná,
+    přísnější operace než běžné zobrazení, a u některých zdrojů (typicky právě Disk) na ni
+    appka může narazit na bezpečnostní omezení prohlížeče. Když se to nepovede, appka to tiše
+    vzdá u TÉHLE JEDNÉ položky a jede dál na další — ne, že by spadla celá dávka. */
+function fetchImageAsDataUrl(url) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    const timeoutId = setTimeout(() => resolve(null), 15000);
+    img.onload = () => {
+      clearTimeout(timeoutId);
+      try {
+        const maxW = 480;
+        const scale = Math.min(1, maxW / img.naturalWidth);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.naturalWidth * scale) || 1;
+        canvas.height = Math.round(img.naturalHeight * scale) || 1;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.85)); // vyhodí SecurityError, pokud zdroj nemá povolené CORS
+      } catch (e) {
+        resolve(null);
+      }
+    };
+    img.onerror = () => { clearTimeout(timeoutId); resolve(null); };
+    img.src = url;
+  });
+}
+document.getElementById("adoptDriveThumbsBtn").addEventListener("click", async () => {
+  if (!isEditor()) return;
+  const targets = Object.values(state.library).filter(it => !it.deletedAt && it.platform !== "youtube" && it.thumbnail && /^https?:\/\//.test(it.thumbnail));
+  if (!targets.length) { toast("Appka nenašla žádné video s náhledem odkazovaným zvenčí (YouTube náhledy appka schválně nechává být, ty jsou spolehlivé samy o sobě)."); return; }
+  if (!confirm(`Appka zkusí stáhnout a uložit natrvalo k sobě ${targets.length} náhledů (Disk, TikTok apod.). U videí z YouTube appka nic měnit nebude. Může to chvíli trvat, hlavně u víc videí najednou. Pokračovat?`)) return;
+  logDebug(`[náhledy] stahuji a ukládám ${targets.length} externě odkazovaných náhledů…`);
+  let okCount = 0, failCount = 0;
+  for (const item of targets) {
+    const dataUrl = await fetchImageAsDataUrl(item.thumbnail);
+    if (!dataUrl) { failCount++; logDebug(`[náhledy] „${item.title}" — nepovedlo se stáhnout (appka to tiše přeskočila, video samo zůstává beze změny)`); continue; }
+    try {
+      const budgeted = await enforceThumbSizeBudget(dataUrl);
+      await setDoc(doc(db, "sharedThumbnails", item.id), { data: budgeted, updatedAt: Date.now() });
+      state.thumbnails[item.id] = budgeted;
+      item.thumbnail = LOCAL_THUMB_PREFIX + item.id;
+      okCount++;
+    } catch (err) {
+      failCount++;
+      logDebug(`[náhledy] „${item.title}" — uložení selhalo:`, err.message || err);
+    }
+  }
+  logDebug(`[náhledy] hotovo — uloženo ${okCount}, nepovedlo se ${failCount}`);
+  if (!okCount) {
+    toast(`Appce se nepovedlo stáhnout ani jeden náhled (${failCount} selhalo) — na tomhle zařízení/prohlížeči to nejspíš nepůjde.`, 10000);
+    return;
+  }
+  renderLibrary();
+  const ok = await saveUserData();
+  if (ok) toast(`Uloženo natrvalo: ${okCount} náhledů. ${failCount ? `${failCount} se nepovedlo stáhnout.` : ""}`, 10000);
+  else toast("Náhledy appka stáhla, ale uložení selhalo — zkus to prosím znovu.", 8000);
 });
 
 function myLabel() {
