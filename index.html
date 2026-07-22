@@ -626,6 +626,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
         <button class="btn btn-icon" id="toggleViewModeBtn" aria-label="Přepnout zobrazení"><i class="fa-solid fa-list"></i></button>
         <button class="btn btn-icon" id="toggleFavFilterBtn" aria-label="Jen oblíbené"><i class="fa-regular fa-star"></i></button>
         <button class="btn btn-icon" id="toggleSelectModeBtn" aria-label="Vybrat více"><i class="fa-regular fa-square-check"></i></button>
+        <button class="btn btn-sm hidden" id="selectAllBtn">Zaškrtnout vše</button>
         <button class="btn btn-accent" id="openAddLinkBtn"><i class="fa-solid fa-plus"></i> Přidat odkaz</button>
         <button class="btn btn-ghost hidden" id="openBulkDriveBtn"><i class="fa-brands fa-google-drive"></i> Hromadně ze složky Disku</button>
       </div>
@@ -1123,10 +1124,12 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 <button type="button" id="debugLogBtn" aria-label="Diagnostický záznam" class="hidden" style="position:fixed;bottom:14px;right:14px;z-index:500;width:38px;height:38px;border-radius:50%;background:rgba(27,36,48,.55);color:#fff;border:none;font-size:16px;">🐞</button>
 <div id="debugLogPanel" class="hidden" style="position:fixed;inset:0;z-index:501;background:rgba(10,12,15,.96);color:#7CFC8C;font-family:monospace;font-size:11.5px;padding:14px;overflow-y:auto;white-space:pre-wrap;">
   <button type="button" id="closeDebugLogBtn" style="position:sticky;top:0;float:right;background:#fff;color:#000;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-left:8px;">Zavřít</button>
+  <button type="button" id="copyDebugLogBtn" style="position:sticky;top:0;float:right;background:#2B6CB0;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;">Kopírovat záznam</button>
   <button type="button" id="disableDevModeBtn" style="position:sticky;top:0;float:right;background:#5B2B2B;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;">Vypnout vývojářský režim</button>
   <button type="button" id="shrinkOversizedBtn" class="hidden" style="position:sticky;top:0;float:right;background:#C99A2E;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Přestěhovat staré náhledy</button>
   <button type="button" id="checkLibrarySizeBtn" class="hidden" style="position:sticky;top:0;float:right;background:#2B6CB0;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Změřit velikost knihovny</button>
   <button type="button" id="adoptDriveThumbsBtn" class="hidden" style="position:sticky;top:0;float:right;background:#2F7A4F;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Uložit Disk náhledy natrvalo</button>
+  <button type="button" id="refreshDriveThumbsBtn" class="hidden" style="position:sticky;top:0;float:right;background:#5B8DD9;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Obnovit Disk náhledy</button>
   <div style="clear:both;"></div>
   <div id="debugLogContent"></div>
 </div>
@@ -1197,7 +1200,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-22 12:15";
+const APP_VERSION = "2026-07-22 13:50";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1276,10 +1279,21 @@ document.getElementById("debugLogBtn").addEventListener("click", () => {
   document.getElementById("shrinkOversizedBtn").classList.toggle("hidden", uidCurrent !== ADMIN_UID);
   document.getElementById("checkLibrarySizeBtn").classList.toggle("hidden", uidCurrent !== ADMIN_UID);
   document.getElementById("adoptDriveThumbsBtn").classList.toggle("hidden", !isEditor());
+  document.getElementById("refreshDriveThumbsBtn").classList.toggle("hidden", !isEditor());
   document.getElementById("debugLogPanel").classList.remove("hidden");
 });
 document.getElementById("closeDebugLogBtn").addEventListener("click", () => {
   document.getElementById("debugLogPanel").classList.add("hidden");
+});
+document.getElementById("copyDebugLogBtn").addEventListener("click", async () => {
+  const text = debugLog.join("\n");
+  if (!text) { toast("Zatím není co kopírovat."); return; }
+  try {
+    await navigator.clipboard.writeText(text);
+    toast("Zkopírováno do schránky.");
+  } catch (e) {
+    toast("Kopírování se nepovedlo — appka na tohle potřebuje povolení ke schránce prohlížeče.", 6000);
+  }
 });
 
 /** Vývojářský režim: skrývá/odkrývá tlačítko diagnostiky (🐞). Váže se na tohle konkrétní
@@ -1426,6 +1440,47 @@ document.getElementById("adoptDriveThumbsBtn").addEventListener("click", async (
   const ok = await saveUserData();
   if (ok) toast(`Uloženo natrvalo: ${okCount} náhledů. ${failCount ? `${failCount} se nepovedlo stáhnout.` : ""}`, 10000);
   else toast("Náhledy appka stáhla, ale uložení selhalo — zkus to prosím znovu.", 8000);
+});
+
+document.getElementById("refreshDriveThumbsBtn").addEventListener("click", async () => {
+  if (!isEditor()) return;
+  // Cílí jen na Disk videa BEZ vlastní, appkou uložené fotky — u těch appka nejdřív zkusí
+  // získat čerstvou adresu náhledu (stejným způsobem jako tlačítko „Načíst info"), a hned
+  // nato tu čerstvou adresu zkusí i stáhnout a uložit appce natrvalo. Když se stažení
+  // nepovede, aspoň ta čerstvá adresa zůstane nastavená — lepší než nic.
+  const targets = Object.values(state.library).filter(it => !it.deletedAt && it.platform === "drive" && it.videoId && (!it.thumbnail || it.thumbnail.startsWith("http")));
+  if (!targets.length) { toast("Appka nenašla žádné video z Disku bez vlastní uložené fotky."); return; }
+  if (!state.driveApiKey) { toast("Appka nemá nastavený přístupový klíč k Disku (nastavuje se v Profilu) — bez něj tohle nepůjde.", 6000); return; }
+  if (!confirm(`Appka u ${targets.length} videí z Disku nejdřív zkusí získat čerstvou adresu náhledu, a hned nato ji zkusí uložit natrvalo k appce. Může to chvíli trvat. Pokračovat?`)) return;
+  logDebug(`[náhledy] obnovuji a ukládám náhledy u ${targets.length} videí z Disku…`);
+  let refreshedCount = 0, savedCount = 0;
+  for (const item of targets) {
+    let freshUrl = null;
+    try {
+      const res = await fetch(`https://www.googleapis.com/drive/v3/files/${item.videoId}?fields=thumbnailLink&key=${state.driveApiKey}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.thumbnailLink) { freshUrl = data.thumbnailLink; item.thumbnail = freshUrl; refreshedCount++; }
+      }
+    } catch (e) { /* appka to u tohohle videa prostě vzdá a jede na další */ }
+    if (!freshUrl) { logDebug(`[náhledy] „${item.title}" — nepovedlo se ani získat čerstvou adresu`); continue; }
+    const dataUrl = await fetchImageAsDataUrl(freshUrl);
+    if (!dataUrl) { logDebug(`[náhledy] „${item.title}" — čerstvá adresa nastavena, stažení natrvalo se nepovedlo`); continue; }
+    try {
+      const budgeted = await enforceThumbSizeBudget(dataUrl);
+      await setDoc(doc(db, "sharedThumbnails", item.id), { data: budgeted, updatedAt: Date.now() });
+      state.thumbnails[item.id] = budgeted;
+      item.thumbnail = LOCAL_THUMB_PREFIX + item.id;
+      savedCount++;
+    } catch (err) {
+      logDebug(`[náhledy] „${item.title}" — uložení natrvalo selhalo:`, err.message || err);
+    }
+  }
+  logDebug(`[náhledy] hotovo — čerstvá adresa u ${refreshedCount}, natrvalo uloženo ${savedCount}`);
+  renderLibrary();
+  const ok = await saveUserData();
+  if (ok) toast(`Hotovo: čerstvá adresa u ${refreshedCount} videí, natrvalo uloženo ${savedCount} z nich.`, 10000);
+  else toast("Náhledy appka zpracovala, ale uložení selhalo — zkus to prosím znovu.", 8000);
 });
 
 function myLabel() {
@@ -2557,6 +2612,12 @@ document.getElementById("toggleSelectModeBtn").addEventListener("click", () => {
   selectMode = !selectMode;
   if (!selectMode) selectedIds.clear();
   document.getElementById("toggleSelectModeBtn").classList.toggle("btn-accent", selectMode);
+  document.getElementById("selectAllBtn").classList.toggle("hidden", !selectMode);
+  renderLibrary();
+});
+document.getElementById("selectAllBtn").addEventListener("click", () => {
+  // Zaškrtne jen to, co appka teď doopravdy ukazuje — položky odfiltrované appka do výběru nepočítá.
+  getFilteredLibraryItems().forEach(it => selectedIds.add(it.id));
   renderLibrary();
 });
 function updateBulkBar() {
@@ -2564,7 +2625,7 @@ function updateBulkBar() {
   bar.classList.toggle("hidden", !selectMode || selectedIds.size === 0);
   document.getElementById("bulkCount").textContent = `${selectedIds.size} vybráno`;
 }
-document.getElementById("bulkCancelBtn").addEventListener("click", () => { selectMode = false; selectedIds.clear(); document.getElementById("toggleSelectModeBtn").classList.remove("btn-accent"); renderLibrary(); });
+document.getElementById("bulkCancelBtn").addEventListener("click", () => { selectMode = false; selectedIds.clear(); document.getElementById("toggleSelectModeBtn").classList.remove("btn-accent"); document.getElementById("selectAllBtn").classList.add("hidden"); renderLibrary(); });
 document.getElementById("bulkDeleteBtn").addEventListener("click", async () => {
   if (!confirm(`Přesunout ${selectedIds.size} vybraných videí do koše?`)) return;
   selectedIds.forEach(id => softDeleteLibraryItem(id));
