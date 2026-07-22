@@ -111,6 +111,11 @@ a{color:var(--court);}
 .btn-sm{padding:6px 11px;font-size:13px;}
 .btn-icon{padding:8px;width:36px;height:36px;}
 .folder-nav-btn{background:var(--court);color:#fff;width:44px;height:44px;font-size:17px;border-color:var(--court);flex-shrink:0;}
+#libraryToolbarArea.pinned{
+  position:sticky;top:98px;z-index:15;background:var(--paper);padding-top:8px;margin-top:-8px;
+  box-shadow:0 4px 8px -4px rgba(0,0,0,.15);
+}
+#togglePinToolbarBtn.btn-accent{background:var(--chalk);border-color:var(--chalk);color:#fff;}
 .folder-nav-btn:hover,.folder-nav-btn:active{background:var(--court-dark);border-color:var(--court-dark);}
 .btn-block{width:100%;}
 
@@ -637,6 +642,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   <main>
     <!-- ---------- LIBRARY VIEW ---------- -->
     <section id="libraryView">
+      <div id="libraryToolbarArea">
       <div class="toolbar">
         <button class="btn btn-icon folder-nav-btn" id="openFolderSidebarBtn" aria-label="Složky"><i class="fa-solid fa-folder"></i></button>
         <input type="search" id="librarySearch" placeholder="Hledat podle názvu, štítku, složky…">
@@ -653,6 +659,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
         <button class="btn btn-icon" id="toggleFavFilterBtn" aria-label="Jen oblíbené"><i class="fa-regular fa-star"></i></button>
         <button class="btn btn-icon" id="toggleSelectModeBtn" aria-label="Vybrat více"><i class="fa-regular fa-square-check"></i></button>
         <button class="btn btn-sm hidden" id="selectAllBtn">Zaškrtnout vše</button>
+        <button class="btn btn-icon" id="togglePinToolbarBtn" aria-label="Přišpendlit panel"><i class="fa-solid fa-thumbtack"></i></button>
         <div class="add-link-menu-wrap">
           <button class="btn btn-accent" id="openAddLinkMenuBtn"><i class="fa-solid fa-plus"></i> Přidat <i class="fa-solid fa-chevron-down" style="font-size:10px;margin-left:2px;"></i></button>
           <div class="add-link-menu hidden" id="addLinkMenu">
@@ -679,6 +686,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
       <div class="chip-collapse" id="tagFilterCollapse"><div class="chip-row" id="tagFilterRow"></div></div>
       <div class="chip-collapse" id="equipFilterCollapse"><div class="chip-row" id="equipFilterRow"></div></div>
       <button type="button" class="manage-link" id="clearTagEquipFilterBtn" style="margin-bottom:10px;">Zrušit vše (štítky a vybavení)</button>
+      </div>
       <div id="libraryGrid" class="grid"></div>
     </section>
 
@@ -1009,6 +1017,10 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
           <input type="text" id="bulkDriveEquipInput" placeholder="napiš a Enter…" autocomplete="off">
         </div>
       </div>
+      <div class="field">
+        <label for="bulkDriveShortDesc">Krátký popisek (nepovinné, společný pro všechna vybraná videa)</label>
+        <textarea id="bulkDriveShortDesc" rows="2" placeholder="Necháš-li prázdné, appka popisek nevyplní"></textarea>
+      </div>
       <div class="filter-toggle-row" style="margin-bottom:8px;">
         <button type="button" class="manage-link" id="bulkDriveSelectAllBtn">Vybrat vše</button>
         <button type="button" class="manage-link" id="bulkDriveSelectNoneBtn">Zrušit výběr</button>
@@ -1056,17 +1068,23 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
       <button class="btn btn-icon btn-ghost" id="closeBulkTagModalBtn">✕</button>
     </div>
     <p style="font-size:12.5px;color:var(--ink-soft);margin:-4px 0 14px;" id="bulkTagModalCount"></p>
-    <div class="field">
+    <div class="field" style="position:relative;">
       <label>Štítky (přidají se, nic nepřepíšou)</label>
       <div class="tag-input-wrap" id="bulkTagWrap">
         <input type="text" id="bulkTagInput" placeholder="napiš a Enter…" autocomplete="off">
       </div>
+      <div class="autocomplete-list hidden" id="bulkTagAutocomplete"></div>
     </div>
-    <div class="field">
+    <div class="field" style="position:relative;">
       <label>Vybavení (přidá se, nic nepřepíše)</label>
       <div class="tag-input-wrap" id="bulkEquipWrap">
         <input type="text" id="bulkEquipInput" placeholder="napiš a Enter…" autocomplete="off">
       </div>
+      <div class="autocomplete-list hidden" id="bulkEquipAutocomplete"></div>
+    </div>
+    <div class="field">
+      <label for="bulkShortDescInput">Krátký popisek (nepovinné — na rozdíl od štítků/vybavení tohle vybraným videím PŘEPÍŠE dosavadní popisek, necháš-li prázdné, appka nic nezmění)</label>
+      <textarea id="bulkShortDescInput" rows="2" placeholder="Necháš-li prázdné, appka popisek u videí nezmění"></textarea>
     </div>
     <div class="modal-actions">
       <button type="button" class="btn btn-primary btn-block" id="bulkTagApplyBtn">Přidat vybraným videím</button>
@@ -1269,7 +1287,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-22 18:30";
+const APP_VERSION = "2026-07-23 10:40";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -2723,6 +2741,19 @@ document.getElementById("toggleFavFilterBtn").addEventListener("click", () => {
   btn.innerHTML = favOnlyFilter ? '<i class="fa-solid fa-star"></i>' : '<i class="fa-regular fa-star"></i>';
   renderLibrary();
 });
+/** Přišpendlení horní lišty a filtrů Knihovny — volitelné, appka si to pamatuje i příště
+    (localStorage), ať to nemusíš zapínat pokaždé znovu. */
+function applyToolbarPinState() {
+  const pinned = localStorage.getItem("trener_toolbar_pinned") === "1";
+  document.getElementById("libraryToolbarArea").classList.toggle("pinned", pinned);
+  document.getElementById("togglePinToolbarBtn").classList.toggle("btn-accent", pinned);
+}
+document.getElementById("togglePinToolbarBtn").addEventListener("click", () => {
+  const pinned = localStorage.getItem("trener_toolbar_pinned") === "1";
+  localStorage.setItem("trener_toolbar_pinned", pinned ? "0" : "1");
+  applyToolbarPinState();
+});
+applyToolbarPinState();
 document.getElementById("toggleSelectModeBtn").addEventListener("click", () => {
   selectMode = !selectMode;
   if (!selectMode) selectedIds.clear();
@@ -2810,6 +2841,7 @@ document.getElementById("bulkTagBtn").addEventListener("click", () => {
   renderBulkEquipAddPills();
   document.getElementById("bulkTagInput").value = "";
   document.getElementById("bulkEquipInput").value = "";
+  document.getElementById("bulkShortDescInput").value = "";
   document.getElementById("bulkTagModalCount").textContent = `Přidá se k ${selectedIds.size} vybraným videím.`;
   document.getElementById("bulkTagModalBackdrop").classList.remove("hidden");
 });
@@ -2817,13 +2849,20 @@ document.getElementById("closeBulkTagModalBtn").addEventListener("click", () => 
   document.getElementById("bulkTagModalBackdrop").classList.add("hidden");
 });
 document.getElementById("bulkTagApplyBtn").addEventListener("click", async () => {
-  if (!bulkTagAddList.length && !bulkEquipAddList.length) { toast("Nic k přidání."); return; }
+  const bulkShortDesc = document.getElementById("bulkShortDescInput").value.trim();
+  if (!bulkTagAddList.length && !bulkEquipAddList.length && !bulkShortDesc) { toast("Nic k přidání."); return; }
   selectedIds.forEach(id => {
     const item = state.library[id];
     if (!item) return;
     bulkTagAddList.forEach(t => { if (!item.tags.includes(t)) item.tags.push(t); });
     bulkEquipAddList.forEach(t => { if (!item.equipment.includes(t)) item.equipment.push(t); });
+    if (bulkShortDesc) item.shortDesc = bulkShortDesc;
   });
+  // Appka musí nové štítky/vybavení připsat i do sdíleného seznamu VŠECH známých štítků —
+  // jinak se sice správně uloží na videu samotném, ale appka je nenabídne ve filtru ani v
+  // našeptávači, dokud je někdo nezadá i přes formulář jednoho videa (přesně tenhle bug).
+  bulkTagAddList.forEach(t => { if (!state.tagPool.includes(t)) state.tagPool.push(t); });
+  bulkEquipAddList.forEach(t => { if (!state.equipmentPool.includes(t)) state.equipmentPool.push(t); });
   document.getElementById("bulkTagModalBackdrop").classList.add("hidden");
   renderLibrary();
   const ok = await saveUserData();
@@ -3212,6 +3251,10 @@ function renderEquipPills() {
 }
 setupAutocomplete("tagInput", "tagAutocomplete", () => state.tagPool, () => formTags, addTag);
 setupAutocomplete("equipInput", "equipAutocomplete", () => state.equipmentPool, () => formEquip, addEquip);
+setupAutocomplete("bulkTagInput", "bulkTagAutocomplete", () => state.tagPool, () => bulkTagAddList,
+  (v) => { if (!bulkTagAddList.includes(v)) { bulkTagAddList.push(v); renderBulkTagAddPills(); } });
+setupAutocomplete("bulkEquipInput", "bulkEquipAutocomplete", () => state.equipmentPool, () => bulkEquipAddList,
+  (v) => { if (!bulkEquipAddList.includes(v)) { bulkEquipAddList.push(v); renderBulkEquipAddPills(); } });
 
 document.getElementById("tagInput").addEventListener("keydown", (e) => {
   if (e.key === "Enter" || e.key === ",") {
@@ -4698,6 +4741,7 @@ let bulkDriveFoundFiles = []; // { id, name, thumbnailLink, isDuplicate }
 function openBulkDriveModal() {
   if (!isEditor()) return;
   document.getElementById("bulkDriveFolderUrl").value = "";
+  document.getElementById("bulkDriveShortDesc").value = "";
   document.getElementById("bulkDriveStatus").classList.add("hidden");
   document.getElementById("bulkDriveResultsWrap").classList.add("hidden");
   document.getElementById("bulkDriveImportBtn").classList.add("hidden");
@@ -4830,6 +4874,7 @@ document.getElementById("bulkDriveImportBtn").addEventListener("click", async ()
   const checked = Array.from(document.querySelectorAll("#bulkDriveFileList input[type='checkbox']:checked")).map(cb => cb.dataset.fileid);
   if (!checked.length) { toast("Nic není vybráno."); return; }
   const folderId = document.getElementById("bulkDriveFolder").value;
+  const bulkShortDesc = document.getElementById("bulkDriveShortDesc").value.trim();
   const now = Date.now();
   let addedCount = 0;
   checked.forEach(fileId => {
@@ -4842,12 +4887,14 @@ document.getElementById("bulkDriveImportBtn").addEventListener("click", async ()
       folderId, defaultPart: state.parts[0] ? state.parts[0].key : "", aspectRatio: "16/9",
       tags: [...bulkDriveTags], equipment: [...bulkDriveEquip],
       difficulties: {}, ratings: {}, notesByCoach: {},
-      shortDesc: "", longDesc: "", timestamp: null, dateAdded: now
+      shortDesc: bulkShortDesc, longDesc: "", timestamp: null, dateAdded: now
     };
     addedCount++;
   });
   renderLibrary();
   toast(`Přidáno ${addedCount} videí, ukládám…`, 4000);
+  bulkDriveTags.forEach(t => { if (!state.tagPool.includes(t)) state.tagPool.push(t); });
+  bulkDriveEquip.forEach(t => { if (!state.equipmentPool.includes(t)) state.equipmentPool.push(t); });
   const ok = await saveUserData();
   if (ok) { toast(`Uloženo — přidáno ${addedCount} videí.`, 6000); closeBulkDriveModal(); }
   else toast("Videa appka přidala, ale uložení selhalo — zkus to prosím znovu.", 8000);
