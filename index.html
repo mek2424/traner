@@ -94,12 +94,24 @@ a{color:var(--court);}
 .btn-primary{background:var(--court);border-color:var(--court);color:#fff;}
 .btn-primary:hover{background:var(--court-dark);}
 .btn-accent{background:var(--chalk);border-color:var(--chalk);color:#fff;}
+.add-link-menu-wrap{position:relative;}
+.add-link-menu{
+  position:absolute;top:calc(100% + 6px);left:0;z-index:20;background:var(--card);border:1px solid var(--line);
+  border-radius:var(--radius-sm);box-shadow:var(--shadow);padding:6px;min-width:220px;display:flex;flex-direction:column;gap:2px;
+}
+.add-link-menu button{
+  display:flex;align-items:center;gap:8px;text-align:left;background:none;border:none;padding:9px 10px;
+  border-radius:var(--radius-sm);font-size:14px;color:var(--ink);width:100%;
+}
+.add-link-menu button:hover{background:var(--paper);}
 .btn-accent:hover{background:var(--chalk-dark);}
 .btn-ghost{background:transparent;border-color:transparent;color:var(--ink-soft);}
 .btn-ghost:hover{background:rgba(27,36,48,.05);}
 .btn-danger{background:var(--danger-bg);border-color:var(--danger-bg);color:var(--danger);}
 .btn-sm{padding:6px 11px;font-size:13px;}
 .btn-icon{padding:8px;width:36px;height:36px;}
+.folder-nav-btn{background:var(--court);color:#fff;width:44px;height:44px;font-size:17px;border-color:var(--court);flex-shrink:0;}
+.folder-nav-btn:hover,.folder-nav-btn:active{background:var(--court-dark);border-color:var(--court-dark);}
 .btn-block{width:100%;}
 
 /* ---------- Login ---------- */
@@ -224,7 +236,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .filter-toggle-btn.open{color:var(--court);border-color:var(--court);}
 .filter-toggle-btn.open i.fa-chevron-down{transform:rotate(180deg);}
 .chip-collapse{max-height:0;overflow:hidden;transition:max-height .2s ease, margin-bottom .2s ease;margin-bottom:0;}
-.chip-collapse.open{max-height:400px;margin-bottom:10px;}
+.chip-collapse.open{max-height:220px;overflow-y:auto;margin-bottom:10px;}
 
 #bulkActionBar{
   display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--paper);border:1px solid var(--line);
@@ -385,6 +397,9 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .folder-row.active{background:var(--paper);border-color:var(--court);font-weight:700;}
 .folder-row .folder-icon{width:16px;font-size:14px;flex-shrink:0;text-align:center;}
 .folder-row-all{border-bottom:1px solid var(--line);border-radius:0;margin-bottom:8px;padding-bottom:12px;}
+.folder-sidebar-manage{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);background:var(--paper);border-radius:var(--radius-sm);padding:12px;}
+.folder-sidebar-manage .manage-link{display:flex;width:100%;padding:7px 4px;}
+.folder-sidebar-manage-label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);margin:0 0 4px;}
 .filter-toggle-btn,.card-fav-btn,.folder-row,.manage-link{transition:transform .08s ease, background .15s ease, border-color .15s ease, color .15s ease;}
 .filter-toggle-btn:active,.card-fav-btn:active,.folder-row:active,.manage-link:active{transform:scale(.95);}
 .folder-manage-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
@@ -415,6 +430,11 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .filter-panel .chip-row{margin-bottom:0;}
 .filter-panel .chip{padding:3px 9px;font-size:11.5px;}
 .url-row{display:flex;gap:8px;}
+#fetchMetaBtn.pulse{animation:fetchMetaPulse 1.4s ease-in-out infinite;}
+@keyframes fetchMetaPulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(51,153,51,.55);}
+  50%{box-shadow:0 0 0 6px rgba(51,153,51,0);}
+}
 .url-row input{flex:1;}
 
 /* ---------- Detail modal ---------- */
@@ -612,7 +632,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
     <!-- ---------- LIBRARY VIEW ---------- -->
     <section id="libraryView">
       <div class="toolbar">
-        <button class="btn btn-icon" id="openFolderSidebarBtn" aria-label="Složky"><i class="fa-solid fa-folder"></i></button>
+        <button class="btn btn-icon folder-nav-btn" id="openFolderSidebarBtn" aria-label="Složky"><i class="fa-solid fa-folder"></i></button>
         <input type="search" id="librarySearch" placeholder="Hledat podle názvu, štítku, složky…">
         <select id="librarySort">
           <option value="date-desc">Nejnovější</option>
@@ -627,8 +647,13 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
         <button class="btn btn-icon" id="toggleFavFilterBtn" aria-label="Jen oblíbené"><i class="fa-regular fa-star"></i></button>
         <button class="btn btn-icon" id="toggleSelectModeBtn" aria-label="Vybrat více"><i class="fa-regular fa-square-check"></i></button>
         <button class="btn btn-sm hidden" id="selectAllBtn">Zaškrtnout vše</button>
-        <button class="btn btn-accent" id="openAddLinkBtn"><i class="fa-solid fa-plus"></i> Přidat odkaz</button>
-        <button class="btn btn-ghost hidden" id="openBulkDriveBtn"><i class="fa-brands fa-google-drive"></i> Hromadně ze složky Disku</button>
+        <div class="add-link-menu-wrap">
+          <button class="btn btn-accent" id="openAddLinkMenuBtn"><i class="fa-solid fa-plus"></i> Přidat <i class="fa-solid fa-chevron-down" style="font-size:10px;margin-left:2px;"></i></button>
+          <div class="add-link-menu hidden" id="addLinkMenu">
+            <button type="button" id="openAddLinkBtn"><i class="fa-solid fa-link"></i> Přidat odkaz</button>
+            <button type="button" id="openBulkDriveBtn" class="hidden"><i class="fa-brands fa-google-drive"></i> Hromadně ze složky Disku</button>
+          </div>
+        </div>
       </div>
       <div id="activeFolderBar" class="hidden" style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:13px;">
         <span>Složka: <strong id="activeFolderLabel"></strong></span>
@@ -636,6 +661,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
       </div>
       <div id="bulkActionBar" class="hidden">
         <span id="bulkCount">0 vybráno</span>
+        <button type="button" class="btn btn-sm" id="bulkTagBtn"><i class="fa-solid fa-tag"></i> Přidat štítek/vybavení</button>
         <button type="button" class="btn btn-sm" id="bulkMoveBtn"><i class="fa-solid fa-folder"></i> Přesunout</button>
         <button type="button" class="btn btn-sm btn-danger" id="bulkDeleteBtn"><i class="fa-solid fa-trash"></i> Smazat</button>
         <button type="button" class="btn btn-sm btn-ghost" id="bulkCancelBtn">Zrušit výběr</button>
@@ -643,10 +669,10 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
       <div class="filter-toggle-row">
         <button type="button" class="filter-toggle-btn" id="toggleTagFilterBtn"><i class="fa-solid fa-tag"></i> Štítky <i class="fa-solid fa-chevron-down"></i></button>
         <button type="button" class="filter-toggle-btn" id="toggleEquipFilterBtn"><i class="fa-solid fa-wrench"></i> Vybavení <i class="fa-solid fa-chevron-down"></i></button>
-        <button type="button" class="manage-link" id="manageTagsBtn" style="margin-left:auto;"><i class="fa-solid fa-code-merge"></i> Sloučit</button>
       </div>
       <div class="chip-collapse" id="tagFilterCollapse"><div class="chip-row" id="tagFilterRow"></div></div>
       <div class="chip-collapse" id="equipFilterCollapse"><div class="chip-row" id="equipFilterRow"></div></div>
+      <button type="button" class="manage-link" id="clearTagEquipFilterBtn" style="margin-bottom:10px;">Zrušit vše (štítky a vybavení)</button>
       <div id="libraryGrid" class="grid"></div>
     </section>
 
@@ -900,8 +926,12 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
       <i class="fa-solid fa-folder-tree folder-icon" style="color:var(--ink-faint);"></i> Všechny složky
     </button>
     <div id="folderSidebarList"></div>
-    <button type="button" class="manage-link" id="manageFoldersBtn" style="margin-top:10px;"><i class="fa-solid fa-sliders"></i> Spravovat složky</button>
-    <button type="button" class="manage-link" id="openTrashBtn" style="margin-top:6px;"><i class="fa-solid fa-trash-can"></i> Koš</button>
+    <div class="folder-sidebar-manage">
+      <p class="folder-sidebar-manage-label">Správa</p>
+      <button type="button" class="manage-link" id="manageFoldersBtn"><i class="fa-solid fa-sliders"></i> Spravovat složky</button>
+      <button type="button" class="manage-link" id="manageTagsBtn"><i class="fa-solid fa-code-merge"></i> Sloučit štítky a vybavení</button>
+      <button type="button" class="manage-link" id="openTrashBtn"><i class="fa-solid fa-trash-can"></i> Koš</button>
+    </div>
   </div>
 </div>
 
@@ -1002,6 +1032,32 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
       <i class="fa-solid fa-plus folder-icon"></i> Nový trénink
     </button>
     <div id="addToTrainingList"></div>
+  </div>
+</div>
+
+<!-- ===================== HROMADNÉ PŘIDÁNÍ ŠTÍTKŮ/VYBAVENÍ ===================== -->
+<div id="bulkTagModalBackdrop" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 style="font-size:20px;">Přidat štítek/vybavení</h2>
+      <button class="btn btn-icon btn-ghost" id="closeBulkTagModalBtn">✕</button>
+    </div>
+    <p style="font-size:12.5px;color:var(--ink-soft);margin:-4px 0 14px;" id="bulkTagModalCount"></p>
+    <div class="field">
+      <label>Štítky (přidají se, nic nepřepíšou)</label>
+      <div class="tag-input-wrap" id="bulkTagWrap">
+        <input type="text" id="bulkTagInput" placeholder="napiš a Enter…" autocomplete="off">
+      </div>
+    </div>
+    <div class="field">
+      <label>Vybavení (přidá se, nic nepřepíše)</label>
+      <div class="tag-input-wrap" id="bulkEquipWrap">
+        <input type="text" id="bulkEquipInput" placeholder="napiš a Enter…" autocomplete="off">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-primary btn-block" id="bulkTagApplyBtn">Přidat vybraným videím</button>
+    </div>
   </div>
 </div>
 
@@ -1200,7 +1256,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-22 14:20";
+const APP_VERSION = "2026-07-22 16:45";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1215,6 +1271,11 @@ let pickerEquipFilter = new Set();
 let saveTimer = null;
 let sortableInstance = null;
 let pendingThumbUpload = null; // data URL vlastního nahraného náhledu, čeká na uložení formuláře
+let metaFetchedForUrl = ""; // appka si pamatuje, pro jaký přesně odkaz už "Načíst info" proběhlo — podle toho pulzuje tlačítko
+document.getElementById("linkUrl").addEventListener("input", () => {
+  const v = document.getElementById("linkUrl").value.trim();
+  document.getElementById("fetchMetaBtn").classList.toggle("pulse", !!v && v !== metaFetchedForUrl);
+});
 
 const DEFAULT_PARTS = [
   { key: "rozcvicka", label: "Rozcvička",          color: "#A8C0DE" },
@@ -1505,6 +1566,17 @@ function nextFolderColor() {
   return FOLDER_COLORS[state.folders.length % FOLDER_COLORS.length];
 }
 let activeFolderFilter = null; // key vybrané složky v postranním panelu, null = vše
+/** Vymaže filtry na štítky a vybavení naráz — appka to volá jak z tlačítka "Zrušit vše" v
+    rozbalovací nabídce filtrů, tak automaticky při přepnutí složky, ať se nemůže stát, že
+    zůstane aktivní filtr na štítek/vybavení, co appka zrovna neukazuje (protože ho ve zvolené
+    složce nenašla), a přitom ho nejde nikde zrušit, protože appka ho nemá jak zobrazit.
+    Filtr na složku a na oblíbené appka má na zrušení vlastní, viditelné tlačítko už dnes. */
+function clearTagEquipFilters() {
+  libraryTagFilter.clear();
+  libraryEquipFilter.clear();
+  renderTagFilterRow();
+  renderEquipFilterRow();
+}
 const ADMIN_UID = "WIw1KfRofOOrbYF7Xl8YzgQrTZd2"; // mazání složek smí jen tenhle účet
 state.myRole = "editor"; // "editor" | "viewer" — zjistí se přesně při přihlášení
 const isEditor = () => state.myRole !== "viewer";
@@ -1512,7 +1584,7 @@ const isEditor = () => state.myRole !== "viewer";
     prohlížeč knihovnu jen čte a tvoří si vlastní tréninky. */
 function applyRoleUI() {
   const editor = isEditor();
-  ["openAddLinkBtn", "toggleSelectModeBtn", "manageTagsBtn", "pickerManageTagsBtn", "manageFoldersBtn", "openTrashBtn", "managePartsBtn", "openBulkDriveBtn"]
+  ["openAddLinkMenuBtn", "openAddLinkBtn", "toggleSelectModeBtn", "manageTagsBtn", "pickerManageTagsBtn", "manageFoldersBtn", "openTrashBtn", "managePartsBtn", "openBulkDriveBtn"]
     .forEach(id => { const el = document.getElementById(id); if (el) el.classList.toggle("hidden", !editor); });
 }
 let libraryViewMode = "grid"; // "grid" | "list" — týká se jen desktopu
@@ -1558,6 +1630,7 @@ function uid() {
     na kterémkoli .modal-backdrop) — nemusí se řešit zvlášť u každého tlačítka/okna.
     Důležité: appka si hlídá jen SKUTEČNÝ přechod ze skryto na viditelno, ne libovolnou změnu
     třídy — jinak by sledovala i vlastní přidání/odebrání animační třídy a nekonečně se honila. */
+let openModalBackdrops = new Set(); // appka si tu drží, kolik oken je zrovna otevřených, kvůli zamykání scrollu pozadí
 document.querySelectorAll(".modal-backdrop").forEach(backdrop => {
   let wasHidden = backdrop.classList.contains("hidden");
   const playEnterAnimation = () => {
@@ -1565,11 +1638,15 @@ document.querySelectorAll(".modal-backdrop").forEach(backdrop => {
     void backdrop.offsetWidth; // vynutí přepočet, ať animace jde spustit i při rychlém opakovaném otevření
     backdrop.classList.add("modal-anim-in");
   };
-  if (!wasHidden) playEnterAnimation();
+  if (!wasHidden) { playEnterAnimation(); openModalBackdrops.add(backdrop); }
   new MutationObserver(() => {
     const isHidden = backdrop.classList.contains("hidden");
-    if (wasHidden && !isHidden) playEnterAnimation();
+    if (wasHidden && !isHidden) { playEnterAnimation(); openModalBackdrops.add(backdrop); }
+    if (!wasHidden && isHidden) { openModalBackdrops.delete(backdrop); }
     wasHidden = isHidden;
+    // Appka zamkne posouvání stránky POD oknem, kdykoli je otevřené aspoň jedno — appka si
+    // hlídá počet otevřených najednou, ať se to nerozbije při dvou oknech nad sebou.
+    document.body.style.overflow = openModalBackdrops.size > 0 ? "hidden" : "";
   }).observe(backdrop, { attributes: true, attributeFilter: ["class"] });
 });
 
@@ -2566,7 +2643,8 @@ function renderLibrary() {
   `;
   }).join("");
 }
-document.getElementById("clearFolderFilterBtn").addEventListener("click", () => { activeFolderFilter = null; renderLibrary(); });
+document.getElementById("clearFolderFilterBtn").addEventListener("click", () => { activeFolderFilter = null; clearTagEquipFilters(); renderLibrary(); });
+document.getElementById("clearTagEquipFilterBtn").addEventListener("click", () => { clearTagEquipFilters(); renderLibrary(); toast("Filtry štítků a vybavení zrušeny."); });
 document.getElementById("libraryGrid").addEventListener("click", (e) => {
   const card = e.target.closest(".card");
   if (!card) return;
@@ -2658,6 +2736,76 @@ document.getElementById("bulkMoveBtn").addEventListener("click", () => {
   toast(`Přesunuto do „${state.folders[idx].label}".`);
 });
 
+/* ---- Hromadné přidání štítků/vybavení k vybraným videím (přidává, nic nepřepisuje) ---- */
+let bulkTagAddList = [];
+let bulkEquipAddList = [];
+function renderBulkTagAddPills() {
+  const wrap = document.getElementById("bulkTagWrap");
+  const input = document.getElementById("bulkTagInput");
+  wrap.querySelectorAll(".tag-pill").forEach(p => p.remove());
+  bulkTagAddList.forEach(t => {
+    const pill = document.createElement("span");
+    pill.className = "tag-pill";
+    pill.innerHTML = `${esc(t)} <button type="button" aria-label="Odebrat">✕</button>`;
+    pill.querySelector("button").addEventListener("click", () => { bulkTagAddList = bulkTagAddList.filter(x => x !== t); renderBulkTagAddPills(); });
+    wrap.insertBefore(pill, input);
+  });
+}
+function renderBulkEquipAddPills() {
+  const wrap = document.getElementById("bulkEquipWrap");
+  const input = document.getElementById("bulkEquipInput");
+  wrap.querySelectorAll(".tag-pill").forEach(p => p.remove());
+  bulkEquipAddList.forEach(t => {
+    const pill = document.createElement("span");
+    pill.className = "tag-pill";
+    pill.innerHTML = `${esc(t)} <button type="button" aria-label="Odebrat">✕</button>`;
+    pill.querySelector("button").addEventListener("click", () => { bulkEquipAddList = bulkEquipAddList.filter(x => x !== t); renderBulkEquipAddPills(); });
+    wrap.insertBefore(pill, input);
+  });
+}
+document.getElementById("bulkTagInput").addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  e.preventDefault();
+  const v = e.target.value.trim();
+  if (v && !bulkTagAddList.includes(v)) { bulkTagAddList.push(v); renderBulkTagAddPills(); }
+  e.target.value = "";
+});
+document.getElementById("bulkEquipInput").addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  e.preventDefault();
+  const v = e.target.value.trim();
+  if (v && !bulkEquipAddList.includes(v)) { bulkEquipAddList.push(v); renderBulkEquipAddPills(); }
+  e.target.value = "";
+});
+document.getElementById("bulkTagBtn").addEventListener("click", () => {
+  if (!selectedIds.size) { toast("Nejdřív něco vyber."); return; }
+  bulkTagAddList = [];
+  bulkEquipAddList = [];
+  renderBulkTagAddPills();
+  renderBulkEquipAddPills();
+  document.getElementById("bulkTagInput").value = "";
+  document.getElementById("bulkEquipInput").value = "";
+  document.getElementById("bulkTagModalCount").textContent = `Přidá se k ${selectedIds.size} vybraným videím.`;
+  document.getElementById("bulkTagModalBackdrop").classList.remove("hidden");
+});
+document.getElementById("closeBulkTagModalBtn").addEventListener("click", () => {
+  document.getElementById("bulkTagModalBackdrop").classList.add("hidden");
+});
+document.getElementById("bulkTagApplyBtn").addEventListener("click", async () => {
+  if (!bulkTagAddList.length && !bulkEquipAddList.length) { toast("Nic k přidání."); return; }
+  selectedIds.forEach(id => {
+    const item = state.library[id];
+    if (!item) return;
+    bulkTagAddList.forEach(t => { if (!item.tags.includes(t)) item.tags.push(t); });
+    bulkEquipAddList.forEach(t => { if (!item.equipment.includes(t)) item.equipment.push(t); });
+  });
+  document.getElementById("bulkTagModalBackdrop").classList.add("hidden");
+  renderLibrary();
+  const ok = await saveUserData();
+  if (ok) toast(`Přidáno ${selectedIds.size} videím.`);
+  else toast("Uložení se nepovedlo, zkus to prosím znovu.");
+});
+
 function setupFilterToggle(btnId, collapseId) {
   const btn = document.getElementById(btnId), collapse = document.getElementById(collapseId);
   btn.addEventListener("click", () => {
@@ -2735,9 +2883,18 @@ const linkModalBackdrop = document.getElementById("linkModalBackdrop");
 const linkForm = document.getElementById("linkForm");
 let formTags = [], formEquip = [];
 
-document.getElementById("openAddLinkBtn").addEventListener("click", () => openLinkModal(null));
+document.getElementById("openAddLinkMenuBtn").addEventListener("click", (e) => {
+  e.stopPropagation();
+  document.getElementById("addLinkMenu").classList.toggle("hidden");
+});
+document.addEventListener("click", (e) => {
+  const menu = document.getElementById("addLinkMenu");
+  if (!menu.classList.contains("hidden") && !e.target.closest(".add-link-menu-wrap")) menu.classList.add("hidden");
+});
+document.getElementById("openAddLinkBtn").addEventListener("click", () => { document.getElementById("addLinkMenu").classList.add("hidden"); openLinkModal(null); });
 document.getElementById("closeLinkModalBtn").addEventListener("click", closeLinkModal);
-linkModalBackdrop.addEventListener("click", (e) => { if (e.target === linkModalBackdrop) closeLinkModal(); });
+// Kliknutí mimo formulář ho záměrně nezavírá (na rozdíl od ostatních oken appky) — u
+// rozepsaného přidávání/úpravy videa by to jinak snadno vedlo k nechtěné ztrátě práce.
 
 function openLinkModal(id) {
   if (!id && !isEditor()) return; // prohlížeč nesmí zakládat nová videa
@@ -2749,6 +2906,8 @@ function openLinkModal(id) {
   const item = id ? state.library[id] : null;
   document.getElementById("linkModalTitle").textContent = item ? "Upravit odkaz" : "Přidat odkaz";
   document.getElementById("linkUrl").value = item ? item.url : "";
+  metaFetchedForUrl = item ? item.url : "";
+  document.getElementById("fetchMetaBtn").classList.remove("pulse");
   document.getElementById("linkTitle").value = item ? item.title : "";
   document.getElementById("linkFolder").value = item ? item.folderId : "";
   document.getElementById("newFolderInput").value = "";
@@ -2853,6 +3012,8 @@ function captureVideoFrameThumbnails(url) {
 document.getElementById("fetchMetaBtn").addEventListener("click", async () => {
   let url = document.getElementById("linkUrl").value.trim();
   if (!url) return;
+  metaFetchedForUrl = url;
+  document.getElementById("fetchMetaBtn").classList.remove("pulse");
   if (url.includes("facebook.com")) {
     if (/facebook\.com\/share\//.test(url)) {
       toast("Tenhle typ sdíleného facebookového odkazu appka bohužel nerozezná. Otevři video přímo na Facebooku a zkopíruj adresu, která bude obsahovat „/reel/“ a dlouhé číslo.", 9000);
@@ -4203,6 +4364,7 @@ document.getElementById("closeFolderSidebarBtn").addEventListener("click", close
 folderSidebarBackdrop.addEventListener("click", (e) => { if (e.target === folderSidebarBackdrop) closeFolderSidebar(); });
 document.getElementById("folderRowAll").addEventListener("click", () => {
   activeFolderFilter = null;
+  clearTagEquipFilters();
   closeFolderSidebar();
   renderLibrary();
 });
@@ -4227,6 +4389,7 @@ function renderFolderSidebar() {
   list.querySelectorAll(".folder-row").forEach(row => {
     row.addEventListener("click", () => {
       activeFolderFilter = row.dataset.key;
+      clearTagEquipFilters();
       folderSidebarBackdrop.classList.add("hidden");
       renderLibrary();
     });
@@ -4445,7 +4608,7 @@ function openBulkDriveModal() {
 function closeBulkDriveModal() {
   document.getElementById("bulkDriveModalBackdrop").classList.add("hidden");
 }
-document.getElementById("openBulkDriveBtn").addEventListener("click", openBulkDriveModal);
+document.getElementById("openBulkDriveBtn").addEventListener("click", () => { document.getElementById("addLinkMenu").classList.add("hidden"); openBulkDriveModal(); });
 document.getElementById("closeBulkDriveModalBtn").addEventListener("click", closeBulkDriveModal);
 document.getElementById("bulkDriveModalBackdrop").addEventListener("click", (e) => {
   if (e.target.id === "bulkDriveModalBackdrop") closeBulkDriveModal();
