@@ -1200,7 +1200,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-22 13:50";
+const APP_VERSION = "2026-07-22 14:20";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1761,7 +1761,7 @@ function secondsToTimestamp(sec) {
 }
 /** Zobrazí appce nabídku 1-3 náhledů na výběr (jen odkazy, appka nic nestahuje) — kliknutím
     se zvolený náhled rovnou projeví v náhledu nahoře a zapíše se, ať appka ví, co uložit. */
-function renderThumbSuggestions(urls) {
+function renderThumbSuggestions(urls, platform) {
   const wrap = document.getElementById("thumbSuggestions");
   urls = urls.filter(Boolean);
   if (!urls.length) { wrap.classList.add("hidden"); wrap.innerHTML = ""; return; }
@@ -1769,7 +1769,7 @@ function renderThumbSuggestions(urls) {
     <div class="thumb-suggestions-row">${urls.map(u => `<div class="thumb-suggestion-item" style="background-image:url('${u}')" data-thumb-url="${esc(u)}"></div>`).join("")}</div>`;
   wrap.classList.remove("hidden");
   wrap.querySelectorAll("[data-thumb-url]").forEach(el => {
-    el.addEventListener("click", () => {
+    el.addEventListener("click", async () => {
       const u = el.dataset.thumbUrl;
       wrap.querySelectorAll(".thumb-suggestion-item").forEach(x => x.classList.toggle("selected", x === el));
       const tp = document.getElementById("thumbPreview");
@@ -1777,6 +1777,18 @@ function renderThumbSuggestions(urls) {
       tp.textContent = "";
       tp.dataset.thumb = u;
       pendingThumbUpload = null; // vybraný návrh má přednost před dřívějším ručním nahráním
+      // U Disku (a TikToku) appka rovnou zkusí náhled stáhnout a uložit si ho natrvalo k sobě —
+      // tyhle adresy totiž mají tendenci časem přestat platit (viděli jsme to naostro). U
+      // YouTube appka tohle záměrně nedělá, tamní adresy jsou samy o sobě dlouhodobě spolehlivé.
+      if (platform === "drive" || platform === "tiktok") {
+        toast("Appka si náhled zkouší uložit natrvalo…", 3000);
+        const dataUrl = await fetchImageAsDataUrl(u);
+        if (dataUrl && document.getElementById("thumbPreview").dataset.thumb === u) {
+          // (kontrola výše: appka mezitím nesmí přepsat novější volbu, kdyby uživatel stihl kliknout jinam)
+          tp.dataset.thumb = dataUrl;
+          toast("Náhled uložen natrvalo.", 2500);
+        }
+      }
     });
   });
 }
@@ -2881,7 +2893,7 @@ document.getElementById("fetchMetaBtn").addEventListener("click", async () => {
         const res = await fetch(`https://www.googleapis.com/drive/v3/files/${driveId}?fields=thumbnailLink&key=${state.driveApiKey}`);
         if (res.ok) {
           const data = await res.json();
-          if (data.thumbnailLink) renderThumbSuggestions([data.thumbnailLink]);
+          if (data.thumbnailLink) renderThumbSuggestions([data.thumbnailLink], "drive");
         }
       } catch (e) { console.warn("Náhled z Disku se nepodařilo najít:", e); }
     }
@@ -2899,7 +2911,7 @@ document.getElementById("fetchMetaBtn").addEventListener("click", async () => {
         if (res.ok) {
           const data = await res.json();
           if (!document.getElementById("linkTitle").value && data.title) document.getElementById("linkTitle").value = data.title;
-          if (data.thumbnail_url) renderThumbSuggestions([data.thumbnail_url]);
+          if (data.thumbnail_url) renderThumbSuggestions([data.thumbnail_url], "tiktok");
           toast("Načteno, náhled zadej ručně, pokud appka žádný nenavrhla.");
         } else {
           toast("TikTok: titulek a náhled zadej ručně.");
