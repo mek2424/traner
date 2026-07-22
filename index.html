@@ -477,6 +477,14 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   padding:24px 20px;overflow-y:auto;min-height:0;transition:background .25s ease;
 }
 .tm-part-label{font-family:var(--font-display);font-size:16px;letter-spacing:.08em;color:rgba(27,36,48,.6);margin-bottom:10px;}
+.tm-series-label{font-size:13px;font-weight:700;color:var(--chalk-dark);background:rgba(232,98,44,.12);display:inline-block;padding:3px 10px;border-radius:20px;margin-bottom:8px;}
+.tm-group-strip{display:flex;gap:8px;overflow-x:auto;margin-top:14px;padding-bottom:4px;max-width:100%;}
+.tm-group-strip img,.tm-group-strip .tm-group-strip-placeholder{width:64px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0;background:rgba(0,0,0,.12);}
+.tm-group-strip .tm-group-strip-note{font-size:9px;text-align:center;color:var(--ink-soft);margin-top:2px;}
+.tm-reps-confirm{
+  margin:10px 16px 16px;padding:20px;border-radius:var(--radius);border:none;background:var(--court);color:#fff;
+  font-family:var(--font-display);font-size:22px;letter-spacing:.03em;flex-shrink:0;
+}
 .tm-title{font-family:var(--font-display);font-size:clamp(30px,8vw,46px);line-height:1.15;color:var(--ink);margin-bottom:10px;max-width:100%;overflow-wrap:anywhere;}
 .tm-desc{font-size:clamp(14px,3.6vw,17px);color:rgba(27,36,48,.7);margin-bottom:14px;max-width:520px;overflow-wrap:anywhere;}
 .tm-cue{font-size:clamp(15px,4vw,18px);font-weight:600;color:rgba(27,36,48,.75);margin-bottom:8px;max-width:100%;overflow-wrap:anywhere;}
@@ -567,6 +575,25 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .part-legend span{display:inline-flex;align-items:center;gap:4px;}
 .part-swatch{width:10px;height:10px;border-radius:3px;display:inline-block;}
 .add-break-btn{margin-bottom:8px;}
+.seq-item.is-group{background:var(--card);border:2px dashed var(--court);}
+.seq-group-icon{color:var(--court);font-size:15px;flex-shrink:0;}
+.seq-group-name{font-family:var(--font-display);font-size:15px;letter-spacing:.02em;border:1px solid transparent;background:none;flex:1 1 120px;min-width:0;padding:2px 4px;border-radius:6px;}
+.seq-group-name:focus{border-color:rgba(0,0,0,.15);background:#fff;}
+.seq-mode-row{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;}
+.seq-mode-toggle{display:flex;border:1px solid rgba(0,0,0,.15);border-radius:6px;overflow:hidden;flex-shrink:0;}
+.seq-mode-toggle button{padding:4px 9px;font-size:11px;background:rgba(255,255,255,.5);border:none;color:var(--ink-soft);}
+.seq-mode-toggle button.active{background:var(--court);color:#fff;}
+.seq-reps-input{width:90px;border:1px solid rgba(0,0,0,.15);border-radius:6px;padding:3px 6px;font-size:11px;}
+.seq-series-row{display:flex;align-items:center;gap:12px;margin-top:6px;flex-wrap:wrap;font-size:11px;color:var(--ink-soft);}
+.seq-series-row label{display:flex;align-items:center;gap:5px;}
+.seq-series-row input{width:44px;border:1px solid rgba(0,0,0,.15);border-radius:6px;padding:2px 4px;font-size:11px;text-align:center;}
+.seq-group-videos{margin-top:10px;border-top:1px dashed rgba(0,0,0,.12);padding-top:8px;display:flex;flex-direction:column;gap:5px;}
+.seq-group-video-row{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.5);border-radius:6px;padding:4px 6px;}
+.drag-handle-inner{cursor:grab;color:rgba(27,36,48,.35);font-size:12px;flex-shrink:0;touch-action:none;}
+.seq-group-thumb{width:38px;height:26px;object-fit:cover;border-radius:4px;background:rgba(0,0,0,.12);flex-shrink:0;}
+.seq-group-video-title{font-size:11.5px;font-weight:600;flex:1;min-width:0;overflow-wrap:anywhere;}
+.seq-group-video-note{width:70px;flex-shrink:0;border:1px solid rgba(0,0,0,.15);border-radius:5px;padding:3px 5px;font-size:10.5px;}
+.seq-group-video-remove{background:none;border:none;color:var(--danger);font-size:12px;flex-shrink:0;padding:2px;}
 
 /* Search inside picker */
 .picker-search{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:8px;background:var(--paper);}
@@ -735,6 +762,10 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
         <div class="picker-panel">
           <h3>Přidat z knihovny</h3>
           <input type="search" id="pickerSearch" class="picker-search" placeholder="Hledat…">
+          <div style="display:flex;gap:8px;margin-bottom:6px;">
+            <button class="btn btn-ghost btn-sm" id="togglePickerSelectModeBtn" style="flex:1;"><i class="fa-regular fa-square-check"></i> Vybrat víc</button>
+            <button class="btn btn-sm btn-accent hidden" id="groupSelectedBtn"><i class="fa-solid fa-layer-group"></i> Seskupit</button>
+          </div>
           <button class="btn btn-ghost btn-sm btn-block add-break-btn" id="addBreakBtn"><i class="fa-solid fa-mug-hot"></i> Přidat přestávku</button>
           <div class="filter-panel">
             <select id="pickerFolderFilter"><option value="">Všechny složky</option></select>
@@ -1190,16 +1221,19 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   </div>
   <div class="tm-body" id="tmBody">
     <div class="tm-part-label" id="tmPartLabel"></div>
+    <div class="tm-series-label hidden" id="tmSeriesLabel"></div>
     <div class="tm-title" id="tmTitle"></div>
     <div class="tm-desc" id="tmDesc"></div>
     <div class="tm-cue" id="tmCue"></div>
     <div class="tm-note" id="tmNote"></div>
+    <div class="tm-group-strip hidden" id="tmGroupStrip"></div>
   </div>
-  <div class="tm-timer-wrap">
+  <div class="tm-timer-wrap" id="tmTimerWrap">
     <button type="button" class="tm-timer-btn" id="tmTimerToggle" aria-label="Pauza/pokračovat"><i class="fa-solid fa-pause"></i></button>
     <div class="tm-timer" id="tmTimer">10:00</div>
     <button type="button" class="tm-timer-btn" id="tmTimerReset" aria-label="Restartovat čas"><i class="fa-solid fa-rotate-left"></i></button>
   </div>
+  <button type="button" class="tm-reps-confirm hidden" id="tmRepsConfirmBtn">Hotovo, další <i class="fa-solid fa-check"></i></button>
   <div class="tm-nav">
     <button type="button" class="tm-nav-btn" id="tmPrevBtn"><i class="fa-solid fa-arrow-left"></i> Předchozí</button>
     <button type="button" class="tm-nav-btn tm-nav-next" id="tmNextBtn">Další <i class="fa-solid fa-arrow-right"></i></button>
@@ -1287,7 +1321,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-23 10:40";
+const APP_VERSION = "2026-07-23 14:05";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1298,9 +1332,12 @@ let currentDetailId = null;     // id knihovní položky v detail modalu
 let libraryTagFilter = new Set();
 let libraryEquipFilter = new Set();
 let pickerTagFilter = new Set();
+let pickerSelectMode = false;
+let selectedPickerIds = new Set();
 let pickerEquipFilter = new Set();
 let saveTimer = null;
 let sortableInstance = null;
+let groupSortableInstances = [];
 let pendingThumbUpload = null; // data URL vlastního nahraného náhledu, čeká na uložení formuláře
 let metaFetchedForUrl = ""; // appka si pamatuje, pro jaký přesně odkaz už "Načíst info" proběhlo — podle toho pulzuje tlačítko
 document.getElementById("linkUrl").addEventListener("input", () => {
@@ -3721,6 +3758,10 @@ function updateTrainingBulkBar() {
    ========================================================= */
 let trainingModeItems = [];
 let trainingModeIndex = 0;
+let trainingModeSeriesNum = 1;
+let trainingModeGroupVideoIndex = 0;
+let trainingModeInSeriesPause = false;
+let trainingModeFinished = false;
 let trainingModeSeconds = 0;
 let trainingModeInterval = null;
 let trainingModeRunning = false;
@@ -3730,6 +3771,11 @@ document.getElementById("startTrainingModeBtn").addEventListener("click", () => 
   if (!t || !t.items.length) { toast("Trénink je prázdný, není co spustit."); return; }
   trainingModeItems = t.items;
   trainingModeIndex = 0;
+  trainingModeSeriesNum = 1;
+  trainingModeGroupVideoIndex = 0;
+  trainingModeInSeriesPause = false;
+  trainingModeFinished = false;
+  document.getElementById("tmTitle").style.color = "";
   const tmView = document.getElementById("trainingModeView");
   tmView.classList.remove("hidden");
   tmView.classList.remove("view-anim-in");
@@ -3738,35 +3784,137 @@ document.getElementById("startTrainingModeBtn").addEventListener("click", () => 
   renderTrainingModeItem();
 });
 
+/** Appka nastaví, jestli má appka ukázat odpočet času (timer), nebo velké tlačítko
+    "Hotovo, další" u režimu na opakování — appka nikdy neukazuje obojí najednou. */
+function setTimerMode(mode) {
+  document.getElementById("tmTimerWrap").classList.toggle("hidden", mode === "reps");
+  document.getElementById("tmRepsConfirmBtn").classList.toggle("hidden", mode !== "reps");
+}
+
 function renderTrainingModeItem() {
   stopTrainingModeTimer();
+  if (trainingModeInSeriesPause) { renderSeriesPause(); return; }
   const row = trainingModeItems[trainingModeIndex];
   document.getElementById("tmProgress").textContent = `${trainingModeIndex + 1} / ${trainingModeItems.length}`;
   document.getElementById("tmPrevBtn").disabled = trainingModeIndex === 0;
-  document.getElementById("tmNextBtn").innerHTML = trainingModeIndex === trainingModeItems.length - 1
-    ? 'Hotovo <i class="fa-solid fa-check"></i>'
-    : 'Další <i class="fa-solid fa-arrow-right"></i>';
+  document.getElementById("tmNextBtn").innerHTML = 'Další <i class="fa-solid fa-arrow-right"></i>';
   const body = document.getElementById("tmBody");
-  if (!row.videoId) {
+  const seriesLabel = document.getElementById("tmSeriesLabel");
+  const groupStrip = document.getElementById("tmGroupStrip");
+  groupStrip.classList.add("hidden");
+  groupStrip.innerHTML = "";
+
+  if (row.part === "prestavka") {
+    seriesLabel.classList.add("hidden");
     body.style.background = "var(--part-prestavka)";
     document.getElementById("tmPartLabel").textContent = "PŘESTÁVKA";
     document.getElementById("tmTitle").textContent = row.label || "Přestávka";
     document.getElementById("tmDesc").textContent = "";
     document.getElementById("tmCue").innerHTML = "";
     document.getElementById("tmNote").textContent = "";
-  } else {
-    const lib = state.library[row.videoId];
-    const part = getPart(row.part);
-    body.style.background = part ? part.color : "var(--card)";
-    document.getElementById("tmPartLabel").textContent = (part ? part.label : "").toUpperCase();
-    document.getElementById("tmTitle").textContent = lib ? lib.title : "(video smazáno z knihovny)";
-    document.getElementById("tmDesc").textContent = lib && lib.shortDesc ? lib.shortDesc : "";
-    document.getElementById("tmCue").innerHTML = row.cue ? `<i class="fa-solid fa-comment"></i> ${esc(row.cue)}` : "";
-    document.getElementById("tmNote").textContent = row.poznamka || "";
+    setTimerMode("time");
+    trainingModeSeconds = Math.max(1, row.duration || 1) * 60;
+    updateTrainingModeTimerDisplay();
+    startTrainingModeTimer();
+    return;
   }
-  trainingModeSeconds = Math.max(1, row.duration || 1) * 60;
+
+  const seriesCount = row.seriesCount || 1;
+  if (seriesCount > 1) {
+    seriesLabel.textContent = `Série ${trainingModeSeriesNum} / ${seriesCount}`;
+    seriesLabel.classList.remove("hidden");
+  } else {
+    seriesLabel.classList.add("hidden");
+  }
+
+  if (row.isGroup) {
+    body.style.background = "var(--card)";
+    document.getElementById("tmPartLabel").textContent = "SKUPINA";
+    document.getElementById("tmCue").innerHTML = row.cue ? `<i class="fa-solid fa-comment"></i> ${esc(row.cue)}` : "";
+
+    if ((row.mode || "time") === "reps") {
+      // appka provede video po videu uvnitř skupiny, každé zvlášť čeká na potvrzení
+      const v = row.videos[trainingModeGroupVideoIndex];
+      const lib = v ? state.library[v.videoId] : null;
+      document.getElementById("tmTitle").textContent = `${row.name || "Skupina"} — ${lib ? lib.title : "(video smazáno)"}`;
+      document.getElementById("tmDesc").textContent = `Cvik ${trainingModeGroupVideoIndex + 1} / ${row.videos.length}`;
+      document.getElementById("tmNote").textContent = (v && v.note) || row.poznamka || "";
+      setTimerMode("reps");
+    } else {
+      document.getElementById("tmTitle").textContent = row.name || "Skupina";
+      document.getElementById("tmDesc").textContent = "";
+      document.getElementById("tmNote").textContent = row.poznamka || "";
+      groupStrip.innerHTML = row.videos.map(v => {
+        const lib = state.library[v.videoId];
+        const thumb = resolveThumbnailUrl(lib);
+        return `<div>${thumb ? `<img src="${esc(thumb)}">` : `<div class="tm-group-strip-placeholder"></div>`}${v.note ? `<div class="tm-group-strip-note">${esc(v.note)}</div>` : ""}</div>`;
+      }).join("");
+      groupStrip.classList.remove("hidden");
+      setTimerMode("time");
+      trainingModeSeconds = Math.max(1, row.duration || 1) * 60;
+      updateTrainingModeTimerDisplay();
+      startTrainingModeTimer();
+    }
+    return;
+  }
+
+  // obyčejné video
+  const lib = state.library[row.videoId];
+  const part = getPart(row.part);
+  body.style.background = part ? part.color : "var(--card)";
+  document.getElementById("tmPartLabel").textContent = (part ? part.label : "").toUpperCase();
+  document.getElementById("tmTitle").textContent = lib ? lib.title : "(video smazáno z knihovny)";
+  document.getElementById("tmDesc").textContent = lib && lib.shortDesc ? lib.shortDesc : "";
+  document.getElementById("tmCue").innerHTML = row.cue ? `<i class="fa-solid fa-comment"></i> ${esc(row.cue)}` : "";
+  document.getElementById("tmNote").textContent = row.poznamka || "";
+
+  if ((row.mode || "time") === "reps") {
+    setTimerMode("reps");
+  } else {
+    setTimerMode("time");
+    trainingModeSeconds = Math.max(1, row.duration || 1) * 60;
+    updateTrainingModeTimerDisplay();
+    startTrainingModeTimer();
+  }
+}
+
+/** Appka vloží krátkou, appkou automaticky odpočítávanou pauzu mezi jednotlivé série — appka
+    ji sama nepřeskočí, ani po doběhnutí na nulu, počká na tvoje "Další", stejně jako u
+    ostatních položek appky. */
+function renderSeriesPause() {
+  const row = trainingModeItems[trainingModeIndex];
+  document.getElementById("tmSeriesLabel").classList.add("hidden");
+  document.getElementById("tmGroupStrip").classList.add("hidden");
+  document.getElementById("tmProgress").textContent = `${trainingModeIndex + 1} / ${trainingModeItems.length}`;
+  document.getElementById("tmPrevBtn").disabled = true;
+  document.getElementById("tmNextBtn").innerHTML = 'Další <i class="fa-solid fa-arrow-right"></i>';
+  document.getElementById("tmBody").style.background = "var(--part-prestavka)";
+  document.getElementById("tmPartLabel").textContent = "PAUZA MEZI SÉRIEMI";
+  document.getElementById("tmTitle").textContent = `Za chvíli série ${trainingModeSeriesNum} / ${row.seriesCount}`;
+  document.getElementById("tmDesc").textContent = "";
+  document.getElementById("tmCue").innerHTML = "";
+  document.getElementById("tmNote").textContent = "";
+  setTimerMode("time");
+  trainingModeSeconds = Math.max(1, row.seriesPause != null ? row.seriesPause : 30);
   updateTrainingModeTimerDisplay();
   startTrainingModeTimer();
+}
+
+function renderTrainingModeFinished() {
+  stopTrainingModeTimer();
+  document.getElementById("tmSeriesLabel").classList.add("hidden");
+  document.getElementById("tmGroupStrip").classList.add("hidden");
+  document.getElementById("tmBody").style.background = "var(--court)";
+  document.getElementById("tmPartLabel").textContent = "";
+  document.getElementById("tmTitle").textContent = "Hotovo 💪";
+  document.getElementById("tmTitle").style.color = "#fff";
+  document.getElementById("tmDesc").textContent = "";
+  document.getElementById("tmCue").innerHTML = "";
+  document.getElementById("tmNote").textContent = "";
+  document.getElementById("tmTimerWrap").classList.add("hidden");
+  document.getElementById("tmRepsConfirmBtn").classList.add("hidden");
+  document.getElementById("tmNextBtn").innerHTML = 'Zavřít <i class="fa-solid fa-xmark"></i>';
+  document.getElementById("tmPrevBtn").disabled = true;
 }
 
 function updateTrainingModeTimerDisplay() {
@@ -3797,18 +3945,61 @@ document.getElementById("tmTimerToggle").addEventListener("click", () => {
   if (trainingModeRunning) stopTrainingModeTimer(); else startTrainingModeTimer();
 });
 document.getElementById("tmTimerReset").addEventListener("click", () => {
+  if (trainingModeFinished) return;
   const row = trainingModeItems[trainingModeIndex];
-  trainingModeSeconds = Math.max(1, row.duration || 1) * 60;
+  trainingModeSeconds = trainingModeInSeriesPause
+    ? Math.max(1, row.seriesPause != null ? row.seriesPause : 30)
+    : Math.max(1, row.duration || 1) * 60;
   updateTrainingModeTimerDisplay();
   startTrainingModeTimer();
 });
 document.getElementById("tmPrevBtn").addEventListener("click", () => {
-  if (trainingModeIndex > 0) { trainingModeIndex--; renderTrainingModeItem(); }
+  if (trainingModeFinished) return;
+  if (trainingModeInSeriesPause) { trainingModeInSeriesPause = false; renderTrainingModeItem(); return; }
+  if (trainingModeIndex > 0) {
+    trainingModeIndex--;
+    trainingModeSeriesNum = 1;
+    trainingModeGroupVideoIndex = 0;
+    renderTrainingModeItem();
+  }
 });
-document.getElementById("tmNextBtn").addEventListener("click", () => {
-  if (trainingModeIndex < trainingModeItems.length - 1) { trainingModeIndex++; renderTrainingModeItem(); }
-  else closeTrainingMode();
-});
+/** Appčino "jsem hotový, jdu dál" — ať už appka počítala čas, nebo čekala na potvrzení u
+    opakování. Appka si sama vyhodnotí, jestli má appka pokračovat na další cvik uvnitř
+    skupiny, spustit další sérii (s pauzou mezi nimi), nebo jít na úplně další položku. */
+function advanceTrainingMode() {
+  if (trainingModeFinished) { closeTrainingMode(); return; }
+  if (trainingModeInSeriesPause) {
+    trainingModeInSeriesPause = false;
+    renderTrainingModeItem();
+    return;
+  }
+  const row = trainingModeItems[trainingModeIndex];
+  const isGroupReps = row.isGroup && (row.mode || "time") === "reps";
+  if (isGroupReps && trainingModeGroupVideoIndex < row.videos.length - 1) {
+    trainingModeGroupVideoIndex++;
+    renderTrainingModeItem();
+    return;
+  }
+  const seriesCount = row.seriesCount || 1;
+  if (trainingModeSeriesNum < seriesCount) {
+    trainingModeSeriesNum++;
+    trainingModeGroupVideoIndex = 0;
+    trainingModeInSeriesPause = true;
+    renderTrainingModeItem();
+    return;
+  }
+  if (trainingModeIndex < trainingModeItems.length - 1) {
+    trainingModeIndex++;
+    trainingModeSeriesNum = 1;
+    trainingModeGroupVideoIndex = 0;
+    renderTrainingModeItem();
+  } else {
+    trainingModeFinished = true;
+    renderTrainingModeFinished();
+  }
+}
+document.getElementById("tmNextBtn").addEventListener("click", advanceTrainingMode);
+document.getElementById("tmRepsConfirmBtn").addEventListener("click", advanceTrainingMode);
 function closeTrainingMode() {
   stopTrainingModeTimer();
   document.getElementById("trainingModeView").classList.add("hidden");
@@ -3925,12 +4116,19 @@ function renderPickerList() {
   if (!items.length) { list.innerHTML = `<p style="font-size:12px;color:var(--ink-faint);">Nic nenalezeno — zkus uvolnit filtry.</p>`; return; }
   list.innerHTML = items.map(it => `
     <div class="picker-item">
+      ${pickerSelectMode ? `<button type="button" class="training-select-box ${selectedPickerIds.has(it.id) ? "checked" : ""}" data-toggle-pick="${esc(it.id)}" aria-label="Vybrat">${selectedPickerIds.has(it.id) ? '<i class="fa-solid fa-check"></i>' : ""}</button>` : ""}
       ${resolveThumbnailUrl(it) ? `<img src="${esc(resolveThumbnailUrl(it))}" alt="">` : `<div style="width:46px;height:30px;background:var(--line);border-radius:4px;flex-shrink:0;"></div>`}
       <div class="picker-item-title">${esc(it.title)}</div>
-      <button class="btn btn-sm btn-icon" data-add="${esc(it.id)}" aria-label="Přidat do tréninku"><i class="fa-solid fa-plus"></i></button>
+      ${pickerSelectMode ? "" : `<button class="btn btn-sm btn-icon" data-add="${esc(it.id)}" aria-label="Přidat do tréninku"><i class="fa-solid fa-plus"></i></button>`}
     </div>
   `).join("");
   list.querySelectorAll("[data-add]").forEach(b => b.addEventListener("click", () => addItemToTraining(b.dataset.add)));
+  list.querySelectorAll("[data-toggle-pick]").forEach(b => b.addEventListener("click", () => {
+    const id = b.dataset.togglePick;
+    if (selectedPickerIds.has(id)) selectedPickerIds.delete(id); else selectedPickerIds.add(id);
+    renderPickerList();
+    document.getElementById("groupSelectedBtn").classList.toggle("hidden", selectedPickerIds.size < 2);
+  }));
 }
 
 /** Přidá video z knihovny do KTERÉHOKOLI tréninku (ne nutně toho právě otevřeného v editoru) —
@@ -4008,6 +4206,37 @@ document.getElementById("addBreakBtn").addEventListener("click", () => {
   scheduleSave();
   renderSequence();
 });
+document.getElementById("togglePickerSelectModeBtn").addEventListener("click", () => {
+  pickerSelectMode = !pickerSelectMode;
+  selectedPickerIds.clear();
+  document.getElementById("togglePickerSelectModeBtn").classList.toggle("btn-accent", pickerSelectMode);
+  document.getElementById("groupSelectedBtn").classList.add("hidden");
+  renderPickerList();
+});
+document.getElementById("groupSelectedBtn").addEventListener("click", () => {
+  const t = state.trainings[currentTrainingId];
+  if (!t || selectedPickerIds.size < 2) return;
+  // appka drží pořadí videí uvnitř skupiny podle toho, jak appka videa v panelu zrovna řadí,
+  // ne podle pořadí kliknutí — je to předvídatelnější
+  const orderedIds = Object.values(state.library)
+    .filter(it => selectedPickerIds.has(it.id))
+    .sort((a, b) => (b.dateAdded || 0) - (a.dateAdded || 0))
+    .map(it => it.id);
+  t.items.push({
+    itemId: uid(), isGroup: true, name: "Nová skupina", cue: "", poznamka: "",
+    mode: "time", duration: 10, reps: "", seriesCount: 1, seriesPause: 30,
+    videos: orderedIds.map(videoId => ({ videoId, note: "" }))
+  });
+  t.dateModified = Date.now();
+  selectedPickerIds.clear();
+  pickerSelectMode = false;
+  document.getElementById("togglePickerSelectModeBtn").classList.remove("btn-accent");
+  document.getElementById("groupSelectedBtn").classList.add("hidden");
+  scheduleSave();
+  renderPickerList();
+  renderSequence();
+  toast("Skupina vytvořena — pojmenuj ji a nastav si detaily v sekvenci.");
+});
 
 function updateTotalBadge() {
   const t = state.trainings[currentTrainingId];
@@ -4015,6 +4244,26 @@ function updateTotalBadge() {
   document.getElementById("totalTimeBadge").textContent = total + " min";
 }
 
+/** Appka starším položkám bez pole "mode" (vytvořeným appkou před touhle přestavbou) bere
+    chybějící hodnotu jako "čas" — chová se přesně jako dřív, žádná zpětná nekompatibilita. */
+function renderModeSeriesControls(row, dis) {
+  const mode = row.mode || "time";
+  const seriesCount = row.seriesCount || 1;
+  return `
+    <div class="seq-mode-row">
+      <div class="seq-mode-toggle">
+        <button type="button" class="${mode === "time" ? "active" : ""}" data-mode-set="time" data-itemid="${esc(row.itemId)}" ${dis}>Čas</button>
+        <button type="button" class="${mode === "reps" ? "active" : ""}" data-mode-set="reps" data-itemid="${esc(row.itemId)}" ${dis}>Opakování</button>
+      </div>
+      ${mode === "time"
+        ? `<input class="seq-duration" type="number" min="1" value="${row.duration || 1}" data-field="duration" data-itemid="${esc(row.itemId)}" ${dis}>`
+        : `<input type="text" class="seq-reps-input" placeholder="např. 3×12" value="${esc(row.reps || "")}" data-field="reps" data-itemid="${esc(row.itemId)}" ${dis}>`}
+    </div>
+    <div class="seq-series-row">
+      <label>Sérií <input type="number" min="1" value="${seriesCount}" data-field="seriesCount" data-itemid="${esc(row.itemId)}" ${dis}></label>
+      ${seriesCount > 1 ? `<label>Pauza mezi sériemi (s) <input type="number" min="0" value="${row.seriesPause != null ? row.seriesPause : 30}" data-field="seriesPause" data-itemid="${esc(row.itemId)}" ${dis}></label>` : ""}
+    </div>`;
+}
 function renderSequence() {
   const t = state.trainings[currentTrainingId];
   const wrap = document.getElementById("sequenceList");
@@ -4033,6 +4282,35 @@ function renderSequence() {
         ${ro ? "" : `<button class="seq-remove" data-remove="${esc(row.itemId)}" aria-label="Odebrat"><i class="fa-solid fa-xmark"></i></button>`}
       </div>`;
     }
+    if (row.isGroup) {
+      return `
+      <div class="seq-item is-group" data-itemid="${esc(row.itemId)}">
+        ${ro ? "" : `<button class="seq-remove" data-remove="${esc(row.itemId)}" aria-label="Odebrat"><i class="fa-solid fa-xmark"></i></button>`}
+        <div class="seq-item-top">
+          ${ro ? "" : `<span class="drag-handle"><i class="fa-solid fa-grip-lines"></i></span>`}
+          <i class="fa-solid fa-layer-group seq-group-icon"></i>
+          <input type="text" class="seq-group-name" value="${esc(row.name || "Skupina")}" placeholder="Název skupiny" data-field="name" data-itemid="${esc(row.itemId)}" ${dis}>
+        </div>
+        ${renderModeSeriesControls(row, dis)}
+        <div class="seq-item-fields">
+          <input type="text" placeholder="Cue (co říct nahlas)" value="${esc(row.cue)}" data-field="cue" data-itemid="${esc(row.itemId)}" ${dis}>
+          <input type="text" placeholder="Poznámka" value="${esc(row.poznamka)}" data-field="poznamka" data-itemid="${esc(row.itemId)}" ${dis}>
+        </div>
+        <div class="seq-group-videos" data-groupid="${esc(row.itemId)}">
+          ${row.videos.map(v => {
+            const lib = state.library[v.videoId];
+            return `
+            <div class="seq-group-video-row" data-videoref="${esc(v.videoId)}">
+              ${ro ? "" : `<span class="drag-handle-inner"><i class="fa-solid fa-grip-lines"></i></span>`}
+              ${resolveThumbnailUrl(lib) ? `<img class="seq-group-thumb" src="${esc(resolveThumbnailUrl(lib))}" data-open="${esc(v.videoId)}">` : `<div class="seq-group-thumb" data-open="${esc(v.videoId)}"></div>`}
+              <span class="seq-group-video-title" data-open="${esc(v.videoId)}">${lib ? esc(lib.title) : "(video smazáno z knihovny)"}</span>
+              <input type="text" class="seq-group-video-note" placeholder="pozn. (12×)" value="${esc(v.note || "")}" data-groupnote-item="${esc(row.itemId)}" data-groupnote-video="${esc(v.videoId)}" ${dis}>
+              ${ro ? "" : `<button type="button" class="seq-group-video-remove" data-groupvideo-remove-item="${esc(row.itemId)}" data-groupvideo-remove-video="${esc(v.videoId)}" aria-label="Odebrat ze skupiny"><i class="fa-solid fa-xmark"></i></button>`}
+            </div>`;
+          }).join("")}
+        </div>
+      </div>`;
+    }
     const lib = state.library[row.videoId];
     const partColor = getPart(row.part).color;
     return `
@@ -4046,9 +4324,9 @@ function renderSequence() {
           <select class="seq-part-select" data-field="part" data-itemid="${esc(row.itemId)}" ${dis}>
             ${state.parts.map(p => `<option value="${esc(p.key)}" ${row.part === p.key ? "selected" : ""}>${esc(p.label)}</option>`).join("")}
           </select>
-          <input class="seq-duration" type="number" min="1" value="${row.duration}" data-field="duration" data-itemid="${esc(row.itemId)}" ${dis}>
         </div>
       </div>
+      ${renderModeSeriesControls(row, dis)}
       <div class="seq-item-fields">
         <input type="text" placeholder="Cue (co říct nahlas)" value="${esc(row.cue)}" data-field="cue" data-itemid="${esc(row.itemId)}" ${dis}>
         <input type="text" placeholder="Poznámka (např. dělat jen 3. cvik)" value="${esc(row.poznamka)}" data-field="poznamka" data-itemid="${esc(row.itemId)}" ${dis}>
@@ -4058,6 +4336,8 @@ function renderSequence() {
 
   // znovu-navázat Sortable (u cizího tréninku vůbec nepřipojíme, ať nejde měnit pořadí)
   if (sortableInstance) { sortableInstance.destroy(); sortableInstance = null; }
+  groupSortableInstances.forEach(s => s.destroy());
+  groupSortableInstances = [];
   if (!ro) {
     sortableInstance = Sortable.create(wrap, {
       handle: ".drag-handle",
@@ -4071,24 +4351,69 @@ function renderSequence() {
         scheduleSave();
       }
     });
+    // appka umí přetahovat pořadí videí i UVNITŘ jedné skupiny, samostatně pro každou
+    wrap.querySelectorAll(".seq-group-videos").forEach(groupEl => {
+      const groupItemId = groupEl.dataset.groupid;
+      groupSortableInstances.push(Sortable.create(groupEl, {
+        handle: ".drag-handle-inner",
+        animation: 150,
+        ghostClass: "sortable-ghost",
+        onEnd: () => {
+          const order = [...groupEl.querySelectorAll(".seq-group-video-row")].map(el => el.dataset.videoref);
+          const t2 = state.trainings[currentTrainingId];
+          const groupRow = t2.items.find(it => it.itemId === groupItemId);
+          if (groupRow) groupRow.videos.sort((a, b) => order.indexOf(a.videoId) - order.indexOf(b.videoId));
+          t2.dateModified = Date.now();
+          scheduleSave();
+        }
+      }));
+    });
   }
 }
 
 document.getElementById("sequenceList").addEventListener("input", (e) => {
+  const groupNoteItem = e.target.dataset.groupnoteItem, groupNoteVideo = e.target.dataset.groupnoteVideo;
+  if (groupNoteItem && groupNoteVideo) {
+    const t = state.trainings[currentTrainingId];
+    const row = t.items.find(it => it.itemId === groupNoteItem);
+    const v = row && row.videos.find(x => x.videoId === groupNoteVideo);
+    if (v) { v.note = e.target.value; t.dateModified = Date.now(); scheduleSave(); }
+    return;
+  }
   const field = e.target.dataset.field, itemId = e.target.dataset.itemid;
   if (!field || !itemId) return;
   const t = state.trainings[currentTrainingId];
   const row = t.items.find(it => it.itemId === itemId);
   if (!row) return;
-  row[field] = field === "duration" ? (parseInt(e.target.value) || 0) : e.target.value;
+  const numericFields = ["duration", "seriesCount", "seriesPause"];
+  row[field] = numericFields.includes(field) ? (parseInt(e.target.value) || 0) : e.target.value;
   t.dateModified = Date.now();
   scheduleSave();
   if (field === "duration") updateTotalBadge();
-  if (field === "part") renderSequence();
+  if (field === "part" || field === "seriesCount") renderSequence();
 });
 document.getElementById("sequenceList").addEventListener("click", (e) => {
   const openBtn = e.target.closest("[data-open]");
   if (openBtn && openBtn.dataset.open) { openDetailModal(openBtn.dataset.open); return; }
+  const modeBtn = e.target.closest("[data-mode-set]");
+  if (modeBtn) {
+    const t = state.trainings[currentTrainingId];
+    const row = t.items.find(it => it.itemId === modeBtn.dataset.itemid);
+    if (row) { row.mode = modeBtn.dataset.modeSet; t.dateModified = Date.now(); scheduleSave(); renderSequence(); }
+    return;
+  }
+  const rmGroupVideo = e.target.closest("[data-groupvideo-remove-item]");
+  if (rmGroupVideo) {
+    const t = state.trainings[currentTrainingId];
+    const row = t.items.find(it => it.itemId === rmGroupVideo.dataset.groupvideoRemoveItem);
+    if (row) {
+      row.videos = row.videos.filter(v => v.videoId !== rmGroupVideo.dataset.groupvideoRemoveVideo);
+      t.dateModified = Date.now();
+      scheduleSave();
+      renderSequence();
+    }
+    return;
+  }
   const rm = e.target.closest("[data-remove]");
   if (rm) {
     const t = state.trainings[currentTrainingId];
