@@ -112,9 +112,12 @@ a{color:var(--court);}
 .btn-icon{padding:8px;width:36px;height:36px;}
 .folder-nav-btn{background:var(--court);color:#fff;width:44px;height:44px;font-size:17px;border-color:var(--court);flex-shrink:0;}
 #libraryToolbarArea.pinned{
-  position:sticky;top:98px;z-index:15;background:var(--paper);padding-top:8px;margin-top:-8px;
-  box-shadow:0 4px 8px -4px rgba(0,0,0,.15);
+  position:fixed;top:98px;left:0;right:0;z-index:15;background:var(--paper);
+  padding:8px 16px 8px;box-shadow:0 4px 8px -4px rgba(0,0,0,.15);
+  max-width:960px;margin:0 auto;box-sizing:border-box;
 }
+#libraryToolbarArea.pinned + #libraryToolbarSpacer{display:block;}
+#libraryToolbarSpacer{display:none;}
 #togglePinToolbarBtn.btn-accent{background:var(--chalk);border-color:var(--chalk);color:#fff;}
 .folder-nav-btn:hover,.folder-nav-btn:active{background:var(--court-dark);border-color:var(--court-dark);}
 .btn-block{width:100%;}
@@ -478,15 +481,21 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 }
 .tm-part-label{font-family:var(--font-display);font-size:16px;letter-spacing:.08em;color:rgba(27,36,48,.6);margin-bottom:10px;}
 .tm-series-label{font-size:13px;font-weight:700;color:var(--chalk-dark);background:rgba(232,98,44,.12);display:inline-block;padding:3px 10px;border-radius:20px;margin-bottom:8px;}
+.tm-group-name{
+  font-family:var(--font-display);font-size:clamp(20px,5.5vw,30px);letter-spacing:.04em;color:var(--court-dark);
+  background:rgba(51,153,51,.1);border:2px solid var(--court);border-radius:var(--radius-sm);
+  padding:7px 18px;margin-bottom:12px;max-width:100%;overflow-wrap:anywhere;
+}
 .tm-group-strip{display:flex;gap:8px;overflow-x:auto;margin-top:14px;padding-bottom:4px;max-width:100%;}
 .tm-group-strip img,.tm-group-strip .tm-group-strip-placeholder{width:64px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0;background:rgba(0,0,0,.12);}
 .tm-group-strip .tm-group-strip-note{font-size:9px;text-align:center;color:var(--ink-soft);margin-top:2px;}
-.tm-reps-confirm{
-  margin:10px 16px 16px;padding:20px;border-radius:var(--radius);border:none;background:var(--court);color:#fff;
-  font-family:var(--font-display);font-size:22px;letter-spacing:.03em;flex-shrink:0;
-}
 .tm-title{font-family:var(--font-display);font-size:clamp(30px,8vw,46px);line-height:1.15;color:var(--ink);margin-bottom:10px;max-width:100%;overflow-wrap:anywhere;}
-.tm-desc{font-size:clamp(14px,3.6vw,17px);color:rgba(27,36,48,.7);margin-bottom:14px;max-width:520px;overflow-wrap:anywhere;}
+.tm-desc{font-family:var(--font-display);font-size:clamp(18px,5vw,24px);letter-spacing:.03em;color:rgba(27,36,48,.65);margin-bottom:12px;max-width:520px;overflow-wrap:anywhere;}
+.tm-reps-display{
+  font-family:var(--font-display);font-size:clamp(52px,17vw,100px);line-height:1;letter-spacing:.02em;color:var(--chalk-dark);
+  background:rgba(232,98,44,.1);border:3px solid var(--chalk);border-radius:var(--radius);
+  padding:10px 30px;margin:6px 0 16px;display:inline-block;
+}
 .tm-cue{font-size:clamp(15px,4vw,18px);font-weight:600;color:rgba(27,36,48,.75);margin-bottom:8px;max-width:100%;overflow-wrap:anywhere;}
 .tm-note{font-size:14px;color:var(--ink-faint);max-width:100%;overflow-wrap:anywhere;}
 .tm-timer-wrap{display:flex;align-items:center;justify-content:center;gap:22px;padding:18px 16px;flex-shrink:0;}
@@ -588,11 +597,12 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .seq-series-row label{display:flex;align-items:center;gap:5px;}
 .seq-series-row input{width:44px;border:1px solid rgba(0,0,0,.15);border-radius:6px;padding:2px 4px;font-size:11px;text-align:center;}
 .seq-group-videos{margin-top:10px;border-top:1px dashed rgba(0,0,0,.12);padding-top:8px;display:flex;flex-direction:column;gap:5px;}
-.seq-group-video-row{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.5);border-radius:6px;padding:4px 6px;}
+.seq-group-video-row{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.5);border-radius:6px;padding:6px 8px;flex-wrap:wrap;}
 .drag-handle-inner{cursor:grab;color:rgba(27,36,48,.35);font-size:12px;flex-shrink:0;touch-action:none;}
 .seq-group-thumb{width:38px;height:26px;object-fit:cover;border-radius:4px;background:rgba(0,0,0,.12);flex-shrink:0;}
-.seq-group-video-title{font-size:11.5px;font-weight:600;flex:1;min-width:0;overflow-wrap:anywhere;}
-.seq-group-video-note{width:70px;flex-shrink:0;border:1px solid rgba(0,0,0,.15);border-radius:5px;padding:3px 5px;font-size:10.5px;}
+.seq-group-video-title{font-size:12px;font-weight:600;flex:1;min-width:120px;overflow-wrap:anywhere;}
+.seq-group-video-reps{width:66px;flex-shrink:0;border:1px solid rgba(0,0,0,.2);border-radius:5px;padding:5px 7px;font-size:13px;font-weight:700;color:var(--chalk-dark);}
+.seq-group-video-note{width:120px;flex-shrink:0;border:1px solid rgba(0,0,0,.15);border-radius:5px;padding:5px 7px;font-size:12.5px;}
 .seq-group-video-remove{background:none;border:none;color:var(--danger);font-size:12px;flex-shrink:0;padding:2px;}
 
 /* Search inside picker */
@@ -683,10 +693,10 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
           <option value="difficulty-desc">Nejtěžší</option>
         </select>
         <button class="btn btn-icon" id="toggleViewModeBtn" aria-label="Přepnout zobrazení"><i class="fa-solid fa-list"></i></button>
+        <button class="btn btn-icon" id="togglePinToolbarBtn" aria-label="Přišpendlit panel"><i class="fa-solid fa-thumbtack"></i></button>
         <button class="btn btn-icon" id="toggleFavFilterBtn" aria-label="Jen oblíbené"><i class="fa-regular fa-star"></i></button>
         <button class="btn btn-icon" id="toggleSelectModeBtn" aria-label="Vybrat více"><i class="fa-regular fa-square-check"></i></button>
         <button class="btn btn-sm hidden" id="selectAllBtn">Zaškrtnout vše</button>
-        <button class="btn btn-icon" id="togglePinToolbarBtn" aria-label="Přišpendlit panel"><i class="fa-solid fa-thumbtack"></i></button>
         <div class="add-link-menu-wrap">
           <button class="btn btn-accent" id="openAddLinkMenuBtn"><i class="fa-solid fa-plus"></i> Přidat <i class="fa-solid fa-chevron-down" style="font-size:10px;margin-left:2px;"></i></button>
           <div class="add-link-menu hidden" id="addLinkMenu">
@@ -714,6 +724,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
       <div class="chip-collapse" id="equipFilterCollapse"><div class="chip-row" id="equipFilterRow"></div></div>
       <button type="button" class="manage-link" id="clearTagEquipFilterBtn" style="margin-bottom:10px;">Zrušit vše (štítky a vybavení)</button>
       </div>
+      <div id="libraryToolbarSpacer"></div>
       <div id="libraryGrid" class="grid"></div>
     </section>
 
@@ -1222,8 +1233,10 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   <div class="tm-body" id="tmBody">
     <div class="tm-part-label" id="tmPartLabel"></div>
     <div class="tm-series-label hidden" id="tmSeriesLabel"></div>
+    <div class="tm-group-name hidden" id="tmGroupName"></div>
     <div class="tm-title" id="tmTitle"></div>
     <div class="tm-desc" id="tmDesc"></div>
+    <div class="tm-reps-display hidden" id="tmRepsDisplay"></div>
     <div class="tm-cue" id="tmCue"></div>
     <div class="tm-note" id="tmNote"></div>
     <div class="tm-group-strip hidden" id="tmGroupStrip"></div>
@@ -1233,7 +1246,6 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
     <div class="tm-timer" id="tmTimer">10:00</div>
     <button type="button" class="tm-timer-btn" id="tmTimerReset" aria-label="Restartovat čas"><i class="fa-solid fa-rotate-left"></i></button>
   </div>
-  <button type="button" class="tm-reps-confirm hidden" id="tmRepsConfirmBtn">Hotovo, další <i class="fa-solid fa-check"></i></button>
   <div class="tm-nav">
     <button type="button" class="tm-nav-btn" id="tmPrevBtn"><i class="fa-solid fa-arrow-left"></i> Předchozí</button>
     <button type="button" class="tm-nav-btn tm-nav-next" id="tmNextBtn">Další <i class="fa-solid fa-arrow-right"></i></button>
@@ -1321,7 +1333,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-23 14:05";
+const APP_VERSION = "2026-07-23 15:30";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -2784,7 +2796,16 @@ function applyToolbarPinState() {
   const pinned = localStorage.getItem("trener_toolbar_pinned") === "1";
   document.getElementById("libraryToolbarArea").classList.toggle("pinned", pinned);
   document.getElementById("togglePinToolbarBtn").classList.toggle("btn-accent", pinned);
+  updateToolbarSpacerHeight();
 }
+function updateToolbarSpacerHeight() {
+  const area = document.getElementById("libraryToolbarArea");
+  const spacer = document.getElementById("libraryToolbarSpacer");
+  spacer.style.height = area.classList.contains("pinned") ? area.offsetHeight + "px" : "0px";
+}
+// appka drží vycpávku pořád aktuální, i když se výška panelu za chodu změní (např. zapnutí
+// výběru přidá řádek navíc) — ne jen v okamžiku, kdy se panel přišpendlí
+new ResizeObserver(updateToolbarSpacerHeight).observe(document.getElementById("libraryToolbarArea"));
 document.getElementById("togglePinToolbarBtn").addEventListener("click", () => {
   const pinned = localStorage.getItem("trener_toolbar_pinned") === "1";
   localStorage.setItem("trener_toolbar_pinned", pinned ? "0" : "1");
@@ -3784,11 +3805,10 @@ document.getElementById("startTrainingModeBtn").addEventListener("click", () => 
   renderTrainingModeItem();
 });
 
-/** Appka nastaví, jestli má appka ukázat odpočet času (timer), nebo velké tlačítko
-    "Hotovo, další" u režimu na opakování — appka nikdy neukazuje obojí najednou. */
+/** Appka u režimu na opakování jen schová odpočet času — appka pro pokračování dál používá
+    to samé tlačítko "Další" jako u času, žádné zvláštní tlačítko navíc appka nemá. */
 function setTimerMode(mode) {
   document.getElementById("tmTimerWrap").classList.toggle("hidden", mode === "reps");
-  document.getElementById("tmRepsConfirmBtn").classList.toggle("hidden", mode !== "reps");
 }
 
 function renderTrainingModeItem() {
@@ -3801,8 +3821,12 @@ function renderTrainingModeItem() {
   const body = document.getElementById("tmBody");
   const seriesLabel = document.getElementById("tmSeriesLabel");
   const groupStrip = document.getElementById("tmGroupStrip");
+  const groupNameEl = document.getElementById("tmGroupName");
+  const repsDisplay = document.getElementById("tmRepsDisplay");
   groupStrip.classList.add("hidden");
   groupStrip.innerHTML = "";
+  groupNameEl.classList.add("hidden");
+  repsDisplay.classList.add("hidden");
 
   if (row.part === "prestavka") {
     seriesLabel.classList.add("hidden");
@@ -3829,19 +3853,22 @@ function renderTrainingModeItem() {
 
   if (row.isGroup) {
     body.style.background = "var(--card)";
-    document.getElementById("tmPartLabel").textContent = "SKUPINA";
+    document.getElementById("tmPartLabel").textContent = "";
+    groupNameEl.textContent = row.name || "Skupina";
+    groupNameEl.classList.remove("hidden");
     document.getElementById("tmCue").innerHTML = row.cue ? `<i class="fa-solid fa-comment"></i> ${esc(row.cue)}` : "";
 
     if ((row.mode || "time") === "reps") {
       // appka provede video po videu uvnitř skupiny, každé zvlášť čeká na potvrzení
       const v = row.videos[trainingModeGroupVideoIndex];
       const lib = v ? state.library[v.videoId] : null;
-      document.getElementById("tmTitle").textContent = `${row.name || "Skupina"} — ${lib ? lib.title : "(video smazáno)"}`;
+      document.getElementById("tmTitle").textContent = lib ? lib.title : "(video smazáno)";
       document.getElementById("tmDesc").textContent = `Cvik ${trainingModeGroupVideoIndex + 1} / ${row.videos.length}`;
       document.getElementById("tmNote").textContent = (v && v.note) || row.poznamka || "";
+      if (v && v.reps) { repsDisplay.textContent = v.reps; repsDisplay.classList.remove("hidden"); }
       setTimerMode("reps");
     } else {
-      document.getElementById("tmTitle").textContent = row.name || "Skupina";
+      document.getElementById("tmTitle").textContent = "";
       document.getElementById("tmDesc").textContent = "";
       document.getElementById("tmNote").textContent = row.poznamka || "";
       groupStrip.innerHTML = row.videos.map(v => {
@@ -3869,6 +3896,7 @@ function renderTrainingModeItem() {
   document.getElementById("tmNote").textContent = row.poznamka || "";
 
   if ((row.mode || "time") === "reps") {
+    if (row.reps) { repsDisplay.textContent = row.reps; repsDisplay.classList.remove("hidden"); }
     setTimerMode("reps");
   } else {
     setTimerMode("time");
@@ -3881,10 +3909,18 @@ function renderTrainingModeItem() {
 /** Appka vloží krátkou, appkou automaticky odpočítávanou pauzu mezi jednotlivé série — appka
     ji sama nepřeskočí, ani po doběhnutí na nulu, počká na tvoje "Další", stejně jako u
     ostatních položek appky. */
+/** Pauza mezi sériemi appce jde zadat ve vteřinách i minutách — appka si to tady vždycky
+    převede na skutečné vteřiny, at appka nikde jinde tenhle převod nemusí řešit znovu. */
+function getSeriesPauseSeconds(row) {
+  const raw = row.seriesPause != null ? row.seriesPause : 30;
+  return row.seriesPauseUnit === "min" ? raw * 60 : raw;
+}
 function renderSeriesPause() {
   const row = trainingModeItems[trainingModeIndex];
   document.getElementById("tmSeriesLabel").classList.add("hidden");
   document.getElementById("tmGroupStrip").classList.add("hidden");
+  document.getElementById("tmGroupName").classList.add("hidden");
+  document.getElementById("tmRepsDisplay").classList.add("hidden");
   document.getElementById("tmProgress").textContent = `${trainingModeIndex + 1} / ${trainingModeItems.length}`;
   document.getElementById("tmPrevBtn").disabled = true;
   document.getElementById("tmNextBtn").innerHTML = 'Další <i class="fa-solid fa-arrow-right"></i>';
@@ -3895,7 +3931,7 @@ function renderSeriesPause() {
   document.getElementById("tmCue").innerHTML = "";
   document.getElementById("tmNote").textContent = "";
   setTimerMode("time");
-  trainingModeSeconds = Math.max(1, row.seriesPause != null ? row.seriesPause : 30);
+  trainingModeSeconds = Math.max(1, getSeriesPauseSeconds(row));
   updateTrainingModeTimerDisplay();
   startTrainingModeTimer();
 }
@@ -3904,6 +3940,8 @@ function renderTrainingModeFinished() {
   stopTrainingModeTimer();
   document.getElementById("tmSeriesLabel").classList.add("hidden");
   document.getElementById("tmGroupStrip").classList.add("hidden");
+  document.getElementById("tmGroupName").classList.add("hidden");
+  document.getElementById("tmRepsDisplay").classList.add("hidden");
   document.getElementById("tmBody").style.background = "var(--court)";
   document.getElementById("tmPartLabel").textContent = "";
   document.getElementById("tmTitle").textContent = "Hotovo 💪";
@@ -3912,7 +3950,6 @@ function renderTrainingModeFinished() {
   document.getElementById("tmCue").innerHTML = "";
   document.getElementById("tmNote").textContent = "";
   document.getElementById("tmTimerWrap").classList.add("hidden");
-  document.getElementById("tmRepsConfirmBtn").classList.add("hidden");
   document.getElementById("tmNextBtn").innerHTML = 'Zavřít <i class="fa-solid fa-xmark"></i>';
   document.getElementById("tmPrevBtn").disabled = true;
 }
@@ -3948,7 +3985,7 @@ document.getElementById("tmTimerReset").addEventListener("click", () => {
   if (trainingModeFinished) return;
   const row = trainingModeItems[trainingModeIndex];
   trainingModeSeconds = trainingModeInSeriesPause
-    ? Math.max(1, row.seriesPause != null ? row.seriesPause : 30)
+    ? Math.max(1, getSeriesPauseSeconds(row))
     : Math.max(1, row.duration || 1) * 60;
   updateTrainingModeTimerDisplay();
   startTrainingModeTimer();
@@ -3999,7 +4036,6 @@ function advanceTrainingMode() {
   }
 }
 document.getElementById("tmNextBtn").addEventListener("click", advanceTrainingMode);
-document.getElementById("tmRepsConfirmBtn").addEventListener("click", advanceTrainingMode);
 function closeTrainingMode() {
   stopTrainingModeTimer();
   document.getElementById("trainingModeView").classList.add("hidden");
@@ -4261,7 +4297,11 @@ function renderModeSeriesControls(row, dis) {
     </div>
     <div class="seq-series-row">
       <label>Sérií <input type="number" min="1" value="${seriesCount}" data-field="seriesCount" data-itemid="${esc(row.itemId)}" ${dis}></label>
-      ${seriesCount > 1 ? `<label>Pauza mezi sériemi (s) <input type="number" min="0" value="${row.seriesPause != null ? row.seriesPause : 30}" data-field="seriesPause" data-itemid="${esc(row.itemId)}" ${dis}></label>` : ""}
+      ${seriesCount > 1 ? `<label>Pauza mezi sériemi <input type="number" min="0" value="${row.seriesPause != null ? row.seriesPause : 30}" data-field="seriesPause" data-itemid="${esc(row.itemId)}" style="width:56px;" ${dis}>
+        <select data-field="seriesPauseUnit" data-itemid="${esc(row.itemId)}" style="width:auto;padding:4px 6px;" ${dis}>
+          <option value="s" ${(row.seriesPauseUnit || "s") === "s" ? "selected" : ""}>s</option>
+          <option value="min" ${row.seriesPauseUnit === "min" ? "selected" : ""}>min</option>
+        </select></label>` : ""}
     </div>`;
 }
 function renderSequence() {
@@ -4304,7 +4344,8 @@ function renderSequence() {
               ${ro ? "" : `<span class="drag-handle-inner"><i class="fa-solid fa-grip-lines"></i></span>`}
               ${resolveThumbnailUrl(lib) ? `<img class="seq-group-thumb" src="${esc(resolveThumbnailUrl(lib))}" data-open="${esc(v.videoId)}">` : `<div class="seq-group-thumb" data-open="${esc(v.videoId)}"></div>`}
               <span class="seq-group-video-title" data-open="${esc(v.videoId)}">${lib ? esc(lib.title) : "(video smazáno z knihovny)"}</span>
-              <input type="text" class="seq-group-video-note" placeholder="pozn. (12×)" value="${esc(v.note || "")}" data-groupnote-item="${esc(row.itemId)}" data-groupnote-video="${esc(v.videoId)}" ${dis}>
+              ${(row.mode || "time") === "reps" ? `<input type="text" class="seq-group-video-reps" placeholder="10×" value="${esc(v.reps || "")}" data-groupreps-item="${esc(row.itemId)}" data-groupreps-video="${esc(v.videoId)}" ${dis}>` : ""}
+              <input type="text" class="seq-group-video-note" placeholder="poznámka" value="${esc(v.note || "")}" data-groupnote-item="${esc(row.itemId)}" data-groupnote-video="${esc(v.videoId)}" ${dis}>
               ${ro ? "" : `<button type="button" class="seq-group-video-remove" data-groupvideo-remove-item="${esc(row.itemId)}" data-groupvideo-remove-video="${esc(v.videoId)}" aria-label="Odebrat ze skupiny"><i class="fa-solid fa-xmark"></i></button>`}
             </div>`;
           }).join("")}
@@ -4372,6 +4413,14 @@ function renderSequence() {
 }
 
 document.getElementById("sequenceList").addEventListener("input", (e) => {
+  const groupRepsItem = e.target.dataset.grouprepsItem, groupRepsVideo = e.target.dataset.grouprepsVideo;
+  if (groupRepsItem && groupRepsVideo) {
+    const t = state.trainings[currentTrainingId];
+    const row = t.items.find(it => it.itemId === groupRepsItem);
+    const v = row && row.videos.find(x => x.videoId === groupRepsVideo);
+    if (v) { v.reps = e.target.value; t.dateModified = Date.now(); scheduleSave(); }
+    return;
+  }
   const groupNoteItem = e.target.dataset.groupnoteItem, groupNoteVideo = e.target.dataset.groupnoteVideo;
   if (groupNoteItem && groupNoteVideo) {
     const t = state.trainings[currentTrainingId];
