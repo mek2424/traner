@@ -1196,7 +1196,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-22 10:20";
+const APP_VERSION = "2026-07-22 11:05";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -2094,9 +2094,7 @@ async function loadUserData() {
 let sharedDataUnsubscribe = null;
 function subscribeToSharedData() {
   if (sharedDataUnsubscribe) { sharedDataUnsubscribe(); sharedDataUnsubscribe = null; }
-  let firstSnapshot = true;
   sharedDataUnsubscribe = onSnapshot(doc(db, "shared", "data"), (snap) => {
-    if (firstSnapshot) { firstSnapshot = false; return; } // tenhle stav appka už má z počátečního načtení
     if (snap.metadata.hasPendingWrites) {
       logDebug("[sync] ignoruji ozvěnu vlastního ještě nepotvrzeného zápisu");
       return; // reagujeme jen na potvrzená data ze serveru, ne na naši vlastní optimistickou ozvěnu
@@ -2115,9 +2113,7 @@ function unsubscribeFromSharedData() {
 let sharedThumbsUnsubscribe = null;
 function subscribeToSharedThumbnails() {
   if (sharedThumbsUnsubscribe) { sharedThumbsUnsubscribe(); sharedThumbsUnsubscribe = null; }
-  let firstSnapshot = true;
   sharedThumbsUnsubscribe = onSnapshot(collection(db, "sharedThumbnails"), (snap) => {
-    if (firstSnapshot) { firstSnapshot = false; return; } // tenhle stav appka už má z počátečního načtení
     let changed = false;
     snap.docChanges().forEach(change => {
       if (change.doc.metadata.hasPendingWrites) return; // ozvěna vlastního zápisu, appka to už má
@@ -2139,9 +2135,7 @@ let ownMembershipUnsubscribe = null;
 function subscribeToOwnMembership() {
   if (ownMembershipUnsubscribe) { ownMembershipUnsubscribe(); ownMembershipUnsubscribe = null; }
   const sessionStartedAt = Date.now();
-  let firstSnapshot = true;
   ownMembershipUnsubscribe = onSnapshot(doc(db, "shared", "members"), (snap) => {
-    if (firstSnapshot) { firstSnapshot = false; return; }
     if (snap.metadata.hasPendingWrites) return;
     if (!snap.exists()) return;
     const data = snap.data();
