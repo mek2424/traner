@@ -475,7 +475,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   position:relative;flex:1;display:grid;grid-template-columns:1fr;grid-template-areas:"left" "right" "video";
   gap:16px;padding:24px 20px;overflow-y:auto;min-height:0;transition:background .25s ease;text-align:center;
 }
-.tm-col-left{grid-area:left;display:flex;flex-direction:column;align-items:center;}
+.tm-col-left{grid-area:left;display:flex;flex-direction:column;align-items:center;margin-top:30px;}
 .tm-col-video{grid-area:video;}
 .tm-col-right{grid-area:right;display:flex;flex-direction:column;align-items:center;}
 .tm-body.tm-solo{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
@@ -507,6 +507,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .tm-note{font-size:14px;color:var(--ink-faint);max-width:100%;overflow-wrap:anywhere;}
 @media(min-width:860px),(orientation:landscape) and (min-width:480px){
   .tm-body{grid-template-columns:1fr 1.3fr 1fr;grid-template-areas:"left video right";align-items:center;gap:28px;padding:24px 40px;}
+  .tm-col-left{margin-top:0;}
   .tm-video-wrap{max-width:100%;}
   .tm-desc,.tm-cue,.tm-note{max-width:100%;}
 }
@@ -2014,26 +2015,36 @@ function renderEmbedHtml(item, opts) {
   return `<a class="fallback-link" href="${esc(item.url)}" target="_blank" rel="noopener">Otevřít odkaz ↗</a>`;
 }
 
-/** U Disku se v praxi osvědčila pevná výška v pixelech (ne dopočítávaná podle šířky/poměru)
-    a automatický přechod na náhradní iframe, pokud se přímé video nepodaří přehrát. Tahle
-    funkce je sdílená mezi detailem videa v Knihovně a Tréninkovým režimem. */
-function setupDriveVideoPlayback(wrap, item) {
-  if (item.platform !== "drive") return;
-  const DRIVE_HEIGHT_PX = { "16/9": 480, "4/3": 480, "1/1": 560, "9/16": 640 };
+/** Video z Disku má vlastní ošetření, sdílené mezi detailem v Knihovně a Tréninkovým režimem:
+    přímé video se rovnou vykreslí v uloženém poměru stran (žádné dopředné hádání) a vždy má
+    horní hranici výšky jako procento výšky obrazovky (opts.maxVh) — jinak by video na výšku
+    (9:16) v úzkém sloupci natáhlo výšku přes celou obrazovku. Pokud se přímé video nepodaří
+    přehrát, přepne se na náhradní iframe od Disku, který v praxi potřebuje pevnou výšku
+    v pixelech (ne dopočítávanou podle poměru), jinak se občas vykreslí špatně. */
+const DRIVE_FALLBACK_HEIGHT_PX = { "16/9": 480, "4/3": 480, "1/1": 560, "9/16": 640 };
+function applyDriveFallbackHeight(wrap, item, maxVh) {
+  const base = DRIVE_FALLBACK_HEIGHT_PX[item.aspectRatio] || 480;
   wrap.style.aspectRatio = "auto";
   wrap.style.maxHeight = "none";
-  wrap.style.height = (DRIVE_HEIGHT_PX[item.aspectRatio] || 480) + "px";
+  wrap.style.height = Math.min(base, Math.round(window.innerHeight * (maxVh / 100))) + "px";
+}
+function setupDriveVideoPlayback(wrap, item, opts) {
+  if (item.platform !== "drive") return;
+  const maxVh = (opts && opts.maxVh) || 70;
   const driveVideoEl = wrap.querySelector("video[data-drive-fallback]");
-  if (!driveVideoEl) return;
+  if (!driveVideoEl) { applyDriveFallbackHeight(wrap, item, maxVh); return; }
+  wrap.style.height = "";
+  wrap.style.maxHeight = maxVh + "vh";
+  wrap.style.aspectRatio = item.aspectRatio || "16/9";
   driveVideoEl.addEventListener("error", () => {
-    if (!wrap.contains(driveVideoEl)) return; // appka mezitím appce vykreslila něco jiného
+    if (!wrap.contains(driveVideoEl)) return; // appka mezitím vykreslila něco jiného
     wrap.innerHTML = `<iframe class="embed" src="${driveVideoEl.dataset.driveFallback}" allow="autoplay; picture-in-picture 'none'"></iframe>`;
+    applyDriveFallbackHeight(wrap, item, maxVh);
   }, { once: true });
   driveVideoEl.addEventListener("loadedmetadata", () => {
     if (!wrap.contains(driveVideoEl)) return;
+    // appka teď zná skutečný poměr stran, přesnější než uložený odhad — výškový strop (maxHeight) necháváme být
     if (driveVideoEl.videoWidth && driveVideoEl.videoHeight) {
-      wrap.style.height = "";
-      wrap.style.maxHeight = "";
       wrap.style.aspectRatio = `${driveVideoEl.videoWidth} / ${driveVideoEl.videoHeight}`;
     }
   }, { once: true });
@@ -3870,7 +3881,7 @@ function showTrainingModeVideo(lib) {
   wrap.style.height = "";
   wrap.style.maxHeight = "";
   wrap.innerHTML = renderEmbedHtml(lib, { muted: true });
-  setupDriveVideoPlayback(wrap, lib);
+  setupDriveVideoPlayback(wrap, lib, { maxVh: 40 });
 }
 function renderTrainingModeItem() {
   stopTrainingModeTimer();
