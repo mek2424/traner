@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Trenér</title>
-<meta name="theme-color" content="#22406B">
+<meta name="theme-color" content="#339933">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -186,6 +186,7 @@ header.topbar{
 .topbar-title-group{display:flex;align-items:center;gap:10px;}
 .club-logo{width:34px;height:34px;border-radius:50%;flex-shrink:0;}
 .topbar-title{font-family:var(--font-display);font-size:24px;letter-spacing:.03em;}
+.offline-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.2);color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;letter-spacing:.02em;}
 .topbar-user{display:flex;align-items:center;gap:10px;font-size:12px;color:rgba(255,255,255,.75);}
 .topbar-user button{background:rgba(255,255,255,.12);border:none;color:#fff;border-radius:var(--radius-sm);padding:6px 10px;font-size:12px;}
 .avatar-btn{
@@ -731,6 +732,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
     <div class="topbar-title-group">
       <img src="club-logo.png" alt="Znak SK Meteor Praha" class="club-logo">
       <div class="topbar-title">TRENÉR</div>
+      <span class="offline-badge hidden" id="offlineBadge" title="Chybí signál — vidíš naposledy uložená data, ne nutně nejčerstvější"><i class="fa-solid fa-cloud-arrow-down"></i> Offline</span>
     </div>
     <div class="topbar-user">
       <button id="profileBtn" class="avatar-btn" aria-label="Profil"><span id="avatarInitial">?</span></button>
@@ -1078,6 +1080,20 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   </div>
 </div>
 
+<!-- ===================== CONFIRM DIALOG (náhrada za nativní confirm()) ===================== -->
+<div id="confirmModalBackdrop" class="modal-backdrop hidden">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-head">
+      <h2 id="confirmModalTitle" style="font-size:20px;">Opravdu?</h2>
+    </div>
+    <p id="confirmModalMessage" style="white-space:pre-line;color:var(--ink-soft);line-height:1.5;margin:0 0 20px;"></p>
+    <div class="modal-actions" style="display:flex;gap:10px;">
+      <button type="button" class="btn btn-block" id="confirmModalCancelBtn">Zrušit</button>
+      <button type="button" class="btn btn-primary btn-block" id="confirmModalConfirmBtn">Potvrdit</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===================== MANAGE PARTS MODAL ===================== -->
 <div id="partsModalBackdrop" class="modal-backdrop hidden">
   <div class="modal">
@@ -1406,7 +1422,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-23 20:05";
+const APP_VERSION = "2026-07-23 20:40";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1562,7 +1578,7 @@ document.getElementById("checkLibrarySizeBtn").addEventListener("click", () => {
 });
 document.getElementById("shrinkOversizedBtn").addEventListener("click", async () => {
   if (uidCurrent !== ADMIN_UID) return;
-  if (!confirm("Appka projde celou knihovnu, najde staré ručně nahrané fotky uložené přímo v knihovně, přestěhuje je do samostatné kolekce (a případně ještě zmenší) a rovnou uloží. Pokračovat?")) return;
+  if (!(await confirmDialog("Appka projde celou knihovnu, najde staré ručně nahrané fotky uložené přímo v knihovně, přestěhuje je do samostatné kolekce (a případně ještě zmenší) a rovnou uloží. Pokračovat?"))) return;
   logDebug("[stěhování] hledám staré náhledy uložené přímo v knihovně…");
   let fixedCount = 0;
   for (const [id, item] of Object.entries(state.library)) {
@@ -1628,7 +1644,7 @@ document.getElementById("adoptDriveThumbsBtn").addEventListener("click", async (
   if (!isEditor()) return;
   const targets = Object.values(state.library).filter(it => !it.deletedAt && it.platform !== "youtube" && it.thumbnail && /^https?:\/\//.test(it.thumbnail));
   if (!targets.length) { toast("Appka nenašla žádné video s náhledem odkazovaným zvenčí (YouTube náhledy appka schválně nechává být, ty jsou spolehlivé samy o sobě)."); return; }
-  if (!confirm(`Appka zkusí stáhnout a uložit natrvalo k sobě ${targets.length} náhledů (Disk, TikTok apod.). U videí z YouTube appka nic měnit nebude. Může to chvíli trvat, hlavně u víc videí najednou. Pokračovat?`)) return;
+  if (!(await confirmDialog(`Appka zkusí stáhnout a uložit natrvalo k sobě ${targets.length} náhledů (Disk, TikTok apod.). U videí z YouTube appka nic měnit nebude. Může to chvíli trvat, hlavně u víc videí najednou. Pokračovat?`))) return;
   logDebug(`[náhledy] stahuji a ukládám ${targets.length} externě odkazovaných náhledů…`);
   let okCount = 0, failCount = 0;
   for (const item of targets) {
@@ -1665,7 +1681,7 @@ document.getElementById("refreshDriveThumbsBtn").addEventListener("click", async
   const targets = Object.values(state.library).filter(it => !it.deletedAt && it.platform === "drive" && it.videoId && (!it.thumbnail || it.thumbnail.startsWith("http")));
   if (!targets.length) { toast("Appka nenašla žádné video z Disku bez vlastní uložené fotky."); return; }
   if (!state.driveApiKey) { toast("Appka nemá nastavený přístupový klíč k Disku (nastavuje se v Profilu) — bez něj tohle nepůjde.", 6000); return; }
-  if (!confirm(`Appka u ${targets.length} videí z Disku nejdřív zkusí získat čerstvou adresu náhledu, a hned nato ji zkusí uložit natrvalo k appce. Může to chvíli trvat. Pokračovat?`)) return;
+  if (!(await confirmDialog(`Appka u ${targets.length} videí z Disku nejdřív zkusí získat čerstvou adresu náhledu, a hned nato ji zkusí uložit natrvalo k appce. Může to chvíli trvat. Pokračovat?`))) return;
   logDebug(`[náhledy] obnovuji a ukládám náhledy u ${targets.length} videí z Disku…`);
   let refreshedCount = 0, savedCount = 0;
   for (const item of targets) {
@@ -1809,6 +1825,35 @@ function toast(msg, durationMs = 2200) {
   t.classList.add("show");
   clearTimeout(toast._tm);
   toast._tm = setTimeout(() => t.classList.remove("show"), durationMs);
+}
+/** Vlastní, stylově sladěná náhrada za nativní okénko prohlížeče confirm(). Vrací Promise
+    (true = potvrzeno, false = zrušeno) — volající funkce proto musí být async a použít await,
+    protože na rozdíl od confirm() tohle neblokuje běh synchronně. */
+function confirmDialog(message, opts) {
+  opts = opts || {};
+  return new Promise((resolve) => {
+    const backdrop = document.getElementById("confirmModalBackdrop");
+    const confirmBtn = document.getElementById("confirmModalConfirmBtn");
+    const cancelBtn = document.getElementById("confirmModalCancelBtn");
+    document.getElementById("confirmModalTitle").textContent = opts.title || "Opravdu?";
+    document.getElementById("confirmModalMessage").textContent = message;
+    confirmBtn.textContent = opts.confirmLabel || "Potvrdit";
+    confirmBtn.className = "btn btn-block " + (opts.danger ? "btn-danger" : "btn-primary");
+    backdrop.classList.remove("hidden");
+    const finish = (result) => {
+      backdrop.classList.add("hidden");
+      confirmBtn.removeEventListener("click", onConfirm);
+      cancelBtn.removeEventListener("click", onCancel);
+      backdrop.removeEventListener("click", onBackdrop);
+      resolve(result);
+    };
+    const onConfirm = () => finish(true);
+    const onCancel = () => finish(false);
+    const onBackdrop = (e) => { if (e.target === backdrop) finish(false); };
+    confirmBtn.addEventListener("click", onConfirm);
+    cancelBtn.addEventListener("click", onCancel);
+    backdrop.addEventListener("click", onBackdrop);
+  });
 }
 function scheduleSave() {
   clearTimeout(saveTimer);
@@ -2540,6 +2585,9 @@ let sharedDataUnsubscribe = null;
 function subscribeToSharedData() {
   if (sharedDataUnsubscribe) { sharedDataUnsubscribe(); sharedDataUnsubscribe = null; }
   sharedDataUnsubscribe = onSnapshot(doc(db, "shared", "data"), (snap) => {
+    // Firestore sám pozná, jestli data přišla čerstvě ze serveru, nebo jen z místní kopie
+    // (např. bez signálu na hřišti) — díky tomu není potřeba nic odhadovat.
+    document.getElementById("offlineBadge").classList.toggle("hidden", !snap.metadata.fromCache);
     if (snap.metadata.hasPendingWrites) {
       logDebug("[sync] ignoruji ozvěnu vlastního ještě nepotvrzeného zápisu");
       return; // reagujeme jen na potvrzená data ze serveru, ne na naši vlastní optimistickou ozvěnu
@@ -2981,7 +3029,7 @@ function updateBulkBar() {
 }
 document.getElementById("bulkCancelBtn").addEventListener("click", () => { selectMode = false; selectedIds.clear(); document.getElementById("toggleSelectModeBtn").classList.remove("btn-accent"); document.getElementById("selectAllBtn").classList.add("hidden"); renderLibrary(); });
 document.getElementById("bulkDeleteBtn").addEventListener("click", async () => {
-  if (!confirm(`Přesunout ${selectedIds.size} vybraných videí do koše?`)) return;
+  if (!(await confirmDialog(`Přesunout ${selectedIds.size} vybraných videí do koše?`, { confirmLabel: "Přesunout do koše", danger: true }))) return;
   selectedIds.forEach(id => softDeleteLibraryItem(id));
   selectedIds.clear();
   renderLibrary();
@@ -3124,7 +3172,7 @@ function openCardContextMenu(itemId, anchorBtn) {
   menu.querySelector("[data-act='edit']")?.addEventListener("click", () => { closeCardContextMenu(); openLinkModal(itemId); });
   menu.querySelector("[data-act='delete']")?.addEventListener("click", async () => {
     closeCardContextMenu();
-    if (!confirm(`Přesunout „${item.title}" do koše?`)) return;
+    if (!(await confirmDialog(`Přesunout „${item.title}" do koše?`, { confirmLabel: "Přesunout do koše", danger: true }))) return;
     softDeleteLibraryItem(itemId);
     renderLibrary();
     const ok = await saveUserData();
@@ -3673,7 +3721,7 @@ linkForm.addEventListener("submit", async (e) => {
 
 document.getElementById("deleteLinkBtn").addEventListener("click", async () => {
   if (!editingLinkId) return;
-  if (!confirm("Přesunout tento odkaz do koše?")) return;
+  if (!(await confirmDialog("Přesunout tento odkaz do koše?", { confirmLabel: "Přesunout do koše", danger: true }))) return;
   softDeleteLibraryItem(editingLinkId);
   closeLinkModal();
   renderLibrary();
@@ -3898,8 +3946,8 @@ function renderTrainingsList() {
     renderTrainingsList();
     toast("Naklonováno.");
   }));
-  list.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", () => {
-    if (!confirm("Smazat tento trénink?")) return;
+  list.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", async () => {
+    if (!(await confirmDialog("Smazat tento trénink?", { confirmLabel: "Smazat", danger: true }))) return;
     delete state.trainings[b.dataset.del];
     deleteTrainingRemote(b.dataset.del);
     renderTrainingsList();
@@ -4855,8 +4903,8 @@ document.getElementById("sequenceList").addEventListener("click", (e) => {
 });
 
 document.getElementById("saveTrainingBtn").addEventListener("click", () => { scheduleSave(); toast("Trénink uložen."); switchView("trainings"); });
-document.getElementById("deleteTrainingBtn").addEventListener("click", () => {
-  if (!confirm("Smazat celý tento trénink?")) return;
+document.getElementById("deleteTrainingBtn").addEventListener("click", async () => {
+  if (!(await confirmDialog("Smazat celý tento trénink?", { confirmLabel: "Smazat", danger: true }))) return;
   delete state.trainings[currentTrainingId];
   scheduleSave();
   switchView("trainings");
@@ -4890,9 +4938,9 @@ function renderMergeList(containerId, pool, mergeFn) {
     </div>
   `).join("");
   wrap.querySelectorAll("select").forEach(sel => {
-    sel.addEventListener("change", () => {
+    sel.addEventListener("change", async () => {
       if (!sel.value) return;
-      if (!confirm(`Sloučit „${sel.dataset.from}" do „${sel.value}"? Projeví se to ve všech videích v knihovně.`)) { sel.value = ""; return; }
+      if (!(await confirmDialog(`Sloučit „${sel.dataset.from}" do „${sel.value}"? Projeví se to ve všech videích v knihovně.`, { confirmLabel: "Sloučit" }))) { sel.value = ""; return; }
       mergeFn(sel.dataset.from, sel.value);
       renderMergeLists();
     });
@@ -5007,7 +5055,7 @@ async function renderPendingApprovals() {
     } catch (e) { console.error(e); toast("Schválení se nepovedlo."); }
   }));
   wrap.querySelectorAll("[data-reject]").forEach(btn => btn.addEventListener("click", async () => {
-    if (!confirm("Zamítnout tuhle žádost o přístup?")) return;
+    if (!(await confirmDialog("Zamítnout tuhle žádost o přístup?", { confirmLabel: "Zamítnout", danger: true }))) return;
     try {
       await deleteDoc(doc(db, "pendingRequests", btn.dataset.reject));
       toast("Zamítnuto.");
@@ -5057,7 +5105,7 @@ async function renderMembersRoleList() {
   }));
   wrap.querySelectorAll("[data-kick]").forEach(btn => btn.addEventListener("click", async () => {
     const uid = btn.dataset.kick, name = btn.dataset.name;
-    if (!confirm(`Odhlásit uživatele „${name}" na dálku? Přístup mu/jí zůstane — může se rovnou zase přihlásit, tohle jen ukončí to, co má teď otevřené.`)) return;
+    if (!(await confirmDialog(`Odhlásit uživatele „${name}" na dálku? Přístup mu/jí zůstane — může se rovnou zase přihlásit, tohle jen ukončí to, co má teď otevřené.`, { confirmLabel: "Odhlásit" }))) return;
     try {
       await updateDoc(doc(db, "shared", "members"), { [`kickedAt.${uid}`]: Date.now() });
       toast("Odhlášeno na dálku (projeví se během chvíle).");
@@ -5065,7 +5113,7 @@ async function renderMembersRoleList() {
   }));
   wrap.querySelectorAll("[data-removeaccess]").forEach(btn => btn.addEventListener("click", async () => {
     const uid = btn.dataset.removeaccess, name = btn.dataset.name;
-    if (!confirm(`Odebrat přístup uživateli „${name}" natrvalo? Přístup se dá kdykoliv znovu udělit přes novou žádost o registraci.`)) return;
+    if (!(await confirmDialog(`Odebrat přístup uživateli „${name}" natrvalo? Přístup se dá kdykoliv znovu udělit přes novou žádost o registraci.`, { confirmLabel: "Odebrat přístup", danger: true }))) return;
     try {
       // Stejná lekce jako u knihovny: appka MUSÍ smazat přesně tuhle jednu položku uvnitř
       // mapy výslovně (deleteField na přesné cestě) — pouhé vynechání z objektu by ji
@@ -5210,7 +5258,7 @@ document.getElementById("profileForm").addEventListener("submit", async (e) => {
 
 document.getElementById("deleteAccountBtn").addEventListener("click", async () => {
   const email = auth.currentUser.email;
-  if (!confirm(`Opravdu natrvalo smazat účet ${email}?\n\nSmaže se tvůj profil, všechny tvoje tréninky a tvoje hodnocení/obtížnost/poznámky u videí ve sdílené knihovně (samotná videa zůstanou). Nedá se vrátit zpět.`)) return;
+  if (!(await confirmDialog(`Opravdu natrvalo smazat účet ${email}?\n\nSmaže se tvůj profil, všechny tvoje tréninky a tvoje hodnocení/obtížnost/poznámky u videí ve sdílené knihovně (samotná videa zůstanou). Nedá se vrátit zpět.`, { confirmLabel: "Smazat účet", danger: true }))) return;
   const password = prompt(`Pro potvrzení zadej heslo k účtu ${email}:`);
   if (!password) return;
   try {
@@ -5343,7 +5391,7 @@ function renderFoldersManageList() {
       const msg = count
         ? `Smazat složku „${f.label}"? ${count} video(í) v ní zůstane bez složky.`
         : `Smazat složku „${f.label}"?`;
-      if (!confirm(msg)) return;
+      if (!(await confirmDialog(msg, { confirmLabel: "Smazat složku", danger: true }))) return;
       state.folders = state.folders.filter(x => x.key !== key);
       Object.values(state.library).forEach(it => { if (it.folderId === key) it.folderId = ""; });
       if (activeFolderFilter === key) activeFolderFilter = null;
@@ -5456,7 +5504,7 @@ function renderTrashList() {
   wrap.querySelectorAll("[data-purge]").forEach(btn => {
     btn.addEventListener("click", async () => {
       const it = state.library[btn.dataset.purge];
-      if (!confirm(`Smazat „${it ? it.title : "toto video"}" nadobro? Tohle se už nedá vzít zpět.`)) return;
+      if (!(await confirmDialog(`Smazat „${it ? it.title : "toto video"}" nadobro? Tohle se už nedá vzít zpět.`, { confirmLabel: "Smazat nadobro", danger: true }))) return;
       hardDeleteLibraryItem(btn.dataset.purge);
       renderTrashList();
       const ok = await saveUserData();
