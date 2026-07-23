@@ -631,7 +631,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   overflow-wrap:anywhere;word-break:break-word;}
 .seq-controls{display:flex;align-items:center;gap:6px;flex:1 0 100%;justify-content:flex-start;margin-top:2px;}
 .seq-part-select{border:1px solid rgba(0,0,0,.15);border-radius:6px;background:rgba(255,255,255,.6);font-size:11px;padding:2px 4px;width:auto;max-width:88px;}
-.seq-duration{width:34px;border:1px solid rgba(0,0,0,.15);border-radius:6px;padding:2px 3px;font-size:11px;text-align:center;}
+.seq-duration{width:46px;border:1px solid rgba(0,0,0,.15);border-radius:6px;padding:2px 3px;font-size:11px;text-align:center;}
 .seq-item-fields{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;}
 @media(max-width:420px){.seq-item-fields{grid-template-columns:1fr;}}
 .seq-item-fields input{border:1px solid rgba(0,0,0,.15);border-radius:6px;padding:5px 7px;font-size:12px;background:rgba(255,255,255,.55);}
@@ -669,7 +669,6 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .seq-group-video-title{font-size:12px;font-weight:600;flex:1;min-width:120px;overflow-wrap:anywhere;}
 .seq-group-video-reps{width:66px;flex-shrink:0;border:1px solid rgba(0,0,0,.2);border-radius:5px;padding:5px 7px;font-size:13px;font-weight:700;color:var(--chalk-dark);}
 .seq-group-video-duration{width:50px;flex-shrink:0;border:1px solid rgba(0,0,0,.2);border-radius:5px;padding:5px 7px;font-size:13px;font-weight:700;color:var(--court-dark);text-align:center;}
-.seq-group-video-unit{flex-shrink:0;border:1px solid rgba(0,0,0,.2);border-radius:5px;padding:5px 4px;font-size:11.5px;color:var(--ink-soft);background:#fff;}
 .seq-group-video-note{width:120px;flex-shrink:0;border:1px solid rgba(0,0,0,.15);border-radius:5px;padding:5px 7px;font-size:12.5px;}
 .seq-group-video-remove{background:none;border:none;color:var(--danger);font-size:12px;flex-shrink:0;padding:2px;}
 
@@ -1407,7 +1406,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-23 16:10";
+const APP_VERSION = "2026-07-23 16:30";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -4603,10 +4602,11 @@ function updateTotalBadge() {
     chybějící hodnotu jako "čas" — chová se přesně jako dřív, žádná zpětná nekompatibilita. */
 /** Appka tohle používá všude, kde appka nabízí volbu vteřiny/minuty (pauza mezi sériemi,
     přestávka, čas u videa uvnitř skupiny) — ať appka vypadá všude stejně, ne pokaždé jinak. */
-function renderTimeUnitSelect(field, itemId, currentUnit, defaultUnit, dis) {
+function renderTimeUnitSelect(field, itemId, currentUnit, defaultUnit, dis, attrsOverride) {
   const unit = currentUnit || defaultUnit;
+  const attrs = attrsOverride || `data-field="${field}" data-itemid="${esc(itemId)}"`;
   return `<span class="time-unit-select-wrap"><i class="fa-solid fa-stopwatch"></i>
-    <select data-field="${field}" data-itemid="${esc(itemId)}" ${dis}>
+    <select ${attrs} ${dis}>
       <option value="s" ${unit === "s" ? "selected" : ""}>s</option>
       <option value="min" ${unit === "min" ? "selected" : ""}>min</option>
     </select></span>`;
@@ -4621,7 +4621,8 @@ function renderModeSeriesControls(row, dis) {
         <button type="button" class="${mode === "reps" ? "active" : ""}" data-mode-set="reps" data-itemid="${esc(row.itemId)}" ${dis}>Opakování</button>
       </div>
       ${row.isGroup ? "" : (mode === "time"
-        ? `<input class="seq-duration" type="number" min="1" value="${row.duration || 1}" data-field="duration" data-itemid="${esc(row.itemId)}" ${dis}>`
+        ? `<input class="seq-duration" type="number" min="1" value="${row.duration || 1}" data-field="duration" data-itemid="${esc(row.itemId)}" ${dis}>
+           ${renderTimeUnitSelect("durationUnit", row.itemId, row.durationUnit, "min", dis)}`
         : `<input type="text" class="seq-reps-input" placeholder="např. 3×12" value="${esc(row.reps || "")}" data-field="reps" data-itemid="${esc(row.itemId)}" ${dis}>`)}
     </div>
     <div class="seq-series-row">
@@ -4674,10 +4675,7 @@ function renderSequence() {
               ${(row.mode || "time") === "reps"
                 ? `<input type="text" class="seq-group-video-reps" placeholder="10×" value="${esc(v.reps || "")}" data-groupreps-item="${esc(row.itemId)}" data-groupreps-video="${esc(v.videoId)}" ${dis}>`
                 : `<input type="number" min="1" class="seq-group-video-duration" placeholder="1" value="${v.duration != null ? v.duration : ""}" data-groupduration-item="${esc(row.itemId)}" data-groupduration-video="${esc(v.videoId)}" ${dis}>
-                   <select class="seq-group-video-unit" data-groupunit-item="${esc(row.itemId)}" data-groupunit-video="${esc(v.videoId)}" ${dis}>
-                     <option value="s" ${(v.durationUnit || "min") === "s" ? "selected" : ""}>s</option>
-                     <option value="min" ${(v.durationUnit || "min") === "min" ? "selected" : ""}>min</option>
-                   </select>`}
+                   ${renderTimeUnitSelect(null, null, v.durationUnit, "min", dis, `data-groupunit-item="${esc(row.itemId)}" data-groupunit-video="${esc(v.videoId)}"`)}`}
               <input type="text" class="seq-group-video-note" placeholder="poznámka" value="${esc(v.note || "")}" data-groupnote-item="${esc(row.itemId)}" data-groupnote-video="${esc(v.videoId)}" ${dis}>
               ${ro ? "" : `<button type="button" class="seq-group-video-remove" data-groupvideo-remove-item="${esc(row.itemId)}" data-groupvideo-remove-video="${esc(v.videoId)}" aria-label="Odebrat ze skupiny"><i class="fa-solid fa-xmark"></i></button>`}
             </div>`;
