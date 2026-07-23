@@ -62,7 +62,6 @@ body.dark-mode{
 html,body{margin:0;padding:0;}
 html{overflow-x:hidden;}
 body{
-  overflow-x:hidden;
   background:var(--paper);
   color:var(--ink);
   font-family:var(--font-body);
@@ -473,19 +472,22 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .tm-exit{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.06);border:none;color:var(--ink-soft);font-size:18px;display:flex;align-items:center;justify-content:center;}
 .tm-progress{font-family:var(--font-display);font-size:18px;color:var(--ink-soft);letter-spacing:.03em;}
 .tm-body{
-  flex:1;display:grid;grid-template-columns:1fr;grid-template-areas:"left" "right" "video";
+  position:relative;flex:1;display:grid;grid-template-columns:1fr;grid-template-areas:"left" "right" "video";
   gap:16px;padding:24px 20px;overflow-y:auto;min-height:0;transition:background .25s ease;text-align:center;
 }
-.tm-col-left{grid-area:left;}
+.tm-col-left{grid-area:left;display:flex;flex-direction:column;align-items:center;}
 .tm-col-video{grid-area:video;}
-.tm-col-right{grid-area:right;}
+.tm-col-right{grid-area:right;display:flex;flex-direction:column;align-items:center;}
+.tm-body.tm-solo{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+.tm-body.tm-solo .tm-col-video,.tm-body.tm-solo .tm-col-right{display:none;}
 .tm-video-wrap{width:100%;max-width:300px;aspect-ratio:16/9;background:#000;border-radius:var(--radius-sm);overflow:hidden;margin:0 auto;}
 .tm-up-next{
+  position:absolute;top:14px;right:16px;z-index:2;
   display:inline-flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);
   border-radius:20px;padding:8px 16px;font-size:12.5px;font-weight:600;color:var(--ink-soft);
-  margin-bottom:10px;box-shadow:var(--shadow);transform:translateY(-8px);opacity:0;transition:transform .35s ease,opacity .35s ease;
+  box-shadow:var(--shadow);transform:translateX(-24px);opacity:0;transition:transform .35s ease,opacity .35s ease;
 }
-.tm-up-next.shown{transform:translateY(0);opacity:1;}
+.tm-up-next.shown{transform:translateX(0);opacity:1;}
 .tm-up-next strong{color:var(--ink);}
 .tm-part-label{font-family:var(--font-display);font-size:16px;letter-spacing:.08em;color:rgba(27,36,48,.6);margin-bottom:10px;}
 .tm-series-label{font-size:13px;font-weight:700;color:var(--chalk-dark);background:rgba(232,98,44,.12);display:inline-block;padding:3px 10px;border-radius:20px;margin-bottom:8px;}
@@ -503,9 +505,8 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 }
 .tm-cue{font-size:clamp(15px,4vw,18px);font-weight:600;color:rgba(27,36,48,.75);margin-bottom:8px;max-width:100%;overflow-wrap:anywhere;}
 .tm-note{font-size:14px;color:var(--ink-faint);max-width:100%;overflow-wrap:anywhere;}
-@media(min-width:860px){
-  .tm-body{grid-template-columns:1fr 1.3fr 1fr;grid-template-areas:"left video right";align-items:center;text-align:left;gap:28px;padding:24px 40px;}
-  .tm-col-left,.tm-col-right{text-align:left;}
+@media(min-width:860px),(orientation:landscape) and (min-width:480px){
+  .tm-body{grid-template-columns:1fr 1.3fr 1fr;grid-template-areas:"left video right";align-items:center;gap:28px;padding:24px 40px;}
   .tm-video-wrap{max-width:100%;}
   .tm-desc,.tm-cue,.tm-note{max-width:100%;}
 }
@@ -1246,6 +1247,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
     <div style="width:44px;"></div>
   </div>
   <div class="tm-body" id="tmBody">
+    <div class="tm-up-next hidden" id="tmUpNext"></div>
     <div class="tm-col-left">
       <div class="tm-part-label" id="tmPartLabel"></div>
       <div class="tm-series-label hidden" id="tmSeriesLabel"></div>
@@ -1256,7 +1258,6 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
       <div class="tm-video-wrap hidden" id="tmVideoWrap"></div>
     </div>
     <div class="tm-col-right">
-      <div class="tm-up-next hidden" id="tmUpNext"></div>
       <div class="tm-desc" id="tmDesc"></div>
       <div class="tm-reps-display hidden" id="tmRepsDisplay"></div>
       <div class="tm-cue" id="tmCue"></div>
@@ -1979,33 +1980,63 @@ async function fetchYouTubeMeta(url) {
     return { title: data.title || "", thumbnail: data.thumbnail_url || "", portrait: (data.height && data.width) ? data.height > data.width : false };
   } catch { return null; }
 }
-function renderEmbedHtml(item) {
+function renderEmbedHtml(item, opts) {
+  opts = opts || {};
+  const muted = !!opts.muted;
   if (item.platform === "youtube" && item.videoId) {
-    const start = item.timestamp ? `?start=${item.timestamp}` : "";
-    return `<iframe class="embed" src="https://www.youtube-nocookie.com/embed/${esc(item.videoId)}${start}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>`;
+    const params = [];
+    if (item.timestamp) params.push(`start=${item.timestamp}`);
+    if (muted) params.push("mute=1");
+    const qs = params.length ? `?${params.join("&")}` : "";
+    return `<iframe class="embed" src="https://www.youtube-nocookie.com/embed/${esc(item.videoId)}${qs}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
   }
   if (item.platform === "drive" && item.videoId) {
     const fallback = `https://drive.google.com/file/d/${esc(item.videoId)}/preview`;
     const directSrc = state.driveApiKey
       ? `https://www.googleapis.com/drive/v3/files/${esc(item.videoId)}?alt=media&key=${esc(state.driveApiKey)}`
       : "";
-    if (!directSrc) return `<iframe class="embed" src="${fallback}" allow="autoplay; picture-in-picture 'none'" loading="lazy"></iframe>`;
-    return `<video class="embed" controls playsinline preload="metadata" src="${directSrc}" data-drive-fallback="${fallback}"></video>`;
+    if (!directSrc) return `<iframe class="embed" src="${fallback}" allow="autoplay; picture-in-picture 'none'"></iframe>`;
+    return `<video class="embed" controls playsinline preload="metadata"${muted ? " muted" : ""} src="${directSrc}" data-drive-fallback="${fallback}"></video>`;
   }
   if (item.platform === "facebook") {
-    return `<iframe class="embed" src="https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(item.url)}&show_text=false" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>`;
+    return `<iframe class="embed" src="https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(item.url)}&show_text=false" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
   }
   if (item.platform === "instagram" && item.videoId) {
-    return `<iframe class="embed" src="https://www.instagram.com/p/${esc(item.videoId)}/embed" allowfullscreen loading="lazy"></iframe>`;
+    return `<iframe class="embed" src="https://www.instagram.com/p/${esc(item.videoId)}/embed" allowfullscreen></iframe>`;
   }
   if (item.platform === "tiktok" && item.videoId) {
-    return `<iframe class="embed" src="https://www.tiktok.com/player/v1/${esc(item.videoId)}" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>`;
+    return `<iframe class="embed" src="https://www.tiktok.com/player/v1/${esc(item.videoId)}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
   }
   if (item.platform === "file") {
     const start = item.timestamp ? `#t=${item.timestamp}` : "";
-    return `<video class="embed" src="${esc(item.url)}${start}" controls playsinline preload="metadata" referrerpolicy="no-referrer"></video>`;
+    return `<video class="embed" src="${esc(item.url)}${start}" controls playsinline preload="metadata"${muted ? " muted" : ""} referrerpolicy="no-referrer"></video>`;
   }
   return `<a class="fallback-link" href="${esc(item.url)}" target="_blank" rel="noopener">Otevřít odkaz ↗</a>`;
+}
+
+/** U Disku se v praxi osvědčila pevná výška v pixelech (ne dopočítávaná podle šířky/poměru)
+    a automatický přechod na náhradní iframe, pokud se přímé video nepodaří přehrát. Tahle
+    funkce je sdílená mezi detailem videa v Knihovně a Tréninkovým režimem. */
+function setupDriveVideoPlayback(wrap, item) {
+  if (item.platform !== "drive") return;
+  const DRIVE_HEIGHT_PX = { "16/9": 480, "4/3": 480, "1/1": 560, "9/16": 640 };
+  wrap.style.aspectRatio = "auto";
+  wrap.style.maxHeight = "none";
+  wrap.style.height = (DRIVE_HEIGHT_PX[item.aspectRatio] || 480) + "px";
+  const driveVideoEl = wrap.querySelector("video[data-drive-fallback]");
+  if (!driveVideoEl) return;
+  driveVideoEl.addEventListener("error", () => {
+    if (!wrap.contains(driveVideoEl)) return; // appka mezitím appce vykreslila něco jiného
+    wrap.innerHTML = `<iframe class="embed" src="${driveVideoEl.dataset.driveFallback}" allow="autoplay; picture-in-picture 'none'"></iframe>`;
+  }, { once: true });
+  driveVideoEl.addEventListener("loadedmetadata", () => {
+    if (!wrap.contains(driveVideoEl)) return;
+    if (driveVideoEl.videoWidth && driveVideoEl.videoHeight) {
+      wrap.style.height = "";
+      wrap.style.maxHeight = "";
+      wrap.style.aspectRatio = `${driveVideoEl.videoWidth} / ${driveVideoEl.videoHeight}`;
+    }
+  }, { once: true });
 }
 
 /* =========================================================
@@ -3545,31 +3576,7 @@ function openDetailModal(id) {
       }, { once: true });
     }
   }
-  if (item.platform === "drive") {
-    // Ověřeno v praxi: pevná výška v pixelech (ne dopočítávaná podle šířky/poměru) dělá Disku
-    // na mobilu mnohem líp než cokoliv "chytřejšího". Bary nahoře/dole nevadí, hlavně ať nic neuřízne.
-    // Tohle je jen výchozí odhad, než appka zjistí víc (buď skutečné rozměry, nebo že přímé video nejde).
-    const DRIVE_HEIGHT_PX = { "16/9": 480, "4/3": 480, "1/1": 560, "9/16": 640 };
-    embedWrap.style.aspectRatio = "auto";
-    embedWrap.style.maxHeight = "none"; // přebije obecné pravidlo z CSS, které by jinak výšku tiše ořízlo
-    embedWrap.style.height = (DRIVE_HEIGHT_PX[item.aspectRatio] || 480) + "px";
-    const driveVideoEl = embedWrap.querySelector("video[data-drive-fallback]");
-    if (driveVideoEl) {
-      driveVideoEl.addEventListener("error", () => {
-        if (currentDetailId !== id) return; // mezitím se otevřelo jiné video
-        embedWrap.innerHTML = `<iframe class="embed" src="${driveVideoEl.dataset.driveFallback}" allow="autoplay; picture-in-picture 'none'" loading="lazy"></iframe>`;
-      }, { once: true });
-      driveVideoEl.addEventListener("loadedmetadata", () => {
-        // přímé přehrání vyšlo — appka teď zná skutečný poměr stran, přesnější než odhad
-        if (currentDetailId !== id) return;
-        if (driveVideoEl.videoWidth && driveVideoEl.videoHeight) {
-          embedWrap.style.height = "";
-          embedWrap.style.maxHeight = "";
-          embedWrap.style.aspectRatio = `${driveVideoEl.videoWidth} / ${driveVideoEl.videoHeight}`;
-        }
-      }, { once: true });
-    }
-  }
+  setupDriveVideoPlayback(embedWrap, item);
   const hint = document.getElementById("detailTimestampHint");
   if (item.timestamp) { hint.textContent = `Cvičení začíná v ${secondsToTimestamp(item.timestamp)}`; hint.classList.remove("hidden"); }
   else { hint.classList.add("hidden"); }
@@ -3858,8 +3865,12 @@ function showUpNextPanel() {
 function showTrainingModeVideo(lib) {
   const wrap = document.getElementById("tmVideoWrap");
   if (!lib) { wrap.classList.add("hidden"); wrap.innerHTML = ""; return; }
-  wrap.innerHTML = renderEmbedHtml(lib);
   wrap.classList.remove("hidden");
+  wrap.style.aspectRatio = "";
+  wrap.style.height = "";
+  wrap.style.maxHeight = "";
+  wrap.innerHTML = renderEmbedHtml(lib, { muted: true });
+  setupDriveVideoPlayback(wrap, lib);
 }
 function renderTrainingModeItem() {
   stopTrainingModeTimer();
@@ -3874,10 +3885,12 @@ function renderTrainingModeItem() {
   const repsDisplay = document.getElementById("tmRepsDisplay");
   groupNameEl.classList.add("hidden");
   repsDisplay.classList.add("hidden");
+  body.classList.remove("tm-solo");
   showUpNextPanel();
 
   if (row.part === "prestavka") {
     seriesLabel.classList.add("hidden");
+    body.classList.add("tm-solo");
     body.style.background = "var(--part-prestavka)";
     document.getElementById("tmPartLabel").textContent = "PŘESTÁVKA";
     document.getElementById("tmTitle").textContent = row.label || "Přestávka";
@@ -3973,6 +3986,7 @@ function renderSeriesPause() {
   document.getElementById("tmProgress").textContent = `${trainingModeIndex + 1} / ${trainingModeItems.length}`;
   document.getElementById("tmPrevBtn").disabled = true;
   document.getElementById("tmNextBtn").innerHTML = 'Další <i class="fa-solid fa-arrow-right"></i>';
+  document.getElementById("tmBody").classList.add("tm-solo");
   document.getElementById("tmBody").style.background = "var(--part-prestavka)";
   document.getElementById("tmPartLabel").textContent = "PAUZA MEZI SÉRIEMI";
   document.getElementById("tmTitle").textContent = `Za chvíli série ${trainingModeSeriesNum} / ${row.seriesCount}`;
@@ -3993,6 +4007,7 @@ function renderTrainingModeFinished() {
   document.getElementById("tmSeriesLabel").classList.add("hidden");
   document.getElementById("tmGroupName").classList.add("hidden");
   document.getElementById("tmRepsDisplay").classList.add("hidden");
+  document.getElementById("tmBody").classList.add("tm-solo");
   document.getElementById("tmBody").style.background = "var(--court)";
   document.getElementById("tmPartLabel").textContent = "";
   document.getElementById("tmTitle").textContent = "Hotovo 💪";
