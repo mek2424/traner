@@ -1406,7 +1406,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-23 19:50";
+const APP_VERSION = "2026-07-23 20:05";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -3989,7 +3989,11 @@ function getUpNextLabel() {
   const next = trainingModeItems[trainingModeIndex + 1];
   if (!next) return null;
   if (next.part === "prestavka") return next.label || "Přestávka";
-  if (next.isGroup) return next.name || "Skupina";
+  if (next.isGroup) {
+    const firstV = next.videos && next.videos[0];
+    const lib = firstV ? state.library[firstV.videoId] : null;
+    return lib ? lib.title : (next.name || "Skupina");
+  }
   const lib = state.library[next.videoId];
   return lib ? lib.title : null;
 }
