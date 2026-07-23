@@ -1406,7 +1406,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-23 16:50";
+const APP_VERSION = "2026-07-23 19:50";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -3833,7 +3833,8 @@ document.getElementById("toggleArchiveViewBtn").addEventListener("click", () => 
 });
 
 function renderTrainingRow(t, mine) {
-  const totalMin = t.items.reduce((s, it) => s + (it.duration || 0), 0);
+  const { totalSeconds, hasReps } = calculateTrainingTotalSeconds(t);
+  const totalDisplay = hasReps ? '<i class="fa-solid fa-stopwatch"></i> ?' : Math.round(totalSeconds / 60) + " min";
   const isNew = !mine && (t.dateCreated || 0) > sessionBadgeThreshold;
   const isSelected = selectedTrainingIds.has(t.id);
   return `
@@ -3841,7 +3842,7 @@ function renderTrainingRow(t, mine) {
       ${mine && trainingSelectMode ? `<button type="button" class="training-select-box ${isSelected ? "checked" : ""}" data-toggle-select="${esc(t.id)}" aria-label="Vybrat">${isSelected ? '<i class="fa-solid fa-check"></i>' : ""}</button>` : ""}
       <button class="training-row-main" data-open="${esc(t.id)}" style="background:none;border:none;text-align:left;cursor:pointer;padding:0;">
         <div class="training-row-title">${isNew ? '<span class="new-badge-inline" title="Nové od posledního přihlášení"></span>' : ""}${esc(t.name)}</div>
-        <div class="training-row-meta">${t.items.length} položek · ${totalMin} min</div>
+        <div class="training-row-meta">${t.items.length} položek · ${totalDisplay}</div>
       </button>
       <div class="training-row-actions">
         ${!showingArchivedTrainings ? `<button class="btn btn-sm" data-clone="${esc(t.id)}"><i class="fa-regular fa-copy"></i> Klonovat</button>` : ""}
