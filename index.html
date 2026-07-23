@@ -1396,7 +1396,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-23 14:00";
+const APP_VERSION = "2026-07-23 14:15";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -3997,6 +3997,22 @@ function showTrainingModeVideo(lib) {
     : { maxW: 190, maxH: Math.round(window.innerHeight * 0.22) };
   setupDriveVideoPlayback(wrap, lib, { box });
 }
+/** Nastaví text prvku a navrch k tomu, co už dá CSS clamp() podle šířky obrazovky, mu podle
+    délky textu zmenší písmo — krátký název zůstane na plné velikosti, dlouhý se úměrně
+    zmenší, ať se nezalomí přes několik řádků a nepřeteče přes video/sloupec vedle sebe. */
+function setScaledText(el, text, opts) {
+  opts = opts || {};
+  const shrinkFrom = opts.shrinkFrom !== undefined ? opts.shrinkFrom : 14;
+  const minScale = opts.minScale !== undefined ? opts.minScale : 0.55;
+  const rate = opts.rate !== undefined ? opts.rate : 0.018;
+  el.style.fontSize = ""; // nejdřív zpátky na CSS výchozí, ať getComputedStyle níž nečte předchozí přepis
+  el.textContent = text;
+  const len = (text || "").length;
+  if (len <= shrinkFrom) return;
+  const baseSize = parseFloat(getComputedStyle(el).fontSize);
+  const scale = Math.max(minScale, 1 - (len - shrinkFrom) * rate);
+  el.style.fontSize = (baseSize * scale) + "px";
+}
 function renderTrainingModeItem() {
   stopTrainingModeTimer();
   if (trainingModeInSeriesPause) { renderSeriesPause(); return; }
@@ -4018,7 +4034,7 @@ function renderTrainingModeItem() {
     body.classList.add("tm-solo");
     body.style.background = "var(--part-prestavka)";
     document.getElementById("tmPartLabel").textContent = "PŘESTÁVKA";
-    document.getElementById("tmTitle").textContent = row.label || "Přestávka";
+    setScaledText(document.getElementById("tmTitle"), row.label || "Přestávka");
     document.getElementById("tmDesc").textContent = "";
     document.getElementById("tmCue").innerHTML = "";
     document.getElementById("tmNote").textContent = "";
@@ -4049,8 +4065,8 @@ function renderTrainingModeItem() {
     // liší se jen to, jestli appka u konkrétního videa odpočítává, nebo čeká na "Další"
     const v = row.videos[trainingModeGroupVideoIndex];
     const lib = v ? state.library[v.videoId] : null;
-    document.getElementById("tmTitle").textContent = lib ? lib.title : "(video smazáno)";
-    document.getElementById("tmDesc").textContent = `Cvik ${trainingModeGroupVideoIndex + 1} / ${row.videos.length}`;
+    setScaledText(document.getElementById("tmTitle"), lib ? lib.title : "(video smazáno)");
+    setScaledText(document.getElementById("tmDesc"), `Cvik ${trainingModeGroupVideoIndex + 1} / ${row.videos.length}`);
     document.getElementById("tmNote").textContent = (v && v.note) || row.poznamka || "";
     showTrainingModeVideo(lib);
 
@@ -4073,8 +4089,8 @@ function renderTrainingModeItem() {
   const part = getPart(row.part);
   body.style.background = part ? part.color : "var(--card)";
   document.getElementById("tmPartLabel").textContent = (part ? part.label : "").toUpperCase();
-  document.getElementById("tmTitle").textContent = lib ? lib.title : "(video smazáno z knihovny)";
-  document.getElementById("tmDesc").textContent = lib && lib.shortDesc ? lib.shortDesc : "";
+  setScaledText(document.getElementById("tmTitle"), lib ? lib.title : "(video smazáno z knihovny)");
+  setScaledText(document.getElementById("tmDesc"), lib && lib.shortDesc ? lib.shortDesc : "");
   document.getElementById("tmCue").innerHTML = row.cue ? `<i class="fa-solid fa-comment"></i> ${esc(row.cue)}` : "";
   document.getElementById("tmNote").textContent = row.poznamka || "";
   showTrainingModeVideo(lib);
@@ -4114,7 +4130,7 @@ function renderSeriesPause() {
   document.getElementById("tmBody").classList.add("tm-solo");
   document.getElementById("tmBody").style.background = "var(--part-prestavka)";
   document.getElementById("tmPartLabel").textContent = "PAUZA MEZI SÉRIEMI";
-  document.getElementById("tmTitle").textContent = `Za chvíli série ${trainingModeSeriesNum} / ${row.seriesCount}`;
+  setScaledText(document.getElementById("tmTitle"), `Za chvíli série ${trainingModeSeriesNum} / ${row.seriesCount}`);
   document.getElementById("tmDesc").textContent = "";
   document.getElementById("tmCue").innerHTML = "";
   document.getElementById("tmNote").textContent = "";
@@ -4135,7 +4151,7 @@ function renderTrainingModeFinished() {
   document.getElementById("tmBody").classList.add("tm-solo");
   document.getElementById("tmBody").style.background = "var(--court)";
   document.getElementById("tmPartLabel").textContent = "";
-  document.getElementById("tmTitle").textContent = "Hotovo 💪";
+  setScaledText(document.getElementById("tmTitle"), "Hotovo 💪");
   document.getElementById("tmTitle").style.color = "#fff";
   document.getElementById("tmDesc").textContent = "";
   document.getElementById("tmCue").innerHTML = "";
