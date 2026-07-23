@@ -1396,7 +1396,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-23 14:25";
+const APP_VERSION = "2026-07-23 14:35";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -2033,8 +2033,9 @@ function renderEmbedHtml(item, opts) {
   }
   if (item.platform === "drive" && item.videoId) {
     const fallback = `https://drive.google.com/file/d/${esc(item.videoId)}/preview`;
+    const cacheBust = opts.cacheBust ? `&_cb=${Date.now()}` : "";
     const directSrc = state.driveApiKey
-      ? `https://www.googleapis.com/drive/v3/files/${esc(item.videoId)}?alt=media&key=${esc(state.driveApiKey)}`
+      ? `https://www.googleapis.com/drive/v3/files/${esc(item.videoId)}?alt=media&key=${esc(state.driveApiKey)}${cacheBust}`
       : "";
     if (!directSrc) return `<iframe class="embed" src="${fallback}" allow="autoplay; picture-in-picture 'none'"></iframe>`;
     return `<video class="embed" controls playsinline preload="${preload}"${muted ? " muted" : ""} src="${directSrc}" data-drive-fallback="${fallback}"></video>`;
@@ -2103,24 +2104,31 @@ function setupDriveVideoPlayback(wrap, item, opts) {
   if (!driveVideoEl) { applyDriveFallbackSize(wrap, item, opts); return; }
   applyRatio(item.aspectRatio);
   driveVideoEl.addEventListener("error", () => {
-    if (!wrap.contains(driveVideoEl)) return; // appka mezitím vykreslila něco jiného
+    if (!wrap.contains(driveVideoEl)) return; // mezitím se vykreslilo něco jiného
     const codes = { 1: "MEDIA_ERR_ABORTED", 2: "MEDIA_ERR_NETWORK", 3: "MEDIA_ERR_DECODE", 4: "MEDIA_ERR_SRC_NOT_SUPPORTED" };
     const code = driveVideoEl.error ? driveVideoEl.error.code : null;
-    logDebug(`[drive] přímé přehrání selhalo u „${item.title || item.videoId}" — kód ${code}: ${codes[code] || "neznámý"}${driveVideoEl.error && driveVideoEl.error.message ? " (" + driveVideoEl.error.message + ")" : ""}, přepínám na náhradní iframe`);
-    // Předchozí pokus dělal fetch přímo na alt=media adresu (binární obsah) — ten na CORS tiše
-    // spadl, takže se do logu nikdy nic nedostalo. Tohle je JSON dotaz na metadata (stejný typ
-    // volání jako u náhledů, který už prokazatelně funguje), takže by konečně mělo ukázat, jestli
-    // je to opravdu nepodporovaný formát (mimeType), nebo něco jiného.
+    logDebug(`[drive] přímé přehrání selhalo u „${item.title || item.videoId}" — kód ${code}: ${codes[code] || "neznámý"}${driveVideoEl.error && driveVideoEl.error.message ? " (" + driveVideoEl.error.message + ")" : ""}`);
     fetch(`https://www.googleapis.com/drive/v3/files/${item.videoId}?fields=mimeType,size,name&key=${state.driveApiKey}`)
       .then(r => r.json())
       .then(data => logDebug(`[drive] metadata souboru — mimeType: ${data.mimeType}, velikost: ${data.size} B, název na Disku: ${data.name}`))
       .catch(err => logDebug(`[drive] i zjištění metadat selhalo: ${err.message || err}`));
+    if (!opts._retriedCacheBust) {
+      // Video vložené do stránky přes JS až za během (ne jako součást prvotního načtení stránky)
+      // se řídí normální mezipamětí prohlížeče podle adresy — ani tvrdé obnovení stránky (Ctrl+F5)
+      // tohle nutně nepřepíše. Než se natrvalo přepne na Googlí iframe, zkusí se to samé video
+      // ještě jednou s parametrem, co donutí prohlížeč obejít mezipaměť a stáhnout ho fakt znovu.
+      logDebug(`[drive] zkouším znovu s obejitím mezipaměti prohlížeče, než se přepne na iframe`);
+      wrap.innerHTML = renderEmbedHtml(item, { muted: driveVideoEl.muted, preload: "auto", cacheBust: true });
+      setupDriveVideoPlayback(wrap, item, Object.assign({}, opts, { _retriedCacheBust: true }));
+      return;
+    }
+    logDebug(`[drive] i opakovaný pokus bez mezipaměti selhal, přepínám na náhradní iframe natrvalo`);
     wrap.innerHTML = `<iframe class="embed" src="${driveVideoEl.dataset.driveFallback}" allow="autoplay; picture-in-picture 'none'"></iframe>`;
     applyDriveFallbackSize(wrap, item, opts);
   }, { once: true });
   driveVideoEl.addEventListener("loadedmetadata", () => {
     if (!wrap.contains(driveVideoEl)) return;
-    // appka teď zná skutečný poměr stran, přesnější než uložený odhad
+    // teď se zná skutečný poměr stran, přesnější než uložený odhad
     if (driveVideoEl.videoWidth && driveVideoEl.videoHeight) {
       applyRatio(`${driveVideoEl.videoWidth} / ${driveVideoEl.videoHeight}`);
     }
