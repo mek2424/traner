@@ -1422,7 +1422,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-23 20:40";
+const APP_VERSION = "2026-07-23 21:15";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -4187,7 +4187,7 @@ function renderTrainingModeItem() {
     setTimerMode("reps");
   } else {
     setTimerMode("time");
-    trainingModeSeconds = Math.max(1, row.duration || 1) * 60;
+    trainingModeSeconds = Math.max(1, valueToSeconds(row.duration || 1, row.durationUnit || "min"));
     updateTrainingModeTimerDisplay();
     startTrainingModeTimer();
   }
@@ -4287,7 +4287,7 @@ document.getElementById("tmTimerReset").addEventListener("click", () => {
     const v = row.videos[trainingModeGroupVideoIndex];
     trainingModeSeconds = Math.max(1, valueToSeconds(v && v.duration != null ? v.duration : 1, v ? (v.durationUnit || "min") : "min"));
   } else {
-    trainingModeSeconds = Math.max(1, row.duration || 1) * 60;
+    trainingModeSeconds = Math.max(1, valueToSeconds(row.duration || 1, row.durationUnit || "min"));
   }
   updateTrainingModeTimerDisplay();
   startTrainingModeTimer();
@@ -4404,18 +4404,30 @@ document.addEventListener("fullscreenchange", () => {
 function exportTrainingAsText(t) {
   const lines = [];
   lines.push(t.name || "Trénink");
-  const totalMin = t.items.reduce((s, it) => s + (it.duration || 0), 0);
-  lines.push(`Celkem: ${totalMin} min`);
+  const { totalSeconds, hasReps } = calculateTrainingTotalSeconds(t);
+  lines.push(hasReps ? "Celkem: nejde spočítat přesně (obsahuje položku na opakování)" : `Celkem: ${Math.round(totalSeconds / 60)} min`);
   lines.push("");
+  const fmtDuration = (row) => (row.mode || "time") === "reps"
+    ? (row.reps || "")
+    : `${row.duration != null ? row.duration : 1} ${(row.durationUnit || "min") === "s" ? "s" : "min"}`;
   t.items.forEach((row, i) => {
-    if (!row.videoId) {
-      lines.push(`— ${row.label || "Přestávka"} (${row.duration} min) —`);
+    if (row.part === "prestavka") {
+      lines.push(`— ${row.label || "Přestávka"} (${row.duration != null ? row.duration : 1} ${(row.durationUnit || "min") === "s" ? "s" : "min"}) —`);
+      lines.push("");
+      return;
+    }
+    const part = getPart(row.part);
+    if (row.isGroup) {
+      lines.push(`${i + 1}. [${part ? part.label : "?"}] Skupina: ${row.name || "Skupina"}`);
+      (row.videos || []).forEach((v, vi) => {
+        const lib = state.library[v.videoId];
+        lines.push(`   ${vi + 1}) ${lib ? lib.title : "(video smazáno z knihovny)"} — ${fmtDuration(Object.assign({ mode: row.mode }, v))}`);
+      });
       lines.push("");
       return;
     }
     const lib = state.library[row.videoId];
-    const part = getPart(row.part);
-    lines.push(`${i + 1}. [${part ? part.label : "?"}] ${lib ? lib.title : "(video smazáno z knihovny)"} — ${row.duration} min`);
+    lines.push(`${i + 1}. [${part ? part.label : "?"}] ${lib ? lib.title : "(video smazáno z knihovny)"} — ${fmtDuration(row)}`);
     if (lib) lines.push(`   Odkaz: ${lib.url}`);
     if (row.cue) lines.push(`   Cue: ${row.cue}`);
     if (row.poznamka) lines.push(`   Poznámka: ${row.poznamka}`);
