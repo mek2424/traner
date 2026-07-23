@@ -520,20 +520,20 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   .tm-desc,.tm-cue,.tm-note{max-width:100%;}
   #tmRotateBtn{display:none;}
   .tm-up-next{
-    position:fixed;top:calc(14px + env(safe-area-inset-top));left:70px;right:auto;
-    transform:translateY(-250%);
+    position:fixed;top:calc(14px + env(safe-area-inset-top));right:70px;left:auto;
+    transform:translateX(-100vw);transition:transform .6s ease,opacity .3s ease;
   }
-  .tm-up-next.shown{transform:translateY(0);}
+  .tm-up-next.shown{transform:translateX(0);}
 }
 #trainingModeView.tm-forced-landscape .tm-body{grid-template-columns:1fr 1.3fr 1fr;grid-template-areas:"left video right";align-items:center;gap:28px;padding:24px 40px;}
 #trainingModeView.tm-forced-landscape .tm-col-left{margin-top:0;}
 #trainingModeView.tm-forced-landscape .tm-video-wrap{max-width:100%;}
 #trainingModeView.tm-forced-landscape .tm-desc,#trainingModeView.tm-forced-landscape .tm-cue,#trainingModeView.tm-forced-landscape .tm-note{max-width:100%;}
 #trainingModeView.tm-forced-landscape .tm-up-next{
-  position:fixed;top:calc(6px + env(safe-area-inset-top));left:54px;right:auto;
-  transform:translateY(-250%);
+  position:fixed;top:calc(6px + env(safe-area-inset-top));right:56px;left:auto;
+  transform:translateX(-100vw);transition:transform .6s ease,opacity .3s ease;
 }
-#trainingModeView.tm-forced-landscape .tm-up-next.shown{transform:translateY(0);}
+#trainingModeView.tm-forced-landscape .tm-up-next.shown{transform:translateX(0);}
 .tm-timer-wrap{display:flex;align-items:center;justify-content:center;gap:22px;padding:18px 16px;flex-shrink:0;}
 .tm-timer{font-family:var(--font-display);font-size:clamp(48px,14vw,72px);color:var(--ink);min-width:180px;text-align:center;font-variant-numeric:tabular-nums;}
 .tm-timer.tm-timer-done{color:var(--chalk);}
@@ -558,7 +558,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   .tm-timer-btn{width:38px;height:38px;font-size:15px;}
   .tm-nav{padding:6px 16px calc(6px + env(safe-area-inset-bottom));}
   .tm-nav-btn{padding:10px;font-size:14px;}
-  .tm-up-next{top:calc(6px + env(safe-area-inset-top));left:54px;}
+  .tm-up-next{top:calc(6px + env(safe-area-inset-top));right:56px;}
 }
 #trainingModeView.tm-forced-landscape .tm-header{padding:6px 14px;padding-top:calc(6px + env(safe-area-inset-top));}
 #trainingModeView.tm-forced-landscape .tm-exit{width:34px;height:34px;font-size:15px;}
@@ -1407,7 +1407,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-23 15:25";
+const APP_VERSION = "2026-07-23 16:10";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
