@@ -1370,7 +1370,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-23 12:34";
+const APP_VERSION = "2026-07-23 18:00";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -2078,6 +2078,11 @@ function setupDriveVideoPlayback(wrap, item, opts) {
   applyRatio(item.aspectRatio);
   driveVideoEl.addEventListener("error", () => {
     if (!wrap.contains(driveVideoEl)) return; // appka mezitím vykreslila něco jiného
+    const codes = { 1: "MEDIA_ERR_ABORTED", 2: "MEDIA_ERR_NETWORK", 3: "MEDIA_ERR_DECODE", 4: "MEDIA_ERR_SRC_NOT_SUPPORTED" };
+    const code = driveVideoEl.error ? driveVideoEl.error.code : null;
+    logDebug(`[drive] přímé přehrání selhalo u „${item.title || item.videoId}" — kód ${code}: ${codes[code] || "neznámý"}, přepínám na náhradní iframe`);
+    // doplní i skutečnou odpověď od Google API (např. důvod nedostatečných práv) — jen do logu, nic to nezdržuje
+    fetch(driveVideoEl.src).then(r => r.text()).then(txt => logDebug(`[drive] odpověď API (zkráceně): ${txt.slice(0, 400)}`)).catch(() => {});
     wrap.innerHTML = `<iframe class="embed" src="${driveVideoEl.dataset.driveFallback}" allow="autoplay; picture-in-picture 'none'"></iframe>`;
     applyDriveFallbackSize(wrap, item, opts);
   }, { once: true });
@@ -3168,6 +3173,37 @@ function openLinkModal(id) {
 }
 function closeLinkModal() { linkModalBackdrop.classList.add("hidden"); }
 
+/** Vybere z předdefinovaných možností tu, která nejlíp odpovídá skutečnému poměru stran. */
+function pickClosestAspectRatio(w, h) {
+  if (!w || !h) return null;
+  const ratio = w / h;
+  const presets = [{ key: "16/9", value: 16 / 9 }, { key: "9/16", value: 9 / 16 }, { key: "4/3", value: 4 / 3 }, { key: "1/1", value: 1 }];
+  let best = presets[0], bestDiff = Infinity;
+  presets.forEach(p => { const diff = Math.abs(p.value - ratio); if (diff < bestDiff) { bestDiff = diff; best = p; } });
+  return best.key;
+}
+/** Zjistí skutečný poměr stran videa jeho krátkým načtením mimo dohled — používá se pro Disk,
+    kde appka jinak poměr stran neuměla poznat sama, i když popisek u pole to sliboval. */
+function detectAspectRatioFromVideoUrl(url) {
+  return new Promise((resolve) => {
+    const video = document.createElement("video");
+    video.crossOrigin = "anonymous";
+    video.muted = true;
+    video.preload = "metadata";
+    video.style.cssText = "position:fixed;top:0;left:0;width:2px;height:2px;opacity:0;pointer-events:none;z-index:-1;";
+    document.body.appendChild(video);
+    video.src = url;
+    const cleanup = () => video.remove();
+    const timeout = setTimeout(() => { cleanup(); resolve(null); }, 8000);
+    video.addEventListener("error", () => { clearTimeout(timeout); cleanup(); resolve(null); }, { once: true });
+    video.addEventListener("loadedmetadata", () => {
+      clearTimeout(timeout);
+      const detected = pickClosestAspectRatio(video.videoWidth, video.videoHeight);
+      cleanup();
+      resolve(detected);
+    }, { once: true });
+  });
+}
 /** U přímo odkazovaného souboru appka zkusí sama "přetočit" video na 3 místa (25 %/50 %/75 %)
     a vyfotit, co v tu chvíli běží na obrazovce. Funguje to jen když to server hostující video
     dovolí (CORS) — když ne, appka to mlčky vzdá a zůstane jen ruční nahrání, žádná chyba se
@@ -3192,6 +3228,8 @@ function captureVideoFrameThumbnails(url) {
       try {
         const duration = video.duration;
         if (!duration || !isFinite(duration)) { clearTimeout(timeouts); cleanup(); resolve([]); return; }
+        const detectedRatio = pickClosestAspectRatio(video.videoWidth, video.videoHeight);
+        if (detectedRatio) document.getElementById("linkAspectRatio").value = detectedRatio;
         const maxW = 480;
         const scale = Math.min(1, maxW / video.videoWidth);
         const canvas = document.createElement("canvas");
@@ -3274,6 +3312,10 @@ document.getElementById("fetchMetaBtn").addEventListener("click", async () => {
           if (data.thumbnailLink) renderThumbSuggestions([data.thumbnailLink], "drive");
         }
       } catch (e) { console.warn("Náhled z Disku se nepodařilo najít:", e); }
+      const directUrl = `https://www.googleapis.com/drive/v3/files/${driveId}?alt=media&key=${state.driveApiKey}`;
+      const detected = await detectAspectRatioFromVideoUrl(directUrl);
+      if (detected) document.getElementById("linkAspectRatio").value = detected;
+      else logDebug(`[drive] tvar videa se nepodařilo zjistit přímým přehráním (soubor ${driveId}) — zkontroluj, jestli přímé přehrávání funguje i v Knihovně`);
     }
   } else if (platform === "instagram") {
     document.getElementById("thumbPreview").dataset.videoId = extractInstagramId(url) || "";
