@@ -1422,7 +1422,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-23 21:15";
+const APP_VERSION = "2026-07-23 21:35";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -4032,6 +4032,17 @@ function getUpNextLabel() {
   if (row.isGroup && trainingModeGroupVideoIndex < row.videos.length - 1) {
     const nextV = row.videos[trainingModeGroupVideoIndex + 1];
     const lib = nextV ? state.library[nextV.videoId] : null;
+    return lib ? lib.title : null;
+  }
+  // Pokud ještě zbývá další série téhož cviku/skupiny, přijde jako další (po krátké
+  // automatické pauze) znovu on sám — ne až následující položka v sekvenci.
+  if (trainingModeSeriesNum < (row.seriesCount || 1)) {
+    if (row.isGroup) {
+      const firstV = row.videos && row.videos[0];
+      const lib = firstV ? state.library[firstV.videoId] : null;
+      return lib ? lib.title : (row.name || "Skupina");
+    }
+    const lib = state.library[row.videoId];
     return lib ? lib.title : null;
   }
   const next = trainingModeItems[trainingModeIndex + 1];
