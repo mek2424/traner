@@ -1396,7 +1396,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-23 14:15";
+const APP_VERSION = "2026-07-23 14:25";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -2106,9 +2106,15 @@ function setupDriveVideoPlayback(wrap, item, opts) {
     if (!wrap.contains(driveVideoEl)) return; // appka mezitím vykreslila něco jiného
     const codes = { 1: "MEDIA_ERR_ABORTED", 2: "MEDIA_ERR_NETWORK", 3: "MEDIA_ERR_DECODE", 4: "MEDIA_ERR_SRC_NOT_SUPPORTED" };
     const code = driveVideoEl.error ? driveVideoEl.error.code : null;
-    logDebug(`[drive] přímé přehrání selhalo u „${item.title || item.videoId}" — kód ${code}: ${codes[code] || "neznámý"}, přepínám na náhradní iframe`);
-    // doplní i skutečnou odpověď od Google API (např. důvod nedostatečných práv) — jen do logu, nic to nezdržuje
-    fetch(driveVideoEl.src).then(r => r.text()).then(txt => logDebug(`[drive] odpověď API (zkráceně): ${txt.slice(0, 400)}`)).catch(() => {});
+    logDebug(`[drive] přímé přehrání selhalo u „${item.title || item.videoId}" — kód ${code}: ${codes[code] || "neznámý"}${driveVideoEl.error && driveVideoEl.error.message ? " (" + driveVideoEl.error.message + ")" : ""}, přepínám na náhradní iframe`);
+    // Předchozí pokus dělal fetch přímo na alt=media adresu (binární obsah) — ten na CORS tiše
+    // spadl, takže se do logu nikdy nic nedostalo. Tohle je JSON dotaz na metadata (stejný typ
+    // volání jako u náhledů, který už prokazatelně funguje), takže by konečně mělo ukázat, jestli
+    // je to opravdu nepodporovaný formát (mimeType), nebo něco jiného.
+    fetch(`https://www.googleapis.com/drive/v3/files/${item.videoId}?fields=mimeType,size,name&key=${state.driveApiKey}`)
+      .then(r => r.json())
+      .then(data => logDebug(`[drive] metadata souboru — mimeType: ${data.mimeType}, velikost: ${data.size} B, název na Disku: ${data.name}`))
+      .catch(err => logDebug(`[drive] i zjištění metadat selhalo: ${err.message || err}`));
     wrap.innerHTML = `<iframe class="embed" src="${driveVideoEl.dataset.driveFallback}" allow="autoplay; picture-in-picture 'none'"></iframe>`;
     applyDriveFallbackSize(wrap, item, opts);
   }, { once: true });
