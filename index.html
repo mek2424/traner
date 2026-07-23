@@ -1406,7 +1406,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-23 16:30";
+const APP_VERSION = "2026-07-23 16:50";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -4592,10 +4592,39 @@ document.getElementById("groupSelectedBtn").addEventListener("click", () => {
   toast("Skupina vytvořena — pojmenuj ji a nastav si detaily v sekvenci.");
 });
 
+/** Spočítá celkový čas tréninku v sekundách — správně počítá jednotky (s/min), skupiny (součet
+    videí uvnitř) i série (opakuje se seriesCount×, plus seriesCount-1 pauz mezi nimi, stejně
+    jako se to reálně chová v Tréninkovém režimu). Položky na opakování nemají žádnou dobu
+    trvání, takže se do součtu nepočítají — místo toho se nastaví hasReps, ať se ukáže, že
+    celkový čas nejde spočítat přesně. */
+function calculateTrainingTotalSeconds(t) {
+  let totalSeconds = 0;
+  let hasReps = false;
+  (t.items || []).forEach(row => {
+    if (row.part === "prestavka") {
+      totalSeconds += valueToSeconds(row.duration || 0, row.durationUnit || "min");
+      return;
+    }
+    if ((row.mode || "time") === "reps") { hasReps = true; return; }
+    const perSeries = row.isGroup
+      ? (row.videos || []).reduce((s, v) => s + valueToSeconds(v.duration || 0, v.durationUnit || "min"), 0)
+      : valueToSeconds(row.duration || 0, row.durationUnit || "min");
+    const seriesCount = row.seriesCount || 1;
+    totalSeconds += perSeries * seriesCount;
+    if (seriesCount > 1) totalSeconds += (seriesCount - 1) * getSeriesPauseSeconds(row);
+  });
+  return { totalSeconds, hasReps };
+}
 function updateTotalBadge() {
   const t = state.trainings[currentTrainingId];
-  const total = t ? t.items.reduce((s, it) => s + (parseInt(it.duration) || 0), 0) : 0;
-  document.getElementById("totalTimeBadge").textContent = total + " min";
+  const badge = document.getElementById("totalTimeBadge");
+  if (!t) { badge.textContent = "0 min"; return; }
+  const { totalSeconds, hasReps } = calculateTrainingTotalSeconds(t);
+  if (hasReps) {
+    badge.innerHTML = '<i class="fa-solid fa-stopwatch"></i> ?';
+    return;
+  }
+  badge.textContent = Math.round(totalSeconds / 60) + " min";
 }
 
 /** Appka starším položkám bez pole "mode" (vytvořeným appkou před touhle přestavbou) bere
@@ -4749,7 +4778,7 @@ document.getElementById("sequenceList").addEventListener("input", (e) => {
     const t = state.trainings[currentTrainingId];
     const row = t.items.find(it => it.itemId === groupDurationItem);
     const v = row && row.videos.find(x => x.videoId === groupDurationVideo);
-    if (v) { v.duration = parseInt(e.target.value) || 1; t.dateModified = Date.now(); scheduleSave(); }
+    if (v) { v.duration = parseInt(e.target.value) || 1; t.dateModified = Date.now(); scheduleSave(); updateTotalBadge(); }
     return;
   }
   const groupUnitItem = e.target.dataset.groupunitItem, groupUnitVideo = e.target.dataset.groupunitVideo;
@@ -4757,7 +4786,7 @@ document.getElementById("sequenceList").addEventListener("input", (e) => {
     const t = state.trainings[currentTrainingId];
     const row = t.items.find(it => it.itemId === groupUnitItem);
     const v = row && row.videos.find(x => x.videoId === groupUnitVideo);
-    if (v) { v.durationUnit = e.target.value; t.dateModified = Date.now(); scheduleSave(); }
+    if (v) { v.durationUnit = e.target.value; t.dateModified = Date.now(); scheduleSave(); updateTotalBadge(); }
     return;
   }
   const groupRepsItem = e.target.dataset.grouprepsItem, groupRepsVideo = e.target.dataset.grouprepsVideo;
@@ -4785,7 +4814,7 @@ document.getElementById("sequenceList").addEventListener("input", (e) => {
   row[field] = numericFields.includes(field) ? (parseInt(e.target.value) || 0) : e.target.value;
   t.dateModified = Date.now();
   scheduleSave();
-  if (field === "duration") updateTotalBadge();
+  if (["duration", "durationUnit", "seriesPause", "seriesPauseUnit"].includes(field)) updateTotalBadge();
   if (field === "part" || field === "seriesCount") renderSequence();
 });
 document.getElementById("sequenceList").addEventListener("click", (e) => {
