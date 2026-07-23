@@ -533,6 +533,32 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .tm-nav-btn:disabled{opacity:.35;}
 .tm-nav-next{background:var(--chalk);color:#fff;border-color:var(--chalk);}
 
+/* Kompaktní chrome pro krátkou/širokou obrazovku (telefon na šířku) — na šířku má telefon
+   spoustu vodorovného, ale málo svislého místa, a hlavička/časovač/navigace mají odsazení
+   odladěné pro portrét, takže samy o sobě spolykaly skoro celou dostupnou výšku. Časovač měl
+   navíc velikost počítanou z šířky (vw) — na šířku obrazovky to spolehlivě vždycky vyjde na
+   maximum bez ohledu na to, jak málo místa nahoru/dolů zbývá, proto se tu přepočítává z výšky. */
+@media(orientation:landscape) and (max-height:500px){
+  .tm-header{padding:6px 14px;padding-top:calc(6px + env(safe-area-inset-top));}
+  .tm-exit{width:34px;height:34px;font-size:15px;}
+  .tm-progress{font-size:14px;}
+  .tm-body{padding-top:10px;padding-bottom:10px;gap:14px;}
+  .tm-timer-wrap{padding:6px 16px;gap:14px;}
+  .tm-timer{font-size:clamp(24px,9vh,40px);min-width:120px;}
+  .tm-timer-btn{width:38px;height:38px;font-size:15px;}
+  .tm-nav{padding:6px 16px calc(6px + env(safe-area-inset-bottom));}
+  .tm-nav-btn{padding:10px;font-size:14px;}
+}
+#trainingModeView.tm-forced-landscape .tm-header{padding:6px 14px;padding-top:calc(6px + env(safe-area-inset-top));}
+#trainingModeView.tm-forced-landscape .tm-exit{width:34px;height:34px;font-size:15px;}
+#trainingModeView.tm-forced-landscape .tm-progress{font-size:14px;}
+#trainingModeView.tm-forced-landscape .tm-body{padding-top:10px;padding-bottom:10px;gap:14px;}
+#trainingModeView.tm-forced-landscape .tm-timer-wrap{padding:6px 16px;gap:14px;}
+#trainingModeView.tm-forced-landscape .tm-timer{font-size:clamp(24px,9vh,40px);min-width:120px;}
+#trainingModeView.tm-forced-landscape .tm-timer-btn{width:38px;height:38px;font-size:15px;}
+#trainingModeView.tm-forced-landscape .tm-nav{padding:6px 16px calc(6px + env(safe-area-inset-bottom));}
+#trainingModeView.tm-forced-landscape .tm-nav-btn{padding:10px;font-size:14px;}
+
 /* ---------- Trainings list ---------- */
 .training-row{
   background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;
@@ -1370,7 +1396,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-23 18:00";
+const APP_VERSION = "2026-07-23 14:00";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
