@@ -465,11 +465,19 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 #trainingModeView{
   position:fixed;inset:0;z-index:200;background:var(--paper);display:flex;flex-direction:column;
 }
+/* Vynucené otočení na šířku bez spoléhání na (nespolehlivé, hlavně na Firefoxu pro Android)
+   zamykání orientace prohlížečem — obsah se místo toho otočí rovnou přes CSS transform,
+   člověk pak jen telefon fyzicky otočí, ať se to sejde. */
+#trainingModeView.tm-forced-landscape{
+  top:0;left:0;right:auto;bottom:auto;width:100vh;height:100vw;
+  transform-origin:top left;transform:rotate(90deg) translateY(-100%);
+}
 .tm-header{
   display:flex;align-items:center;justify-content:space-between;padding:14px 16px;
   padding-top:calc(14px + env(safe-area-inset-top));flex-shrink:0;
 }
 .tm-exit{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.06);border:none;color:var(--ink-soft);font-size:18px;display:flex;align-items:center;justify-content:center;}
+#tmRotateBtn.active{background:var(--court);color:#fff;}
 .tm-progress{font-family:var(--font-display);font-size:18px;color:var(--ink-soft);letter-spacing:.03em;}
 .tm-body{
   position:relative;flex:1;display:grid;grid-template-columns:1fr;grid-template-areas:"left" "right" "video";
@@ -480,12 +488,12 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .tm-col-right{grid-area:right;display:flex;flex-direction:column;align-items:center;}
 .tm-body.tm-solo{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
 .tm-body.tm-solo .tm-col-video,.tm-body.tm-solo .tm-col-right{display:none;}
-.tm-video-wrap{width:100%;max-width:300px;aspect-ratio:16/9;background:#000;border-radius:var(--radius-sm);overflow:hidden;margin:0 auto;}
+.tm-video-wrap{width:100%;max-width:220px;aspect-ratio:16/9;background:#000;border-radius:var(--radius-sm);overflow:hidden;margin:0 auto;}
 .tm-up-next{
   position:absolute;top:14px;right:16px;z-index:2;
   display:inline-flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);
   border-radius:20px;padding:8px 16px;font-size:12.5px;font-weight:600;color:var(--ink-soft);
-  box-shadow:var(--shadow);transform:translateX(-24px);opacity:0;transition:transform .35s ease,opacity .35s ease;
+  box-shadow:var(--shadow);transform:translateX(130%);opacity:0;transition:transform .45s ease,opacity .3s ease;
 }
 .tm-up-next.shown{transform:translateX(0);opacity:1;}
 .tm-up-next strong{color:var(--ink);}
@@ -510,7 +518,12 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   .tm-col-left{margin-top:0;}
   .tm-video-wrap{max-width:100%;}
   .tm-desc,.tm-cue,.tm-note{max-width:100%;}
+  #tmRotateBtn{display:none;}
 }
+#trainingModeView.tm-forced-landscape .tm-body{grid-template-columns:1fr 1.3fr 1fr;grid-template-areas:"left video right";align-items:center;gap:28px;padding:24px 40px;}
+#trainingModeView.tm-forced-landscape .tm-col-left{margin-top:0;}
+#trainingModeView.tm-forced-landscape .tm-video-wrap{max-width:100%;}
+#trainingModeView.tm-forced-landscape .tm-desc,#trainingModeView.tm-forced-landscape .tm-cue,#trainingModeView.tm-forced-landscape .tm-note{max-width:100%;}
 .tm-timer-wrap{display:flex;align-items:center;justify-content:center;gap:22px;padding:18px 16px;flex-shrink:0;}
 .tm-timer{font-family:var(--font-display);font-size:clamp(48px,14vw,72px);color:var(--ink);min-width:180px;text-align:center;font-variant-numeric:tabular-nums;}
 .tm-timer.tm-timer-done{color:var(--chalk);}
@@ -1245,7 +1258,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   <div class="tm-header">
     <button type="button" class="tm-exit" id="tmExitBtn" aria-label="Zavřít"><i class="fa-solid fa-xmark"></i></button>
     <div class="tm-progress" id="tmProgress">1 / 1</div>
-    <div style="width:44px;"></div>
+    <button type="button" class="tm-exit" id="tmRotateBtn" aria-label="Na šířku"><i class="fa-solid fa-expand"></i></button>
   </div>
   <div class="tm-body" id="tmBody">
     <div class="tm-up-next hidden" id="tmUpNext"></div>
@@ -1984,6 +1997,7 @@ async function fetchYouTubeMeta(url) {
 function renderEmbedHtml(item, opts) {
   opts = opts || {};
   const muted = !!opts.muted;
+  const preload = opts.preload || "metadata";
   if (item.platform === "youtube" && item.videoId) {
     const params = [];
     if (item.timestamp) params.push(`start=${item.timestamp}`);
@@ -1997,7 +2011,7 @@ function renderEmbedHtml(item, opts) {
       ? `https://www.googleapis.com/drive/v3/files/${esc(item.videoId)}?alt=media&key=${esc(state.driveApiKey)}`
       : "";
     if (!directSrc) return `<iframe class="embed" src="${fallback}" allow="autoplay; picture-in-picture 'none'"></iframe>`;
-    return `<video class="embed" controls playsinline preload="metadata"${muted ? " muted" : ""} src="${directSrc}" data-drive-fallback="${fallback}"></video>`;
+    return `<video class="embed" controls playsinline preload="${preload}"${muted ? " muted" : ""} src="${directSrc}" data-drive-fallback="${fallback}"></video>`;
   }
   if (item.platform === "facebook") {
     return `<iframe class="embed" src="https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(item.url)}&show_text=false" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
@@ -2010,42 +2024,68 @@ function renderEmbedHtml(item, opts) {
   }
   if (item.platform === "file") {
     const start = item.timestamp ? `#t=${item.timestamp}` : "";
-    return `<video class="embed" src="${esc(item.url)}${start}" controls playsinline preload="metadata"${muted ? " muted" : ""} referrerpolicy="no-referrer"></video>`;
+    return `<video class="embed" src="${esc(item.url)}${start}" controls playsinline preload="${preload}"${muted ? " muted" : ""} referrerpolicy="no-referrer"></video>`;
   }
   return `<a class="fallback-link" href="${esc(item.url)}" target="_blank" rel="noopener">Otevřít odkaz ↗</a>`;
 }
 
-/** Video z Disku má vlastní ošetření, sdílené mezi detailem v Knihovně a Tréninkovým režimem:
-    přímé video se rovnou vykreslí v uloženém poměru stran (žádné dopředné hádání) a vždy má
-    horní hranici výšky jako procento výšky obrazovky (opts.maxVh) — jinak by video na výšku
-    (9:16) v úzkém sloupci natáhlo výšku přes celou obrazovku. Pokud se přímé video nepodaří
-    přehrát, přepne se na náhradní iframe od Disku, který v praxi potřebuje pevnou výšku
-    v pixelech (ne dopočítávanou podle poměru), jinak se občas vykreslí špatně. */
+/** Video z Disku má dva režimy velikosti. V detailu Knihovny (opts.box není zadaný) se drží
+    poměr stran a jen se omezí procentem výšky obrazovky (opts.maxVh). V Tréninkovém režimu
+    (opts.box = {maxW,maxH}) slouží video jen jako rychlý náhled, takže se spočítá jako malý
+    obdélník pevných rozměrů, co se vejde do zadaného rámečku při zachování poměru stran —
+    stejně pro video na šířku i na výšku, žádné neřízené natažení přes celou obrazovku.
+    Iframe /preview od Disku (bez API klíče, nebo když selže přímé video) potřebuje v praxi
+    pevnou výšku v pixelech, ne poměr stran, jinak se občas vykreslí špatně. */
 const DRIVE_FALLBACK_HEIGHT_PX = { "16/9": 480, "4/3": 480, "1/1": 560, "9/16": 640 };
-function applyDriveFallbackHeight(wrap, item, maxVh) {
+function fitBoxForRatio(aspectRatioStr, maxW, maxH) {
+  const parts = (aspectRatioStr || "16/9").split("/").map(Number);
+  const rw = parts[0] || 16, rh = parts[1] || 9;
+  let w = maxW, h = w * (rh / rw);
+  if (h > maxH) { h = maxH; w = h * (rw / rh); }
+  return { w: Math.round(w), h: Math.round(h) };
+}
+function applyDriveFallbackSize(wrap, item, opts) {
+  if (opts.box) {
+    const fit = fitBoxForRatio(item.aspectRatio, opts.box.maxW, opts.box.maxH);
+    wrap.style.aspectRatio = "";
+    wrap.style.maxHeight = "";
+    wrap.style.width = fit.w + "px";
+    wrap.style.height = fit.h + "px";
+    return;
+  }
   const base = DRIVE_FALLBACK_HEIGHT_PX[item.aspectRatio] || 480;
   wrap.style.aspectRatio = "auto";
   wrap.style.maxHeight = "none";
-  wrap.style.height = Math.min(base, Math.round(window.innerHeight * (maxVh / 100))) + "px";
+  wrap.style.height = Math.min(base, Math.round(window.innerHeight * ((opts.maxVh || 70) / 100))) + "px";
 }
 function setupDriveVideoPlayback(wrap, item, opts) {
   if (item.platform !== "drive") return;
-  const maxVh = (opts && opts.maxVh) || 70;
+  opts = opts || {};
+  const applyRatio = (ratioStr) => {
+    if (opts.box) {
+      const fit = fitBoxForRatio(ratioStr, opts.box.maxW, opts.box.maxH);
+      wrap.style.width = fit.w + "px";
+      wrap.style.height = fit.h + "px";
+    } else {
+      wrap.style.width = "";
+      wrap.style.height = "";
+      wrap.style.maxHeight = (opts.maxVh || 70) + "vh";
+      wrap.style.aspectRatio = ratioStr || "16/9";
+    }
+  };
   const driveVideoEl = wrap.querySelector("video[data-drive-fallback]");
-  if (!driveVideoEl) { applyDriveFallbackHeight(wrap, item, maxVh); return; }
-  wrap.style.height = "";
-  wrap.style.maxHeight = maxVh + "vh";
-  wrap.style.aspectRatio = item.aspectRatio || "16/9";
+  if (!driveVideoEl) { applyDriveFallbackSize(wrap, item, opts); return; }
+  applyRatio(item.aspectRatio);
   driveVideoEl.addEventListener("error", () => {
     if (!wrap.contains(driveVideoEl)) return; // appka mezitím vykreslila něco jiného
     wrap.innerHTML = `<iframe class="embed" src="${driveVideoEl.dataset.driveFallback}" allow="autoplay; picture-in-picture 'none'"></iframe>`;
-    applyDriveFallbackHeight(wrap, item, maxVh);
+    applyDriveFallbackSize(wrap, item, opts);
   }, { once: true });
   driveVideoEl.addEventListener("loadedmetadata", () => {
     if (!wrap.contains(driveVideoEl)) return;
-    // appka teď zná skutečný poměr stran, přesnější než uložený odhad — výškový strop (maxHeight) necháváme být
+    // appka teď zná skutečný poměr stran, přesnější než uložený odhad
     if (driveVideoEl.videoWidth && driveVideoEl.videoHeight) {
-      wrap.style.aspectRatio = `${driveVideoEl.videoWidth} / ${driveVideoEl.videoHeight}`;
+      applyRatio(`${driveVideoEl.videoWidth} / ${driveVideoEl.videoHeight}`);
     }
   }, { once: true });
 }
@@ -3878,10 +3918,16 @@ function showTrainingModeVideo(lib) {
   if (!lib) { wrap.classList.add("hidden"); wrap.innerHTML = ""; return; }
   wrap.classList.remove("hidden");
   wrap.style.aspectRatio = "";
+  wrap.style.width = "";
   wrap.style.height = "";
   wrap.style.maxHeight = "";
-  wrap.innerHTML = renderEmbedHtml(lib, { muted: true });
-  setupDriveVideoPlayback(wrap, lib, { maxVh: 40 });
+  wrap.innerHTML = renderEmbedHtml(lib, { muted: true, preload: "auto" });
+  const isWide = document.getElementById("trainingModeView").classList.contains("tm-forced-landscape")
+    || window.matchMedia("(min-width:860px),(orientation:landscape) and (min-width:480px)").matches;
+  const box = isWide
+    ? { maxW: 420, maxH: Math.round(window.innerHeight * 0.45) }
+    : { maxW: 190, maxH: Math.round(window.innerHeight * 0.22) };
+  setupDriveVideoPlayback(wrap, lib, { box });
 }
 function renderTrainingModeItem() {
   stopTrainingModeTimer();
@@ -4123,9 +4169,66 @@ document.getElementById("tmNextBtn").addEventListener("click", advanceTrainingMo
 function closeTrainingMode() {
   stopTrainingModeTimer();
   clearTimeout(tmUpNextTimeout);
+  exitTrainingLandscape();
   document.getElementById("trainingModeView").classList.add("hidden");
 }
 document.getElementById("tmExitBtn").addEventListener("click", closeTrainingMode);
+
+/** Tlačítko "na šířku" nejdřív zkusí pořádné API (fullscreen + zamčení orientace) — to na
+    Chromu funguje dobře. Firefox pro Android ale zamykání orientace v prohlížeči má defaultně
+    vypnuté a rovnou to odmítne, takže appka pro ten případ použije záložní řešení: obsah rovnou
+    otočí přes CSS transform a člověka appka vyzve, ať telefon otočí fyzicky sám — vizuálně to
+    pak sedí, i když orientaci sám prohlížeč nezamkl. */
+let tmLandscapeForced = false;
+async function enterTrainingLandscape() {
+  const el = document.getElementById("trainingModeView");
+  try {
+    if (el.requestFullscreen) await el.requestFullscreen();
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  } catch (e) { /* appka pokračuje i bez fullscreenu, CSS otočení nevyžaduje jeho podporu */ }
+  let locked = false;
+  try {
+    if (screen.orientation && screen.orientation.lock) {
+      await screen.orientation.lock("landscape");
+      locked = true;
+    }
+  } catch (e) { /* nepodporováno (typicky Firefox pro Android) — použije se CSS varianta */ }
+  tmLandscapeForced = true;
+  document.getElementById("tmRotateBtn").classList.add("active");
+  document.getElementById("tmRotateBtn").innerHTML = '<i class="fa-solid fa-compress"></i>';
+  if (!locked) {
+    el.classList.add("tm-forced-landscape");
+    toast("Teď telefon otoč na šířku 📱", 4000);
+  }
+  showTrainingModeVideo(currentTrainingModeLib());
+}
+function exitTrainingLandscape() {
+  if (!tmLandscapeForced) return;
+  tmLandscapeForced = false;
+  document.getElementById("trainingModeView").classList.remove("tm-forced-landscape");
+  document.getElementById("tmRotateBtn").classList.remove("active");
+  document.getElementById("tmRotateBtn").innerHTML = '<i class="fa-solid fa-expand"></i>';
+  try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (e) {}
+  if (document.fullscreenElement) { try { document.exitFullscreen(); } catch (e) {} }
+  showTrainingModeVideo(currentTrainingModeLib());
+}
+function currentTrainingModeLib() {
+  const row = trainingModeItems[trainingModeIndex];
+  if (!row) return null;
+  if (row.part === "prestavka" || trainingModeInSeriesPause) return null;
+  if (row.isGroup) {
+    const v = row.videos[trainingModeGroupVideoIndex];
+    return v ? state.library[v.videoId] : null;
+  }
+  return state.library[row.videoId];
+}
+document.getElementById("tmRotateBtn").addEventListener("click", () => {
+  if (tmLandscapeForced) exitTrainingLandscape(); else enterTrainingLandscape();
+});
+// zachytí, když člověk fullscreen zavře gestem nebo tlačítkem prohlížeče, ne naším tlačítkem
+document.addEventListener("fullscreenchange", () => {
+  if (!document.fullscreenElement && tmLandscapeForced) exitTrainingLandscape();
+});
 
 function exportTrainingAsText(t) {
   const lines = [];
