@@ -623,7 +623,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 }
 .seq-item.is-break{
   background:repeating-linear-gradient(135deg, var(--part-prestavka), var(--part-prestavka) 8px, #d8d9d5 8px, #d8d9d5 16px);
-  text-align:center;padding:9px 36px 9px 12px;
+  padding:10px 36px 10px 12px;
 }
 .seq-item-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-width:100%;}
 .drag-handle{cursor:grab;color:rgba(27,36,48,.4);font-size:15px;padding:2px 4px;touch-action:none;flex-shrink:0;}
@@ -637,8 +637,8 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 @media(max-width:420px){.seq-item-fields{grid-template-columns:1fr;}}
 .seq-item-fields input{border:1px solid rgba(0,0,0,.15);border-radius:6px;padding:5px 7px;font-size:12px;background:rgba(255,255,255,.55);}
 .seq-item-fields input::placeholder{color:rgba(27,36,48,.45);}
-.break-label{border:none;background:none;font-family:var(--font-display);font-size:16px;letter-spacing:.03em;color:var(--ink-soft);text-align:center;width:48%;}
-.seq-break-duration-group{display:inline-flex;align-items:center;gap:6px;vertical-align:middle;}
+.break-label{border:none;background:none;font-family:var(--font-display);font-size:16px;letter-spacing:.03em;color:var(--ink-soft);text-align:left;flex:1;min-width:0;}
+.seq-break-duration-row{display:flex;align-items:center;gap:8px;margin-top:8px;}
 .seq-part-select:disabled,.seq-duration:disabled,.seq-item-fields input:disabled,.break-label:disabled{
   opacity:.55;cursor:not-allowed;-webkit-text-fill-color:currentColor;
 }
@@ -1423,7 +1423,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-23 22:10";
+const APP_VERSION = "2026-07-23 22:25";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -4749,13 +4749,15 @@ function renderSequence() {
     if (row.part === "prestavka") {
       return `
       <div class="seq-item is-break" data-itemid="${esc(row.itemId)}">
-        ${ro ? "" : `<span class="drag-handle"><i class="fa-solid fa-grip-lines"></i></span>`}
-        <input class="break-label" value="${esc(row.label || "Přestávka")}" data-field="label" data-itemid="${esc(row.itemId)}" ${dis}>
-        <span class="seq-break-duration-group">
+        ${ro ? "" : `<button class="seq-remove" data-remove="${esc(row.itemId)}" aria-label="Odebrat"><i class="fa-solid fa-xmark"></i></button>`}
+        <div class="seq-item-top">
+          ${ro ? "" : `<span class="drag-handle"><i class="fa-solid fa-grip-lines"></i></span>`}
+          <input class="break-label" value="${esc(row.label || "Přestávka")}" data-field="label" data-itemid="${esc(row.itemId)}" ${dis}>
+        </div>
+        <div class="seq-break-duration-row">
           <input class="seq-duration" type="number" min="1" value="${row.duration}" data-field="duration" data-itemid="${esc(row.itemId)}" style="width:52px;" ${dis}>
           ${renderTimeUnitSelect("durationUnit", row.itemId, row.durationUnit, "min", dis)}
-        </span>
-        ${ro ? "" : `<button class="seq-remove" data-remove="${esc(row.itemId)}" aria-label="Odebrat"><i class="fa-solid fa-xmark"></i></button>`}
+        </div>
       </div>`;
     }
     if (row.isGroup) {
