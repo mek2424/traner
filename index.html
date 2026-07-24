@@ -51,13 +51,20 @@ body.dark-mode{
   --card:#1F2630;
   --ink:#E9ECEF;
   --ink-soft:#9BA4B0;
-  --ink-faint:#6B7280;
-  --line:#2E3640;
+  --ink-faint:#929BA8;
+  --line:#454F5C;
   --ok:#5CAD79;
   --danger:#E06666;
   --danger-bg:#3D2020;
   --shadow:0 1px 2px rgba(0,0,0,.45), 0 4px 14px rgba(0,0,0,.3);
 }
+.theme-toggle{position:relative;width:56px;height:30px;border-radius:16px;border:1px solid var(--line);background:var(--paper);cursor:pointer;flex-shrink:0;padding:0;}
+.theme-toggle-knob{position:absolute;top:2px;left:2px;width:24px;height:24px;border-radius:50%;background:var(--court);transition:left .25s ease;display:flex;align-items:center;justify-content:center;color:#fff;}
+.theme-toggle-knob i{position:absolute;font-size:12px;transition:opacity .2s ease;}
+.theme-toggle-knob .fa-moon{opacity:0;}
+.theme-toggle.active .theme-toggle-knob{left:28px;}
+.theme-toggle.active .theme-toggle-knob .fa-sun{opacity:0;}
+.theme-toggle.active .theme-toggle-knob .fa-moon{opacity:1;}
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;}
 html{overflow-x:hidden;}
@@ -813,6 +820,10 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
         <button type="button" class="subtab-btn active" data-subtab="mine">Moje tréninky</button>
         <button type="button" class="subtab-btn" data-subtab="others">Tréninky ostatních</button>
       </div>
+      <div class="toolbar" style="margin-top:10px;">
+        <input type="search" id="trainingsSearch" placeholder="Hledat podle názvu tréninku nebo cviku…">
+      </div>
+      <div class="chip-row" id="trainingsTagFilterRow" style="margin-top:8px;"></div>
       <div id="trainingsList"></div>
       <button type="button" class="manage-link hidden" id="toggleArchiveViewBtn" style="margin-top:14px;"></button>
     </section>
@@ -1261,7 +1272,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
       </div>
       <div class="two-col">
         <div class="field">
-          <label for="profileColorPrimary">Hlavní barva appky</label>
+          <label for="profileColorPrimary">Hlavní barva aplikace</label>
           <input type="color" id="profileColorPrimary" style="width:100%;height:40px;padding:2px;border:1px solid var(--line);border-radius:var(--radius-sm);">
         </div>
         <div class="field">
@@ -1269,9 +1280,11 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
           <input type="color" id="profileColorAccent" style="width:100%;height:40px;padding:2px;border:1px solid var(--line);border-radius:var(--radius-sm);">
         </div>
       </div>
-      <div class="field" style="display:flex;align-items:center;gap:8px;">
-        <input type="checkbox" id="profileDarkMode" style="width:18px;height:18px;">
-        <label for="profileDarkMode" style="margin:0;text-transform:none;font-size:13px;letter-spacing:0;font-weight:500;">Tmavý režim</label>
+      <div class="field" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <label style="margin:0;text-transform:none;font-size:13px;letter-spacing:0;font-weight:500;">Tmavý režim</label>
+        <button type="button" class="theme-toggle" id="darkModeToggle" role="switch" aria-checked="false" aria-label="Přepnout tmavý režim">
+          <span class="theme-toggle-knob"><i class="fa-solid fa-sun"></i><i class="fa-solid fa-moon"></i></span>
+        </button>
       </div>
       <div class="modal-actions">
         <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Uložit profil</button>
@@ -1423,7 +1436,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-23 22:25";
+const APP_VERSION = "2026-07-23 23:15";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -3836,9 +3849,51 @@ document.getElementById("newTrainingBtn").addEventListener("click", () => {
 document.getElementById("backToTrainingsBtn").addEventListener("click", () => switchView("trainings"));
 
 let trainingsSubTab = "mine";
+let trainingsTagFilter = new Set();
+/** Vrátí ID všech videí použitých v tréninku, včetně videí uvnitř skupin — používá se pro
+    fulltextové hledání (podle názvů cviků) i pro filtr podle štítků. */
+function getTrainingVideoIds(t) {
+  const ids = [];
+  (t.items || []).forEach(row => {
+    if (row.isGroup) (row.videos || []).forEach(v => { if (v.videoId) ids.push(v.videoId); });
+    else if (row.videoId) ids.push(row.videoId);
+  });
+  return ids;
+}
+function getTrainingSearchTags(t) {
+  const tags = new Set();
+  getTrainingVideoIds(t).forEach(id => {
+    const lib = state.library[id];
+    if (lib) (lib.tags || []).forEach(tag => tags.add(tag));
+  });
+  return tags;
+}
+/** Stejný princip jako u tagsUsedInActiveFolder v Knihovně — nabídnou se jen štítky, co se
+    fakt vyskytují mezi právě zobrazenými tréninky, ne úplně všechny štítky z celé appky. */
+function tagsUsedInVisibleTrainings(baseList) {
+  const used = new Set();
+  baseList.forEach(t => getTrainingSearchTags(t).forEach(tag => used.add(tag)));
+  return state.tagPool.filter(tag => used.has(tag));
+}
+function filterTrainingsBySearch(list) {
+  const q = document.getElementById("trainingsSearch").value.trim().toLowerCase();
+  return list.filter(t => {
+    if (trainingsTagFilter.size) {
+      const tags = getTrainingSearchTags(t);
+      if (![...trainingsTagFilter].every(tag => tags.has(tag))) return false;
+    }
+    if (q) {
+      const videoTitles = getTrainingVideoIds(t).map(id => state.library[id] ? state.library[id].title : "").join(" ");
+      const hay = `${t.name} ${videoTitles}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
 let trainingSelectMode = false;
 let selectedTrainingIds = new Set();
 let showingArchivedTrainings = false;
+document.getElementById("trainingsSearch").addEventListener("input", renderTrainingsList);
 document.querySelectorAll(".subtab-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     trainingsSubTab = btn.dataset.subtab;
@@ -3906,8 +3961,13 @@ function renderTrainingsList() {
   const list = document.getElementById("trainingsList");
   const all = Object.values(state.trainings);
   const mineAll = all.filter(t => t.ownerUid === uidCurrent);
-  const mineList = mineAll.filter(t => !!t.archived === showingArchivedTrainings).sort((a, b) => (b.dateModified || 0) - (a.dateModified || 0));
-  const othersList = all.filter(t => t.ownerUid !== uidCurrent && !t.archived).sort((a, b) => (b.dateModified || 0) - (a.dateModified || 0));
+  const mineBase = mineAll.filter(t => !!t.archived === showingArchivedTrainings).sort((a, b) => (b.dateModified || 0) - (a.dateModified || 0));
+  const othersBase = all.filter(t => t.ownerUid !== uidCurrent && !t.archived).sort((a, b) => (b.dateModified || 0) - (a.dateModified || 0));
+
+  renderFilterChips("trainingsTagFilterRow", tagsUsedInVisibleTrainings(trainingsSubTab === "mine" ? mineBase : othersBase), trainingsTagFilter, renderTrainingsList);
+
+  const mineList = filterTrainingsBySearch(mineBase);
+  const othersList = filterTrainingsBySearch(othersBase);
 
   const archiveBtn = document.getElementById("toggleArchiveViewBtn");
   const archivedCount = mineAll.filter(t => t.archived).length;
@@ -3919,11 +3979,15 @@ function renderTrainingsList() {
   if (trainingsSubTab === "mine") {
     list.innerHTML = mineList.length
       ? mineList.map(t => renderTrainingRow(t, true)).join("")
-      : (showingArchivedTrainings
-        ? `<div class="empty-state"><h3>Archiv je prázdný</h3><p>Archivované tréninky se objeví tady.</p></div>`
-        : `<div class="empty-state"><h3>Zatím žádné tréninky</h3><p>Založ první tlačítkem nahoře.</p></div>`);
+      : (mineBase.length
+        ? `<div class="empty-state"><h3>Nic nesedí</h3><p>Zkus upravit hledání nebo uvolnit štítky.</p></div>`
+        : (showingArchivedTrainings
+          ? `<div class="empty-state"><h3>Archiv je prázdný</h3><p>Archivované tréninky se objeví tady.</p></div>`
+          : `<div class="empty-state"><h3>Zatím žádné tréninky</h3><p>Založ první tlačítkem nahoře.</p></div>`));
   } else if (!othersList.length) {
-    list.innerHTML = `<div class="empty-state"><h3>Zatím nic od kolegů</h3><p>Jakmile někdo jiný založí trénink, objeví se tady.</p></div>`;
+    list.innerHTML = othersBase.length
+      ? `<div class="empty-state"><h3>Nic nesedí</h3><p>Zkus upravit hledání nebo uvolnit štítky.</p></div>`
+      : `<div class="empty-state"><h3>Zatím nic od kolegů</h3><p>Jakmile někdo jiný založí trénink, objeví se tady.</p></div>`;
   } else {
     const groups = {};
     othersList.forEach(t => {
@@ -4035,17 +4099,9 @@ function getUpNextLabel() {
     const lib = nextV ? state.library[nextV.videoId] : null;
     return lib ? lib.title : null;
   }
-  // Pokud ještě zbývá další série téhož cviku/skupiny, přijde jako další (po krátké
-  // automatické pauze) znovu on sám — ne až následující položka v sekvenci.
-  if (trainingModeSeriesNum < (row.seriesCount || 1)) {
-    if (row.isGroup) {
-      const firstV = row.videos && row.videos[0];
-      const lib = firstV ? state.library[firstV.videoId] : null;
-      return lib ? lib.title : (row.name || "Skupina");
-    }
-    const lib = state.library[row.videoId];
-    return lib ? lib.title : null;
-  }
+  // Pokud ještě zbývá další série téhož cviku/skupiny, přijde jako další opravdu ta krátká
+  // automatická pauza mezi sériemi — ne rovnou cvik, co se objeví až po ní.
+  if (trainingModeSeriesNum < (row.seriesCount || 1)) return "Pauza mezi sériemi";
   const next = trainingModeItems[trainingModeIndex + 1];
   if (!next) return null;
   if (next.part === "prestavka") return next.label || "Přestávka";
@@ -5020,7 +5076,8 @@ function openProfileModal() {
   document.getElementById("profileClub").value = p.club || "";
   document.getElementById("profileColorPrimary").value = p.colorPrimary || DEFAULT_COLORS.primary;
   document.getElementById("profileColorAccent").value = p.colorAccent || DEFAULT_COLORS.accent;
-  document.getElementById("profileDarkMode").checked = !!p.darkMode;
+  document.getElementById("darkModeToggle").classList.toggle("active", !!p.darkMode);
+  document.getElementById("darkModeToggle").setAttribute("aria-checked", !!p.darkMode);
   const prev = document.getElementById("avatarPreview");
   if (p.avatarUrl) { prev.style.backgroundImage = `url('${p.avatarUrl}')`; prev.textContent = ""; }
   else { prev.style.backgroundImage = "none"; prev.textContent = "bez fotky"; }
@@ -5270,7 +5327,7 @@ document.getElementById("profileForm").addEventListener("submit", async (e) => {
     avatarUrl: pendingAvatarUpload || (state.profile && state.profile.avatarUrl) || "",
     colorPrimary: document.getElementById("profileColorPrimary").value,
     colorAccent: document.getElementById("profileColorAccent").value,
-    darkMode: document.getElementById("profileDarkMode").checked
+    darkMode: !!(state.profile && state.profile.darkMode)
   };
   applyColorScheme();
   renderTopbarIdentity();
@@ -5282,6 +5339,22 @@ document.getElementById("profileForm").addEventListener("submit", async (e) => {
     toast("Uložení profilu selhalo, zkontroluj připojení.");
   }
   profileModalBackdrop.classList.add("hidden");
+});
+
+/** Tmavý režim se přepíná mimo zbytek formuláře profilu — hned po kliknutí se změní vzhled
+    i uloží sám, ať člověk nemusí kvůli jedné maličkosti odesílat celý profil. */
+document.getElementById("darkModeToggle").addEventListener("click", async () => {
+  const on = !document.getElementById("darkModeToggle").classList.contains("active");
+  document.getElementById("darkModeToggle").classList.toggle("active", on);
+  document.getElementById("darkModeToggle").setAttribute("aria-checked", on);
+  state.profile = Object.assign({}, state.profile, { darkMode: on });
+  applyColorScheme();
+  try {
+    await setDoc(doc(db, "users", uidCurrent), { darkMode: on }, { merge: true });
+  } catch (err) {
+    console.error(err);
+    toast("Uložení tmavého režimu selhalo, zkontroluj připojení.");
+  }
 });
 
 document.getElementById("deleteAccountBtn").addEventListener("click", async () => {
