@@ -623,7 +623,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 }
 .seq-item.is-break{
   background:repeating-linear-gradient(135deg, var(--part-prestavka), var(--part-prestavka) 8px, #d8d9d5 8px, #d8d9d5 16px);
-  text-align:center;padding:9px 12px;
+  text-align:center;padding:9px 36px 9px 12px;
 }
 .seq-item-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-width:100%;}
 .drag-handle{cursor:grab;color:rgba(27,36,48,.4);font-size:15px;padding:2px 4px;touch-action:none;flex-shrink:0;}
@@ -1423,7 +1423,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-23 22:00";
+const APP_VERSION = "2026-07-23 22:10";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
