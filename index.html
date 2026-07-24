@@ -585,6 +585,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 }
 .training-row-main{flex:1;min-width:160px;}
 .training-row-title{font-size:17px;font-weight:700;margin-bottom:3px;}
+.training-visibility-icon{font-size:12px;color:var(--ink-faint);margin-left:8px;vertical-align:middle;}
 .new-badge-inline{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--chalk);margin-right:6px;vertical-align:middle;}
 .training-row-meta{font-size:12px;color:var(--ink-faint);}
 .training-row-actions{display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0;}
@@ -818,7 +819,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
       </div>
       <div class="subtabs">
         <button type="button" class="subtab-btn active" data-subtab="mine">Moje tréninky</button>
-        <button type="button" class="subtab-btn" data-subtab="others">Tréninky ostatních</button>
+        <button type="button" class="subtab-btn" data-subtab="others">Tržiště tréninků</button>
       </div>
       <div class="toolbar" style="margin-top:10px;">
         <input type="search" id="trainingsSearch" placeholder="Hledat podle názvu tréninku nebo cviku…">
@@ -838,6 +839,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
         <input type="text" id="trainingNameInput" placeholder="Název tréninku">
         <div class="total-badge" id="totalTimeBadge">0 min</div>
       </div>
+      <button type="button" class="btn btn-sm" id="trainingVisibilityBtn" style="margin-bottom:12px;"></button>
       <div style="display:flex;gap:8px;margin-bottom:12px;">
         <button type="button" class="btn btn-primary" id="startTrainingModeBtn" style="flex:1;"><i class="fa-solid fa-play"></i> Spustit trénink</button>
       </div>
@@ -1105,6 +1107,23 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
     <div class="modal-actions" style="display:flex;gap:10px;">
       <button type="button" class="btn btn-block" id="confirmModalCancelBtn">Zrušit</button>
       <button type="button" class="btn btn-primary btn-block" id="confirmModalConfirmBtn">Potvrdit</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== VISIBILITY CHOICE MODAL (Tržiště) ===================== -->
+<div id="visibilityModalBackdrop" class="modal-backdrop hidden">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-head">
+      <h2 style="font-size:20px;">Kdo uvidí tenhle trénink?</h2>
+      <button type="button" class="btn btn-icon btn-ghost" id="visibilityHelpBtn" aria-label="Vysvětlit"><i class="fa-solid fa-circle-question"></i></button>
+    </div>
+    <div class="chip-collapse" id="visibilityHelpCollapse">
+      <p style="font-size:13px;color:var(--ink-soft);line-height:1.5;margin:0 0 14px;">Trénink je defaultně jen tvůj — dokud ho sám nezveřejníš, nikdo jiný ho neuvidí. Editor totiž může sloužit i jako nástroj na třídění vlastních nápadů, ne jen na tvorbu hotových věcí k prezentaci — a rozpracované pokusy by neměly zaplevelovat Tržiště ostatním. Až bude trénink v podobě, co chceš ukázat kolegům, dej ho na Tržiště. Rozhodnutí se dá kdykoli změnit oběma směry.</p>
+    </div>
+    <div class="modal-actions" style="display:flex;flex-direction:column;gap:8px;">
+      <button type="button" class="btn btn-block" id="visibilityChoicePrivateBtn"><i class="fa-solid fa-lock"></i> Jen pro mě</button>
+      <button type="button" class="btn btn-primary btn-block" id="visibilityChoicePublicBtn"><i class="fa-solid fa-globe"></i> Na Tržiště</button>
     </div>
   </div>
 </div>
@@ -1439,7 +1458,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-24 00:05";
+const APP_VERSION = "2026-07-24 01:00";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -3949,7 +3968,7 @@ function renderTrainingRow(t, mine) {
     <div class="training-row">
       ${mine && trainingSelectMode ? `<button type="button" class="training-select-box ${isSelected ? "checked" : ""}" data-toggle-select="${esc(t.id)}" aria-label="Vybrat">${isSelected ? '<i class="fa-solid fa-check"></i>' : ""}</button>` : ""}
       <button class="training-row-main" data-open="${esc(t.id)}" style="background:none;border:none;text-align:left;cursor:pointer;padding:0;">
-        <div class="training-row-title">${isNew ? '<span class="new-badge-inline" title="Nové od posledního přihlášení"></span>' : ""}${esc(t.name)}</div>
+        <div class="training-row-title">${isNew ? '<span class="new-badge-inline" title="Nové od posledního přihlášení"></span>' : ""}${esc(t.name)}${mine ? `<i class="fa-solid ${t.public ? "fa-globe" : "fa-lock"} training-visibility-icon" title="${t.public ? "Na Tržišti" : "Soukromé"}"></i>` : ""}</div>
         <div class="training-row-meta">${t.items.length} položek · ${totalDisplay}</div>
       </button>
       <div class="training-row-actions">
@@ -3966,7 +3985,7 @@ function renderTrainingsList() {
   const all = Object.values(state.trainings);
   const mineAll = all.filter(t => t.ownerUid === uidCurrent);
   const mineBase = mineAll.filter(t => !!t.archived === showingArchivedTrainings).sort((a, b) => (b.dateModified || 0) - (a.dateModified || 0));
-  const othersBase = all.filter(t => t.ownerUid !== uidCurrent && !t.archived).sort((a, b) => (b.dateModified || 0) - (a.dateModified || 0));
+  const othersBase = all.filter(t => t.ownerUid !== uidCurrent && !t.archived && t.public).sort((a, b) => (b.dateModified || 0) - (a.dateModified || 0));
 
   renderFilterChips("trainingsTagFilterRow", tagsUsedInVisibleTrainings(trainingsSubTab === "mine" ? mineBase : othersBase), trainingsTagFilter, renderTrainingsList);
 
@@ -3991,7 +4010,7 @@ function renderTrainingsList() {
   } else if (!othersList.length) {
     list.innerHTML = othersBase.length
       ? `<div class="empty-state"><h3>Nic nesedí</h3><p>Zkus upravit hledání nebo uvolnit štítky.</p></div>`
-      : `<div class="empty-state"><h3>Zatím nic od kolegů</h3><p>Jakmile někdo jiný založí trénink, objeví se tady.</p></div>`;
+      : `<div class="empty-state"><h3>Tržiště je zatím prázdné</h3><p>Jakmile někdo zveřejní svůj trénink, objeví se tady.</p></div>`;
   } else {
     const groups = {};
     othersList.forEach(t => {
@@ -4010,7 +4029,7 @@ function renderTrainingsList() {
     const src = state.trainings[b.dataset.clone];
     const id = uid();
     const label = (state.profile && state.profile.username) || (auth.currentUser && auth.currentUser.email) || uidCurrent;
-    state.trainings[id] = { ...structuredClone(src), id, name: src.name + " (kopie)", dateCreated: Date.now(), dateModified: Date.now(), ownerUid: uidCurrent, ownerLabel: label, archived: false };
+    state.trainings[id] = { ...structuredClone(src), id, name: src.name + " (kopie)", dateCreated: Date.now(), dateModified: Date.now(), ownerUid: uidCurrent, ownerLabel: label, archived: false, public: false, visibilityDecided: false };
     scheduleSave();
     renderTrainingsList();
     toast("Naklonováno.");
@@ -4542,6 +4561,8 @@ function openEditor(id) {
   document.getElementById("editorLayout").classList.toggle("no-picker", editorReadOnly);
   document.getElementById("saveTrainingBtn").classList.toggle("hidden", editorReadOnly);
   document.getElementById("deleteTrainingBtn").classList.toggle("hidden", editorReadOnly);
+  document.getElementById("trainingVisibilityBtn").classList.toggle("hidden", editorReadOnly);
+  renderTrainingVisibilityBtn();
   pickerTagFilter.clear();
   pickerEquipFilter.clear();
   document.getElementById("pickerSearch").value = "";
@@ -4555,7 +4576,7 @@ document.getElementById("cloneFromReadOnlyBtn").addEventListener("click", () => 
   const src = state.trainings[currentTrainingId];
   const id = uid();
   const label = (state.profile && state.profile.username) || (auth.currentUser && auth.currentUser.email) || uidCurrent;
-  state.trainings[id] = { ...structuredClone(src), id, name: src.name + " (kopie)", dateCreated: Date.now(), dateModified: Date.now(), ownerUid: uidCurrent, ownerLabel: label };
+  state.trainings[id] = { ...structuredClone(src), id, name: src.name + " (kopie)", dateCreated: Date.now(), dateModified: Date.now(), ownerUid: uidCurrent, ownerLabel: label, public: false, visibilityDecided: false };
   scheduleSave();
   toast("Naklonováno do tvých tréninků.");
   openEditor(id);
@@ -5003,7 +5024,58 @@ document.getElementById("sequenceList").addEventListener("click", (e) => {
   }
 });
 
-document.getElementById("saveTrainingBtn").addEventListener("click", () => { scheduleSave(); toast("Trénink uložen."); switchView("trainings"); });
+/** Ikonka/tlačítko v editoru jde přepnout kdykoli, nezávisle na dialogu při prvním uložení —
+    ruční přepnutí se počítá jako vědomé rozhodnutí (visibilityDecided), takže se dialog příště
+    znovu neukáže. */
+function renderTrainingVisibilityBtn() {
+  const t = state.trainings[currentTrainingId];
+  const btn = document.getElementById("trainingVisibilityBtn");
+  if (!t) return;
+  btn.innerHTML = t.public
+    ? '<i class="fa-solid fa-globe"></i> Na Tržišti — klikni pro soukromé'
+    : '<i class="fa-solid fa-lock"></i> Soukromé — klikni pro Tržiště';
+}
+document.getElementById("trainingVisibilityBtn").addEventListener("click", () => {
+  const t = state.trainings[currentTrainingId];
+  if (!t) return;
+  t.public = !t.public;
+  t.visibilityDecided = true;
+  t.dateModified = Date.now();
+  scheduleSave();
+  renderTrainingVisibilityBtn();
+  toast(t.public ? "Trénink je teď na Tržišti." : "Trénink je teď soukromý.");
+});
+document.getElementById("visibilityHelpBtn").addEventListener("click", () => {
+  document.getElementById("visibilityHelpCollapse").classList.toggle("open");
+});
+function finishSavingTraining() {
+  scheduleSave();
+  toast("Trénink uložen.");
+  switchView("trainings");
+}
+document.getElementById("visibilityChoicePrivateBtn").addEventListener("click", () => {
+  const t = state.trainings[currentTrainingId];
+  if (t) { t.public = false; t.visibilityDecided = true; }
+  document.getElementById("visibilityModalBackdrop").classList.add("hidden");
+  renderTrainingVisibilityBtn();
+  finishSavingTraining();
+});
+document.getElementById("visibilityChoicePublicBtn").addEventListener("click", () => {
+  const t = state.trainings[currentTrainingId];
+  if (t) { t.public = true; t.visibilityDecided = true; }
+  document.getElementById("visibilityModalBackdrop").classList.add("hidden");
+  renderTrainingVisibilityBtn();
+  finishSavingTraining();
+});
+document.getElementById("saveTrainingBtn").addEventListener("click", () => {
+  const t = state.trainings[currentTrainingId];
+  if (t && !t.visibilityDecided) {
+    document.getElementById("visibilityHelpCollapse").classList.remove("open");
+    document.getElementById("visibilityModalBackdrop").classList.remove("hidden");
+    return;
+  }
+  finishSavingTraining();
+});
 document.getElementById("deleteTrainingBtn").addEventListener("click", async () => {
   if (!(await confirmDialog("Smazat celý tento trénink?", { confirmLabel: "Smazat", danger: true }))) return;
   delete state.trainings[currentTrainingId];
