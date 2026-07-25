@@ -487,6 +487,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 /* ---------- Tréninkový režim ---------- */
 #trainingModeView{
   position:fixed;inset:0;z-index:200;background:#F4F5F2;display:flex;flex-direction:column;
+  transform:translateZ(0);-webkit-transform:translateZ(0);
 }
 /* Vynucené otočení na šířku bez spoléhání na (nespolehlivé, hlavně na Firefoxu pro Android)
    zamykání orientace prohlížečem — obsah se místo toho otočí rovnou přes CSS transform,
@@ -755,7 +756,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
     <div class="login-logo">TRENÉR</div>
     <p style="text-align:center;font-size:14px;color:var(--ink-soft);margin:8px 0 20px;">
       <i class="fa-regular fa-clock" style="font-size:26px;color:var(--court);display:block;margin-bottom:10px;"></i>
-      Účet je založený, ale ještě čeká na schválení od administrátora appky. Jakmile tě schválí, stačí appku znovu otevřít nebo obnovit.
+      Účet je založený, ale ještě čeká na schválení od administrátora aplikace. Jakmile tě schválí, stačí aplikaci znovu otevřít nebo obnovit.
     </p>
     <button type="button" class="btn btn-primary btn-block" id="pendingRecheckBtn"><i class="fa-solid fa-rotate"></i> Zkontrolovat znovu</button>
     <button type="button" class="btn btn-ghost btn-block" id="pendingLogoutBtn" style="margin-top:8px;">Odhlásit</button>
@@ -950,7 +951,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
         <input type="file" id="thumbFileInput" accept="image/*">
       </div>
       <div class="field">
-        <label for="linkAspectRatio">Tvar videa (u YouTube, Disku a nahraných souborů appka pozná sama, tohle je jen pro Facebook a ostatní)</label>
+        <label for="linkAspectRatio">Tvar videa (u YouTube, Disku a nahraných souborů aplikace pozná sama, tohle je jen pro Facebook a ostatní)</label>
         <select id="linkAspectRatio">
           <option value="16/9">Na šířku (16:9)</option>
           <option value="9/16">Na výšku (9:16 — mobil/Reels/Shorts)</option>
@@ -1242,7 +1243,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
       </div>
       <div class="field">
         <label for="bulkDriveShortDesc">Krátký popisek (nepovinné, společný pro všechna vybraná videa)</label>
-        <textarea id="bulkDriveShortDesc" rows="2" placeholder="Necháš-li prázdné, appka popisek nevyplní"></textarea>
+        <textarea id="bulkDriveShortDesc" rows="2" placeholder="Necháš-li prázdné, aplikace popisek nevyplní"></textarea>
       </div>
       <div class="filter-toggle-row" style="margin-bottom:8px;">
         <button type="button" class="manage-link" id="bulkDriveSelectAllBtn">Vybrat vše</button>
@@ -1263,7 +1264,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
       <h2 style="font-size:22px;">Koš</h2>
       <button class="btn btn-icon btn-ghost" id="closeTrashModalBtn"><i class="fa-solid fa-xmark"></i></button>
     </div>
-    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:0;">Smazaná videa tu čekají 14 dní, než appka mazání dokoná napořád — mezitím jde kterékoli vrátit zpět.</p>
+    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:0;">Smazaná videa tu čekají 14 dní, než aplikace mazání dokoná napořád — mezitím jde kterékoli vrátit zpět.</p>
     <div id="trashList"></div>
   </div>
 </div>
@@ -1306,8 +1307,8 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
       <div class="autocomplete-list hidden" id="bulkEquipAutocomplete"></div>
     </div>
     <div class="field">
-      <label for="bulkShortDescInput">Krátký popisek (nepovinné — na rozdíl od štítků/vybavení tohle vybraným videím PŘEPÍŠE dosavadní popisek, necháš-li prázdné, appka nic nezmění)</label>
-      <textarea id="bulkShortDescInput" rows="2" placeholder="Necháš-li prázdné, appka popisek u videí nezmění"></textarea>
+      <label for="bulkShortDescInput">Krátký popisek (nepovinné — na rozdíl od štítků/vybavení tohle vybraným videím PŘEPÍŠE dosavadní popisek, necháš-li prázdné, aplikace nic nezmění)</label>
+      <textarea id="bulkShortDescInput" rows="2" placeholder="Necháš-li prázdné, aplikace popisek u videí nezmění"></textarea>
     </div>
     <div class="modal-actions">
       <button type="button" class="btn btn-primary btn-block" id="bulkTagApplyBtn">Přidat vybraným videím</button>
@@ -1516,7 +1517,7 @@ let db;
 try {
   db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
 } catch (e) {
-  console.warn("Offline cache se nepodařilo zapnout, appka poběží jen online:", e);
+  console.warn("Offline cache se nepodařilo zapnout, aplikace poběží jen online:", e);
   db = initializeFirestore(fbApp, {});
 }
 
@@ -1525,7 +1526,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-25 23:05";
+const APP_VERSION = "2026-07-25 23:35";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1543,7 +1544,7 @@ let saveTimer = null;
 let sortableInstance = null;
 let groupSortableInstances = [];
 let pendingThumbUpload = null; // data URL vlastního nahraného náhledu, čeká na uložení formuláře
-let metaFetchedForUrl = ""; // appka si pamatuje, pro jaký přesně odkaz už "Načíst info" proběhlo — podle toho pulzuje tlačítko
+let metaFetchedForUrl = ""; // aplikace si pamatuje, pro jaký přesně odkaz už "Načíst info" proběhlo — podle toho pulzuje tlačítko
 document.getElementById("linkUrl").addEventListener("input", () => {
   const v = document.getElementById("linkUrl").value.trim();
   document.getElementById("fetchMetaBtn").classList.toggle("pulse", !!v && v !== metaFetchedForUrl);
@@ -1587,7 +1588,7 @@ function renderStarsHtml(avg) {
   }
   return html;
 }
-/** Spustí stažení textového obsahu jako soubor (appka nemá vlastní server, takže jde vždy o soubor v prohlížeči). */
+/** Spustí stažení textového obsahu jako soubor (aplikace nemá vlastní server, takže jde vždy o soubor v prohlížeči). */
 function downloadTextFile(filename, content, mime = "application/octet-stream") {
   const blob = new Blob([content], { type: mime });
   const url = URL.createObjectURL(blob);
@@ -1596,7 +1597,7 @@ function downloadTextFile(filename, content, mime = "application/octet-stream") 
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
-/** Zapíše zprávu do konzole (pro PC) i do panelu viditelného přímo v appce (pro mobil bez
+/** Zapíše zprávu do konzole (pro PC) i do panelu viditelného přímo v aplikaci (pro mobil bez
     propojení s PC) — dočasný diagnostický nástroj, klidně ho jednou v budoucnu odstraníme. */
 let debugLog = [];
 function logDebug(...args) {
@@ -1625,7 +1626,7 @@ document.getElementById("copyDebugLogBtn").addEventListener("click", async () =>
     await navigator.clipboard.writeText(text);
     toast("Zkopírováno do schránky.");
   } catch (e) {
-    toast("Kopírování se nepovedlo — appka na tohle potřebuje povolení ke schránce prohlížeče.", 6000);
+    toast("Kopírování se nepovedlo — aplikace na tohle potřebuje povolení ke schránce prohlížeče.", 6000);
   }
 });
 
@@ -1646,7 +1647,7 @@ function setDevMode(on) {
   if (!on) document.getElementById("debugLogPanel").classList.add("hidden");
 }
 applyDevModeVisibility();
-// Skryté gesto: 7× klepnutí na logo/název appky do 3 vteřin přepne vývojářský režim.
+// Skryté gesto: 7× klepnutí na logo/název aplikace do 3 vteřin přepne vývojářský režim.
 let logoTapCount = 0;
 let logoTapTimer = null;
 document.querySelector(".topbar-title-group").addEventListener("click", () => {
@@ -1681,11 +1682,11 @@ document.getElementById("checkLibrarySizeBtn").addEventListener("click", () => {
 });
 document.getElementById("shrinkOversizedBtn").addEventListener("click", async () => {
   if (uidCurrent !== ADMIN_UID) return;
-  if (!(await confirmDialog("Appka projde celou knihovnu, najde staré ručně nahrané fotky uložené přímo v knihovně, přestěhuje je do samostatné kolekce (a případně ještě zmenší) a rovnou uloží. Pokračovat?"))) return;
+  if (!(await confirmDialog("Aplikace projde celou knihovnu, najde staré ručně nahrané fotky uložené přímo v knihovně, přestěhuje je do samostatné kolekce (a případně ještě zmenší) a rovnou uloží. Pokračovat?"))) return;
   logDebug("[stěhování] hledám staré náhledy uložené přímo v knihovně…");
   let fixedCount = 0;
   for (const [id, item] of Object.entries(state.library)) {
-    if (!item.thumbnail || !item.thumbnail.startsWith("data:")) continue; // odkazy (URL) appku nezajímají, jen staré vlastní nahrané fotky
+    if (!item.thumbnail || !item.thumbnail.startsWith("data:")) continue; // odkazy (URL) aplikaci nezajímají, jen staré vlastní nahrané fotky
     const beforeLen = item.thumbnail.length;
     let dataUrl = item.thumbnail;
     if (dataUrl.length * 0.75 > THUMB_SAFE_BYTES) dataUrl = await enforceThumbSizeBudget(dataUrl);
@@ -1700,8 +1701,8 @@ document.getElementById("shrinkOversizedBtn").addEventListener("click", async ()
     }
   }
   if (!fixedCount) {
-    logDebug("[stěhování] appka nenašla žádný starý náhled uložený přímo v knihovně — nejspíš už je vše přestěhované.");
-    toast("Appka nenašla žádný starý náhled ke stěhování.", 6000);
+    logDebug("[stěhování] aplikace nenašla žádný starý náhled uložený přímo v knihovně — nejspíš už je vše přestěhované.");
+    toast("Aplikace nenašla žádný starý náhled ke stěhování.", 6000);
     return;
   }
   logDebug(`[stěhování] hotovo, přestěhováno ${fixedCount} náhledů, ukládám hlavní dokument…`);
@@ -1711,13 +1712,13 @@ document.getElementById("shrinkOversizedBtn").addEventListener("click", async ()
     renderLibrary();
     toast(`Přestěhováno ${fixedCount} náhledů mimo hlavní dokument.`, 8000);
   } else {
-    toast("Náhledy appka přestěhovala, ale uložení hlavního dokumentu selhalo — zkus to prosím znovu.", 8000);
+    toast("Náhledy aplikace přestěhovala, ale uložení hlavního dokumentu selhalo — zkus to prosím znovu.", 8000);
   }
 });
 
-/** Appka zkusí STÁHNOUT obrázek (ne jen ho zobrazit) a převést na data URL — to je jiná,
+/** Aplikace zkusí STÁHNOUT obrázek (ne jen ho zobrazit) a převést na data URL — to je jiná,
     přísnější operace než běžné zobrazení, a u některých zdrojů (typicky právě Disk) na ni
-    appka může narazit na bezpečnostní omezení prohlížeče. Když se to nepovede, appka to tiše
+    aplikace může narazit na bezpečnostní omezení prohlížeče. Když se to nepovede, aplikace to tiše
     vzdá u TÉHLE JEDNÉ položky a jede dál na další — ne, že by spadla celá dávka. */
 function fetchImageAsDataUrl(url) {
   return new Promise((resolve) => {
@@ -1746,13 +1747,13 @@ function fetchImageAsDataUrl(url) {
 document.getElementById("adoptDriveThumbsBtn").addEventListener("click", async () => {
   if (!isEditor()) return;
   const targets = Object.values(state.library).filter(it => !it.deletedAt && it.platform !== "youtube" && it.thumbnail && /^https?:\/\//.test(it.thumbnail));
-  if (!targets.length) { toast("Appka nenašla žádné video s náhledem odkazovaným zvenčí (YouTube náhledy appka schválně nechává být, ty jsou spolehlivé samy o sobě)."); return; }
-  if (!(await confirmDialog(`Appka zkusí stáhnout a uložit natrvalo k sobě ${targets.length} náhledů (Disk, TikTok apod.). U videí z YouTube appka nic měnit nebude. Může to chvíli trvat, hlavně u víc videí najednou. Pokračovat?`))) return;
+  if (!targets.length) { toast("Aplikace nenašla žádné video s náhledem odkazovaným zvenčí (YouTube náhledy aplikace schválně nechává být, ty jsou spolehlivé samy o sobě)."); return; }
+  if (!(await confirmDialog(`Aplikace zkusí stáhnout a uložit natrvalo k sobě ${targets.length} náhledů (Disk, TikTok apod.). U videí z YouTube aplikace nic měnit nebude. Může to chvíli trvat, hlavně u víc videí najednou. Pokračovat?`))) return;
   logDebug(`[náhledy] stahuji a ukládám ${targets.length} externě odkazovaných náhledů…`);
   let okCount = 0, failCount = 0;
   for (const item of targets) {
     const dataUrl = await fetchImageAsDataUrl(item.thumbnail);
-    if (!dataUrl) { failCount++; logDebug(`[náhledy] „${item.title}" — nepovedlo se stáhnout (appka to tiše přeskočila, video samo zůstává beze změny)`); continue; }
+    if (!dataUrl) { failCount++; logDebug(`[náhledy] „${item.title}" — nepovedlo se stáhnout (aplikace to tiše přeskočila, video samo zůstává beze změny)`); continue; }
     try {
       const budgeted = await enforceThumbSizeBudget(dataUrl);
       await setDoc(doc(db, "sharedThumbnails", item.id), { data: budgeted, updatedAt: Date.now() });
@@ -1766,25 +1767,25 @@ document.getElementById("adoptDriveThumbsBtn").addEventListener("click", async (
   }
   logDebug(`[náhledy] hotovo — uloženo ${okCount}, nepovedlo se ${failCount}`);
   if (!okCount) {
-    toast(`Appce se nepovedlo stáhnout ani jeden náhled (${failCount} selhalo) — na tomhle zařízení/prohlížeči to nejspíš nepůjde.`, 10000);
+    toast(`Aplikaci se nepovedlo stáhnout ani jeden náhled (${failCount} selhalo) — na tomhle zařízení/prohlížeči to nejspíš nepůjde.`, 10000);
     return;
   }
   renderLibrary();
   const ok = await saveUserData();
   if (ok) toast(`Uloženo natrvalo: ${okCount} náhledů. ${failCount ? `${failCount} se nepovedlo stáhnout.` : ""}`, 10000);
-  else toast("Náhledy appka stáhla, ale uložení selhalo — zkus to prosím znovu.", 8000);
+  else toast("Náhledy aplikace stáhla, ale uložení selhalo — zkus to prosím znovu.", 8000);
 });
 
 document.getElementById("refreshDriveThumbsBtn").addEventListener("click", async () => {
   if (!isEditor()) return;
-  // Cílí jen na Disk videa BEZ vlastní, appkou uložené fotky — u těch appka nejdřív zkusí
+  // Cílí jen na Disk videa BEZ vlastní, aplikací uložené fotky — u těch aplikace nejdřív zkusí
   // získat čerstvou adresu náhledu (stejným způsobem jako tlačítko „Načíst info"), a hned
-  // nato tu čerstvou adresu zkusí i stáhnout a uložit appce natrvalo. Když se stažení
+  // nato tu čerstvou adresu zkusí i stáhnout a uložit aplikaci natrvalo. Když se stažení
   // nepovede, aspoň ta čerstvá adresa zůstane nastavená — lepší než nic.
   const targets = Object.values(state.library).filter(it => !it.deletedAt && it.platform === "drive" && it.videoId && (!it.thumbnail || it.thumbnail.startsWith("http")));
-  if (!targets.length) { toast("Appka nenašla žádné video z Disku bez vlastní uložené fotky."); return; }
-  if (!state.driveApiKey) { toast("Appka nemá nastavený přístupový klíč k Disku (nastavuje se v Profilu) — bez něj tohle nepůjde.", 6000); return; }
-  if (!(await confirmDialog(`Appka u ${targets.length} videí z Disku nejdřív zkusí získat čerstvou adresu náhledu, a hned nato ji zkusí uložit natrvalo k appce. Může to chvíli trvat. Pokračovat?`))) return;
+  if (!targets.length) { toast("Aplikace nenašla žádné video z Disku bez vlastní uložené fotky."); return; }
+  if (!state.driveApiKey) { toast("Aplikace nemá nastavený přístupový klíč k Disku (nastavuje se v Profilu) — bez něj tohle nepůjde.", 6000); return; }
+  if (!(await confirmDialog(`Aplikace u ${targets.length} videí z Disku nejdřív zkusí získat čerstvou adresu náhledu, a hned nato ji zkusí uložit natrvalo k aplikaci. Může to chvíli trvat. Pokračovat?`))) return;
   logDebug(`[náhledy] obnovuji a ukládám náhledy u ${targets.length} videí z Disku…`);
   let refreshedCount = 0, savedCount = 0;
   for (const item of targets) {
@@ -1795,7 +1796,7 @@ document.getElementById("refreshDriveThumbsBtn").addEventListener("click", async
         const data = await res.json();
         if (data.thumbnailLink) { freshUrl = data.thumbnailLink; item.thumbnail = freshUrl; refreshedCount++; }
       }
-    } catch (e) { /* appka to u tohohle videa prostě vzdá a jede na další */ }
+    } catch (e) { /* aplikace to u tohohle videa prostě vzdá a jede na další */ }
     if (!freshUrl) { logDebug(`[náhledy] „${item.title}" — nepovedlo se ani získat čerstvou adresu`); continue; }
     const dataUrl = await fetchImageAsDataUrl(freshUrl);
     if (!dataUrl) { logDebug(`[náhledy] „${item.title}" — čerstvá adresa nastavena, stažení natrvalo se nepovedlo`); continue; }
@@ -1813,7 +1814,7 @@ document.getElementById("refreshDriveThumbsBtn").addEventListener("click", async
   renderLibrary();
   const ok = await saveUserData();
   if (ok) toast(`Hotovo: čerstvá adresa u ${refreshedCount} videí, natrvalo uloženo ${savedCount} z nich.`, 10000);
-  else toast("Náhledy appka zpracovala, ale uložení selhalo — zkus to prosím znovu.", 8000);
+  else toast("Náhledy aplikace zpracovala, ale uložení selhalo — zkus to prosím znovu.", 8000);
 });
 
 function myLabel() {
@@ -1838,11 +1839,11 @@ function nextFolderColor() {
   return FOLDER_COLORS[state.folders.length % FOLDER_COLORS.length];
 }
 let activeFolderFilter = null; // key vybrané složky v postranním panelu, null = vše
-/** Vymaže filtry na štítky a vybavení naráz — appka to volá jak z tlačítka "Zrušit vše" v
+/** Vymaže filtry na štítky a vybavení naráz — aplikace to volá jak z tlačítka "Zrušit vše" v
     rozbalovací nabídce filtrů, tak automaticky při přepnutí složky, ať se nemůže stát, že
-    zůstane aktivní filtr na štítek/vybavení, co appka zrovna neukazuje (protože ho ve zvolené
-    složce nenašla), a přitom ho nejde nikde zrušit, protože appka ho nemá jak zobrazit.
-    Filtr na složku a na oblíbené appka má na zrušení vlastní, viditelné tlačítko už dnes. */
+    zůstane aktivní filtr na štítek/vybavení, co aplikace zrovna neukazuje (protože ho ve zvolené
+    složce nenašla), a přitom ho nejde nikde zrušit, protože aplikace ho nemá jak zobrazit.
+    Filtr na složku a na oblíbené aplikace má na zrušení vlastní, viditelné tlačítko už dnes. */
 function clearTagEquipFilters() {
   libraryTagFilter.clear();
   libraryEquipFilter.clear();
@@ -1852,7 +1853,7 @@ function clearTagEquipFilters() {
 const ADMIN_UID = "WIw1KfRofOOrbYF7Xl8YzgQrTZd2"; // mazání složek smí jen tenhle účet
 state.myRole = "editor"; // "editor" | "viewer" — zjistí se přesně při přihlášení
 const isEditor = () => state.myRole !== "viewer";
-/** Podle role (editor/prohlížeč) appka schová tlačítka pro úpravu sdílené knihovny —
+/** Podle role (editor/prohlížeč) aplikace schová tlačítka pro úpravu sdílené knihovny —
     prohlížeč knihovnu jen čte a tvoří si vlastní tréninky. */
 function applyRoleUI() {
   const editor = isEditor();
@@ -1863,11 +1864,11 @@ let libraryViewMode = "grid"; // "grid" | "list" — týká se jen desktopu
 const isMobileViewport = () => window.matchMedia("(max-width:640px)").matches;
 let libraryMobileCompact = localStorage.getItem("trener_mobile_compact") !== "0"; // na mobilu výchozí zapnuto
 let selectMode = false;
-let pendingLibraryDeletions = new Set(); // ID položek, co appka musí na serveru výslovně smazat (ne jen vynechat)
+let pendingLibraryDeletions = new Set(); // ID položek, co aplikace musí na serveru výslovně smazat (ne jen vynechat)
 let sessionBadgeThreshold = 0; // čas posledního přihlášení — cokoli novější dostane odznak "nové"
-const TRASH_RETENTION_DAYS = 14; // po tolika dnech appka položku z koše sama nadobro odstraní
+const TRASH_RETENTION_DAYS = 14; // po tolika dnech aplikace položku z koše sama nadobro odstraní
 /** "Smazání" videa z běžné knihovny je měkké — video zůstane v datech, jen označené jako
-    smazané, a pár dní čeká v Koši, než appka provede skutečné, nevratné smazání. */
+    smazané, a pár dní čeká v Koši, než aplikace provede skutečné, nevratné smazání. */
 function softDeleteLibraryItem(id) {
   const it = state.library[id];
   if (!it) return;
@@ -1898,11 +1899,11 @@ function esc(s) {
 function uid() {
   return (crypto.randomUUID ? crypto.randomUUID() : "id-" + Date.now() + "-" + Math.random().toString(16).slice(2));
 }
-/** Automaticky animuje otevření úplně každého modálního okna v appce (sleduje třídu .hidden
+/** Automaticky animuje otevření úplně každého modálního okna v aplikaci (sleduje třídu .hidden
     na kterémkoli .modal-backdrop) — nemusí se řešit zvlášť u každého tlačítka/okna.
-    Důležité: appka si hlídá jen SKUTEČNÝ přechod ze skryto na viditelno, ne libovolnou změnu
+    Důležité: aplikace si hlídá jen SKUTEČNÝ přechod ze skryto na viditelno, ne libovolnou změnu
     třídy — jinak by sledovala i vlastní přidání/odebrání animační třídy a nekonečně se honila. */
-let openModalBackdrops = new Set(); // appka si tu drží, kolik oken je zrovna otevřených, kvůli zamykání scrollu pozadí
+let openModalBackdrops = new Set(); // aplikace si tu drží, kolik oken je zrovna otevřených, kvůli zamykání scrollu pozadí
 document.querySelectorAll(".modal-backdrop").forEach(backdrop => {
   let wasHidden = backdrop.classList.contains("hidden");
   const playEnterAnimation = () => {
@@ -1916,7 +1917,7 @@ document.querySelectorAll(".modal-backdrop").forEach(backdrop => {
     if (wasHidden && !isHidden) { playEnterAnimation(); openModalBackdrops.add(backdrop); }
     if (!wasHidden && isHidden) { openModalBackdrops.delete(backdrop); }
     wasHidden = isHidden;
-    // Appka zamkne posouvání stránky POD oknem, kdykoli je otevřené aspoň jedno — appka si
+    // Aplikace zamkne posouvání stránky POD oknem, kdykoli je otevřené aspoň jedno — aplikace si
     // hlídá počet otevřených najednou, ať se to nerozbije při dvou oknech nad sebou.
     document.body.style.overflow = openModalBackdrops.size > 0 ? "hidden" : "";
   }).observe(backdrop, { attributes: true, attributeFilter: ["class"] });
@@ -2004,8 +2005,8 @@ function scheduleSave() {
   saveTimer = setTimeout(saveUserData, 700);
 }
 
-/** Podle jasu barvy appka vybere čitelný text (bílá na sytější/tmavší barvě, appky tmavě
-    modrošedá na světlé pastelové) — používá se všude, kde appka dá barvu jako plné pozadí. */
+/** Podle jasu barvy aplikace vybere čitelný text (bílá na sytější/tmavší barvě, aplikace tmavě
+    modrošedá na světlé pastelové) — používá se všude, kde aplikace dá barvu jako plné pozadí. */
 function readableTextColor(hex) {
   const m = hex.replace("#", "").match(/.{1,2}/g);
   if (!m || m.length < 3) return "#1B2430";
@@ -2021,7 +2022,7 @@ function darkenHex(hex, amount) {
   return "#" + [r, g, b].map(v => v.toString(16).padStart(2, "0")).join("");
 }
 /** Nastaví/zruší malý barevný "štítek" (jemné pozadí + dobře čitelný tmavší text odvozený
-    ze stejné barvy) — appka to používá všude, kde dřív bývala barva části přes celou plochu
+    ze stejné barvy) — aplikace to používá všude, kde dřív bývala barva části přes celou plochu
     (karta v editoru, obrazovka tréninkového režimu), aby barva zůstala jen jako nenápadný hint. */
 function setPartTag(el, color) {
   if (color) { el.style.background = color + "33"; el.style.color = darkenHex(color, 0.55); }
@@ -2033,8 +2034,8 @@ function mixHex(hex, withHex, amount) {
   const b = withHex.replace("#", "").match(/.{1,2}/g).map(h => parseInt(h, 16));
   return "#" + a.map((v, i) => Math.max(0, Math.min(255, Math.round(v + (b[i] - v) * amount))).toString(16).padStart(2, "0")).join("");
 }
-/** Barevný "štítek" pro editor (part-select) — na rozdíl od setPartTag počítá s tím, že appka
-    v editoru respektuje tmavý/světlý motiv appky, takže pozadí štítku musí být VŽDY dost tmavé/
+/** Barevný "štítek" pro editor (part-select) — na rozdíl od setPartTag počítá s tím, že aplikace
+    v editoru respektuje tmavý/světlý motiv aplikace, takže pozadí štítku musí být VŽDY dost tmavé/
     světlé vůči aktuálnímu motivu (na rozdíl od tréninkového režimu, který má teď pevnou paletu). */
 function partTagStyle(color) {
   if (!color) return "";
@@ -2047,9 +2048,9 @@ function partTagStyle(color) {
     to sám od sebe u fotek z mobilu často nedělá), a rovnou ho zmenší na maxDimension.
     Zmenšení už při čtení (ne až dodatečně z plného rozlišení) je důležité hlavně na mobilu —
     fotky přímo z telefonu mívají mnohem větší rozlišení než cokoliv sdílené z PC, a vytvořit
-    z nich napřed obří meziverzi v plné velikosti dokázalo appku na mobilu spolehlivě zaseknout.
+    z nich napřed obří meziverzi v plné velikosti dokázalo aplikaci na mobilu spolehlivě zaseknout.
     Zmenšuje i záložní cesta (dřív to nedělala), a na konci je ještě pojistka, co obrázek dál
-    zmenší, kdyby byl výsledek pořád zbytečně velký — appčina sdílená databáze má limit velikosti
+    zmenší, kdyby byl výsledek pořád zbytečně velký — sdílená databáze má limit velikosti
     na celý dokument, takže jedna obří fotka dokázala shodit ukládání úplně všem. */
 async function fileToOrientedDataUrl(file, maxDimension = 1600, mimeType = "image/jpeg", quality = 0.88) {
   let dataUrl;
@@ -2094,14 +2095,14 @@ async function fileToOrientedDataUrl(file, maxDimension = 1600, mimeType = "imag
   // jednou ho zmenšíme — radši menší náhled než shozené ukládání celé sdílené knihovny.
   return await enforceThumbSizeBudget(dataUrl, mimeType, quality);
 }
-/** Sdílená pojistka: dokud je data URL zbytečně velké, appka ho dál zmenšuje. Používá se pro
-    ručně nahrané fotky i pro snímky, co appka sama zachytí z videa — obojí umí být obří,
+/** Sdílená pojistka: dokud je data URL zbytečně velké, aplikace ho dál zmenšuje. Používá se pro
+    ručně nahrané fotky i pro snímky, co aplikace sama zachytí z videa — obojí umí být obří,
     obojí by jinak dokázalo shodit ukládání CELÉ sdílené knihovny, ne jen tuhle jednu položku. */
 const THUMB_SAFE_BYTES = 20000; // rezerva pro celou knihovnu, ne jen tuhle jednu fotku
 const LOCAL_THUMB_PREFIX = "local:";
-/** Ručně nahrané/zachycené náhledy appka neukládá přímo do knihovny (to je přesně to, co ji
+/** Ručně nahrané/zachycené náhledy aplikace neukládá přímo do knihovny (to je přesně to, co ji
     dřív přeplnilo), ale zvlášť, do vlastní kolekce — v knihovně zůstává jen krátký odkaz
-    "local:ID". Odkazy z YouTube/Disku/TikToku zůstávají normální URL, ty appku netíží. */
+    "local:ID". Odkazy z YouTube/Disku/TikToku zůstávají normální URL, ty aplikaci netíží. */
 function resolveThumbnailUrl(item) {
   if (item && item.thumbnail && item.thumbnail.startsWith(LOCAL_THUMB_PREFIX)) {
     return state.thumbnails[item.id] || "";
@@ -2164,14 +2165,14 @@ function extractTikTokId(url) {
   const m = url.match(/tiktok\.com\/@[\w.-]+\/video\/(\d+)/);
   return m ? m[1] : null;
 }
-/** Sjednotí různé tvary FB odkazu na reel na ten jediný, o kterém víme, že appka umí spolehlivě
+/** Sjednotí různé tvary FB odkazu na reel na ten jediný, o kterém víme, že aplikace umí spolehlivě
     přehrát. Necháváme beze změny cokoli, co nepoznáme jistě (radši nezměnit, než rozbít). */
 function normalizeFacebookUrl(url) {
   const m = url.match(/facebook\.com\/reel\/(\d+)/);
   return m ? `https://www.facebook.com/reel/${m[1]}/` : url;
 }
 /** Sjednotí odkaz na Instagram příspěvek/reel (/p/, /reel/, /reels/, /tv/, i s uživatelským
-    jménem před tím) na tvar /reel/{kód}/, o kterém víme, že appka umí spolehlivě přehrát. */
+    jménem před tím) na tvar /reel/{kód}/, o kterém víme, že aplikace umí spolehlivě přehrát. */
 function normalizeInstagramUrl(url) {
   const m = url.match(/instagram\.com\/(?:[\w.]+\/)?(?:p|reel|reels|tv)\/([\w-]+)/);
   return m ? `https://www.instagram.com/reel/${m[1]}/` : url;
@@ -2210,8 +2211,8 @@ function secondsToTimestamp(sec) {
   const m = Math.floor(sec / 60), s = sec % 60;
   return m + ":" + String(s).padStart(2, "0");
 }
-/** Zobrazí appce nabídku 1-3 náhledů na výběr (jen odkazy, appka nic nestahuje) — kliknutím
-    se zvolený náhled rovnou projeví v náhledu nahoře a zapíše se, ať appka ví, co uložit. */
+/** Zobrazí aplikaci nabídku 1-3 náhledů na výběr (jen odkazy, aplikace nic nestahuje) — kliknutím
+    se zvolený náhled rovnou projeví v náhledu nahoře a zapíše se, ať aplikace ví, co uložit. */
 function renderThumbSuggestions(urls, platform) {
   const wrap = document.getElementById("thumbSuggestions");
   urls = urls.filter(Boolean);
@@ -2228,14 +2229,14 @@ function renderThumbSuggestions(urls, platform) {
       tp.textContent = "";
       tp.dataset.thumb = u;
       pendingThumbUpload = null; // vybraný návrh má přednost před dřívějším ručním nahráním
-      // U Disku (a TikToku) appka rovnou zkusí náhled stáhnout a uložit si ho natrvalo k sobě —
+      // U Disku (a TikToku) aplikace rovnou zkusí náhled stáhnout a uložit si ho natrvalo k sobě —
       // tyhle adresy totiž mají tendenci časem přestat platit (viděli jsme to naostro). U
-      // YouTube appka tohle záměrně nedělá, tamní adresy jsou samy o sobě dlouhodobě spolehlivé.
+      // YouTube aplikace tohle záměrně nedělá, tamní adresy jsou samy o sobě dlouhodobě spolehlivé.
       if (platform === "drive" || platform === "tiktok") {
-        toast("Appka si náhled zkouší uložit natrvalo…", 3000);
+        toast("Aplikace si náhled zkouší uložit natrvalo…", 3000);
         const dataUrl = await fetchImageAsDataUrl(u);
         if (dataUrl && document.getElementById("thumbPreview").dataset.thumb === u) {
-          // (kontrola výše: appka mezitím nesmí přepsat novější volbu, kdyby uživatel stihl kliknout jinam)
+          // (kontrola výše: aplikace mezitím nesmí přepsat novější volbu, kdyby uživatel stihl kliknout jinam)
           tp.dataset.thumb = dataUrl;
           toast("Náhled uložen natrvalo.", 2500);
         }
@@ -2371,10 +2372,10 @@ function setupDriveVideoPlayback(wrap, item, opts) {
    ========================================================= */
 const loginForm = document.getElementById("loginForm");
 /** Náhodná hláška při přihlašování — sem si klidně napiš/uprav vlastní varianty,
-    appka pokaždé vybere jednu náhodně. */
+    aplikace pokaždé vybere jednu náhodně. */
 const LOGIN_LOADING_MESSAGES = [
   "Hlásím postavení…",
-  "Rozcvičuju appku…",
+  "Rozcvičuju aplikaci…",
   "Natahuju sako…",
   "Hledám klíče od skřínky…",
   "Hledám kliku…",
@@ -2473,9 +2474,9 @@ onAuthStateChanged(auth, async (user) => {
   if (user) {
     uidCurrent = user.uid;
     document.getElementById("userEmailLabel").textContent = user.email || "";
-    // Appka se tohle dozví i tehdy, když se přihlásíš automaticky (např. po obnovení
+    // Aplikace se tohle dozví i tehdy, když se přihlásíš automaticky (např. po obnovení
     // stránky, díky zapamatovanému přihlášení) — ne jen po ručním odeslání formuláře.
-    // Animaci proto appka ukazuje i tady, ať je vidět, že appka pracuje, i když jsi
+    // Animaci proto aplikace ukazuje i tady, ať je vidět, že aplikace pracuje, i když jsi
     // sám nic neklikal.
     showLoginLoading();
     await checkMembershipAndProceed();
@@ -2588,7 +2589,7 @@ async function loadUserData() {
     darkMode: !!legacy.darkMode
   };
   applyColorScheme();
-  // Práh pro odznaky "nové od posledního přihlášení" — appka si čas uloží zvlášť (ne jako
+  // Práh pro odznaky "nové od posledního přihlášení" — aplikace si čas uloží zvlášť (ne jako
   // součást profilu), ať se nesmaže při příští úpravě jména/barev/avataru ve formuláři profilu.
   sessionBadgeThreshold = legacy.lastSeenAt || 0;
   setDoc(doc(db, "users", uidCurrent), { lastSeenAt: Date.now() }, { merge: true }).catch(e => console.warn("Uložení času posledního přihlášení selhalo:", e));
@@ -2634,7 +2635,7 @@ async function loadUserData() {
     thumbsSnap.forEach(d => { state.thumbnails[d.id] = (d.data() || {}).data || ""; });
     logDebug("[login] načteno samostatných náhledů:", Object.keys(state.thumbnails).length);
   } catch (e) {
-    console.warn("Nepodařilo se načíst samostatné náhledy (appka poběží i bez nich, jen bez fotek):", e);
+    console.warn("Nepodařilo se načíst samostatné náhledy (aplikace poběží i bez nich, jen bez fotek):", e);
   }
 
   // --- tréninky (moje subkolekce + jednorázová migrace ze staré mapy + všechny přes collection group) ---
@@ -2710,7 +2711,7 @@ async function loadUserData() {
   } catch (e) { console.error("Migrace knihovních položek selhala:", e); }
 
   // --- jednorázové přeřazení "legacy" hodnocení/obtížnosti/poznámek na skutečného autora
-  //     (appku před zapnutím sdílení používal jen admin, takže "legacy" = on) ---
+  //     (aplikaci před zapnutím sdílení používal jen admin, takže "legacy" = on) ---
   try {
     if (uidCurrent === ADMIN_UID) {
       let migratedLegacy = false;
@@ -2753,9 +2754,9 @@ async function loadUserData() {
 
 /* =========================================================
    ŽIVÁ SYNCHRONIZACE SDÍLENÝCH DAT
-   Appka se od tohohle okamžiku drží napojená na databázi, dokud je otevřená — když někdo
-   (i appka sama v jiném okně/zařízení) něco uloží, projeví se to tady bez nutnosti se
-   znovu přihlásit nebo obnovit appku.
+   Aplikace se od tohohle okamžiku drží napojená na databázi, dokud je otevřená — když někdo
+   (i aplikace sama v jiném okně/zařízení) něco uloží, projeví se to tady bez nutnosti se
+   znovu přihlásit nebo obnovit aplikaci.
    ========================================================= */
 let sharedDataUnsubscribe = null;
 function subscribeToSharedData() {
@@ -2785,7 +2786,7 @@ function subscribeToSharedThumbnails() {
   sharedThumbsUnsubscribe = onSnapshot(collection(db, "sharedThumbnails"), (snap) => {
     let changed = false;
     snap.docChanges().forEach(change => {
-      if (change.doc.metadata.hasPendingWrites) return; // ozvěna vlastního zápisu, appka to už má
+      if (change.doc.metadata.hasPendingWrites) return; // ozvěna vlastního zápisu, aplikace to už má
       if (change.type === "removed") { delete state.thumbnails[change.doc.id]; changed = true; }
       else { state.thumbnails[change.doc.id] = (change.doc.data() || {}).data || ""; changed = true; }
     });
@@ -2797,9 +2798,9 @@ function subscribeToSharedThumbnails() {
 function unsubscribeFromSharedThumbnails() {
   if (sharedThumbsUnsubscribe) { sharedThumbsUnsubscribe(); sharedThumbsUnsubscribe = null; }
 }
-/** Appka sama sebe (svou vlastní relaci) hlídá, jestli ji admin mezitím buď neodhlásil na
-    dálku (kickedAt novější, než appka naběhla), nebo jestli jí úplně neodebral přístup
-    (zmizí z approved) — v obou případech appku sama odhlásí, uživatel nemusí dělat nic. */
+/** Aplikace sama sebe (svou vlastní relaci) hlídá, jestli ji admin mezitím buď neodhlásil na
+    dálku (kickedAt novější, než aplikace naběhla), nebo jestli jí úplně neodebral přístup
+    (zmizí z approved) — v obou případech aplikaci sama odhlásí, uživatel nemusí dělat nic. */
 let ownMembershipUnsubscribe = null;
 function subscribeToOwnMembership() {
   if (ownMembershipUnsubscribe) { ownMembershipUnsubscribe(); ownMembershipUnsubscribe = null; }
@@ -2834,7 +2835,7 @@ function applyRemoteSharedUpdate(shared) {
   state.knownRevision = shared.revision || 0;
   // Schválně nepřekreslujeme, když je zrovna otevřený formulář nebo rozepsaná úprava (přidání/úprava
   // odkazu, správa složek/částí, profil) — ať živá aktualizace nesmaže rozepsaný text pod rukama.
-  // Data v appce jsou i tak už aktuální, jen se to na obrazovce neprojeví, dokud se formulář nezavře.
+  // Data v aplikaci jsou i tak už aktuální, jen se to na obrazovce neprojeví, dokud se formulář nezavře.
   const modalOpen = !linkModalBackdrop.classList.contains("hidden")
     || !document.getElementById("foldersModalBackdrop").classList.contains("hidden")
     || !document.getElementById("partsModalBackdrop").classList.contains("hidden");
@@ -2848,9 +2849,9 @@ async function saveUserData() {
   try {
     const sharedRef = doc(db, "shared", "data");
     // Pojistka proti tichému přepsání: než uložíme, ověříme si čerstvě, jestli mezitím někdo jiný
-    // (třeba appka zapomenutá otevřená jinde) neuložil novější verzi, než ze které vycházíme my.
+    // (třeba aplikace zapomenutá otevřená jinde) neuložil novější verzi, než ze které vycházíme my.
     // Schválně tu není možnost "přepsat i tak" — i jedno nevědomé kliknutí v zapomenutém okně by
-    // mohlo validně vrátit smazaná data zpátky, tak radši appka vždycky vezme tu novější verzi sama.
+    // mohlo validně vrátit smazaná data zpátky, tak radši aplikace vždycky vezme tu novější verzi sama.
     let baseRevision = state.knownRevision;
     if (state.knownRevision !== undefined) {
       const freshSnap = await getDoc(sharedRef);
@@ -2859,7 +2860,7 @@ async function saveUserData() {
       if (freshRevision !== state.knownRevision) {
         logDebug("[save] konflikt verzí — moje:", state.knownRevision, "na serveru:", freshRevision, "— beru tu novější");
         applyRemoteSharedUpdate(freshData);
-        toast("Mezitím se appka změnila jinde (možná zapomenuté okno) — appka se obnovila na nejnovější verzi. Zkus svou poslední změnu prosím zopakovat.", 10000);
+        toast("Mezitím se aplikace změnila jinde (možná zapomenuté okno) — aplikace se obnovila na nejnovější verzi. Zkus svou poslední změnu prosím zopakovat.", 10000);
         return false;
       }
       baseRevision = freshRevision;
@@ -2884,13 +2885,13 @@ async function saveUserData() {
       revision: newRevision
     });
     state.knownRevision = newRevision;
-    // Okamžité ověření: appka se hned znovu zeptá databáze, co tam doopravdy je, místo aby jen
+    // Okamžité ověření: aplikace se hned znovu zeptá databáze, co tam doopravdy je, místo aby jen
     // věřila tomu, že setDoc() nespadl do chyby. Dočasné, ať víme jistě, kde přesně se to láme.
     try {
       const verifySnap = await getDoc(sharedRef);
       const verifyData = verifySnap.exists() ? verifySnap.data() : {};
       const stillThere = [...deletedIdsThisSave].filter(id => (verifyData.library || {})[id]);
-      logDebug("[verify] hned po uložení appka na serveru vidí: počet videí",
+      logDebug("[verify] hned po uložení aplikace na serveru vidí: počet videí",
         Object.keys(verifyData.library || {}).length, "revize", verifyData.revision,
         "— smazané položky, co tam přesto ještě jsou:", stillThere.length ? stillThere.join(",") : "žádné");
     } catch (verifyErr) {
@@ -2988,7 +2989,7 @@ function renderTagFilterRow() { renderFilterChips("tagFilterRow", tagsUsedInActi
 function renderEquipFilterRow() { renderFilterChips("equipFilterRow", tagsUsedInActiveFolder("equipment"), libraryEquipFilter, () => { renderTagFilterRow(); renderEquipFilterRow(); renderLibrary(); }); }
 
 /* =========================================================
-   EASTER EGGY (drobnosti, žádný vliv na běžné fungování appky)
+   EASTER EGGY (drobnosti, žádný vliv na běžné fungování aplikace)
    ========================================================= */
 function triggerConfetti() {
   const colors = ["#339933", "#216321", "#E8622C", "#C74F1E", "#ffffff"];
@@ -3006,7 +3007,7 @@ function triggerConfetti() {
 const raptorAudio = new Audio("raptor-sound.mp3");
 function playRaptorSound() {
   raptorAudio.currentTime = 0;
-  raptorAudio.play().catch(() => {}); // některé prohlížeče mohou přehrání bez zvuku odmítnout, appka to nijak neřeší
+  raptorAudio.play().catch(() => {}); // některé prohlížeče mohou přehrání bez zvuku odmítnout, aplikace to nijak neřeší
 }
 let lastEasterEggQuery = "";
 function checkSearchEasterEggs(q) {
@@ -3026,7 +3027,7 @@ function getFilteredLibraryItems() {
     if (activeFolderFilter && item.folderId !== activeFolderFilter) return false;
     if (!activeFolderFilter && !q) {
       const itFolder = getFolder(item.folderId);
-      if (itFolder && itFolder.hiddenFromMain) return false; // schovaná složka — dokud ji nikdo výslovně nevybere nebo nehledá, appka ji v hlavním seznamu vynechá
+      if (itFolder && itFolder.hiddenFromMain) return false; // schovaná složka — dokud ji nikdo výslovně nevybere nebo nehledá, aplikace ji v hlavním seznamu vynechá
     }
     if (libraryTagFilter.size && ![...libraryTagFilter].every(t => item.tags.includes(t))) return false;
     if (libraryEquipFilter.size && ![...libraryEquipFilter].every(t => item.equipment.includes(t))) return false;
@@ -3052,7 +3053,7 @@ function getFilteredLibraryItems() {
 const PLATFORM_ICONS = { youtube: "fa-brands fa-youtube", facebook: "fa-brands fa-facebook", drive: "fa-brands fa-google-drive", instagram: "fa-brands fa-instagram", tiktok: "fa-brands fa-tiktok", file: "fa-solid fa-film", other: "fa-solid fa-link" };
 
 /** Spočítá, kolikrát se který video (podle ID) objevuje napříč VŠEMI tréninky (i archivovanými
-    a cizími) — appka to ukazuje jen jako tichou, informativní hodnotu na kartě, nijak to
+    a cizími) — aplikace to ukazuje jen jako tichou, informativní hodnotu na kartě, nijak to
     needitovaně neovlivňuje řazení ani neschovává/nezvýrazňuje videa nahoře. */
 function computeVideoUsageCounts() {
   const counts = {};
@@ -3083,7 +3084,7 @@ function renderLibrary() {
   if (!items.length) {
     const q = document.getElementById("librarySearch").value.trim().toLowerCase();
     const msg = q === "pivo"
-      ? { h: "Tohle appka nenajde.", p: "Ale zasloužil by sis ho. Tak tady je 🍺." }
+      ? { h: "Tohle aplikace nenajde.", p: "Ale zasloužil by sis ho. Tak tady je 🍺." }
       : { h: "Zatím žádná videa", p: "Přidej první odkaz tlačítkem nahoře, nebo zkus uvolnit filtry." };
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><h3>${msg.h}</h3><p>${msg.p}</p></div>`;
     return;
@@ -3173,7 +3174,7 @@ document.getElementById("toggleFavFilterBtn").addEventListener("click", () => {
   btn.innerHTML = favOnlyFilter ? '<i class="fa-solid fa-star"></i>' : '<i class="fa-regular fa-star"></i>';
   renderLibrary();
 });
-/** Přišpendlení horní lišty a filtrů Knihovny — volitelné, appka si to pamatuje i příště
+/** Přišpendlení horní lišty a filtrů Knihovny — volitelné, aplikace si to pamatuje i příště
     (localStorage), ať to nemusíš zapínat pokaždé znovu. */
 function applyToolbarPinState() {
   const pinned = localStorage.getItem("trener_toolbar_pinned") === "1";
@@ -3194,7 +3195,7 @@ document.getElementById("toggleSelectModeBtn").addEventListener("click", () => {
   renderLibrary();
 });
 document.getElementById("selectAllBtn").addEventListener("click", () => {
-  // Zaškrtne jen to, co appka teď doopravdy ukazuje — položky odfiltrované appka do výběru nepočítá.
+  // Zaškrtne jen to, co aplikace teď doopravdy ukazuje — položky odfiltrované aplikace do výběru nepočítá.
   getFilteredLibraryItems().forEach(it => selectedIds.add(it.id));
   renderLibrary();
 });
@@ -3290,8 +3291,8 @@ document.getElementById("bulkTagApplyBtn").addEventListener("click", async () =>
     bulkEquipAddList.forEach(t => { if (!item.equipment.includes(t)) item.equipment.push(t); });
     if (bulkShortDesc) item.shortDesc = bulkShortDesc;
   });
-  // Appka musí nové štítky/vybavení připsat i do sdíleného seznamu VŠECH známých štítků —
-  // jinak se sice správně uloží na videu samotném, ale appka je nenabídne ve filtru ani v
+  // Aplikace musí nové štítky/vybavení připsat i do sdíleného seznamu VŠECH známých štítků —
+  // jinak se sice správně uloží na videu samotném, ale aplikace je nenabídne ve filtru ani v
   // našeptávači, dokud je někdo nezadá i přes formulář jednoho videa (přesně tenhle bug).
   bulkTagAddList.forEach(t => { if (!state.tagPool.includes(t)) state.tagPool.push(t); });
   bulkEquipAddList.forEach(t => { if (!state.equipmentPool.includes(t)) state.equipmentPool.push(t); });
@@ -3390,7 +3391,7 @@ document.addEventListener("click", (e) => {
 });
 document.getElementById("openAddLinkBtn").addEventListener("click", () => { document.getElementById("addLinkMenu").classList.add("hidden"); openLinkModal(null); });
 document.getElementById("closeLinkModalBtn").addEventListener("click", closeLinkModal);
-// Kliknutí mimo formulář ho záměrně nezavírá (na rozdíl od ostatních oken appky) — u
+// Kliknutí mimo formulář ho záměrně nezavírá (na rozdíl od ostatních oken aplikace) — u
 // rozepsaného přidávání/úpravy videa by to jinak snadno vedlo k nechtěné ztrátě práce.
 
 function openLinkModal(id) {
@@ -3431,7 +3432,7 @@ function openLinkModal(id) {
   setRatingPicker(item && item.ratings && item.ratings[uidCurrent] ? item.ratings[uidCurrent] : 0);
 
   // Prohlížeč smí v tomhle formuláři upravit jen svoje hodnocení/obtížnost/poznámku —
-  // zbytek appka zamkne needitovatelný, ale dál viditelný pro přehled.
+  // zbytek aplikace zamkne needitovatelný, ale dál viditelný pro přehled.
   const lockedIds = ["linkUrl", "fetchMetaBtn", "linkTitle", "linkFolder", "newFolderInput", "linkDefaultPart",
     "linkAspectRatio", "linkTimestamp", "linkShortDesc", "linkLongDesc", "thumbFileInput", "tagInput", "equipInput"];
   const viewerLockNotice = document.getElementById("viewerLockNotice");
@@ -3458,7 +3459,7 @@ function pickClosestAspectRatio(w, h) {
   return best.key;
 }
 /** Zjistí skutečný poměr stran videa jeho krátkým načtením mimo dohled — používá se pro Disk,
-    kde appka jinak poměr stran neuměla poznat sama, i když popisek u pole to sliboval. */
+    kde aplikace jinak poměr stran neuměla poznat sama, i když popisek u pole to sliboval. */
 function detectAspectRatioFromVideoUrl(url) {
   return new Promise((resolve) => {
     const video = document.createElement("video");
@@ -3479,9 +3480,9 @@ function detectAspectRatioFromVideoUrl(url) {
     }, { once: true });
   });
 }
-/** U přímo odkazovaného souboru appka zkusí sama "přetočit" video na 3 místa (25 %/50 %/75 %)
+/** U přímo odkazovaného souboru aplikace zkusí sama "přetočit" video na 3 místa (25 %/50 %/75 %)
     a vyfotit, co v tu chvíli běží na obrazovce. Funguje to jen když to server hostující video
-    dovolí (CORS) — když ne, appka to mlčky vzdá a zůstane jen ruční nahrání, žádná chyba se
+    dovolí (CORS) — když ne, aplikace to mlčky vzdá a zůstane jen ruční nahrání, žádná chyba se
     neukazuje, ať to nepůsobí jako něco rozbitého. */
 function captureVideoFrameThumbnails(url) {
   return new Promise((resolve) => {
@@ -3490,14 +3491,14 @@ function captureVideoFrameThumbnails(url) {
     video.muted = true;
     video.playsInline = true;
     video.preload = "auto";
-    // Appka video musí mít skutečně vložené do stránky (jen "v paměti" to u některých videí
+    // Aplikace video musí mít skutečně vložené do stránky (jen "v paměti" to u některých videí
     // nevykreslí obraz vůbec) — schované mimo dohled, ale technicky součástí stránky.
     video.style.cssText = "position:fixed;top:0;left:0;width:2px;height:2px;opacity:0;pointer-events:none;z-index:-1;";
     document.body.appendChild(video);
     video.src = url;
     const frames = [];
     const cleanup = () => { video.remove(); };
-    const timeouts = setTimeout(() => { cleanup(); resolve([]); }, 15000); // ať appka nečeká navěky na pomalé/nedostupné video
+    const timeouts = setTimeout(() => { cleanup(); resolve([]); }, 15000); // ať aplikace nečeká navěky na pomalé/nedostupné video
     video.addEventListener("error", () => { clearTimeout(timeouts); cleanup(); resolve([]); });
     video.addEventListener("loadedmetadata", async () => {
       try {
@@ -3512,7 +3513,7 @@ function captureVideoFrameThumbnails(url) {
         canvas.height = Math.round(video.videoHeight * scale);
         const ctx = canvas.getContext("2d");
         // Krátké přehrání hned na startu donutí prohlížeč opravdu začít dekódovat obraz — bez
-        // tohoto appka u některých videí zachytávala jen černý snímek (přetočeno technicky ano,
+        // tohoto aplikace u některých videí zachytávala jen černý snímek (přetočeno technicky ano,
         // ale vykreslený obraz ještě nebyl skutečně připravený).
         try { await video.play(); video.pause(); } catch (e) {}
         for (const frac of [0.25, 0.5, 0.75]) {
@@ -3521,7 +3522,7 @@ function captureVideoFrameThumbnails(url) {
             video.addEventListener("error", seekReject, { once: true });
             video.currentTime = duration * frac;
           });
-          // Počká na dva vykreslovací tiky navíc, ať appka nezachytí snímek dřív, než ho
+          // Počká na dva vykreslovací tiky navíc, ať aplikace nezachytí snímek dřív, než ho
           // prohlížeč fakt stihl vykreslit.
           await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -3534,7 +3535,7 @@ function captureVideoFrameThumbnails(url) {
       } catch (e) {
         clearTimeout(timeouts);
         cleanup();
-        resolve([]); // typicky CORS — appka to tiše vzdá, ruční nahrání zůstává k dispozici
+        resolve([]); // typicky CORS — aplikace to tiše vzdá, ruční nahrání zůstává k dispozici
       }
     });
   });
@@ -3546,7 +3547,7 @@ document.getElementById("fetchMetaBtn").addEventListener("click", async () => {
   document.getElementById("fetchMetaBtn").classList.remove("pulse");
   if (url.includes("facebook.com")) {
     if (/facebook\.com\/share\//.test(url)) {
-      toast("Tenhle typ sdíleného facebookového odkazu appka bohužel nerozezná. Otevři video přímo na Facebooku a zkopíruj adresu, která bude obsahovat „/reel/“ a dlouhé číslo.", 9000);
+      toast("Tenhle typ sdíleného facebookového odkazu aplikace bohužel nerozezná. Otevři video přímo na Facebooku a zkopíruj adresu, která bude obsahovat „/reel/“ a dlouhé číslo.", 9000);
       return;
     }
     url = normalizeFacebookUrl(url);
@@ -3607,13 +3608,13 @@ document.getElementById("fetchMetaBtn").addEventListener("click", async () => {
           const data = await res.json();
           if (!document.getElementById("linkTitle").value && data.title) document.getElementById("linkTitle").value = data.title;
           if (data.thumbnail_url) renderThumbSuggestions([data.thumbnail_url], "tiktok");
-          toast("Načteno, náhled zadej ručně, pokud appka žádný nenavrhla.");
+          toast("Načteno, náhled zadej ručně, pokud aplikace žádný nenavrhla.");
         } else {
           toast("TikTok: titulek a náhled zadej ručně.");
         }
       } catch (e) { toast("TikTok: titulek a náhled zadej ručně."); }
     } else {
-      toast("Krátký TikTok odkaz appka nerozpozná — vlož prosím ten dlouhý, s /video/ v adrese.");
+      toast("Krátký TikTok odkaz aplikace nerozpozná — vlož prosím ten dlouhý, s /video/ v adrese.");
     }
   } else if (platform === "file") {
     toast("Zkouším z videa vyfotit náhledy…", 4000);
@@ -3622,7 +3623,7 @@ document.getElementById("fetchMetaBtn").addEventListener("click", async () => {
       renderThumbSuggestions(frames);
       toast("Náhledy navrženy, titulek zadej ručně.");
     } else {
-      toast("Náhled appka automaticky nezískala (server to nedovolil) — nahraj ho prosím ručně, titulek taky.");
+      toast("Náhled aplikace automaticky nezískala (server to nedovolil) — nahraj ho prosím ručně, titulek taky.");
     }
   } else {
     document.getElementById("thumbPreview").dataset.videoId = "";
@@ -3631,8 +3632,8 @@ document.getElementById("fetchMetaBtn").addEventListener("click", async () => {
   checkForDuplicate(platform, document.getElementById("thumbPreview").dataset.videoId, url);
 });
 
-/** Zkontroluje, jestli appka nemá tohle video už v knihovně — porovnává platformu+ID videa,
-    a když appka ID nezná (např. neznámý formát odkazu), aspoň přesnou shodu URL. */
+/** Zkontroluje, jestli aplikace nemá tohle video už v knihovně — porovnává platformu+ID videa,
+    a když aplikace ID nezná (např. neznámý formát odkazu), aspoň přesnou shodu URL. */
 function findDuplicateLibraryItem(platform, videoId, url) {
   return Object.entries(state.library).find(([id, it]) => {
     if (it.deletedAt) return false; // co je v koši, se za duplicitu nepočítá
@@ -3771,7 +3772,7 @@ document.querySelectorAll("#ratingPicker button").forEach(b => b.addEventListene
 }));
 
 /** Hodnocení a obtížnost přímo v detailu videa — na rozdíl od pickerů ve formuláři úpravy
-    se ukládá hned po kliknutí, ať appka nikoho nenutí zajíždět do editace jen kvůli tomuhle. */
+    se ukládá hned po kliknutí, ať aplikace nikoho nenutí zajíždět do editace jen kvůli tomuhle. */
 function setDetailDiffPicker(val) {
   document.querySelectorAll("#detailDiffPicker button").forEach(b => b.classList.toggle("on", parseInt(b.dataset.val) <= val));
   document.getElementById("detailDiffPicker").dataset.value = val;
@@ -3818,7 +3819,7 @@ linkForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   let url = document.getElementById("linkUrl").value.trim();
   if (/facebook\.com\/share\//.test(url)) {
-    toast("Tenhle typ sdíleného facebookového odkazu appka bohužel nerozezná. Otevři video přímo na Facebooku a zkopíruj adresu, která bude obsahovat „/reel/“ a dlouhé číslo.", 9000);
+    toast("Tenhle typ sdíleného facebookového odkazu aplikace bohužel nerozezná. Otevři video přímo na Facebooku a zkopíruj adresu, která bude obsahovat „/reel/“ a dlouhé číslo.", 9000);
     return;
   }
   if (url.includes("facebook.com")) url = normalizeFacebookUrl(url);
@@ -3857,10 +3858,10 @@ linkForm.addEventListener("submit", async (e) => {
   if (myRating) ratings[uidCurrent] = myRating; else delete ratings[uidCurrent];
   if (myNote) notesByCoach[uidCurrent] = { text: myNote, authorLabel: myLabel(), date: Date.now() }; else delete notesByCoach[uidCurrent];
 
-  // Nová/změněná ručně nahraná či zachycená fotka appka neukládá přímo do knihovny (to je
+  // Nová/změněná ručně nahraná či zachycená fotka aplikace neukládá přímo do knihovny (to je
   // přesně to, co ji dřív přeplnilo přes limit) — jde do vlastní, samostatné kolekce, a v
   // knihovně po ní zůstane jen krátký odkaz. Beze změny (např. odkaz z YouTube, nebo fotka,
-  // co už tam takhle byla) appka nechává tak, jak je.
+  // co už tam takhle byla) aplikace nechává tak, jak je.
   let thumbToSave = pendingThumbUpload || document.getElementById("thumbPreview").dataset.thumb || "";
   if (thumbToSave.startsWith("data:")) {
     try {
@@ -3928,13 +3929,13 @@ function openDetailModal(id) {
   embedWrap.style.maxHeight = "";
   embedWrap.style.aspectRatio = item.aspectRatio || "16/9";
   if (item.platform === "file") {
-    // u přímého video souboru appka pozná skutečný poměr stran sama, jakmile se video načte
+    // u přímého video souboru aplikace pozná skutečný poměr stran sama, jakmile se video načte
     const videoEl = embedWrap.querySelector("video");
     if (videoEl) {
       videoEl.addEventListener("loadedmetadata", () => {
         if (videoEl.videoWidth && videoEl.videoHeight) embedWrap.style.aspectRatio = `${videoEl.videoWidth} / ${videoEl.videoHeight}`;
       }, { once: true });
-      // Dočasná diagnostika: appka teď zachytí a zapíše skutečný technický důvod, proč se
+      // Dočasná diagnostika: aplikace teď zachytí a zapíše skutečný technický důvod, proč se
       // video nepřehrálo, ne jen to, že se nepřehrálo — pomůže to najít skutečnou příčinu.
       videoEl.addEventListener("error", () => {
         const codes = { 1: "MEDIA_ERR_ABORTED (přerušeno)", 2: "MEDIA_ERR_NETWORK (síťová chyba)", 3: "MEDIA_ERR_DECODE (chyba dekódování)", 4: "MEDIA_ERR_SRC_NOT_SUPPORTED (server odmítl/nepodporovaný formát)" };
@@ -4032,7 +4033,7 @@ function getTrainingSearchTags(t) {
   return tags;
 }
 /** Stejný princip jako u tagsUsedInActiveFolder v Knihovně — nabídnou se jen štítky, co se
-    fakt vyskytují mezi právě zobrazenými tréninky, ne úplně všechny štítky z celé appky. */
+    fakt vyskytují mezi právě zobrazenými tréninky, ne úplně všechny štítky z celé aplikace. */
 function tagsUsedInVisibleTrainings(baseList) {
   const used = new Set();
   baseList.forEach(t => getTrainingSearchTags(t).forEach(tag => used.add(tag)));
@@ -4237,11 +4238,11 @@ document.getElementById("startTrainingModeBtn").addEventListener("click", () => 
   trainingModeInSeriesPause = false;
   trainingModeFinished = false;
   document.getElementById("tmTitle").style.color = "";
-  // Appka tréninkový režim vždy kreslí ve svém vlastním pevném světlém vzhledu (nezávisle na
-  // tmavém/světlém motivu appky) — na některých mobilních prohlížečích se ale při vykreslení
-  // přes celoobrazovkovou appku na okamžik prokreslí tmavé pozadí appky pod ní (appka ho tam
-  // nechává, dokud appka první snímek nedokreslí). Appka proto na dobu tréninku pozadí appky
-  // dočasně přebarví na stejnou světlou appky barvu, ať tenhle nedokreslený proužek nejde vidět.
+  // Tréninkový režim se vždy kreslí ve svém vlastním pevném světlém vzhledu (nezávisle na
+  // tmavém/světlém motivu) — na některých mobilních prohlížečích se ale při vykreslení
+  // přes celoobrazovkovou vrstvu na okamžik prokreslí tmavé pozadí pod ní (zůstává tam,
+  // dokud se první snímek nedokreslí). Proto se na dobu tréninku pozadí dočasně přebarví
+  // na stejnou světlou barvu, ať tenhle nedokreslený proužek nejde vidět.
   document.body.style.background = "#F4F5F2";
   const tmView = document.getElementById("trainingModeView");
   tmView.classList.remove("hidden");
@@ -4251,15 +4252,15 @@ document.getElementById("startTrainingModeBtn").addEventListener("click", () => 
   renderTrainingModeItem();
 });
 
-/** Appka u režimu na opakování jen schová odpočet času — appka pro pokračování dál používá
-    to samé tlačítko "Další" jako u času, žádné zvláštní tlačítko navíc appka nemá. */
+/** Aplikace u režimu na opakování jen schová odpočet času — aplikace pro pokračování dál používá
+    to samé tlačítko "Další" jako u času, žádné zvláštní tlačítko navíc aplikace nemá. */
 function setTimerMode(mode) {
   document.getElementById("tmTimerWrap").classList.toggle("hidden", mode === "reps");
 }
 
 let tmUpNextTimeout = null;
-/** Appka appce zjistí, co bude následovat — nejdřív zkontroluje další video v TÉ SAMÉ skupině
-    (pokud appka zrovna prochází skupinu), jinak příští položku v sekvenci. Appka appce nic
+/** Zjistí, co bude následovat — nejdřív zkontroluje další video v TÉ SAMÉ skupině
+    (pokud aplikace zrovna prochází skupinu), jinak příští položku v sekvenci. Nic
     neukáže přes pauzu mezi sériemi ani na úplně poslední položce. */
 function getUpNextLabel() {
   const row = trainingModeItems[trainingModeIndex];
@@ -4282,7 +4283,7 @@ function getUpNextLabel() {
   const lib = state.library[next.videoId];
   return lib ? lib.title : null;
 }
-/** Stejná logika jako getUpNextLabel, ale appka z ní odvozuje barvu (levý pruh na baneru
+/** Stejná logika jako getUpNextLabel, ale aplikace z ní odvozuje barvu (levý pruh na baneru
     "Následuje") místo textu — ať banner na první pohled naznačí, jaký typ cviku přijde. */
 function getUpNextColor() {
   const row = trainingModeItems[trainingModeIndex];
@@ -4328,9 +4329,9 @@ function showUpNextPanel(labelOverride) {
   el.classList.remove("hidden");
   tmUpNextTimeout = setTimeout(() => el.classList.add("shown"), 2500);
 }
-/** Průběhový proužek nahoře appka obarví podle právě probíhající části tréninku — poznat na
-    dálku, v jaké části jsme, jde teď i bez čtení textu. Appka stejnou barvou obarví i pozadí
-    časovače (appky nejsledovanější prvek obrazovky), aby šla část poznat na první pohled. */
+/** Průběhový proužek nahoře aplikace obarví podle právě probíhající části tréninku — poznat na
+    dálku, v jaké části jsme, jde teď i bez čtení textu. Aplikace stejnou barvou obarví i pozadí
+    časovače (aplikace nejsledovanější prvek obrazovky), aby šla část poznat na první pohled. */
 function updateProgressBar(color) {
   const total = trainingModeItems.length || 1;
   const pct = Math.min(100, Math.max(0, (trainingModeIndex / total) * 100));
@@ -4346,8 +4347,8 @@ function updateProgressBar(color) {
     timerEl.style.removeProperty("--tm-timer-fg");
   }
 }
-/** Appka vestaví skutečný přehrávač videa (stejná logika jako u detailu videa v Knihovně) —
-    u přestávky ani pauzy mezi sériemi appka video neukazuje, jen u konkrétního cviku. */
+/** Aplikace vestaví skutečný přehrávač videa (stejná logika jako u detailu videa v Knihovně) —
+    u přestávky ani pauzy mezi sériemi aplikace video neukazuje, jen u konkrétního cviku. */
 function showTrainingModeVideo(lib) {
   const wrap = document.getElementById("tmVideoWrap");
   if (!lib) { wrap.classList.add("hidden"); wrap.innerHTML = ""; return; }
@@ -4451,8 +4452,8 @@ function renderTrainingModeItem() {
     }
     document.getElementById("tmCue").innerHTML = row.cue ? `<i class="fa-solid fa-comment"></i> ${esc(row.cue)}` : "";
 
-    // appka teď prochází videa uvnitř skupiny vždy jedno po druhém — u času i u opakování,
-    // liší se jen to, jestli appka u konkrétního videa odpočítává, nebo čeká na "Další"
+    // aplikace teď prochází videa uvnitř skupiny vždy jedno po druhém — u času i u opakování,
+    // liší se jen to, jestli aplikace u konkrétního videa odpočítává, nebo čeká na "Další"
     const v = row.videos[trainingModeGroupVideoIndex];
     const lib = v ? state.library[v.videoId] : null;
     setScaledText(document.getElementById("tmTitle"), lib ? lib.title : "(video smazáno)");
@@ -4497,11 +4498,11 @@ function renderTrainingModeItem() {
   }
 }
 
-/** Appka vloží krátkou, appkou automaticky odpočítávanou pauzu mezi jednotlivé série — appka
-    ji sama nepřeskočí, ani po doběhnutí na nulu, počká na tvoje "Další", stejně jako u
-    ostatních položek appky. */
-/** Kdykoli appka appce dovolí zadat čas ve vteřinách NEBO minutách, appka si to tady vždycky
-    převede na skutečné vteřiny, ať appka nikde jinde tenhle převod nemusí řešit znovu. */
+/** Vloží krátkou, automaticky odpočítávanou pauzu mezi jednotlivé série — samo se to
+    nepřeskočí, ani po doběhnutí na nulu, počká se na tvoje "Další", stejně jako u
+    ostatních položek. */
+/** Kdykoli je dovoleno zadat čas ve vteřinách NEBO minutách, převede se to tady vždycky
+    na skutečné vteřiny, ať se nikde jinde tenhle převod nemusí řešit znovu. */
 function valueToSeconds(value, unit) {
   return unit === "min" ? (value || 0) * 60 : (value || 0);
 }
@@ -4609,8 +4610,8 @@ document.getElementById("tmPrevBtn").addEventListener("click", () => {
     renderTrainingModeItem();
   }
 });
-/** Appčino "jsem hotový, jdu dál" — ať už appka počítala čas, nebo čekala na potvrzení u
-    opakování. Appka si sama vyhodnotí, jestli má appka pokračovat na další cvik uvnitř
+/** "Jsem hotový, jdu dál" — ať už se počítal čas, nebo se čekalo na potvrzení u
+    opakování. Samo se vyhodnotí, jestli se má pokračovat na další cvik uvnitř
     skupiny, spustit další sérii (s pauzou mezi nimi), nebo jít na úplně další položku. */
 function advanceTrainingMode() {
   if (trainingModeFinished) { closeTrainingMode(); return; }
@@ -4655,8 +4656,8 @@ document.getElementById("tmExitBtn").addEventListener("click", closeTrainingMode
 
 /** Tlačítko "na šířku" nejdřív zkusí pořádné API (fullscreen + zamčení orientace) — to na
     Chromu funguje dobře. Firefox pro Android ale zamykání orientace v prohlížeči má defaultně
-    vypnuté a rovnou to odmítne, takže appka pro ten případ použije záložní řešení: obsah rovnou
-    otočí přes CSS transform a člověka appka vyzve, ať telefon otočí fyzicky sám — vizuálně to
+    vypnuté a rovnou to odmítne, takže aplikace pro ten případ použije záložní řešení: obsah rovnou
+    otočí přes CSS transform a člověka aplikace vyzve, ať telefon otočí fyzicky sám — vizuálně to
     pak sedí, i když orientaci sám prohlížeč nezamkl. */
 let tmLandscapeForced = false;
 async function enterTrainingLandscape() {
@@ -4664,7 +4665,7 @@ async function enterTrainingLandscape() {
   try {
     if (el.requestFullscreen) await el.requestFullscreen();
     else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-  } catch (e) { /* appka pokračuje i bez fullscreenu, CSS otočení nevyžaduje jeho podporu */ }
+  } catch (e) { /* aplikace pokračuje i bez fullscreenu, CSS otočení nevyžaduje jeho podporu */ }
   let locked = false;
   try {
     if (screen.orientation && screen.orientation.lock) {
@@ -4804,10 +4805,10 @@ function renderPartLegend() {
   document.getElementById(id).addEventListener("change", renderPickerList);
 });
 
-/** Appka tohle dělá stejně jako v Knihovně (viz tagsUsedInActiveFolder) — jen appka tady čte
+/** Aplikace tohle dělá stejně jako v Knihovně (viz tagsUsedInActiveFolder) — jen aplikace tady čte
     aktivní složku z panelu tréninku, ne z Knihovny, protože jsou to dvě různá, navzájem
-    nezávislá místa appky. Appka takhle jednou opravenou logiku i dál drží konzistentní
-    v celé appce, ne jen na jednom místě. */
+    nezávislá místa aplikace. Aplikace takhle jednou opravenou logiku i dál drží konzistentní
+    v celé aplikaci, ne jen na jednom místě. */
 function tagsUsedInActivePickerFolder(field) {
   const folder = document.getElementById("pickerFolderFilter").value;
   if (!folder) return field === "tags" ? state.tagPool : state.equipmentPool;
@@ -4945,7 +4946,7 @@ document.getElementById("togglePickerSelectModeBtn").addEventListener("click", (
 document.getElementById("groupSelectedBtn").addEventListener("click", () => {
   const t = state.trainings[currentTrainingId];
   if (!t || selectedPickerIds.size < 2) return;
-  // appka drží pořadí videí uvnitř skupiny podle toho, jak appka videa v panelu zrovna řadí,
+  // aplikace drží pořadí videí uvnitř skupiny podle toho, jak aplikace videa v panelu zrovna řadí,
   // ne podle pořadí kliknutí — je to předvídatelnější
   const orderedIds = Object.values(state.library)
     .filter(it => selectedPickerIds.has(it.id))
@@ -5002,10 +5003,10 @@ function updateTotalBadge() {
   badge.textContent = Math.round(totalSeconds / 60) + " min";
 }
 
-/** Appka starším položkám bez pole "mode" (vytvořeným appkou před touhle přestavbou) bere
+/** Aplikace starším položkám bez pole "mode" (vytvořeným aplikací před touhle přestavbou) bere
     chybějící hodnotu jako "čas" — chová se přesně jako dřív, žádná zpětná nekompatibilita. */
-/** Appka tohle používá všude, kde appka nabízí volbu vteřiny/minuty (pauza mezi sériemi,
-    přestávka, čas u videa uvnitř skupiny) — ať appka vypadá všude stejně, ne pokaždé jinak. */
+/** Aplikace tohle používá všude, kde aplikace nabízí volbu vteřiny/minuty (pauza mezi sériemi,
+    přestávka, čas u videa uvnitř skupiny) — ať aplikace vypadá všude stejně, ne pokaždé jinak. */
 function renderTimeUnitSelect(field, itemId, currentUnit, defaultUnit, dis, attrsOverride) {
   const unit = currentUnit || defaultUnit;
   const attrs = attrsOverride || `data-field="${field}" data-itemid="${esc(itemId)}"`;
@@ -5144,7 +5145,7 @@ function renderSequence() {
         scheduleSave();
       }
     });
-    // appka umí přetahovat pořadí videí i UVNITŘ jedné skupiny, samostatně pro každou
+    // aplikace umí přetahovat pořadí videí i UVNITŘ jedné skupiny, samostatně pro každou
     wrap.querySelectorAll(".seq-group-videos").forEach(groupEl => {
       const groupItemId = groupEl.dataset.groupid;
       groupSortableInstances.push(Sortable.create(groupEl, {
@@ -5513,9 +5514,9 @@ async function renderMembersRoleList() {
     const uid = btn.dataset.removeaccess, name = btn.dataset.name;
     if (!(await confirmDialog(`Odebrat přístup uživateli „${name}" natrvalo? Přístup se dá kdykoliv znovu udělit přes novou žádost o registraci.`, { confirmLabel: "Odebrat přístup", danger: true }))) return;
     try {
-      // Stejná lekce jako u knihovny: appka MUSÍ smazat přesně tuhle jednu položku uvnitř
+      // Stejná lekce jako u knihovny: aplikace MUSÍ smazat přesně tuhle jednu položku uvnitř
       // mapy výslovně (deleteField na přesné cestě) — pouhé vynechání z objektu by ji
-      // nesmazalo, jen by appka nevěděla o její existenci (viz starší chyba s mazáním videí).
+      // nesmazalo, jen by aplikace nevěděla o její existenci (viz starší chyba s mazáním videí).
       await updateDoc(doc(db, "shared", "members"), { [`approved.${uid}`]: deleteField() });
       toast("Přístup odebrán.");
       renderMembersRoleList();
@@ -5954,7 +5955,7 @@ function renderTrashList() {
     });
   });
 }
-/** Appka si při každém přihlášení tiše zkontroluje koš a videa starší než TRASH_RETENTION_DAYS
+/** Aplikace si při každém přihlášení tiše zkontroluje koš a videa starší než TRASH_RETENTION_DAYS
     dní sama nadobro smaže — trenér nemusí koš sám nijak čistit. */
 async function purgeOldTrash() {
   const cutoff = Date.now() - TRASH_RETENTION_DAYS * 86400000;
@@ -5967,8 +5968,8 @@ async function purgeOldTrash() {
 /* =========================================================
    PWA — service worker
    ========================================================= */
-// Poslední pojistka: kdyby appku zavřel/opustil s ještě neuloženou (odloženou) změnou,
-// appka se ji v tu chvíli ještě pokusí urychleně doslat, místo aby čekala na odklad.
+// Poslední pojistka: kdyby aplikaci zavřel/opustil s ještě neuloženou (odloženou) změnou,
+// aplikace se ji v tu chvíli ještě pokusí urychleně doslat, místo aby čekala na odklad.
 window.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden" && saveTimer) {
     clearTimeout(saveTimer);
@@ -5977,7 +5978,7 @@ window.addEventListener("visibilitychange", () => {
 });
 
 /* =========================================================
-   HROMADNÝ IMPORT ZE SLOŽKY DISKU (zatím jen pro admina, appka to teprve zkouší)
+   HROMADNÝ IMPORT ZE SLOŽKY DISKU (zatím jen pro admina, aplikace to teprve zkouší)
    ========================================================= */
 let bulkDriveTags = [];
 let bulkDriveEquip = [];
@@ -6007,7 +6008,7 @@ document.getElementById("bulkDriveModalBackdrop").addEventListener("click", (e) 
   if (e.target.id === "bulkDriveModalBackdrop") closeBulkDriveModal();
 });
 
-// Štítky/vybavení tady appka drží jednoduše (bez nabízení už existujících při psaní) —
+// Štítky/vybavení tady aplikace drží jednoduše (bez nabízení už existujících při psaní) —
 // je to zatím experimentální admin nástroj, kde jde hlavně o rychlé vyzkoušení.
 function renderBulkDriveTagPills() {
   const wrap = document.getElementById("bulkDriveTagWrap");
@@ -6074,11 +6075,11 @@ document.getElementById("bulkDriveLoadBtn").addEventListener("click", async () =
   document.getElementById("bulkDriveImportBtn").classList.add("hidden");
   const folderId = extractDriveFolderId(url);
   if (!folderId) {
-    statusEl.textContent = "Appka tohle nerozpoznala jako odkaz na SLOŽKU Disku (ne na jedno video) — zkontroluj prosím adresu.";
+    statusEl.textContent = "Aplikace tohle nerozpoznala jako odkaz na SLOŽKU Disku (ne na jedno video) — zkontroluj prosím adresu.";
     return;
   }
   if (!state.driveApiKey) {
-    statusEl.textContent = "Appka nemá nastavený přístupový klíč k Disku (nastavuje se v Profilu) — bez něj hromadný import nepůjde.";
+    statusEl.textContent = "Aplikace nemá nastavený přístupový klíč k Disku (nastavuje se v Profilu) — bez něj hromadný import nepůjde.";
     return;
   }
   statusEl.textContent = "Načítám obsah složky…";
@@ -6093,7 +6094,7 @@ document.getElementById("bulkDriveLoadBtn").addEventListener("click", async () =
     const data = await res.json();
     const files = data.files || [];
     if (!files.length) {
-      statusEl.textContent = "Appka ve složce nenašla žádná videa — buď je prázdná, obsahuje jen jiné typy souborů (např. jen tu JPG), nebo k ní appka nemá přístup.";
+      statusEl.textContent = "Aplikace ve složce nenašla žádná videa — buď je prázdná, obsahuje jen jiné typy souborů (např. jen tu JPG), nebo k ní aplikace nemá přístup.";
       return;
     }
     bulkDriveFoundFiles = files.map(f => {
@@ -6105,13 +6106,13 @@ document.getElementById("bulkDriveLoadBtn").addEventListener("click", async () =
         isDuplicate: !!existingItem
       };
     });
-    statusEl.textContent = `Appka našla ${files.length} video souborů — zkontroluj výběr a doplň zařazení níž.`;
+    statusEl.textContent = `Aplikace našla ${files.length} video souborů — zkontroluj výběr a doplň zařazení níž.`;
     renderBulkDriveFileList();
     document.getElementById("bulkDriveResultsWrap").classList.remove("hidden");
     document.getElementById("bulkDriveImportBtn").classList.remove("hidden");
   } catch (e) {
     console.error("Načtení obsahu složky selhalo:", e);
-    statusEl.textContent = `Nepodařilo se načíst obsah složky (${e.message}). Nejspíš appka na tohle potřebuje víc než jen přístupový klíč — zkus prosím zatím vkládat odkazy na jednotlivá videa ručně.`;
+    statusEl.textContent = `Nepodařilo se načíst obsah složky (${e.message}). Nejspíš aplikace na tohle potřebuje víc než jen přístupový klíč — zkus prosím zatím vkládat odkazy na jednotlivá videa ručně.`;
   }
 });
 
@@ -6142,18 +6143,18 @@ document.getElementById("bulkDriveImportBtn").addEventListener("click", async ()
   bulkDriveEquip.forEach(t => { if (!state.equipmentPool.includes(t)) state.equipmentPool.push(t); });
   const ok = await saveUserData();
   if (ok) { toast(`Uloženo — přidáno ${addedCount} videí.`, 6000); closeBulkDriveModal(); }
-  else toast("Videa appka přidala, ale uložení selhalo — zkus to prosím znovu.", 8000);
+  else toast("Videa aplikace přidala, ale uložení selhalo — zkus to prosím znovu.", 8000);
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("sw.js").then((reg) => {
-      // Appka se sama, aktivně, každých pár minut zeptá, jestli nevyšla novější verze —
-      // ať appka zapomenutá otevřená na pozadí neběží donekonečna na starém kódu.
+      // Aplikace se sama, aktivně, každých pár minut zeptá, jestli nevyšla novější verze —
+      // ať aplikace zapomenutá otevřená na pozadí neběží donekonečna na starém kódu.
       setInterval(() => reg.update().catch(() => {}), 5 * 60 * 1000);
     }).catch(err => console.warn("SW registrace selhala:", err));
   });
-  // Jakmile převezme vládu nová verze appky (sw.js), appka se sama jednou obnoví,
+  // Jakmile převezme vládu nová verze aplikace (sw.js), aplikace se sama jednou obnoví,
   // ať se nikdy nestane, že by "oprava" tiše zůstala v uložené staré verzi.
   let refreshedOnce = false;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
