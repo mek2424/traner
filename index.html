@@ -1414,7 +1414,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
     <div class="tm-progress" id="tmProgress">1 / 1</div>
     <button type="button" class="tm-exit" id="tmRotateBtn" aria-label="Na šířku"><i class="fa-solid fa-expand"></i></button>
   </div>
-  <div class="tm-progress-bar" style="display:none;"><div class="tm-progress-fill" id="tmProgressFill"></div></div>
+  <div class="tm-progress-bar"><div class="tm-progress-fill" id="tmProgressFill"></div></div>
   <div class="tm-body" id="tmBody">
     <div class="tm-up-next hidden" id="tmUpNext"></div>
     <div class="tm-col-left">
@@ -1443,6 +1443,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
     <button type="button" class="tm-nav-btn tm-nav-next" id="tmNextBtn">Další <i class="fa-solid fa-arrow-right"></i></button>
   </div>
 </div>
+<pre id="tmDebugOverlay" style="position:fixed;top:0;left:0;right:0;z-index:999;background:rgba(0,0,0,.85);color:#0f0;font-size:9px;line-height:1.4;padding:6px;max-height:45vh;overflow:auto;white-space:pre-wrap;margin:0;pointer-events:none;"></pre>
 
 <!-- ===================== DIAGNOSTICKÝ ZÁZNAM (dočasné) ===================== -->
 <div id="appVersionLabel" style="position:fixed;bottom:14px;left:14px;z-index:500;font-size:10.5px;color:var(--ink-faint);font-family:monospace;background:var(--card);padding:3px 7px;border-radius:5px;pointer-events:none;"></div>
@@ -1525,7 +1526,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-25 21:30";
+const APP_VERSION = "2026-07-25 22:25";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -4339,6 +4340,31 @@ function updateProgressBar(color) {
     timerEl.style.removeProperty("--tm-timer-bg");
     timerEl.style.removeProperty("--tm-timer-fg");
   }
+  requestAnimationFrame(debugTmRects);
+}
+/** DOČASNÉ: diagnostický přehled — appka na obrazovku vypíše přesné rozměry/pozice všech
+    přímých potomků #trainingModeView a #tmBody, ať se dá záhadný pruh přesně dohledat. */
+function debugTmRects() {
+  const overlay = document.getElementById("tmDebugOverlay");
+  if (!overlay) return;
+  const tmView = document.getElementById("trainingModeView");
+  if (!tmView) return;
+  const lines = [];
+  const describe = (el, label) => {
+    if (!el) { lines.push(label + ": (chybí)"); return; }
+    const r = el.getBoundingClientRect();
+    const cs = getComputedStyle(el);
+    lines.push(`${label} [${el.id || el.className || el.tagName}] top=${r.top.toFixed(0)} bottom=${r.bottom.toFixed(0)} h=${r.height.toFixed(0)} disp=${cs.display} bg=${cs.backgroundColor}`);
+  };
+  lines.push("--- #trainingModeView ---");
+  describe(tmView, "view");
+  Array.from(tmView.children).forEach((c, i) => describe(c, "  tv[" + i + "]"));
+  const body = document.getElementById("tmBody");
+  if (body) {
+    lines.push("--- #tmBody ---");
+    Array.from(body.children).forEach((c, i) => describe(c, "  body[" + i + "]"));
+  }
+  overlay.textContent = lines.join("\n");
 }
 /** Appka vestaví skutečný přehrávač videa (stejná logika jako u detailu videa v Knihovně) —
     u přestávky ani pauzy mezi sériemi appka video neukazuje, jen u konkrétního cviku. */
