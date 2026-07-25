@@ -502,6 +502,8 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .tm-exit{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.06);border:none;color:#5B6472;font-size:18px;display:flex;align-items:center;justify-content:center;}
 #tmRotateBtn.active{background:var(--court);color:#fff;}
 .tm-progress{font-family:var(--font-display);font-size:18px;color:#5B6472;letter-spacing:.03em;}
+.tm-progress-bar{height:4px;background:rgba(27,36,48,.08);flex-shrink:0;}
+.tm-progress-fill{height:100%;background:var(--court);transition:width .3s ease,background .3s ease;}
 .tm-body{
   position:relative;flex:1;display:grid;grid-template-columns:1fr;grid-template-areas:"left" "right" "video";
   gap:16px;padding:24px 20px;overflow-y:auto;min-height:0;transition:background .25s ease;text-align:center;
@@ -514,8 +516,8 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .tm-video-wrap{width:100%;max-width:220px;aspect-ratio:16/9;background:#000;border-radius:var(--radius-sm);overflow:hidden;margin:0 auto;}
 .tm-up-next{
   position:absolute;top:14px;right:16px;z-index:2;
-  display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid #DCDFD9;
-  border-radius:999px;padding:8px 16px;font-size:12.5px;font-weight:600;color:#5B6472;
+  display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid #DCDFD9;border-left:4px solid #DCDFD9;
+  border-radius:var(--radius-sm);padding:8px 16px;font-size:12.5px;font-weight:600;color:#5B6472;
   box-shadow:0 1px 2px rgba(27,36,48,.07), 0 4px 14px rgba(27,36,48,.05);transform:translateX(130%);opacity:0;transition:transform .45s ease,opacity .3s ease;
 }
 .tm-up-next.shown{transform:translateX(0);opacity:1;}
@@ -655,7 +657,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .seq-thumb{width:52px;height:34px;object-fit:cover;border-radius:5px;background:rgba(0,0,0,.15);flex-shrink:0;cursor:pointer;}
 .seq-title{font-size:13.5px;font-weight:700;flex:1 1 120px;min-width:0;max-width:100%;cursor:pointer;
   overflow-wrap:anywhere;word-break:break-word;}
-.seq-controls{display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:auto;}
+.seq-controls{display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:auto;margin-right:28px;}
 .seq-part-select{border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper);font-size:11px;font-weight:700;padding:2px 6px;width:auto;max-width:112px;}
 .seq-duration{width:46px;border:1px solid var(--line);background:var(--paper);border-radius:var(--radius-sm);padding:2px 3px;font-size:11px;text-align:center;}
 .seq-item.is-break .seq-duration{background:rgba(255,255,255,.7);border-color:rgba(0,0,0,.15);}
@@ -1412,6 +1414,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
     <div class="tm-progress" id="tmProgress">1 / 1</div>
     <button type="button" class="tm-exit" id="tmRotateBtn" aria-label="Na šířku"><i class="fa-solid fa-expand"></i></button>
   </div>
+  <div class="tm-progress-bar"><div class="tm-progress-fill" id="tmProgressFill"></div></div>
   <div class="tm-body" id="tmBody">
     <div class="tm-up-next hidden" id="tmUpNext"></div>
     <div class="tm-col-left">
@@ -1522,7 +1525,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-25 18:46";
+const APP_VERSION = "2026-07-25 19:09";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -2014,6 +2017,22 @@ function darkenHex(hex, amount) {
 function setPartTag(el, color) {
   if (color) { el.style.background = color + "33"; el.style.color = darkenHex(color, 0.55); }
   else { el.style.background = ""; el.style.color = ""; }
+}
+/** Smísí dvě hex barvy v daném poměru (0 = čistá "hex", 1 = čistá "withHex"). */
+function mixHex(hex, withHex, amount) {
+  const a = hex.replace("#", "").match(/.{1,2}/g).map(h => parseInt(h, 16));
+  const b = withHex.replace("#", "").match(/.{1,2}/g).map(h => parseInt(h, 16));
+  return "#" + a.map((v, i) => Math.max(0, Math.min(255, Math.round(v + (b[i] - v) * amount))).toString(16).padStart(2, "0")).join("");
+}
+/** Barevný "štítek" pro editor (part-select) — na rozdíl od setPartTag počítá s tím, že appka
+    v editoru respektuje tmavý/světlý motiv appky, takže pozadí štítku musí být VŽDY dost tmavé/
+    světlé vůči aktuálnímu motivu (na rozdíl od tréninkového režimu, který má teď pevnou paletu). */
+function partTagStyle(color) {
+  if (!color) return "";
+  const dark = document.body.classList.contains("dark-mode");
+  const bg = dark ? mixHex(color, "#1F2630", 0.6) : mixHex(color, "#ffffff", 0.78);
+  const fg = dark ? mixHex(color, "#ffffff", 0.75) : darkenHex(color, 0.55);
+  return `background:${bg};color:${fg};border-color:${color}`;
 }
 /** Načte soubor jako obrázek se správně opravenou orientací podle EXIF (canvas.drawImage
     to sám od sebe u fotek z mobilu často nedělá), a rovnou ho zmenší na maxDimension.
@@ -4248,6 +4267,20 @@ function getUpNextLabel() {
   const lib = state.library[next.videoId];
   return lib ? lib.title : null;
 }
+/** Stejná logika jako getUpNextLabel, ale appka z ní odvozuje barvu (levý pruh na baneru
+    "Následuje") místo textu — ať banner na první pohled naznačí, jaký typ cviku přijde. */
+function getUpNextColor() {
+  const row = trainingModeItems[trainingModeIndex];
+  if (row.isGroup && trainingModeGroupVideoIndex < row.videos.length - 1) {
+    return row.part ? getPart(row.part).color : "#339933";
+  }
+  if (trainingModeSeriesNum < (row.seriesCount || 1)) return "#C7C9C4";
+  const next = trainingModeItems[trainingModeIndex + 1];
+  if (!next) return null;
+  if (next.part === "prestavka") return "#C7C9C4";
+  if (next.isGroup) return next.part ? getPart(next.part).color : "#339933";
+  return getPart(next.part).color;
+}
 /** Během pauzy mezi sériemi je "další" vždycky ten cvik, co novou sérii zahajuje — u skupiny
     tedy vždycky první video, ne "další po tom prvním" (getUpNextLabel by tady bez týhle
     výjimky počítal špatně, protože index videa uvnitř skupiny je v tuhle chvíli už nastavený
@@ -4262,6 +4295,11 @@ function getUpNextLabelForSeriesPause() {
   const lib = state.library[row.videoId];
   return lib ? lib.title : null;
 }
+function getUpNextColorForSeriesPause() {
+  const row = trainingModeItems[trainingModeIndex];
+  if (row.isGroup) return row.part ? getPart(row.part).color : "#339933";
+  return getPart(row.part).color;
+}
 function showUpNextPanel(labelOverride) {
   clearTimeout(tmUpNextTimeout);
   const el = document.getElementById("tmUpNext");
@@ -4269,9 +4307,20 @@ function showUpNextPanel(labelOverride) {
   el.classList.remove("shown");
   const label = labelOverride !== undefined ? labelOverride : getUpNextLabel();
   if (!label) return;
+  const color = (labelOverride !== undefined ? getUpNextColorForSeriesPause() : getUpNextColor()) || "#DCDFD9";
+  el.style.borderLeftColor = color;
   el.innerHTML = `Následuje: <strong>${esc(label)}</strong> <i class="fa-solid fa-forward"></i>`;
   el.classList.remove("hidden");
   tmUpNextTimeout = setTimeout(() => el.classList.add("shown"), 2500);
+}
+/** Průběhový proužek nahoře appka obarví podle právě probíhající části tréninku — poznat na
+    dálku, v jaké části jsme, jde teď i bez čtení textu. */
+function updateProgressBar(color) {
+  const total = trainingModeItems.length || 1;
+  const pct = Math.min(100, Math.max(0, (trainingModeIndex / total) * 100));
+  const fill = document.getElementById("tmProgressFill");
+  fill.style.width = pct + "%";
+  fill.style.background = color || "var(--court)";
 }
 /** Appka vestaví skutečný přehrávač videa (stejná logika jako u detailu videa v Knihovně) —
     u přestávky ani pauzy mezi sériemi appka video neukazuje, jen u konkrétního cviku. */
@@ -4338,6 +4387,7 @@ function renderTrainingModeItem() {
     body.classList.add("tm-solo");
     document.getElementById("tmPartLabel").textContent = "PŘESTÁVKA";
     setPartTag(document.getElementById("tmPartLabel"), "#C7C9C4");
+    updateProgressBar("#C7C9C4");
     setScaledText(document.getElementById("tmTitle"), row.label || "Přestávka");
     document.getElementById("tmDesc").textContent = "";
     document.getElementById("tmCue").innerHTML = "";
@@ -4361,8 +4411,19 @@ function renderTrainingModeItem() {
   if (row.isGroup) {
     document.getElementById("tmPartLabel").textContent = "";
     setPartTag(document.getElementById("tmPartLabel"), row.part ? getPart(row.part).color : null);
+    updateProgressBar(row.part ? getPart(row.part).color : "#339933");
     groupNameEl.textContent = row.name || "Skupina";
     groupNameEl.classList.remove("hidden");
+    if (row.part) {
+      const gp = getPart(row.part);
+      groupNameEl.style.color = darkenHex(gp.color, 0.5);
+      groupNameEl.style.background = gp.color + "33";
+      groupNameEl.style.borderColor = gp.color;
+    } else {
+      groupNameEl.style.color = "";
+      groupNameEl.style.background = "";
+      groupNameEl.style.borderColor = "";
+    }
     document.getElementById("tmCue").innerHTML = row.cue ? `<i class="fa-solid fa-comment"></i> ${esc(row.cue)}` : "";
 
     // appka teď prochází videa uvnitř skupiny vždy jedno po druhém — u času i u opakování,
@@ -4393,6 +4454,7 @@ function renderTrainingModeItem() {
   const part = getPart(row.part);
   document.getElementById("tmPartLabel").textContent = (part ? part.label : "").toUpperCase();
   setPartTag(document.getElementById("tmPartLabel"), part ? part.color : null);
+  updateProgressBar(part ? part.color : null);
   setScaledText(document.getElementById("tmTitle"), lib ? lib.title : "(video smazáno z knihovny)");
   setScaledText(document.getElementById("tmDesc"), lib && lib.shortDesc ? lib.shortDesc : "");
   document.getElementById("tmCue").innerHTML = row.cue ? `<i class="fa-solid fa-comment"></i> ${esc(row.cue)}` : "";
@@ -4432,6 +4494,7 @@ function renderSeriesPause() {
   document.getElementById("tmBody").classList.add("tm-solo");
   document.getElementById("tmPartLabel").textContent = "PAUZA MEZI SÉRIEMI";
   setPartTag(document.getElementById("tmPartLabel"), "#C7C9C4");
+  updateProgressBar("#C7C9C4");
   setScaledText(document.getElementById("tmTitle"), `Za chvíli série ${trainingModeSeriesNum} / ${row.seriesCount}`);
   document.getElementById("tmDesc").textContent = "";
   document.getElementById("tmCue").innerHTML = "";
@@ -4453,6 +4516,8 @@ function renderTrainingModeFinished() {
   document.getElementById("tmRepsDisplay").classList.add("hidden");
   document.getElementById("tmBody").classList.add("tm-solo");
   document.getElementById("tmBody").style.background = "var(--court)";
+  document.getElementById("tmProgressFill").style.width = "100%";
+  document.getElementById("tmProgressFill").style.background = "var(--court)";
   document.getElementById("tmPartLabel").textContent = "";
   setScaledText(document.getElementById("tmTitle"), "Hotovo 💪");
   document.getElementById("tmTitle").style.color = "#fff";
@@ -4980,7 +5045,7 @@ function renderSequence() {
           <i class="fa-solid fa-layer-group seq-group-icon"></i>
           <input type="text" class="seq-group-name" value="${esc(row.name || "Skupina")}" placeholder="Název skupiny" data-field="name" data-itemid="${esc(row.itemId)}" ${dis}>
           <div class="seq-controls">
-            <select class="seq-part-select" data-field="part" data-itemid="${esc(row.itemId)}" ${dis}${groupPart ? ` style="background:${esc(groupPart.color)}33;color:${esc(darkenHex(groupPart.color, 0.55))};border-color:${esc(groupPart.color)}"` : ""}>
+            <select class="seq-part-select" data-field="part" data-itemid="${esc(row.itemId)}" ${dis}${groupPart ? ` style="${esc(partTagStyle(groupPart.color))}"` : ""}>
               <option value="">Bez části</option>
               ${state.parts.map(p => `<option value="${esc(p.key)}" ${row.part === p.key ? "selected" : ""}>${esc(p.label)}</option>`).join("")}
             </select>
@@ -5021,7 +5086,7 @@ function renderSequence() {
         ${resolveThumbnailUrl(lib) ? `<img class="seq-thumb" src="${esc(resolveThumbnailUrl(lib))}" data-open="${esc(row.videoId)}">` : `<div class="seq-thumb" data-open="${esc(row.videoId)}"></div>`}
         <span class="seq-title" data-open="${esc(row.videoId)}">${lib ? esc(lib.title) : "(video smazáno z knihovny)"}</span>
         <div class="seq-controls">
-          <select class="seq-part-select" data-field="part" data-itemid="${esc(row.itemId)}" ${dis} style="background:${esc(part.color)}33;color:${esc(darkenHex(part.color, 0.55))};border-color:${esc(part.color)}">
+          <select class="seq-part-select" data-field="part" data-itemid="${esc(row.itemId)}" ${dis} style="${esc(partTagStyle(part.color))}">
             ${state.parts.map(p => `<option value="${esc(p.key)}" ${row.part === p.key ? "selected" : ""}>${esc(p.label)}</option>`).join("")}
           </select>
         </div>
