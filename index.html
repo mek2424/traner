@@ -1128,6 +1128,27 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   </div>
 </div>
 
+<!-- ===================== ZMĚNA HESLA ===================== -->
+<div id="changePasswordModalBackdrop" class="modal-backdrop hidden">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-head">
+      <h2 style="font-size:20px;">Změnit heslo</h2>
+      <button class="btn btn-icon btn-ghost" id="closeChangePasswordModalBtn">✕</button>
+    </div>
+    <div class="field">
+      <label for="changePassCurrentInput">Současné heslo</label>
+      <input type="password" id="changePassCurrentInput" autocomplete="current-password">
+    </div>
+    <div class="field">
+      <label for="changePassNewInput">Nové heslo (aspoň 6 znaků)</label>
+      <input type="password" id="changePassNewInput" autocomplete="new-password">
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-primary btn-block" id="changePasswordSubmitBtn">Změnit heslo</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===================== MANAGE PARTS MODAL ===================== -->
 <div id="partsModalBackdrop" class="modal-backdrop hidden">
   <div class="modal">
@@ -1308,6 +1329,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
           <span class="theme-toggle-knob"><i class="fa-solid fa-sun"></i><i class="fa-solid fa-moon"></i></span>
         </button>
       </div>
+      <button type="button" class="btn btn-sm" id="openChangePasswordBtn" style="margin-bottom:12px;"><i class="fa-solid fa-key"></i> Změnit heslo</button>
       <div class="modal-actions">
         <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Uložit profil</button>
         <button type="button" class="btn btn-ghost" id="resetColorsBtn">Výchozí barvy</button>
@@ -1422,7 +1444,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/fireba
 import {
   getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
   onAuthStateChanged, signOut, sendPasswordResetEmail, setPersistence, browserLocalPersistence,
-  deleteUser, EmailAuthProvider, reauthenticateWithCredential
+  deleteUser, EmailAuthProvider, reauthenticateWithCredential, updatePassword
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
@@ -1458,7 +1480,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-24 01:00";
+const APP_VERSION = "2026-07-24 01:20";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -5446,6 +5468,34 @@ document.getElementById("darkModeToggle").addEventListener("click", async () => 
   }
 });
 
+document.getElementById("openChangePasswordBtn").addEventListener("click", () => {
+  document.getElementById("changePassCurrentInput").value = "";
+  document.getElementById("changePassNewInput").value = "";
+  document.getElementById("changePasswordModalBackdrop").classList.remove("hidden");
+});
+document.getElementById("closeChangePasswordModalBtn").addEventListener("click", () => {
+  document.getElementById("changePasswordModalBackdrop").classList.add("hidden");
+});
+document.getElementById("changePasswordSubmitBtn").addEventListener("click", async () => {
+  const current = document.getElementById("changePassCurrentInput").value;
+  const next = document.getElementById("changePassNewInput").value;
+  if (!current || !next) { toast("Vyplň obě pole."); return; }
+  if (next.length < 6) { toast("Nové heslo musí mít aspoň 6 znaků."); return; }
+  const email = auth.currentUser.email;
+  try {
+    await reauthenticateWithCredential(auth.currentUser, EmailAuthProvider.credential(email, current));
+  } catch (err) {
+    toast("Současné heslo nesedí (" + translateAuthError(err.code) + ").", 6000);
+    return;
+  }
+  try {
+    await updatePassword(auth.currentUser, next);
+    document.getElementById("changePasswordModalBackdrop").classList.add("hidden");
+    toast("Heslo změněno.");
+  } catch (err) {
+    toast("Změna hesla selhala (" + translateAuthError(err.code) + ").", 6000);
+  }
+});
 document.getElementById("deleteAccountBtn").addEventListener("click", async () => {
   const email = auth.currentUser.email;
   if (!(await confirmDialog(`Opravdu natrvalo smazat účet ${email}?\n\nSmaže se tvůj profil, všechny tvoje tréninky a tvoje hodnocení/obtížnost/poznámky u videí ve sdílené knihovně (samotná videa zůstanou). Nedá se vrátit zpět.`, { confirmLabel: "Smazat účet", danger: true }))) return;
