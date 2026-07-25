@@ -4380,6 +4380,7 @@ function renderTrainingModeItem() {
   groupNameEl.classList.add("hidden");
   repsDisplay.classList.add("hidden");
   body.classList.remove("tm-solo");
+  body.style.background = "";
   showUpNextPanel();
 
   if (row.part === "prestavka") {
@@ -4519,6 +4520,7 @@ function renderTrainingModeFinished() {
   document.getElementById("tmProgressFill").style.width = "100%";
   document.getElementById("tmProgressFill").style.background = "var(--court)";
   document.getElementById("tmPartLabel").textContent = "";
+  setPartTag(document.getElementById("tmPartLabel"), null);
   setScaledText(document.getElementById("tmTitle"), "Hotovo 💪");
   document.getElementById("tmTitle").style.color = "#fff";
   document.getElementById("tmDesc").textContent = "";
