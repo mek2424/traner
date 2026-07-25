@@ -434,7 +434,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .folder-manage-row .drag-handle{color:var(--ink-faint);flex-shrink:0;}
 .folder-manage-row input[type=color]{width:34px;height:34px;padding:2px;border:1px solid var(--line);border-radius:var(--radius-sm);flex-shrink:0;}
 .folder-hide-toggle{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-soft);flex-basis:100%;cursor:help;}
-.folder-hide-toggle input{width:16px;height:16px;flex-shrink:0;}
+.folder-hide-toggle input{width:16px;height:16px;flex-shrink:0;accent-color:var(--court);}
 .folder-manage-row .folder-name-input{flex:1 1 40%;padding:7px 9px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper);min-width:0;}
 .folder-manage-row .folder-note-input{flex-basis:100%;order:5;margin-left:42px;width:calc(100% - 42px);padding:7px 9px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper);font-size:12.5px;}
 @media(min-width:480px){.folder-manage-row .folder-note-input{flex:1 1 45%;flex-basis:0;order:0;margin-left:0;width:auto;min-width:0;}}
@@ -486,7 +486,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 
 /* ---------- Tréninkový režim ---------- */
 #trainingModeView{
-  position:fixed;inset:0;z-index:200;background:var(--paper);display:flex;flex-direction:column;
+  position:fixed;inset:0;z-index:200;background:#F4F5F2;display:flex;flex-direction:column;
 }
 /* Vynucené otočení na šířku bez spoléhání na (nespolehlivé, hlavně na Firefoxu pro Android)
    zamykání orientace prohlížečem — obsah se místo toho otočí rovnou přes CSS transform,
@@ -499,9 +499,9 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   display:flex;align-items:center;justify-content:space-between;padding:14px 16px;
   padding-top:calc(14px + env(safe-area-inset-top));flex-shrink:0;
 }
-.tm-exit{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.06);border:none;color:var(--ink-soft);font-size:18px;display:flex;align-items:center;justify-content:center;}
+.tm-exit{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.06);border:none;color:#5B6472;font-size:18px;display:flex;align-items:center;justify-content:center;}
 #tmRotateBtn.active{background:var(--court);color:#fff;}
-.tm-progress{font-family:var(--font-display);font-size:18px;color:var(--ink-soft);letter-spacing:.03em;}
+.tm-progress{font-family:var(--font-display);font-size:18px;color:#5B6472;letter-spacing:.03em;}
 .tm-body{
   position:relative;flex:1;display:grid;grid-template-columns:1fr;grid-template-areas:"left" "right" "video";
   gap:16px;padding:24px 20px;overflow-y:auto;min-height:0;transition:background .25s ease;text-align:center;
@@ -514,28 +514,28 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .tm-video-wrap{width:100%;max-width:220px;aspect-ratio:16/9;background:#000;border-radius:var(--radius-sm);overflow:hidden;margin:0 auto;}
 .tm-up-next{
   position:absolute;top:14px;right:16px;z-index:2;
-  display:inline-flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);
-  border-radius:999px;padding:8px 16px;font-size:12.5px;font-weight:600;color:var(--ink-soft);
-  box-shadow:var(--shadow);transform:translateX(130%);opacity:0;transition:transform .45s ease,opacity .3s ease;
+  display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid #DCDFD9;
+  border-radius:999px;padding:8px 16px;font-size:12.5px;font-weight:600;color:#5B6472;
+  box-shadow:0 1px 2px rgba(27,36,48,.07), 0 4px 14px rgba(27,36,48,.05);transform:translateX(130%);opacity:0;transition:transform .45s ease,opacity .3s ease;
 }
 .tm-up-next.shown{transform:translateX(0);opacity:1;}
-.tm-up-next strong{color:var(--ink);}
-.tm-part-label{font-family:var(--font-display);font-size:16px;letter-spacing:.08em;color:var(--ink-faint);margin-bottom:10px;}
+.tm-up-next strong{color:#1B2430;}
+.tm-part-label{font-family:var(--font-display);font-size:16px;letter-spacing:.08em;color:#8A93A0;margin-bottom:10px;display:inline-block;padding:2px 10px;border-radius:999px;}
 .tm-series-label{font-size:13px;font-weight:700;color:var(--chalk-dark);background:rgba(232,98,44,.12);display:inline-block;padding:3px 10px;border-radius:999px;margin-bottom:8px;}
 .tm-group-name{
   font-family:var(--font-display);font-size:clamp(20px,5.5vw,30px);letter-spacing:.04em;color:var(--court-dark);
   background:rgba(51,153,51,.1);border:2px solid var(--court);border-radius:var(--radius-sm);
   padding:7px 18px;margin-bottom:12px;max-width:100%;overflow-wrap:anywhere;display:inline-block;
 }
-.tm-title{font-family:var(--font-display);font-size:clamp(30px,8vw,46px);line-height:1.15;color:var(--ink);margin-bottom:10px;max-width:100%;overflow-wrap:anywhere;}
-.tm-desc{font-family:var(--font-display);font-size:clamp(18px,5vw,24px);letter-spacing:.03em;color:var(--ink-soft);margin-bottom:12px;max-width:520px;overflow-wrap:anywhere;}
+.tm-title{font-family:var(--font-display);font-size:clamp(30px,8vw,46px);line-height:1.15;color:#1B2430;margin-bottom:10px;max-width:100%;overflow-wrap:anywhere;}
+.tm-desc{font-family:var(--font-display);font-size:clamp(18px,5vw,24px);letter-spacing:.03em;color:#5B6472;margin-bottom:12px;max-width:520px;overflow-wrap:anywhere;}
 .tm-reps-display{
   font-family:var(--font-display);font-size:clamp(52px,17vw,100px);line-height:1;letter-spacing:.02em;color:var(--chalk-dark);
   background:rgba(232,98,44,.1);border:3px solid var(--chalk);border-radius:var(--radius);
   padding:10px 30px;margin:6px 0 16px;display:inline-block;
 }
-.tm-cue{font-size:clamp(15px,4vw,18px);font-weight:600;color:var(--ink-soft);margin-bottom:8px;max-width:100%;overflow-wrap:anywhere;}
-.tm-note{font-size:14px;color:var(--ink-faint);max-width:100%;overflow-wrap:anywhere;}
+.tm-cue{font-size:clamp(15px,4vw,18px);font-weight:600;color:#5B6472;margin-bottom:8px;max-width:100%;overflow-wrap:anywhere;}
+.tm-note{font-size:14px;color:#8A93A0;max-width:100%;overflow-wrap:anywhere;}
 @media(min-width:860px),(orientation:landscape) and (min-width:480px){
   .tm-body{grid-template-columns:1fr 1.3fr 1fr;grid-template-areas:"left video right";align-items:center;gap:28px;padding:24px 40px;}
   .tm-col-left{margin-top:0;}
@@ -558,11 +558,11 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 }
 #trainingModeView.tm-forced-landscape .tm-up-next.shown{transform:translateX(0);}
 .tm-timer-wrap{display:flex;align-items:center;justify-content:center;gap:22px;padding:18px 16px;flex-shrink:0;}
-.tm-timer{font-family:var(--font-display);font-size:clamp(48px,14vw,72px);color:var(--ink);min-width:180px;text-align:center;font-variant-numeric:tabular-nums;}
+.tm-timer{font-family:var(--font-display);font-size:clamp(48px,14vw,72px);color:#1B2430;min-width:180px;text-align:center;font-variant-numeric:tabular-nums;}
 .tm-timer.tm-timer-done{color:var(--chalk);}
 .tm-timer-btn{width:56px;height:56px;border-radius:50%;background:var(--court);color:#fff;border:none;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .tm-nav{display:flex;gap:10px;padding:12px 16px calc(16px + env(safe-area-inset-bottom));flex-shrink:0;}
-.tm-nav-btn{flex:1;padding:16px;border-radius:var(--radius);border:1px solid var(--line);background:var(--card);font-family:var(--font-display);font-size:16px;color:var(--ink);letter-spacing:.02em;}
+.tm-nav-btn{flex:1;padding:16px;border-radius:var(--radius);border:1px solid #DCDFD9;background:#fff;font-family:var(--font-display);font-size:16px;color:#1B2430;letter-spacing:.02em;}
 .tm-nav-btn:disabled{opacity:.35;}
 .tm-nav-next{background:var(--chalk);color:#fff;border-color:var(--chalk);}
 
@@ -633,7 +633,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .picker-item button{flex-shrink:0;}
 .bulk-drive-list{max-height:320px;overflow-y:auto;margin-bottom:12px;}
 .bulk-drive-item{display:flex;gap:10px;align-items:center;padding:8px 4px;border-bottom:1px solid var(--line);}
-.bulk-drive-item input[type="checkbox"]{width:18px;height:18px;flex-shrink:0;}
+.bulk-drive-item input[type="checkbox"]{width:18px;height:18px;flex-shrink:0;accent-color:var(--court);}
 .bulk-drive-item img{width:52px;height:34px;object-fit:cover;border-radius:4px;background:var(--line);flex-shrink:0;}
 .bulk-drive-item-title{font-size:13px;font-weight:600;flex:1;}
 .bulk-drive-item.is-duplicate{opacity:.5;}
@@ -641,7 +641,8 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 
 .sequence{display:flex;flex-direction:column;gap:8px;min-height:60px;min-width:0;}
 .seq-item{
-  border-radius:var(--radius);padding:10px 12px;position:relative;border:1px solid rgba(0,0,0,.06);
+  background:var(--card);border:1px solid var(--line);border-left:4px solid var(--line);
+  border-radius:var(--radius);padding:10px 12px;position:relative;
   box-shadow:var(--shadow);overflow:hidden;max-width:100%;min-width:0;
 }
 .seq-item.is-break{
@@ -649,49 +650,51 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   padding:10px 36px 10px 12px;
 }
 .seq-item-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-width:100%;}
-.drag-handle{cursor:grab;color:rgba(27,36,48,.4);font-size:15px;padding:2px 4px;touch-action:none;flex-shrink:0;}
+.drag-handle{cursor:grab;color:var(--ink-faint);font-size:15px;padding:2px 4px;touch-action:none;flex-shrink:0;}
+.seq-item.is-break .drag-handle{color:rgba(27,36,48,.4);}
 .seq-thumb{width:52px;height:34px;object-fit:cover;border-radius:5px;background:rgba(0,0,0,.15);flex-shrink:0;cursor:pointer;}
 .seq-title{font-size:13.5px;font-weight:700;flex:1 1 120px;min-width:0;max-width:100%;cursor:pointer;
   overflow-wrap:anywhere;word-break:break-word;}
-.seq-controls{display:flex;align-items:center;gap:6px;flex:1 0 100%;justify-content:flex-start;margin-top:2px;}
-.seq-part-select{border:1px solid rgba(0,0,0,.15);border-radius:var(--radius-sm);background:rgba(255,255,255,.6);font-size:11px;padding:2px 4px;width:auto;max-width:88px;}
-.seq-duration{width:46px;border:1px solid rgba(0,0,0,.15);border-radius:var(--radius-sm);padding:2px 3px;font-size:11px;text-align:center;}
-.seq-item-fields{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;}
+.seq-controls{display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:auto;}
+.seq-part-select{border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper);font-size:11px;font-weight:700;padding:2px 6px;width:auto;max-width:112px;}
+.seq-duration{width:46px;border:1px solid var(--line);background:var(--paper);border-radius:var(--radius-sm);padding:2px 3px;font-size:11px;text-align:center;}
+.seq-item.is-break .seq-duration{background:rgba(255,255,255,.7);border-color:rgba(0,0,0,.15);}
+.seq-notes-toggle{display:flex;align-items:center;gap:5px;background:none;border:none;padding:0;margin-top:8px;font-size:11.5px;color:var(--ink-soft);}
+.seq-notes-toggle i{font-size:10px;transition:transform .15s ease;}
+.seq-notes-toggle.open i{transform:rotate(180deg);}
+.seq-item-fields{display:none;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;}
+.seq-item-fields.open{display:grid;}
 @media(max-width:420px){.seq-item-fields{grid-template-columns:1fr;}}
-.seq-item-fields input{border:1px solid rgba(0,0,0,.15);border-radius:var(--radius-sm);padding:5px 7px;font-size:12px;background:rgba(255,255,255,.55);}
-.seq-item-fields input::placeholder{color:rgba(27,36,48,.45);}
-.break-label{border:none;background:none;font-family:var(--font-display);font-size:16px;letter-spacing:.03em;color:var(--ink-soft);text-align:left;flex:1;min-width:0;}
+.seq-item-fields input{border:1px solid var(--line);border-radius:var(--radius-sm);padding:5px 7px;font-size:12px;background:var(--paper);}
+.seq-item-fields input::placeholder{color:var(--ink-faint);}
+.break-label{border:none;background:none;font-family:var(--font-display);font-size:16px;letter-spacing:.03em;color:#5B6472;text-align:left;flex:1;min-width:0;}
 .seq-break-duration-row{display:flex;align-items:center;gap:8px;margin-top:8px;}
 .seq-part-select:disabled,.seq-duration:disabled,.seq-item-fields input:disabled,.break-label:disabled{
   opacity:.55;cursor:not-allowed;-webkit-text-fill-color:currentColor;
 }
 .editor-head input[type=text]:disabled{opacity:.6;cursor:not-allowed;background:var(--paper);}
-.seq-remove{position:absolute;top:6px;right:6px;background:rgba(255,255,255,.7);border:none;border-radius:50%;width:22px;height:22px;font-size:13px;color:var(--danger);line-height:1;}
+.seq-remove{position:absolute;top:6px;right:6px;background:var(--paper);border:none;border-radius:50%;width:22px;height:22px;font-size:13px;color:var(--danger);line-height:1;}
+.seq-item.is-break .seq-remove{background:rgba(255,255,255,.7);}
 .sortable-ghost{opacity:.35;}
 .part-legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;font-size:11px;color:var(--ink-soft);}
 .part-legend span{display:inline-flex;align-items:center;gap:4px;}
 .part-swatch{width:10px;height:10px;border-radius:3px;display:inline-block;}
 .add-break-btn{margin-bottom:8px;}
 .seq-item.is-group{background:var(--card);border:2px dashed var(--court);}
-.seq-item.is-group .drag-handle{color:var(--ink-faint);}
-.seq-item.is-group .seq-mode-toggle{border-color:var(--line);}
-.seq-item.is-group .seq-mode-toggle button:not(.active){background:var(--paper);}
-.seq-item.is-group .seq-series-row input{border-color:var(--line);background:var(--paper);}
-.seq-item.is-group .seq-item-fields input{background:var(--paper);border-color:var(--line);}
-.seq-item.is-group .time-unit-select-wrap{background:var(--line);}
-.seq-item.is-group .seq-remove{background:var(--paper);}
 .seq-group-icon{color:var(--court);font-size:15px;flex-shrink:0;}
 .seq-group-name{font-family:var(--font-display);font-size:15px;letter-spacing:.02em;border:1px solid transparent;background:none;flex:1 1 120px;min-width:0;padding:2px 4px;border-radius:var(--radius-sm);}
 .seq-group-name:focus{border-color:var(--court);background:var(--paper);}
-.seq-mode-row{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;}
-.seq-mode-toggle{display:flex;border:1px solid rgba(0,0,0,.15);border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0;}
-.seq-mode-toggle button{padding:4px 9px;font-size:11px;background:rgba(255,255,255,.5);border:none;color:var(--ink-soft);}
+.seq-dosage-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin-top:8px;}
+.seq-dosage-group{display:inline-flex;align-items:center;gap:6px;flex-wrap:nowrap;flex-shrink:0;}
+.seq-mode-toggle{display:flex;border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0;}
+.seq-mode-toggle button{padding:4px 9px;font-size:11px;background:var(--paper);border:none;color:var(--ink-soft);white-space:nowrap;}
 .seq-mode-toggle button.active{background:var(--court);color:#fff;}
-.seq-reps-input{width:90px;border:1px solid rgba(0,0,0,.15);border-radius:var(--radius-sm);padding:3px 6px;font-size:11px;}
-.seq-series-row{display:flex;align-items:center;gap:12px;margin-top:6px;flex-wrap:wrap;font-size:11px;color:var(--ink-soft);}
-.seq-series-row label{display:flex;align-items:center;gap:5px;}
-.seq-series-row input{width:44px;border:1px solid rgba(0,0,0,.15);border-radius:var(--radius-sm);padding:2px 4px;font-size:11px;text-align:center;}
-.time-unit-select-wrap{display:inline-flex;align-items:center;gap:5px;background:#EBEBE8;border-radius:var(--radius-sm);padding:4px 9px;flex-shrink:0;}
+.seq-reps-input{width:90px;border:1px solid var(--line);background:var(--paper);border-radius:var(--radius-sm);padding:3px 6px;font-size:11px;}
+.seq-series-row{font-size:11px;color:var(--ink-soft);}
+.seq-series-row label{display:flex;align-items:center;gap:5px;white-space:nowrap;}
+.seq-series-row input{width:40px;border:1px solid var(--line);background:var(--paper);border-radius:var(--radius-sm);padding:2px 4px;font-size:11px;text-align:center;}
+.time-unit-select-wrap{display:inline-flex;align-items:center;gap:5px;background:var(--line);border-radius:var(--radius-sm);padding:4px 9px;flex-shrink:0;}
+.seq-item.is-break .time-unit-select-wrap{background:#EBEBE8;}
 .time-unit-select-wrap i{color:var(--ink-soft);font-size:11px;}
 .time-unit-select-wrap select{border:none;background:none;color:var(--ink-soft);font-size:12px;font-weight:600;padding:0;}
 .seq-group-videos{margin-top:10px;border-top:1px dashed var(--line);padding-top:8px;display:flex;flex-direction:column;gap:5px;}
@@ -1519,7 +1522,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-25 18:05";
+const APP_VERSION = "2026-07-25 18:46";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -2004,6 +2007,13 @@ function darkenHex(hex, amount) {
   if (!m || m.length < 3) return hex;
   const [r, g, b] = m.map(h => Math.max(0, Math.round(parseInt(h, 16) * (1 - amount))));
   return "#" + [r, g, b].map(v => v.toString(16).padStart(2, "0")).join("");
+}
+/** Nastaví/zruší malý barevný "štítek" (jemné pozadí + dobře čitelný tmavší text odvozený
+    ze stejné barvy) — appka to používá všude, kde dřív bývala barva části přes celou plochu
+    (karta v editoru, obrazovka tréninkového režimu), aby barva zůstala jen jako nenápadný hint. */
+function setPartTag(el, color) {
+  if (color) { el.style.background = color + "33"; el.style.color = darkenHex(color, 0.55); }
+  else { el.style.background = ""; el.style.color = ""; }
 }
 /** Načte soubor jako obrázek se správně opravenou orientací podle EXIF (canvas.drawImage
     to sám od sebe u fotek z mobilu často nedělá), a rovnou ho zmenší na maxDimension.
@@ -4326,8 +4336,8 @@ function renderTrainingModeItem() {
   if (row.part === "prestavka") {
     seriesLabel.classList.add("hidden");
     body.classList.add("tm-solo");
-    body.style.background = "var(--part-prestavka)";
     document.getElementById("tmPartLabel").textContent = "PŘESTÁVKA";
+    setPartTag(document.getElementById("tmPartLabel"), "#C7C9C4");
     setScaledText(document.getElementById("tmTitle"), row.label || "Přestávka");
     document.getElementById("tmDesc").textContent = "";
     document.getElementById("tmCue").innerHTML = "";
@@ -4349,8 +4359,8 @@ function renderTrainingModeItem() {
   }
 
   if (row.isGroup) {
-    body.style.background = "var(--card)";
     document.getElementById("tmPartLabel").textContent = "";
+    setPartTag(document.getElementById("tmPartLabel"), row.part ? getPart(row.part).color : null);
     groupNameEl.textContent = row.name || "Skupina";
     groupNameEl.classList.remove("hidden");
     document.getElementById("tmCue").innerHTML = row.cue ? `<i class="fa-solid fa-comment"></i> ${esc(row.cue)}` : "";
@@ -4381,8 +4391,8 @@ function renderTrainingModeItem() {
   // obyčejné video
   const lib = state.library[row.videoId];
   const part = getPart(row.part);
-  body.style.background = part ? part.color : "var(--card)";
   document.getElementById("tmPartLabel").textContent = (part ? part.label : "").toUpperCase();
+  setPartTag(document.getElementById("tmPartLabel"), part ? part.color : null);
   setScaledText(document.getElementById("tmTitle"), lib ? lib.title : "(video smazáno z knihovny)");
   setScaledText(document.getElementById("tmDesc"), lib && lib.shortDesc ? lib.shortDesc : "");
   document.getElementById("tmCue").innerHTML = row.cue ? `<i class="fa-solid fa-comment"></i> ${esc(row.cue)}` : "";
@@ -4420,8 +4430,8 @@ function renderSeriesPause() {
   document.getElementById("tmPrevBtn").disabled = true;
   document.getElementById("tmNextBtn").innerHTML = 'Další <i class="fa-solid fa-arrow-right"></i>';
   document.getElementById("tmBody").classList.add("tm-solo");
-  document.getElementById("tmBody").style.background = "var(--part-prestavka)";
   document.getElementById("tmPartLabel").textContent = "PAUZA MEZI SÉRIEMI";
+  setPartTag(document.getElementById("tmPartLabel"), "#C7C9C4");
   setScaledText(document.getElementById("tmTitle"), `Za chvíli série ${trainingModeSeriesNum} / ${row.seriesCount}`);
   document.getElementById("tmDesc").textContent = "";
   document.getElementById("tmCue").innerHTML = "";
@@ -4917,20 +4927,24 @@ function renderModeSeriesControls(row, dis) {
   const mode = row.mode || "time";
   const seriesCount = row.seriesCount || 1;
   return `
-    <div class="seq-mode-row">
-      <div class="seq-mode-toggle">
-        <button type="button" class="${mode === "time" ? "active" : ""}" data-mode-set="time" data-itemid="${esc(row.itemId)}" ${dis}>Čas</button>
-        <button type="button" class="${mode === "reps" ? "active" : ""}" data-mode-set="reps" data-itemid="${esc(row.itemId)}" ${dis}>Opakování</button>
+    <div class="seq-dosage-row">
+      <div class="seq-dosage-group">
+        <div class="seq-mode-toggle">
+          <button type="button" class="${mode === "time" ? "active" : ""}" data-mode-set="time" data-itemid="${esc(row.itemId)}" ${dis}>Čas</button>
+          <button type="button" class="${mode === "reps" ? "active" : ""}" data-mode-set="reps" data-itemid="${esc(row.itemId)}" ${dis}>Opakování</button>
+        </div>
+        ${row.isGroup ? "" : (mode === "time"
+          ? `<input class="seq-duration" type="number" min="1" value="${row.duration || 1}" data-field="duration" data-itemid="${esc(row.itemId)}" ${dis}>
+             ${renderTimeUnitSelect("durationUnit", row.itemId, row.durationUnit, "min", dis)}`
+          : `<input type="text" class="seq-reps-input" placeholder="např. 3×12" value="${esc(row.reps || "")}" data-field="reps" data-itemid="${esc(row.itemId)}" ${dis}>`)}
       </div>
-      ${row.isGroup ? "" : (mode === "time"
-        ? `<input class="seq-duration" type="number" min="1" value="${row.duration || 1}" data-field="duration" data-itemid="${esc(row.itemId)}" ${dis}>
-           ${renderTimeUnitSelect("durationUnit", row.itemId, row.durationUnit, "min", dis)}`
-        : `<input type="text" class="seq-reps-input" placeholder="např. 3×12" value="${esc(row.reps || "")}" data-field="reps" data-itemid="${esc(row.itemId)}" ${dis}>`)}
-    </div>
-    <div class="seq-series-row">
-      <label>Sérií <input type="number" min="1" value="${seriesCount}" data-field="seriesCount" data-itemid="${esc(row.itemId)}" ${dis}></label>
-      ${seriesCount > 1 ? `<label>Pauza mezi sériemi <input type="number" min="0" value="${row.seriesPause != null ? row.seriesPause : 30}" data-field="seriesPause" data-itemid="${esc(row.itemId)}" style="width:56px;" ${dis}></label>
-        ${renderTimeUnitSelect("seriesPauseUnit", row.itemId, row.seriesPauseUnit, "s", dis)}` : ""}
+      <div class="seq-dosage-group seq-series-row">
+        <label>Sérií <input type="number" min="1" value="${seriesCount}" data-field="seriesCount" data-itemid="${esc(row.itemId)}" ${dis}></label>
+      </div>
+      ${seriesCount > 1 ? `<div class="seq-dosage-group seq-series-row">
+        <label>Pauza <input type="number" min="0" value="${row.seriesPause != null ? row.seriesPause : 30}" data-field="seriesPause" data-itemid="${esc(row.itemId)}" style="width:56px;" ${dis}></label>
+        ${renderTimeUnitSelect("seriesPauseUnit", row.itemId, row.seriesPauseUnit, "s", dis)}
+      </div>` : ""}
     </div>`;
 }
 function renderSequence() {
@@ -4957,16 +4971,24 @@ function renderSequence() {
       </div>`;
     }
     if (row.isGroup) {
+      const groupPart = row.part ? getPart(row.part) : null;
       return `
-      <div class="seq-item is-group" data-itemid="${esc(row.itemId)}">
+      <div class="seq-item is-group" data-itemid="${esc(row.itemId)}"${groupPart ? ` style="border-color:${esc(groupPart.color)}"` : ""}>
         ${ro ? "" : `<button class="seq-remove" data-remove="${esc(row.itemId)}" aria-label="Odebrat"><i class="fa-solid fa-xmark"></i></button>`}
         <div class="seq-item-top">
           ${ro ? "" : `<span class="drag-handle"><i class="fa-solid fa-grip-lines"></i></span>`}
           <i class="fa-solid fa-layer-group seq-group-icon"></i>
           <input type="text" class="seq-group-name" value="${esc(row.name || "Skupina")}" placeholder="Název skupiny" data-field="name" data-itemid="${esc(row.itemId)}" ${dis}>
+          <div class="seq-controls">
+            <select class="seq-part-select" data-field="part" data-itemid="${esc(row.itemId)}" ${dis}${groupPart ? ` style="background:${esc(groupPart.color)}33;color:${esc(darkenHex(groupPart.color, 0.55))};border-color:${esc(groupPart.color)}"` : ""}>
+              <option value="">Bez části</option>
+              ${state.parts.map(p => `<option value="${esc(p.key)}" ${row.part === p.key ? "selected" : ""}>${esc(p.label)}</option>`).join("")}
+            </select>
+          </div>
         </div>
         ${renderModeSeriesControls(row, dis)}
-        <div class="seq-item-fields">
+        <button type="button" class="seq-notes-toggle${(row.cue || row.poznamka) ? " open" : ""}" data-notes-toggle="${esc(row.itemId)}"><i class="fa-solid fa-chevron-down"></i> Cue a poznámka</button>
+        <div class="seq-item-fields${(row.cue || row.poznamka) ? " open" : ""}" data-notes-panel="${esc(row.itemId)}">
           <input type="text" placeholder="Cue (co říct nahlas)" value="${esc(row.cue)}" data-field="cue" data-itemid="${esc(row.itemId)}" ${dis}>
           <input type="text" placeholder="Poznámka" value="${esc(row.poznamka)}" data-field="poznamka" data-itemid="${esc(row.itemId)}" ${dis}>
         </div>
@@ -4990,22 +5012,23 @@ function renderSequence() {
       </div>`;
     }
     const lib = state.library[row.videoId];
-    const partColor = getPart(row.part).color;
+    const part = getPart(row.part);
     return `
-    <div class="seq-item" data-itemid="${esc(row.itemId)}" style="background:${esc(partColor)}">
+    <div class="seq-item" data-itemid="${esc(row.itemId)}" style="border-left-color:${esc(part.color)}">
       ${ro ? "" : `<button class="seq-remove" data-remove="${esc(row.itemId)}" aria-label="Odebrat"><i class="fa-solid fa-xmark"></i></button>`}
       <div class="seq-item-top">
         ${ro ? "" : `<span class="drag-handle"><i class="fa-solid fa-grip-lines"></i></span>`}
         ${resolveThumbnailUrl(lib) ? `<img class="seq-thumb" src="${esc(resolveThumbnailUrl(lib))}" data-open="${esc(row.videoId)}">` : `<div class="seq-thumb" data-open="${esc(row.videoId)}"></div>`}
         <span class="seq-title" data-open="${esc(row.videoId)}">${lib ? esc(lib.title) : "(video smazáno z knihovny)"}</span>
         <div class="seq-controls">
-          <select class="seq-part-select" data-field="part" data-itemid="${esc(row.itemId)}" ${dis}>
+          <select class="seq-part-select" data-field="part" data-itemid="${esc(row.itemId)}" ${dis} style="background:${esc(part.color)}33;color:${esc(darkenHex(part.color, 0.55))};border-color:${esc(part.color)}">
             ${state.parts.map(p => `<option value="${esc(p.key)}" ${row.part === p.key ? "selected" : ""}>${esc(p.label)}</option>`).join("")}
           </select>
         </div>
       </div>
       ${renderModeSeriesControls(row, dis)}
-      <div class="seq-item-fields">
+      <button type="button" class="seq-notes-toggle${(row.cue || row.poznamka) ? " open" : ""}" data-notes-toggle="${esc(row.itemId)}"><i class="fa-solid fa-chevron-down"></i> Cue a poznámka</button>
+      <div class="seq-item-fields${(row.cue || row.poznamka) ? " open" : ""}" data-notes-panel="${esc(row.itemId)}">
         <input type="text" placeholder="Cue (co říct nahlas)" value="${esc(row.cue)}" data-field="cue" data-itemid="${esc(row.itemId)}" ${dis}>
         <input type="text" placeholder="Poznámka (např. dělat jen 3. cvik)" value="${esc(row.poznamka)}" data-field="poznamka" data-itemid="${esc(row.itemId)}" ${dis}>
       </div>
@@ -5095,6 +5118,13 @@ document.getElementById("sequenceList").addEventListener("input", (e) => {
   if (field === "part" || field === "seriesCount") renderSequence();
 });
 document.getElementById("sequenceList").addEventListener("click", (e) => {
+  const notesToggle = e.target.closest("[data-notes-toggle]");
+  if (notesToggle) {
+    const panel = e.currentTarget.querySelector(`[data-notes-panel="${CSS.escape(notesToggle.dataset.notesToggle)}"]`);
+    notesToggle.classList.toggle("open");
+    if (panel) panel.classList.toggle("open");
+    return;
+  }
   const openBtn = e.target.closest("[data-open]");
   if (openBtn && openBtn.dataset.open) { openDetailModal(openBtn.dataset.open); return; }
   const modeBtn = e.target.closest("[data-mode-set]");
