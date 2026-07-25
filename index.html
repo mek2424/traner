@@ -487,7 +487,6 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 /* ---------- Tréninkový režim ---------- */
 #trainingModeView{
   position:fixed;inset:0;z-index:200;background:#F4F5F2;display:flex;flex-direction:column;
-  box-sizing:border-box;border:9px solid var(--line);transition:border-color .3s ease;
 }
 /* Vynucené otočení na šířku bez spoléhání na (nespolehlivé, hlavně na Firefoxu pro Android)
    zamykání orientace prohlížečem — obsah se místo toho otočí rovnou přes CSS transform,
@@ -1526,7 +1525,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-25 19:25";
+const APP_VERSION = "2026-07-25 19:40";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -4322,7 +4321,6 @@ function updateProgressBar(color) {
   const fill = document.getElementById("tmProgressFill");
   fill.style.width = pct + "%";
   fill.style.background = color || "var(--court)";
-  document.getElementById("trainingModeView").style.borderColor = color || "var(--court)";
 }
 /** Appka vestaví skutečný přehrávač videa (stejná logika jako u detailu videa v Knihovně) —
     u přestávky ani pauzy mezi sériemi appka video neukazuje, jen u konkrétního cviku. */
@@ -4521,7 +4519,6 @@ function renderTrainingModeFinished() {
   document.getElementById("tmBody").style.background = "var(--court)";
   document.getElementById("tmProgressFill").style.width = "100%";
   document.getElementById("tmProgressFill").style.background = "var(--court)";
-  document.getElementById("trainingModeView").style.borderColor = "var(--court)";
   document.getElementById("tmPartLabel").textContent = "";
   setPartTag(document.getElementById("tmPartLabel"), null);
   setScaledText(document.getElementById("tmTitle"), "Hotovo 💪");
