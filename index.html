@@ -1527,7 +1527,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-25 23:50";
+const APP_VERSION = "2026-07-26 00:05";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -4251,6 +4251,14 @@ document.getElementById("startTrainingModeBtn").addEventListener("click", () => 
   void tmView.offsetWidth;
   tmView.classList.add("view-anim-in");
   renderTrainingModeItem();
+  // Na některých mobilních prohlížečích zůstane po zobrazení téhle celoobrazovkové vrstvy
+  // někde "zamrzlý" starý překreslený pruh, i když už appka pod ním kreslí správně (ověřeno
+  // diagnostikou — nejde o špatná data/styl, jen o zaseknuté překreslení). Krátké bliknutí
+  // průhlednosti donutí prohlížeč tu plochu překreslit znovu od nuly.
+  setTimeout(() => {
+    tmView.style.opacity = "0.999";
+    requestAnimationFrame(() => { tmView.style.opacity = ""; });
+  }, 60);
 });
 
 /** DOČASNÉ: ťukni na záhadný pruh — appka dole vypíše mnohem podrobnější diagnostiku (i
