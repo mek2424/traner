@@ -1424,7 +1424,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
       <div class="tm-title" id="tmTitle"></div>
     </div>
     <div class="tm-col-video" style="outline:2px dashed orange;">
-      <div class="tm-video-wrap hidden" id="tmVideoWrap"></div>
+      <div class="tm-video-wrap hidden" id="tmVideoWrap" style="outline:3px solid hotpink;"></div>
     </div>
     <div class="tm-col-right" style="outline:2px dashed lime;">
       <div class="tm-desc" id="tmDesc"></div>
@@ -1525,7 +1525,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-25 21:10";
+const APP_VERSION = "2026-07-25 21:20";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
