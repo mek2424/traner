@@ -1409,36 +1409,36 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 
 <!-- ===================== TRÉNINKOVÝ REŽIM ===================== -->
 <div id="trainingModeView" class="hidden">
-  <div class="tm-header">
+  <div class="tm-header" style="outline:3px solid red;">
     <button type="button" class="tm-exit" id="tmExitBtn" aria-label="Zavřít"><i class="fa-solid fa-xmark"></i></button>
     <div class="tm-progress" id="tmProgress">1 / 1</div>
     <button type="button" class="tm-exit" id="tmRotateBtn" aria-label="Na šířku"><i class="fa-solid fa-expand"></i></button>
   </div>
-  <div class="tm-progress-bar"><div class="tm-progress-fill" id="tmProgressFill"></div></div>
-  <div class="tm-body" id="tmBody">
+  <div class="tm-progress-bar" style="outline:3px solid magenta;"><div class="tm-progress-fill" id="tmProgressFill"></div></div>
+  <div class="tm-body" id="tmBody" style="outline:3px solid blue;">
     <div class="tm-up-next hidden" id="tmUpNext"></div>
-    <div class="tm-col-left">
+    <div class="tm-col-left" style="outline:2px dashed dodgerblue;">
       <div class="tm-part-label" id="tmPartLabel"></div>
       <div class="tm-series-label hidden" id="tmSeriesLabel"></div>
       <div class="tm-group-name hidden" id="tmGroupName"></div>
       <div class="tm-title" id="tmTitle"></div>
     </div>
-    <div class="tm-col-video">
+    <div class="tm-col-video" style="outline:2px dashed orange;">
       <div class="tm-video-wrap hidden" id="tmVideoWrap"></div>
     </div>
-    <div class="tm-col-right">
+    <div class="tm-col-right" style="outline:2px dashed lime;">
       <div class="tm-desc" id="tmDesc"></div>
       <div class="tm-reps-display hidden" id="tmRepsDisplay"></div>
       <div class="tm-cue" id="tmCue"></div>
       <div class="tm-note" id="tmNote"></div>
     </div>
   </div>
-  <div class="tm-timer-wrap" id="tmTimerWrap">
+  <div class="tm-timer-wrap" id="tmTimerWrap" style="outline:3px solid cyan;">
     <button type="button" class="tm-timer-btn" id="tmTimerToggle" aria-label="Pauza/pokračovat"><i class="fa-solid fa-pause"></i></button>
     <div class="tm-timer" id="tmTimer">10:00</div>
     <button type="button" class="tm-timer-btn" id="tmTimerReset" aria-label="Restartovat čas"><i class="fa-solid fa-rotate-left"></i></button>
   </div>
-  <div class="tm-nav">
+  <div class="tm-nav" style="outline:3px solid yellow;">
     <button type="button" class="tm-nav-btn" id="tmPrevBtn"><i class="fa-solid fa-arrow-left"></i> Předchozí</button>
     <button type="button" class="tm-nav-btn tm-nav-next" id="tmNextBtn">Další <i class="fa-solid fa-arrow-right"></i></button>
   </div>
@@ -1525,7 +1525,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-25 19:55";
+const APP_VERSION = "2026-07-25 21:10";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
