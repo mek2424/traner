@@ -114,7 +114,7 @@ a{color:var(--court);}
 .btn-primary{background:var(--court);border-color:var(--court);color:#fff;}
 .btn-primary:hover{background:var(--court-dark);}
 .btn-accent{background:var(--chalk);border-color:var(--chalk);color:#fff;}
-.add-link-menu-wrap{position:relative;}
+.add-link-menu-wrap{position:relative;margin-bottom:16px;}
 .add-link-menu{
   position:absolute;top:calc(100% + 6px);left:0;z-index:20;background:var(--card);border:1px solid var(--line);
   border-radius:var(--radius-sm);box-shadow:var(--shadow);padding:6px;min-width:220px;display:flex;flex-direction:column;gap:2px;
@@ -161,13 +161,16 @@ a{color:var(--court);}
   #openAddLinkMenuBtn{
     width:56px;height:56px;border-radius:50%;padding:0;font-size:21px;
     box-shadow:0 4px 14px rgba(27,36,48,.35);transition:transform .2s ease;
+    -webkit-tap-highlight-color:transparent;
   }
   #openAddLinkMenuBtn .add-link-btn-label,#openAddLinkMenuBtn .add-link-btn-chevron{display:none;}
   #openAddLinkMenuBtn.open{transform:rotate(45deg);}
+  @keyframes fabMenuIn{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
   .add-link-menu{
     position:absolute;top:auto;left:auto;right:0;bottom:calc(100% + 14px);
     background:none;border:none;box-shadow:none;padding:0;min-width:0;
     flex-direction:column;align-items:flex-end;gap:10px;
+    animation:fabMenuIn .16s ease;
   }
   .add-link-item{width:auto;flex-direction:row-reverse;gap:10px;padding:0;background:none;}
   .add-link-item:hover{background:none;}
@@ -1595,7 +1598,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-26 01:35";
+const APP_VERSION = "2026-07-26 01:45";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
