@@ -1443,7 +1443,6 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
     <button type="button" class="tm-nav-btn tm-nav-next" id="tmNextBtn">Další <i class="fa-solid fa-arrow-right"></i></button>
   </div>
 </div>
-<pre id="tmTapDebug" style="position:fixed;bottom:0;left:0;right:0;z-index:999;background:rgba(0,0,0,.9);color:#0f0;font-size:10px;line-height:1.5;padding:8px;max-height:50vh;overflow:auto;white-space:pre-wrap;margin:0;pointer-events:none;"></pre>
 
 <!-- ===================== DIAGNOSTICKÝ ZÁZNAM (dočasné) ===================== -->
 <div id="appVersionLabel" style="position:fixed;bottom:14px;left:14px;z-index:500;font-size:10.5px;color:var(--ink-faint);font-family:monospace;background:var(--card);padding:3px 7px;border-radius:5px;pointer-events:none;"></div>
@@ -1526,7 +1525,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-25 22:55";
+const APP_VERSION = "2026-07-25 23:05";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -4238,6 +4237,12 @@ document.getElementById("startTrainingModeBtn").addEventListener("click", () => 
   trainingModeInSeriesPause = false;
   trainingModeFinished = false;
   document.getElementById("tmTitle").style.color = "";
+  // Appka tréninkový režim vždy kreslí ve svém vlastním pevném světlém vzhledu (nezávisle na
+  // tmavém/světlém motivu appky) — na některých mobilních prohlížečích se ale při vykreslení
+  // přes celoobrazovkovou appku na okamžik prokreslí tmavé pozadí appky pod ní (appka ho tam
+  // nechává, dokud appka první snímek nedokreslí). Appka proto na dobu tréninku pozadí appky
+  // dočasně přebarví na stejnou světlou appky barvu, ať tenhle nedokreslený proužek nejde vidět.
+  document.body.style.background = "#F4F5F2";
   const tmView = document.getElementById("trainingModeView");
   tmView.classList.remove("hidden");
   tmView.classList.remove("view-anim-in");
@@ -4245,25 +4250,6 @@ document.getElementById("startTrainingModeBtn").addEventListener("click", () => 
   tmView.classList.add("view-anim-in");
   renderTrainingModeItem();
 });
-
-/** DOČASNÉ: ťukni kdekoli v tréninkovém režimu — appka dole vypíše, jaký přesný prvek (a jeho
-    barvu pozadí) je přesně pod prstem, ať se dá záhadný pruh dohledat jistě, ne odhadem. */
-document.getElementById("trainingModeView").addEventListener("click", (e) => {
-  const dbg = document.getElementById("tmTapDebug");
-  if (!dbg) return;
-  const x = e.clientX, y = e.clientY;
-  const el = document.elementFromPoint(x, y);
-  const lines = [`ťuknuto na x=${x} y=${y}`];
-  let node = el, depth = 0;
-  while (node && depth < 6) {
-    const cs = getComputedStyle(node);
-    const r = node.getBoundingClientRect();
-    lines.push(`${depth}: <${node.tagName.toLowerCase()}> id="${node.id||""}" class="${node.className||""}" top=${r.top.toFixed(0)} bottom=${r.bottom.toFixed(0)} bg=${cs.backgroundColor} bgImg=${cs.backgroundImage.slice(0,40)}`);
-    node = node.parentElement;
-    depth++;
-  }
-  dbg.textContent = lines.join("\n");
-}, true);
 
 /** Appka u režimu na opakování jen schová odpočet času — appka pro pokračování dál používá
     to samé tlačítko "Další" jako u času, žádné zvláštní tlačítko navíc appka nemá. */
@@ -4663,6 +4649,7 @@ function closeTrainingMode() {
   clearTimeout(tmUpNextTimeout);
   exitTrainingLandscape();
   document.getElementById("trainingModeView").classList.add("hidden");
+  document.body.style.background = "";
 }
 document.getElementById("tmExitBtn").addEventListener("click", closeTrainingMode);
 
