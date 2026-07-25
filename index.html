@@ -119,12 +119,64 @@ a{color:var(--court);}
   position:absolute;top:calc(100% + 6px);left:0;z-index:20;background:var(--card);border:1px solid var(--line);
   border-radius:var(--radius-sm);box-shadow:var(--shadow);padding:6px;min-width:220px;display:flex;flex-direction:column;gap:2px;
 }
-.add-link-menu button{
+.add-link-item{
   display:flex;align-items:center;gap:8px;text-align:left;background:none;border:none;padding:9px 10px;
   border-radius:var(--radius-sm);font-size:14px;color:var(--ink);width:100%;
 }
-.add-link-menu button:hover{background:var(--paper);}
+.add-link-item:hover{background:var(--paper);}
+.add-link-icon{width:16px;text-align:center;color:var(--ink-soft);flex-shrink:0;}
+.add-link-btn-chevron{font-size:10px;margin-left:2px;}
+.add-link-menu-scrim{display:none;}
 .btn-accent:hover{background:var(--chalk-dark);}
+/* ---------- Skupinové "kapsle" panelu Knihovny ---------- */
+.combo-pill{
+  display:flex;align-items:stretch;background:var(--card);border:1px solid var(--line);
+  border-radius:999px;overflow:hidden;flex:1;min-width:0;
+}
+.combo-pill .combo-seg{border-radius:0;border:none;}
+.combo-pill .combo-seg + .combo-seg{border-left:1px solid var(--line);}
+.combo-pill .folder-nav-btn{width:44px;height:auto;flex-shrink:0;}
+.combo-pill .filter-toggle-btn{flex:1;min-width:0;justify-content:center;background:none;}
+.combo-pill .filter-toggle-btn.open{background:var(--paper);}
+.combo-pill .filter-toggle-btn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.icon-group{
+  display:flex;align-items:center;background:var(--card);border:1px solid var(--line);
+  border-radius:var(--radius-sm);flex-shrink:0;overflow:hidden;
+}
+.icon-group .btn-icon{border:none;border-radius:0;background:none;}
+.icon-group .btn-icon + .btn-icon{border-left:1px solid var(--line);}
+.icon-group .btn-icon.btn-accent{background:var(--chalk);border-color:var(--chalk);color:#fff;}
+@media(max-width:640px){
+  /* Na mobilu se "Přidat" mění na plovoucí tlačítko (FAB) v pravém dolním rohu obrazovky,
+     které se po ťuknutí rozbalí do malého menu (popisek + kolečko s ikonkou u každé položky). */
+  .add-link-menu-wrap{position:fixed;right:16px;bottom:16px;z-index:30;}
+  #openAddLinkMenuBtn{
+    width:56px;height:56px;border-radius:50%;padding:0;font-size:21px;
+    box-shadow:0 4px 14px rgba(27,36,48,.35);transition:transform .2s ease;
+  }
+  #openAddLinkMenuBtn .add-link-btn-label,#openAddLinkMenuBtn .add-link-btn-chevron{display:none;}
+  #openAddLinkMenuBtn.open{transform:rotate(45deg);}
+  .add-link-menu{
+    position:absolute;top:auto;left:auto;right:0;bottom:calc(100% + 14px);
+    background:none;border:none;box-shadow:none;padding:0;min-width:0;
+    flex-direction:column;align-items:flex-end;gap:10px;
+  }
+  .add-link-item{width:auto;flex-direction:row-reverse;gap:10px;padding:0;background:none;}
+  .add-link-item:hover{background:none;}
+  .add-link-label{
+    background:var(--card);border:1px solid var(--line);color:var(--ink);font-size:13px;font-weight:600;
+    padding:8px 14px;border-radius:999px;box-shadow:var(--shadow);white-space:nowrap;
+  }
+  .add-link-icon{
+    width:42px;height:42px;border-radius:50%;background:var(--chalk);color:#fff;display:flex;align-items:center;
+    justify-content:center;font-size:16px;box-shadow:var(--shadow);flex-shrink:0;
+  }
+  .add-link-menu-scrim{
+    display:block;position:fixed;inset:0;background:rgba(27,36,48,0);z-index:25;
+    opacity:0;pointer-events:none;transition:opacity .18s ease;
+  }
+  .add-link-menu-scrim.show{opacity:1;pointer-events:auto;background:rgba(27,36,48,.3);}
+}
 .btn-ghost{background:transparent;border-color:transparent;color:var(--ink-soft);}
 .btn-ghost:hover{background:rgba(27,36,48,.05);}
 .btn-danger{background:var(--danger-bg);border-color:var(--danger-bg);color:var(--danger);}
@@ -788,7 +840,6 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
     <section id="libraryView">
       <div id="libraryToolbarArea">
       <div class="toolbar">
-        <button class="btn btn-icon folder-nav-btn" id="openFolderSidebarBtn" aria-label="Složky"><i class="fa-solid fa-folder"></i></button>
         <input type="search" id="librarySearch" placeholder="Hledat podle názvu, štítku, složky…">
         <select id="librarySort">
           <option value="date-desc">Nejnovější</option>
@@ -799,17 +850,27 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
           <option value="difficulty-asc">Nejsnazší</option>
           <option value="difficulty-desc">Nejtěžší</option>
         </select>
-        <button class="btn btn-icon" id="toggleViewModeBtn" aria-label="Přepnout zobrazení"><i class="fa-solid fa-list"></i></button>
-        <button class="btn btn-icon" id="togglePinToolbarBtn" aria-label="Přišpendlit panel"><i class="fa-solid fa-thumbtack"></i></button>
-        <button class="btn btn-icon" id="toggleFavFilterBtn" aria-label="Jen oblíbené"><i class="fa-regular fa-star"></i></button>
-        <button class="btn btn-icon" id="toggleSelectModeBtn" aria-label="Vybrat více"><i class="fa-regular fa-square-check"></i></button>
-        <button class="btn btn-sm hidden" id="selectAllBtn">Zaškrtnout vše</button>
-        <div class="add-link-menu-wrap">
-          <button class="btn btn-accent" id="openAddLinkMenuBtn"><i class="fa-solid fa-plus"></i> Přidat <i class="fa-solid fa-chevron-down" style="font-size:10px;margin-left:2px;"></i></button>
-          <div class="add-link-menu hidden" id="addLinkMenu">
-            <button type="button" id="openAddLinkBtn"><i class="fa-solid fa-link"></i> Přidat odkaz</button>
-            <button type="button" id="openBulkDriveBtn" class="hidden"><i class="fa-brands fa-google-drive"></i> Hromadně ze složky Disku</button>
-          </div>
+      </div>
+      <div class="toolbar">
+        <div class="combo-pill">
+          <button class="btn btn-icon folder-nav-btn combo-seg" id="openFolderSidebarBtn" aria-label="Složky"><i class="fa-solid fa-folder"></i></button>
+          <button type="button" class="filter-toggle-btn combo-seg" id="toggleTagFilterBtn"><i class="fa-solid fa-tag"></i> <span>Štítky</span> <i class="fa-solid fa-chevron-down"></i></button>
+          <button type="button" class="filter-toggle-btn combo-seg" id="toggleEquipFilterBtn"><i class="fa-solid fa-wrench"></i> <span>Vybavení</span> <i class="fa-solid fa-chevron-down"></i></button>
+        </div>
+        <div class="icon-group">
+          <button class="btn btn-icon" id="toggleViewModeBtn" aria-label="Přepnout zobrazení"><i class="fa-solid fa-list"></i></button>
+          <button class="btn btn-icon" id="togglePinToolbarBtn" aria-label="Přišpendlit panel"><i class="fa-solid fa-thumbtack"></i></button>
+          <button class="btn btn-icon" id="toggleFavFilterBtn" aria-label="Jen oblíbené"><i class="fa-regular fa-star"></i></button>
+          <button class="btn btn-icon" id="toggleSelectModeBtn" aria-label="Vybrat více"><i class="fa-regular fa-square-check"></i></button>
+        </div>
+      </div>
+      <button class="btn btn-sm hidden" id="selectAllBtn">Zaškrtnout vše</button>
+      <div class="add-link-menu-scrim hidden" id="addLinkMenuScrim"></div>
+      <div class="add-link-menu-wrap">
+        <button class="btn btn-accent" id="openAddLinkMenuBtn"><i class="fa-solid fa-cloud-arrow-up"></i> <span class="add-link-btn-label">Přidat</span> <i class="fa-solid fa-chevron-down add-link-btn-chevron"></i></button>
+        <div class="add-link-menu hidden" id="addLinkMenu">
+          <button type="button" class="add-link-item" id="openAddLinkBtn"><i class="fa-solid fa-link add-link-icon"></i><span class="add-link-label">Přidat odkaz</span></button>
+          <button type="button" class="add-link-item hidden" id="openBulkDriveBtn"><i class="fa-brands fa-google-drive add-link-icon"></i><span class="add-link-label">Hromadně ze složky Disku</span></button>
         </div>
       </div>
       <div id="activeFolderBar" class="hidden" style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:13px;">
@@ -822,10 +883,6 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
         <button type="button" class="btn btn-sm" id="bulkMoveBtn"><i class="fa-solid fa-folder"></i> Přesunout</button>
         <button type="button" class="btn btn-sm btn-danger" id="bulkDeleteBtn"><i class="fa-solid fa-trash"></i> Smazat</button>
         <button type="button" class="btn btn-sm btn-ghost" id="bulkCancelBtn">Zrušit výběr</button>
-      </div>
-      <div class="filter-toggle-row">
-        <button type="button" class="filter-toggle-btn" id="toggleTagFilterBtn"><i class="fa-solid fa-tag"></i> Štítky <i class="fa-solid fa-chevron-down"></i></button>
-        <button type="button" class="filter-toggle-btn" id="toggleEquipFilterBtn"><i class="fa-solid fa-wrench"></i> Vybavení <i class="fa-solid fa-chevron-down"></i></button>
       </div>
       <div class="chip-collapse" id="tagFilterCollapse"><div class="chip-row" id="tagFilterRow"></div></div>
       <div class="chip-collapse" id="equipFilterCollapse"><div class="chip-row" id="equipFilterRow"></div></div>
@@ -1528,7 +1585,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-26 00:45";
+const APP_VERSION = "2026-07-26 01:10";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -3383,15 +3440,20 @@ const linkModalBackdrop = document.getElementById("linkModalBackdrop");
 const linkForm = document.getElementById("linkForm");
 let formTags = [], formEquip = [];
 
+function setAddLinkMenuOpen(open) {
+  document.getElementById("addLinkMenu").classList.toggle("hidden", !open);
+  document.getElementById("openAddLinkMenuBtn").classList.toggle("open", open);
+  document.getElementById("addLinkMenuScrim").classList.toggle("show", open);
+}
 document.getElementById("openAddLinkMenuBtn").addEventListener("click", (e) => {
   e.stopPropagation();
-  document.getElementById("addLinkMenu").classList.toggle("hidden");
+  setAddLinkMenuOpen(document.getElementById("addLinkMenu").classList.contains("hidden"));
 });
 document.addEventListener("click", (e) => {
   const menu = document.getElementById("addLinkMenu");
-  if (!menu.classList.contains("hidden") && !e.target.closest(".add-link-menu-wrap")) menu.classList.add("hidden");
+  if (!menu.classList.contains("hidden") && !e.target.closest(".add-link-menu-wrap")) setAddLinkMenuOpen(false);
 });
-document.getElementById("openAddLinkBtn").addEventListener("click", () => { document.getElementById("addLinkMenu").classList.add("hidden"); openLinkModal(null); });
+document.getElementById("openAddLinkBtn").addEventListener("click", () => { setAddLinkMenuOpen(false); openLinkModal(null); });
 document.getElementById("closeLinkModalBtn").addEventListener("click", closeLinkModal);
 // Kliknutí mimo formulář ho záměrně nezavírá (na rozdíl od ostatních oken aplikace) — u
 // rozepsaného přidávání/úpravy videa by to jinak snadno vedlo k nechtěné ztrátě práce.
@@ -6026,7 +6088,7 @@ function openBulkDriveModal() {
 function closeBulkDriveModal() {
   document.getElementById("bulkDriveModalBackdrop").classList.add("hidden");
 }
-document.getElementById("openBulkDriveBtn").addEventListener("click", () => { document.getElementById("addLinkMenu").classList.add("hidden"); openBulkDriveModal(); });
+document.getElementById("openBulkDriveBtn").addEventListener("click", () => { setAddLinkMenuOpen(false); openBulkDriveModal(); });
 document.getElementById("closeBulkDriveModalBtn").addEventListener("click", closeBulkDriveModal);
 document.getElementById("bulkDriveModalBackdrop").addEventListener("click", (e) => {
   if (e.target.id === "bulkDriveModalBackdrop") closeBulkDriveModal();
