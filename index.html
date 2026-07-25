@@ -1417,6 +1417,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
     <button type="button" class="tm-exit" id="tmRotateBtn" aria-label="Na šířku"><i class="fa-solid fa-expand"></i></button>
   </div>
   <div class="tm-progress-bar"><div class="tm-progress-fill" id="tmProgressFill"></div></div>
+  <div id="tmSeamPatch" style="position:absolute;left:0;right:0;background:#F4F5F2;pointer-events:none;z-index:5;display:none;"></div>
   <div class="tm-body" id="tmBody">
     <div class="tm-up-next hidden" id="tmUpNext"></div>
     <div class="tm-col-left">
@@ -1528,7 +1529,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-26 00:20";
+const APP_VERSION = "2026-07-26 00:35";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -4387,6 +4388,20 @@ function updateProgressBar(color) {
     timerEl.style.removeProperty("--tm-timer-bg");
     timerEl.style.removeProperty("--tm-timer-fg");
   }
+  requestAnimationFrame(positionSeamPatch);
+}
+/** Na některých mobilních prohlížečích zůstává přesně na švu mezi obsahem cviku a časovačem
+    "zaseknutý" starý překreslený pruh (potvrzeno diagnostikou — appka/data jsou v pořádku,
+    jde jen o vykreslení telefonu). Místo honění příčiny se přes tohle přesné místo položí
+    čerstvá světlá záplata, co cokoliv pod ní překryje. */
+function positionSeamPatch() {
+  const patch = document.getElementById("tmSeamPatch");
+  const body = document.getElementById("tmBody");
+  if (!patch || !body) return;
+  const seamY = body.getBoundingClientRect().bottom;
+  patch.style.top = (seamY - 16) + "px";
+  patch.style.height = "32px";
+  patch.style.display = "block";
 }
 /** Aplikace vestaví skutečný přehrávač videa (stejná logika jako u detailu videa v Knihovně) —
     u přestávky ani pauzy mezi sériemi aplikace video neukazuje, jen u konkrétního cviku. */
