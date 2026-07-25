@@ -338,6 +338,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   opacity:0;transition:opacity .18s ease;
 }
 .modal-backdrop.modal-anim-in{opacity:1;}
+#changePasswordModalBackdrop{z-index:60;}
 @media(min-width:640px){.modal-backdrop{align-items:center;}}
 .modal{
   background:var(--card);width:100%;max-width:560px;max-height:92vh;overflow-y:auto;
@@ -1480,7 +1481,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-24 01:20";
+const APP_VERSION = "2026-07-24 01:30";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
