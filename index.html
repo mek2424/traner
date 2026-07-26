@@ -211,7 +211,10 @@ button:active{filter:brightness(.9);}
    (podklad, zaoblené spodní rohy, stín) a stejné odsazení do stran jako `main`, aby lícoval se
    zbytkem obsahu pod sebou. */
 #libraryToolbarArea.pinned{
-  background:var(--paper);max-width:960px;margin:0 auto;padding:0 16px 10px;
+  /* Žádný vlastní padding-bottom — `main` má svých 16px nahoře, a když se panel přesune ven z
+     něj (viz JS), přesně tahle mezera zbyde mezi panelem a videi. Kdyby si panel přidal ještě
+     vlastní odsazení navrch, mezera by při zapnutí špendlíku o pár px poskočila. */
+  background:var(--paper);max-width:960px;margin:0 auto;padding:0 16px;
   border-radius:0 0 var(--radius) var(--radius);
   box-shadow:0 4px 8px -4px rgba(0,0,0,.15);
 }
@@ -1657,7 +1660,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-26 03:50";
+const APP_VERSION = "2026-07-26 04:00";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
