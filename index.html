@@ -483,6 +483,11 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 }
 .modal-backdrop.modal-anim-in{opacity:1;}
 #changePasswordModalBackdrop{z-index:60;}
+/* confirmDialog/alertDialog/promptDialog (confirmModalBackdrop) se používá jako obecné potvrzovací
+   okno odkudkoli v appce — i zevnitř jiných už otevřených oken (např. "Odhlásit na dálku" uvnitř
+   Profilu). Musí proto mít vyšší z-index než VŠECHNY ostatní modaly, jinak by (při stejném
+   z-indexu) o pořadí vykreslení rozhodlo jen pořadí v HTML a confirm by skončil vzadu. */
+#confirmModalBackdrop,#promptModalBackdrop{z-index:70;}
 @media(min-width:640px){.modal-backdrop{align-items:center;}}
 .modal{
   background:var(--card);width:100%;max-width:560px;max-height:92vh;overflow-y:auto;
@@ -1668,7 +1673,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-26 19:00";
+const APP_VERSION = "2026-07-26 19:10";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
