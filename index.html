@@ -1666,7 +1666,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-26 18:05";
+const APP_VERSION = "2026-07-26 18:20";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -3360,7 +3360,17 @@ document.getElementById("togglePinToolbarBtn").addEventListener("click", () => {
   localStorage.setItem("trener_toolbar_pinned", pinned ? "0" : "1");
   applyToolbarPinState();
   const heightAfter = document.documentElement.scrollHeight;
-  window.scrollTo(0, Math.max(0, scrollYBefore + (heightAfter - heightBefore)));
+  const targetScroll = Math.max(0, scrollYBefore + (heightAfter - heightBefore));
+  window.scrollTo(0, targetScroll);
+  // Prohlížeč si "přišpendlenou" (position:sticky) pozici horní skupiny někdy přepočítá až při
+  // dalším SKUTEČNÉM scrollu — pokud výše scrollTo() cílí na stejné místo, kde už jsme (žádná
+  // změna výšky), k přepočtu vůbec nedojde a panel zůstane vykreslený podle starého rozložení,
+  // dokud sám neposuneš stránkou. Neviditelný "cukr" o 1px tam a zpátky donutí prohlížeč přepočet
+  // udělat hned, ne až při tvém dalším scrollu.
+  requestAnimationFrame(() => {
+    window.scrollTo(0, Math.max(0, targetScroll - 1));
+    requestAnimationFrame(() => window.scrollTo(0, targetScroll));
+  });
 });
 applyToolbarPinState();
 document.getElementById("toggleSelectModeBtn").addEventListener("click", () => {
