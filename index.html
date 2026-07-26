@@ -79,7 +79,7 @@ body.dark-mode{
 .theme-toggle.active .theme-toggle-knob{left:28px;}
 .theme-toggle.active .theme-toggle-knob .fa-sun{opacity:0;}
 .theme-toggle.active .theme-toggle-knob .fa-moon{opacity:1;}
-*{box-sizing:border-box;}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{margin:0;padding:0;}
 html{overflow-x:hidden;}
 body{
@@ -110,6 +110,12 @@ a{color:var(--court);}
   transition:transform .08s ease, border-color .15s ease, background .15s ease;
 }
 .btn:active{transform:scale(.97);}
+/* Vlastní, appce vlastní dotyková odezva na tlačítkách (náhrada za defaultní systémový modrý
+   "flash", který se nehodil do palety a u kapslí (Štítky/Vybavení) se ošklivě nedokresloval do
+   kraje). filter:brightness ztmaví přesně to, co prohlížeč už tak jako tak vykresluje — respektuje
+   tedy zaoblení i barvu KAŽDÉHO tlačítka samo o sobě, takže funguje spolehlivě všude stejně. */
+button:active{filter:brightness(.9);}
+#openAddLinkMenuBtn:active{filter:none;}
 .btn:focus-visible{outline:2px solid var(--court);outline-offset:2px;}
 .btn-primary{background:var(--court);border-color:var(--court);color:#fff;}
 .btn-primary:hover{background:var(--court-dark);}
@@ -195,8 +201,7 @@ a{color:var(--court);}
 .btn-icon{padding:8px;width:36px;height:36px;}
 .folder-nav-btn{background:var(--court);color:#fff;width:44px;height:44px;font-size:17px;border-color:var(--court);flex-shrink:0;}
 #libraryToolbarArea.pinned{
-  position:sticky;top:98px;z-index:15;background:var(--paper);padding-top:8px;padding-bottom:10px;
-  margin-top:-8px;
+  position:sticky;top:98px;z-index:15;background:var(--paper);padding-bottom:10px;
   box-shadow:0 4px 8px -4px rgba(0,0,0,.15);
 }
 #libraryToolbarArea.pinned .add-link-menu-wrap{margin-bottom:0;}
@@ -1600,7 +1605,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-26 02:00";
+const APP_VERSION = "2026-07-26 02:15";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
