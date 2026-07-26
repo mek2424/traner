@@ -205,12 +205,13 @@ button:active{filter:brightness(.9);}
 .btn-sm{padding:6px 11px;font-size:13px;}
 .btn-icon{padding:8px;width:36px;height:36px;}
 .folder-nav-btn{background:var(--court);color:#fff;width:44px;height:44px;font-size:17px;border-color:var(--court);flex-shrink:0;}
+/* Přišpendlený panel se teď (viz JS) fyzicky přesouvá dovnitř #stickyHeaderGroup — je tam tedy
+   normální, neplovoucí obsah hned pod taby, žádné vlastní position:sticky/top/margin-počty
+   nepotřebuje, a proto s nimi nemůže "nesedět" ani o pixel. Jen dostane zpátky svůj vzhled
+   (podklad, zaoblené spodní rohy, stín) a stejné odsazení do stran jako `main`, aby lícoval se
+   zbytkem obsahu pod sebou. */
 #libraryToolbarArea.pinned{
-  position:sticky;top:98px;z-index:15;background:var(--paper);padding-bottom:10px;
-  /* main{padding:16px} dává panelu 16px "náskok" nad tabem Knihovna/Tréninky — než se scrollem
-     dožene na svou přišpendlenou pozici, chvíli mezi nimi probleskává obsah pod nimi. Tenhle
-     záporný margin tu mezeru rovnou zavře, ať je panel od prvního pixelu scrollu spojený s taby. */
-  margin-top:-16px;
+  background:var(--paper);max-width:960px;margin:0 auto;padding:0 16px 10px;
   border-radius:0 0 var(--radius) var(--radius);
   box-shadow:0 4px 8px -4px rgba(0,0,0,.15);
 }
@@ -1656,7 +1657,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-26 03:35";
+const APP_VERSION = "2026-07-26 03:50";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -3314,34 +3315,29 @@ document.getElementById("toggleFavFilterBtn").addEventListener("click", () => {
 });
 /** Přišpendlení horní lišty a filtrů Knihovny — volitelné, aplikace si to pamatuje i příště
     (localStorage), ať to nemusíš zapínat pokaždé znovu.
-    Panel se lepí přesně pod hlavičku+taby (#stickyHeaderGroup) — jeho "top" se dopočítá ze
-    skutečné vykreslené výšky té skupiny (ne napevno zadané číslo), takže nemůže vzniknout
-    mezera/přesah, ani kdyby se hlavička či taby někdy změnily. */
-function syncPinnedToolbarOffset() {
-  const headerGroup = document.getElementById("stickyHeaderGroup");
-  const toolbar = document.getElementById("libraryToolbarArea");
-  if (headerGroup && toolbar) toolbar.style.top = headerGroup.offsetHeight + "px";
-}
+    Žádné dopočítávání pixelů — když je zapnuté, panel se přesune fyzicky dovnitř
+    #stickyHeaderGroup (stejné místo, kde už bezchybně drží hlavička a taby), takže s nimi
+    automaticky drží jako jeden kus bez jakékoli mezery. Při vypnutí se vrátí zpátky na své
+    původní místo (za značku toolbarPlaceholder). */
+const toolbarPlaceholder = document.createComment("toolbar-placeholder");
+document.getElementById("libraryToolbarArea").before(toolbarPlaceholder);
 function applyToolbarPinState() {
   const pinned = localStorage.getItem("trener_toolbar_pinned") === "1";
-  document.getElementById("libraryToolbarArea").classList.toggle("pinned", pinned);
+  const toolbar = document.getElementById("libraryToolbarArea");
+  const headerGroup = document.getElementById("stickyHeaderGroup");
+  toolbar.classList.toggle("pinned", pinned);
   document.getElementById("togglePinToolbarBtn").classList.toggle("btn-accent", pinned);
-  if (pinned) syncPinnedToolbarOffset();
+  if (pinned) {
+    headerGroup.appendChild(toolbar);
+  } else if (toolbarPlaceholder.parentNode) {
+    toolbarPlaceholder.parentNode.insertBefore(toolbar, toolbarPlaceholder.nextSibling);
+  }
 }
 document.getElementById("togglePinToolbarBtn").addEventListener("click", () => {
   const pinned = localStorage.getItem("trener_toolbar_pinned") === "1";
   localStorage.setItem("trener_toolbar_pinned", pinned ? "0" : "1");
   applyToolbarPinState();
 });
-window.addEventListener("resize", syncPinnedToolbarOffset);
-// Font se dotáhne asynchronně a hlavička se tím může (i jen o pár px) přeskládat — kdyby se
-// tohle stihlo AŽ po prvním výpočtu, panel by se pak lepil na starou, už neplatnou výšku.
-// ResizeObserver hlídá hlavičku průběžně, takže to spolehlivě dorovná úplně vždy.
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(syncPinnedToolbarOffset);
-if (window.ResizeObserver) {
-  const headerGroupEl = document.getElementById("stickyHeaderGroup");
-  if (headerGroupEl) new ResizeObserver(syncPinnedToolbarOffset).observe(headerGroupEl);
-}
 applyToolbarPinState();
 document.getElementById("toggleSelectModeBtn").addEventListener("click", () => {
   selectMode = !selectMode;
