@@ -1666,7 +1666,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-26 18:20";
+const APP_VERSION = "2026-07-26 18:40";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -3334,6 +3334,34 @@ document.getElementById("toggleFavFilterBtn").addEventListener("click", () => {
     #stickyHeaderGroup (stejné místo, kde už bezchybně drží hlavička a taby), takže s nimi
     automaticky drží jako jeden kus bez jakékoli mezery. Při vypnutí se vrátí zpátky na své
     původní místo (za značku toolbarPlaceholder). */
+/* ===== DOČASNÝ diagnostický panel (odstranit, až najdeme příčinu skoku u přišpendlení) =====
+   Malé zelené okénko vlevo dole ukazuje živě, kde přesně je taby/panel a jaká je mezera mezi
+   nimi — pomůže nám přesně změřit tu chybu, místo abychom dál hádali. */
+const pinDebugBox = document.createElement("div");
+pinDebugBox.id = "pinDebugBox";
+pinDebugBox.style.cssText = "position:fixed;bottom:8px;left:8px;z-index:999999;background:rgba(0,0,0,.85);color:#7CFC7C;font:11px/1.45 monospace;padding:8px 10px;border-radius:6px;max-width:360px;white-space:pre;pointer-events:none;";
+document.body.appendChild(pinDebugBox);
+function updatePinDebug() {
+  const ta = document.getElementById("libraryToolbarArea");
+  const sg = document.getElementById("stickyHeaderGroup");
+  const box = document.getElementById("pinDebugBox");
+  if (!ta || !sg || !box) return;
+  const taRect = ta.getBoundingClientRect();
+  const sgRect = sg.getBoundingClientRect();
+  const mainRect = document.querySelector("main").getBoundingClientRect();
+  const cs = getComputedStyle(ta);
+  box.textContent =
+    `pinned=${ta.classList.contains("pinned")}  scrollY=${Math.round(window.scrollY)}\n` +
+    `stickyGroup bottom=${sgRect.bottom.toFixed(1)}\n` +
+    `toolbar     top=${taRect.top.toFixed(1)}  bottom=${taRect.bottom.toFixed(1)}  h=${taRect.height.toFixed(1)}\n` +
+    `main        top=${mainRect.top.toFixed(1)}\n` +
+    `toolbar padTop=${cs.paddingTop} margTop=${cs.marginTop}\n` +
+    `mezera taby->panel = ${(taRect.top - sgRect.bottom).toFixed(1)}px`;
+}
+window.addEventListener("scroll", updatePinDebug, { passive: true });
+window.addEventListener("resize", updatePinDebug);
+setTimeout(updatePinDebug, 400);
+/* ===== konec dočasného panelu ===== */
 const toolbarPlaceholder = document.createComment("toolbar-placeholder");
 document.getElementById("libraryToolbarArea").before(toolbarPlaceholder);
 function applyToolbarPinState() {
@@ -3347,6 +3375,7 @@ function applyToolbarPinState() {
   } else if (toolbarPlaceholder.parentNode) {
     toolbarPlaceholder.parentNode.insertBefore(toolbar, toolbarPlaceholder.nextSibling);
   }
+  updatePinDebug();
 }
 document.getElementById("togglePinToolbarBtn").addEventListener("click", () => {
   // Přesun panelu (a jeho drobná změna výšky kvůli zaoblení/mezeře) o pár px změní celkovou
@@ -3369,7 +3398,8 @@ document.getElementById("togglePinToolbarBtn").addEventListener("click", () => {
   // udělat hned, ne až při tvém dalším scrollu.
   requestAnimationFrame(() => {
     window.scrollTo(0, Math.max(0, targetScroll - 1));
-    requestAnimationFrame(() => window.scrollTo(0, targetScroll));
+    updatePinDebug();
+    requestAnimationFrame(() => { window.scrollTo(0, targetScroll); updatePinDebug(); });
   });
 });
 applyToolbarPinState();
