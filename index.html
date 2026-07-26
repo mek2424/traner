@@ -1666,7 +1666,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-26 17:45";
+const APP_VERSION = "2026-07-26 18:05";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -3349,9 +3349,18 @@ function applyToolbarPinState() {
   }
 }
 document.getElementById("togglePinToolbarBtn").addEventListener("click", () => {
+  // Přesun panelu (a jeho drobná změna výšky kvůli zaoblení/mezeře) o pár px změní celkovou
+  // výšku dokumentu NAD místem, kde zrovna scrolluješ — prohlížeč scrollY sám neopraví, takže by
+  // se ti obsah pod panelem viditelně "poskočil". Tady si proto před přesunem změříme výšku
+  // dokumentu, po přesunu ji změříme znovu a o přesně ten rozdíl dorovnáme scroll — takže se
+  // vizuálně nic nehne, ať byl rozdíl ve výšce jakýkoli.
+  const scrollYBefore = window.scrollY;
+  const heightBefore = document.documentElement.scrollHeight;
   const pinned = localStorage.getItem("trener_toolbar_pinned") === "1";
   localStorage.setItem("trener_toolbar_pinned", pinned ? "0" : "1");
   applyToolbarPinState();
+  const heightAfter = document.documentElement.scrollHeight;
+  window.scrollTo(0, Math.max(0, scrollYBefore + (heightAfter - heightBefore)));
 });
 applyToolbarPinState();
 document.getElementById("toggleSelectModeBtn").addEventListener("click", () => {
