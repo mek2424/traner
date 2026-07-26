@@ -207,6 +207,10 @@ button:active{filter:brightness(.9);}
 .folder-nav-btn{background:var(--court);color:#fff;width:44px;height:44px;font-size:17px;border-color:var(--court);flex-shrink:0;}
 #libraryToolbarArea.pinned{
   position:sticky;top:98px;z-index:15;background:var(--paper);padding-bottom:10px;
+  /* main{padding:16px} dává panelu 16px "náskok" nad tabem Knihovna/Tréninky — než se scrollem
+     dožene na svou přišpendlenou pozici, chvíli mezi nimi probleskává obsah pod nimi. Tenhle
+     záporný margin tu mezeru rovnou zavře, ať je panel od prvního pixelu scrollu spojený s taby. */
+  margin-top:-16px;
   border-radius:0 0 var(--radius) var(--radius);
   box-shadow:0 4px 8px -4px rgba(0,0,0,.15);
 }
@@ -306,10 +310,15 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 /* ---------- Toast ---------- */
 #toast{
   position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);
-  background:var(--ink);color:var(--paper);padding:10px 18px;border-radius:999px;font-size:13px;
+  background:var(--ink);color:var(--paper);padding:9px 18px 9px 14px;border-radius:999px;font-size:13px;
   opacity:0;pointer-events:none;transition:opacity .2s ease, transform .2s ease;z-index:100;box-shadow:var(--shadow);
+  display:inline-flex;align-items:center;gap:9px;max-width:calc(100vw - 32px);
 }
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast-icon{
+  width:20px;height:20px;border-radius:50%;background:var(--court);display:flex;align-items:center;justify-content:center;
+  font-size:10px;color:#fff;flex-shrink:0;
+}
 
 /* ---------- Library toolbar ---------- */
 .toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;align-items:center;}
@@ -322,6 +331,11 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 }
 .chip.active{background:var(--court);border-color:var(--court);color:#fff;}
 .empty-state{text-align:center;padding:60px 20px;color:var(--ink-faint);}
+.empty-state-icon{
+  width:56px;height:56px;border-radius:50%;background:var(--card);border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:22px;color:var(--ink-faint);
+  box-shadow:var(--shadow);
+}
 
 .subtabs{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--line);}
 .pending-approval-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px;}
@@ -429,9 +443,12 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .card:active{transform:scale(.98);}
 .card [data-action="open-detail"]{cursor:pointer;}
 .card-thumb{
-  aspect-ratio:16/9;background:var(--court) center/cover no-repeat;position:relative;
-  display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.85);font-size:11px;
+  aspect-ratio:16/9;background:linear-gradient(135deg,var(--court) 0%,var(--court-dark) 100%) center/cover no-repeat;
+  position:relative;display:flex;flex-direction:column;gap:4px;align-items:center;justify-content:center;
+  color:rgba(255,255,255,.85);font-size:11px;
 }
+.thumb-empty-icon{font-size:22px;color:rgba(255,255,255,.55);}
+.thumb-empty-label{font-size:11px;font-weight:600;color:rgba(255,255,255,.8);letter-spacing:.02em;}
 .card-thumb .platform-badge{
   position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;
   width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:50%;
@@ -495,7 +512,9 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .duplicate-warning i{color:var(--warn-icon);}
 .duplicate-warning span{flex:1;min-width:150px;}
 .thumb-preview{width:100%;aspect-ratio:16/9;background:var(--paper);border:1px dashed var(--line);border-radius:var(--radius-sm);
-  display:flex;align-items:center;justify-content:center;color:var(--ink-faint);font-size:12px;margin-bottom:8px;background-size:cover;background-position:center;overflow:hidden;}
+  display:flex;flex-direction:column;gap:4px;align-items:center;justify-content:center;color:var(--ink-faint);font-size:12px;margin-bottom:8px;background-size:cover;background-position:center;overflow:hidden;}
+.thumb-preview .thumb-empty-icon{color:var(--ink-faint);font-size:20px;}
+.thumb-preview .thumb-empty-label{color:var(--ink-faint);font-size:12px;font-weight:600;}
 .thumb-suggestions-row{display:flex;gap:8px;justify-content:center;}
 .thumb-suggestion-item{
   flex:0 1 104px;min-width:0;height:72px;border-radius:var(--radius-sm);border:2px solid var(--line);cursor:pointer;
@@ -1016,6 +1035,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
         <div>
           <div class="sequence" id="sequenceList"></div>
           <div id="sequenceEmpty" class="empty-state hidden">
+            <div class="empty-state-icon"><i class="fa-solid fa-hand-pointer"></i></div>
             <h3>Zatím prázdno</h3>
             <p>Přidej první video z knihovny vlevo.</p>
           </div>
@@ -1053,7 +1073,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
         <span>Tohle video už v knihovně možná je: <strong id="duplicateWarningTitle"></strong></span>
         <button type="button" class="btn btn-sm" id="openDuplicateBtn">Otevřít existující</button>
       </div>
-      <div class="thumb-preview" id="thumbPreview">bez náhledu</div>
+      <div class="thumb-preview" id="thumbPreview"><i class="fa-solid fa-clapperboard thumb-empty-icon"></i><span class="thumb-empty-label">Bez náhledu</span></div>
       <div class="thumb-suggestions hidden" id="thumbSuggestions"></div>
       <div class="thumb-upload-row">
         <label class="btn btn-sm" for="thumbFileInput"><i class="fa-solid fa-image"></i> Nahrát vlastní náhled</label>
@@ -1636,7 +1656,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-26 03:05";
+const APP_VERSION = "2026-07-26 03:35";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -2035,7 +2055,7 @@ document.querySelectorAll(".modal-backdrop").forEach(backdrop => {
 
 function toast(msg, durationMs = 2200) {
   const t = document.getElementById("toast");
-  t.textContent = msg;
+  t.innerHTML = `<span class="toast-icon"><i class="fa-solid fa-check"></i></span>${esc(msg)}`;
   t.classList.add("show");
   clearTimeout(toast._tm);
   toast._tm = setTimeout(() => t.classList.remove("show"), durationMs);
@@ -3161,6 +3181,12 @@ function getFilteredLibraryItems() {
 }
 
 const PLATFORM_ICONS = { youtube: "fa-brands fa-youtube", facebook: "fa-brands fa-facebook", drive: "fa-brands fa-google-drive", instagram: "fa-brands fa-instagram", tiktok: "fa-brands fa-tiktok", file: "fa-solid fa-film", other: "fa-solid fa-link" };
+const NO_THUMB_HTML = '<i class="fa-solid fa-clapperboard thumb-empty-icon"></i><span class="thumb-empty-label">Bez náhledu</span>';
+/** Vrátí hotové HTML pro "prázdný stav" (kolečko s ikonou + nadpis + text) — používá se pro
+    prázdnou knihovnu, prázdné tréninky, prázdný koš apod., ať to vždycky vypadá stejně. */
+function emptyStateHtml(icon, title, text) {
+  return `<div class="empty-state"><div class="empty-state-icon"><i class="fa-solid ${esc(icon)}"></i></div><h3>${title}</h3><p>${text}</p></div>`;
+}
 
 /** Spočítá, kolikrát se který video (podle ID) objevuje napříč VŠEMI tréninky (i archivovanými
     a cizími) — aplikace to ukazuje jen jako tichou, informativní hodnotu na kartě, nijak to
@@ -3196,9 +3222,9 @@ function renderLibrary() {
   if (!items.length) {
     const q = document.getElementById("librarySearch").value.trim().toLowerCase();
     const msg = q === "pivo"
-      ? { h: "Tohle aplikace nenajde.", p: "Ale zasloužil by sis ho. Tak tady je 🍺." }
-      : { h: "Zatím žádná videa", p: "Přidej první odkaz tlačítkem nahoře, nebo zkus uvolnit filtry." };
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><h3>${msg.h}</h3><p>${msg.p}</p></div>`;
+      ? { h: "Tohle aplikace nenajde.", p: "Ale zasloužil by sis ho. Tak tady je 🍺.", icon: "fa-mug-saucer" }
+      : { h: "Zatím žádná videa", p: "Přidej první odkaz tlačítkem nahoře, nebo zkus uvolnit filtry.", icon: "fa-video-slash" };
+    grid.innerHTML = `<div style="grid-column:1/-1;">${emptyStateHtml(msg.icon, msg.h, msg.p)}</div>`;
     return;
   }
   grid.innerHTML = items.map(item => {
@@ -3214,7 +3240,7 @@ function renderLibrary() {
       <button type="button" class="card-select-box ${selectMode ? "" : "hidden"} ${isSelected ? "checked" : ""}" data-action="toggle-select" aria-label="Vybrat">${isSelected ? '<i class="fa-solid fa-check"></i>' : ""}</button>
       <button type="button" class="card-menu-btn" data-action="open-menu" aria-label="Menu"><i class="fa-solid fa-ellipsis-vertical"></i></button>
       <div class="card-thumb" data-action="open-detail" style="${thumbUrl ? `background-image:url('${esc(thumbUrl)}')` : ""}">
-        ${thumbUrl ? "" : "bez náhledu"}
+        ${thumbUrl ? "" : NO_THUMB_HTML}
         ${isEditor() ? `<button type="button" class="card-fav-btn ${item.favorite ? "on" : ""}" data-action="toggle-fav" aria-label="Oblíbené"><i class="fa-solid fa-star"></i></button>` : ""}
         <span class="platform-badge"><i class="${PLATFORM_ICONS[item.platform] || PLATFORM_ICONS.other}"></i></span>
       </div>
@@ -3555,7 +3581,7 @@ function openLinkModal(id) {
   document.getElementById("linkLongDesc").value = item ? item.longDesc : "";
   document.getElementById("linkNote").value = (item && item.notesByCoach && item.notesByCoach[uidCurrent]) ? item.notesByCoach[uidCurrent].text : "";
   document.getElementById("thumbPreview").style.backgroundImage = item && resolveThumbnailUrl(item) ? `url('${resolveThumbnailUrl(item)}')` : "none";
-  document.getElementById("thumbPreview").textContent = item && resolveThumbnailUrl(item) ? "" : "bez náhledu";
+  document.getElementById("thumbPreview").innerHTML = item && resolveThumbnailUrl(item) ? "" : NO_THUMB_HTML;
   document.getElementById("thumbPreview").dataset.thumb = item ? (item.thumbnail || "") : "";
   document.getElementById("thumbPreview").dataset.platform = item ? item.platform : "";
   document.getElementById("thumbPreview").dataset.videoId = item ? (item.videoId || "") : "";
@@ -4283,14 +4309,14 @@ function renderTrainingsList() {
     list.innerHTML = mineList.length
       ? mineList.map(t => renderTrainingRow(t, true)).join("")
       : (mineBase.length
-        ? `<div class="empty-state"><h3>Nic nesedí</h3><p>Zkus upravit hledání nebo uvolnit štítky.</p></div>`
+        ? emptyStateHtml("fa-magnifying-glass", "Nic nesedí", "Zkus upravit hledání nebo uvolnit štítky.")
         : (showingArchivedTrainings
-          ? `<div class="empty-state"><h3>Archiv je prázdný</h3><p>Archivované tréninky se objeví tady.</p></div>`
-          : `<div class="empty-state"><h3>Zatím žádné tréninky</h3><p>Založ první tlačítkem nahoře.</p></div>`));
+          ? emptyStateHtml("fa-box-archive", "Archiv je prázdný", "Archivované tréninky se objeví tady.")
+          : emptyStateHtml("fa-clipboard-list", "Zatím žádné tréninky", "Založ první tlačítkem nahoře.")));
   } else if (!othersList.length) {
     list.innerHTML = othersBase.length
-      ? `<div class="empty-state"><h3>Nic nesedí</h3><p>Zkus upravit hledání nebo uvolnit štítky.</p></div>`
-      : `<div class="empty-state"><h3>Tržiště je zatím prázdné</h3><p>Jakmile někdo zveřejní svůj trénink, objeví se tady.</p></div>`;
+      ? emptyStateHtml("fa-magnifying-glass", "Nic nesedí", "Zkus upravit hledání nebo uvolnit štítky.")
+      : emptyStateHtml("fa-store", "Tržiště je zatím prázdné", "Jakmile někdo zveřejní svůj trénink, objeví se tady.");
   } else {
     const groups = {};
     othersList.forEach(t => {
@@ -6080,7 +6106,7 @@ function renderTrashList() {
     .filter(([, it]) => it.deletedAt)
     .sort(([, a], [, b]) => b.deletedAt - a.deletedAt);
   if (!trashed.length) {
-    wrap.innerHTML = `<div class="empty-state"><h3>Koš je prázdný</h3><p>Smazaná videa se objeví tady.</p></div>`;
+    wrap.innerHTML = emptyStateHtml("fa-trash-can", "Koš je prázdný", "Smazaná videa se objeví tady.");
     return;
   }
   wrap.innerHTML = trashed.map(([id, it]) => {
