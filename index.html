@@ -195,7 +195,8 @@ a{color:var(--court);}
 .btn-icon{padding:8px;width:36px;height:36px;}
 .folder-nav-btn{background:var(--court);color:#fff;width:44px;height:44px;font-size:17px;border-color:var(--court);flex-shrink:0;}
 #libraryToolbarArea.pinned{
-  position:sticky;top:98px;z-index:15;background:var(--paper);padding-top:8px;margin-top:-8px;
+  position:sticky;top:98px;z-index:15;background:var(--paper);padding-top:8px;padding-bottom:14px;
+  margin-top:-8px;margin-bottom:-14px;
   box-shadow:0 4px 8px -4px rgba(0,0,0,.15);
 }
 #togglePinToolbarBtn.btn-accent{background:var(--chalk);border-color:var(--chalk);color:#fff;}
@@ -1598,7 +1599,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-26 01:45";
+const APP_VERSION = "2026-07-26 01:55";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
