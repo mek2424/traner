@@ -340,12 +340,30 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .filter-toggle-btn.open i.fa-chevron-down{transform:rotate(180deg);}
 .chip-collapse{max-height:0;overflow:hidden;transition:max-height .2s ease, margin-bottom .2s ease;margin-bottom:0;}
 .chip-collapse.open{max-height:220px;overflow-y:auto;margin-bottom:10px;}
+/* Štítky/Vybavení — sjednocená "kartička" (stejná rodina jako menu tří teček), napevno 2 řádky,
+   přebytek jede svisle (stejný směr jako scroll celé appky, žádné vodorovné "hledání" prstem). */
+.chip-collapse.chip-panel-card.open{max-height:96px;}
+.chip-panel-inner{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:var(--shadow);padding:8px;}
+.chip-panel-scroll{max-height:76px;overflow-y:auto;padding-right:2px;margin-bottom:0 !important;}
 
 #bulkActionBar{
   display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--paper);border:1px solid var(--line);
   border-radius:var(--radius-sm);padding:9px 12px;margin-bottom:10px;font-size:13px;font-weight:600;
 }
 #bulkActionBar.hidden{display:none;}
+@media(max-width:640px){
+  /* Stejně jako tlačítko Přidat — na mobilu ať lišta při výběru videí nezabírá místo v toku
+     panelu (netlačí zbytek dolů), ale plave nad videi jako kompaktní pruh s ikonkami. */
+  @keyframes bulkBarIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+  #bulkActionBar:not(.hidden){
+    position:fixed;left:12px;right:12px;bottom:16px;z-index:26;
+    background:var(--card);border-radius:999px;box-shadow:var(--shadow);
+    padding:8px 8px 8px 16px;margin-bottom:0;animation:bulkBarIn .16s ease;
+  }
+  #bulkActionBar #bulkCount{flex:1;min-width:0;}
+  #bulkActionBar .btn{width:34px;height:34px;padding:0;border-radius:50%;background:var(--paper);border:none;}
+  #bulkActionBar .bulk-btn-label{display:none;}
+}
 
 .card-select-box{
   position:absolute;top:8px;left:8px;z-index:5;width:22px;height:22px;border-radius:var(--radius-sm);
@@ -368,7 +386,9 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .card-context-menu{
   position:absolute;z-index:60;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);
   box-shadow:var(--shadow);min-width:170px;overflow:hidden;
+  transform-origin:top right;animation:contextMenuIn .12s ease;
 }
+@keyframes contextMenuIn{from{opacity:0;transform:scale(.94) translateY(-4px);}to{opacity:1;transform:scale(1) translateY(0);}}
 .card-context-menu button{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:10px 14px;background:none;border:none;font-size:13.5px;color:var(--ink);}
 .card-context-menu button:hover{background:var(--paper);}
 .card-context-menu button.danger{color:var(--danger);}
@@ -897,16 +917,16 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
         <span>Složka: <strong id="activeFolderLabel"></strong></span>
         <button type="button" class="manage-link" id="clearFolderFilterBtn">zrušit filtr</button>
       </div>
-      <div class="chip-collapse" id="tagFilterCollapse"><div class="chip-row" id="tagFilterRow"></div></div>
-      <div class="chip-collapse" id="equipFilterCollapse"><div class="chip-row" id="equipFilterRow"></div></div>
+      <div class="chip-collapse chip-panel-card" id="tagFilterCollapse"><div class="chip-panel-inner"><div class="chip-row chip-panel-scroll" id="tagFilterRow"></div></div></div>
+      <div class="chip-collapse chip-panel-card" id="equipFilterCollapse"><div class="chip-panel-inner"><div class="chip-row chip-panel-scroll" id="equipFilterRow"></div></div></div>
       <button type="button" class="manage-link hidden" id="clearTagEquipFilterBtn" style="margin-bottom:10px;">Zrušit vše (štítky a vybavení)</button>
       <button class="btn btn-sm hidden" id="selectAllBtn">Zaškrtnout vše</button>
       <div id="bulkActionBar" class="hidden">
         <span id="bulkCount">0 vybráno</span>
-        <button type="button" class="btn btn-sm" id="bulkTagBtn"><i class="fa-solid fa-tag"></i> Přidat štítek/vybavení</button>
-        <button type="button" class="btn btn-sm" id="bulkMoveBtn"><i class="fa-solid fa-folder"></i> Přesunout</button>
-        <button type="button" class="btn btn-sm btn-danger" id="bulkDeleteBtn"><i class="fa-solid fa-trash"></i> Smazat</button>
-        <button type="button" class="btn btn-sm btn-ghost" id="bulkCancelBtn">Zrušit výběr</button>
+        <button type="button" class="btn btn-sm" id="bulkTagBtn"><i class="fa-solid fa-tag"></i> <span class="bulk-btn-label">Přidat štítek/vybavení</span></button>
+        <button type="button" class="btn btn-sm" id="bulkMoveBtn"><i class="fa-solid fa-folder"></i> <span class="bulk-btn-label">Přesunout</span></button>
+        <button type="button" class="btn btn-sm btn-danger" id="bulkDeleteBtn"><i class="fa-solid fa-trash"></i> <span class="bulk-btn-label">Smazat</span></button>
+        <button type="button" class="btn btn-sm btn-ghost" id="bulkCancelBtn"><i class="fa-solid fa-xmark"></i> <span class="bulk-btn-label">Zrušit výběr</span></button>
       </div>
       <div class="add-link-menu-scrim" id="addLinkMenuScrim"></div>
       <div class="add-link-menu-wrap">
@@ -942,7 +962,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
       <div class="filter-toggle-row">
         <button type="button" class="filter-toggle-btn" id="toggleTrainingsTagFilterBtn"><i class="fa-solid fa-tag"></i> Štítky <i class="fa-solid fa-chevron-down"></i></button>
       </div>
-      <div class="chip-collapse" id="trainingsTagFilterCollapse"><div class="chip-row" id="trainingsTagFilterRow"></div></div>
+      <div class="chip-collapse chip-panel-card" id="trainingsTagFilterCollapse"><div class="chip-panel-inner"><div class="chip-row chip-panel-scroll" id="trainingsTagFilterRow"></div></div></div>
       <div id="trainingsList"></div>
       <button type="button" class="manage-link hidden" id="toggleArchiveViewBtn" style="margin-top:14px;"></button>
     </section>
@@ -986,8 +1006,8 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
               <button type="button" class="filter-toggle-btn" id="pickerToggleEquipFilterBtn"><i class="fa-solid fa-wrench"></i> Vybavení <i class="fa-solid fa-chevron-down"></i></button>
               <button type="button" class="manage-link" id="pickerManageTagsBtn" style="margin-left:auto;"><i class="fa-solid fa-code-merge"></i> Sloučit</button>
             </div>
-            <div class="chip-collapse" id="pickerTagFilterCollapse"><div class="chip-row" id="pickerTagFilterRow"></div></div>
-            <div class="chip-collapse" id="pickerEquipFilterCollapse"><div class="chip-row" id="pickerEquipFilterRow"></div></div>
+            <div class="chip-collapse chip-panel-card" id="pickerTagFilterCollapse"><div class="chip-panel-inner"><div class="chip-row chip-panel-scroll" id="pickerTagFilterRow"></div></div></div>
+            <div class="chip-collapse chip-panel-card" id="pickerEquipFilterCollapse"><div class="chip-panel-inner"><div class="chip-row chip-panel-scroll" id="pickerEquipFilterRow"></div></div></div>
           </div>
           <div class="picker-list" id="pickerList"></div>
         </div>
@@ -1614,7 +1634,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-26 02:30";
+const APP_VERSION = "2026-07-26 02:50";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -3265,17 +3285,27 @@ document.getElementById("toggleFavFilterBtn").addEventListener("click", () => {
   renderLibrary();
 });
 /** Přišpendlení horní lišty a filtrů Knihovny — volitelné, aplikace si to pamatuje i příště
-    (localStorage), ať to nemusíš zapínat pokaždé znovu. */
+    (localStorage), ať to nemusíš zapínat pokaždé znovu.
+    Panel se lepí přesně pod hlavičku+taby (#stickyHeaderGroup) — jeho "top" se dopočítá ze
+    skutečné vykreslené výšky té skupiny (ne napevno zadané číslo), takže nemůže vzniknout
+    mezera/přesah, ani kdyby se hlavička či taby někdy změnily. */
+function syncPinnedToolbarOffset() {
+  const headerGroup = document.getElementById("stickyHeaderGroup");
+  const toolbar = document.getElementById("libraryToolbarArea");
+  if (headerGroup && toolbar) toolbar.style.top = headerGroup.offsetHeight + "px";
+}
 function applyToolbarPinState() {
   const pinned = localStorage.getItem("trener_toolbar_pinned") === "1";
   document.getElementById("libraryToolbarArea").classList.toggle("pinned", pinned);
   document.getElementById("togglePinToolbarBtn").classList.toggle("btn-accent", pinned);
+  if (pinned) syncPinnedToolbarOffset();
 }
 document.getElementById("togglePinToolbarBtn").addEventListener("click", () => {
   const pinned = localStorage.getItem("trener_toolbar_pinned") === "1";
   localStorage.setItem("trener_toolbar_pinned", pinned ? "0" : "1");
   applyToolbarPinState();
 });
+window.addEventListener("resize", syncPinnedToolbarOffset);
 applyToolbarPinState();
 document.getElementById("toggleSelectModeBtn").addEventListener("click", () => {
   selectMode = !selectMode;
