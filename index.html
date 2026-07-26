@@ -638,7 +638,6 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   padding-top:calc(14px + env(safe-area-inset-top));flex-shrink:0;background:#F4F5F2;
 }
 .tm-exit{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.06);border:none;color:#5B6472;font-size:18px;display:flex;align-items:center;justify-content:center;}
-#tmRotateBtn.active{background:var(--court);color:#fff;}
 .tm-progress{font-family:var(--font-display);font-size:18px;color:#5B6472;letter-spacing:.03em;}
 .tm-progress-bar{height:9px;background:rgba(27,36,48,.08);flex-shrink:0;}
 .tm-progress-fill{height:100%;background:var(--court);transition:width .3s ease,background .3s ease;}
@@ -682,7 +681,6 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   .tm-col-left{margin-top:0;}
   .tm-video-wrap{max-width:100%;}
   .tm-desc,.tm-cue,.tm-note{max-width:100%;}
-  #tmRotateBtn{display:none;}
   .tm-up-next{
     position:fixed;top:calc(14px + env(safe-area-inset-top));right:70px;left:auto;
     transform:translateX(-100vw);transition:transform .6s ease,opacity .3s ease;
@@ -1559,7 +1557,6 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   <div class="tm-header">
     <button type="button" class="tm-exit" id="tmExitBtn" aria-label="Zavřít"><i class="fa-solid fa-xmark"></i></button>
     <div class="tm-progress" id="tmProgress">1 / 1</div>
-    <button type="button" class="tm-exit" id="tmRotateBtn" aria-label="Na šířku"><i class="fa-solid fa-expand"></i></button>
   </div>
   <div class="tm-progress-bar"><div class="tm-progress-fill" id="tmProgressFill"></div></div>
   <div id="tmSeamPatch" style="position:absolute;left:0;right:0;background:#F4F5F2;pointer-events:none;z-index:5;display:none;"></div>
@@ -1673,7 +1670,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-26 19:10";
+const APP_VERSION = "2026-07-26 20:00";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -4441,6 +4438,10 @@ document.getElementById("startTrainingModeBtn").addEventListener("click", () => 
   void tmView.offsetWidth;
   tmView.classList.add("view-anim-in");
   renderTrainingModeItem();
+  // Na úzké obrazovce na výšku appka teď rovnou vynutí šířku sama, žádné dobrovolné tlačítko
+  // na výběr — širokou obrazovku (tablet/PC) tohle vůbec nezajímá, tam běžný layout na šířku
+  // zvládne responzivně samo, bez jakéhokoli otáčení.
+  if (shouldForceTrainingLandscape()) enterTrainingLandscape();
   // Na některých mobilních prohlížečích zůstane po zobrazení téhle celoobrazovkové vrstvy
   // někde "zamrzlý" starý překreslený pruh, i když už appka pod ním kreslí správně (ověřeno
   // diagnostikou — nejde o špatná data/styl, jen o zaseknuté překreslení). Krátké bliknutí
@@ -4761,6 +4762,10 @@ function renderTrainingModeFinished() {
   document.getElementById("tmRepsDisplay").classList.add("hidden");
   document.getElementById("tmBody").classList.add("tm-solo");
   document.getElementById("tmBody").style.background = "var(--court)";
+  // Poslední obrazovka je celá zelená (bez toho světlého pozadí, na které je záplata švu níž
+  // vyladěná) — bez schování by na ní ta záplata (viz positionSeamPatch) prosvítala jako
+  // cizí světlý pruh, protože jinou barvu, než na jaké vznikla, nezná.
+  document.getElementById("tmSeamPatch").style.display = "none";
   document.getElementById("tmProgressFill").style.width = "100%";
   document.getElementById("tmProgressFill").style.background = "var(--court)";
   document.getElementById("tmPartLabel").textContent = "";
@@ -4873,11 +4878,18 @@ function closeTrainingMode() {
 }
 document.getElementById("tmExitBtn").addEventListener("click", closeTrainingMode);
 
-/** Tlačítko "na šířku" nejdřív zkusí pořádné API (fullscreen + zamčení orientace) — to na
-    Chromu funguje dobře. Firefox pro Android ale zamykání orientace v prohlížeči má defaultně
-    vypnuté a rovnou to odmítne, takže aplikace pro ten případ použije záložní řešení: obsah rovnou
-    otočí přes CSS transform a člověka aplikace vyzve, ať telefon otočí fyzicky sám — vizuálně to
-    pak sedí, i když orientaci sám prohlížeč nezamkl. */
+/** Tréninkový režim je teď vždy na šířku — žádné dobrovolné tlačítko, appka si o otočení řekne
+    sama, hned při spuštění (viz shouldForceTrainingLandscape). Nejdřív zkusí pořádné API
+    (fullscreen + zamčení orientace) — to na Chromu funguje dobře. Firefox pro Android ale
+    zamykání orientace v prohlížeči má defaultně vypnuté a rovnou to odmítne, takže aplikace pro
+    ten případ použije záložní řešení: obsah rovnou otočí přes CSS transform a člověka vyzve, ať
+    telefon otočí fyzicky sám — vizuálně to pak sedí, i když orientaci sám prohlížeč nezamkl. */
+/** Otočení má smysl vynucovat jen na úzké obrazovce na výšku (telefon) — širokou (tablet/PC)
+    appka zvládne responzivně sama, přes běžnou @media(min-width/orientation) v CSS, bez
+    jakéhokoli otáčení. */
+function shouldForceTrainingLandscape() {
+  return window.innerWidth < 860 && window.innerHeight > window.innerWidth;
+}
 let tmLandscapeForced = false;
 async function enterTrainingLandscape() {
   const el = document.getElementById("trainingModeView");
@@ -4893,8 +4905,6 @@ async function enterTrainingLandscape() {
     }
   } catch (e) { /* nepodporováno (typicky Firefox pro Android) — použije se CSS varianta */ }
   tmLandscapeForced = true;
-  document.getElementById("tmRotateBtn").classList.add("active");
-  document.getElementById("tmRotateBtn").innerHTML = '<i class="fa-solid fa-compress"></i>';
   if (!locked) {
     el.classList.add("tm-forced-landscape");
     toast("Teď telefon otoč na šířku 📱", 4000, "info");
@@ -4905,8 +4915,6 @@ function exitTrainingLandscape() {
   if (!tmLandscapeForced) return;
   tmLandscapeForced = false;
   document.getElementById("trainingModeView").classList.remove("tm-forced-landscape");
-  document.getElementById("tmRotateBtn").classList.remove("active");
-  document.getElementById("tmRotateBtn").innerHTML = '<i class="fa-solid fa-expand"></i>';
   try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (e) {}
   if (document.fullscreenElement) { try { document.exitFullscreen(); } catch (e) {} }
   showTrainingModeVideo(currentTrainingModeLib());
@@ -4921,9 +4929,6 @@ function currentTrainingModeLib() {
   }
   return state.library[row.videoId];
 }
-document.getElementById("tmRotateBtn").addEventListener("click", () => {
-  if (tmLandscapeForced) exitTrainingLandscape(); else enterTrainingLandscape();
-});
 // zachytí, když člověk fullscreen zavře gestem nebo tlačítkem prohlížeče, ne naším tlačítkem
 document.addEventListener("fullscreenchange", () => {
   if (!document.fullscreenElement && tmLandscapeForced) exitTrainingLandscape();
