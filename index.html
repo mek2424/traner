@@ -152,6 +152,10 @@ button:active{filter:brightness(.9);}
 .icon-group .btn-icon{border:none;border-radius:0;background:none;}
 .icon-group .btn-icon + .btn-icon{border-left:1px solid var(--line);}
 .icon-group .btn-icon.btn-accent{background:var(--chalk);border-color:var(--chalk);color:#fff;}
+/* Segmenty spojené v kapsli (Složky/Štítky/Vybavení, ikonky) nesmí při doteku měnit velikost —
+   zmenšení jednoho segmentu odhalovalo mezeru/okraj vedle sousedů a "vylézalo" to ven z kapsle.
+   Ztmavení (viz button:active filter) navíc funguje samo o sobě, transform tu není potřeba. */
+.combo-pill .combo-seg:active,.icon-group .btn-icon:active{transform:none;}
 #selectAllBtn{display:table;margin:0 0 10px auto;}
 @media(min-width:641px){
   .combo-pill .folder-nav-btn{width:56px;}
@@ -270,9 +274,12 @@ button:active{filter:brightness(.9);}
 
 /* ---------- App shell ---------- */
 #app{min-height:100vh;display:flex;flex-direction:column;}
+/* Hlavička a lišta Knihovna/Tréninky jedou jako JEDEN přišpendlený blok — díky tomu spolu drží
+   vždy přesně na milimetr, ať je hlavička vysoká jakkoli, a nemůže mezi nimi při scrollu na chvíli
+   probleknout mezera (dřív měl každý svůj vlastní "top", který musel sedět na pixel přesně). */
+#stickyHeaderGroup{position:sticky;top:0;z-index:20;}
 header.topbar{
   background:var(--court);color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;
-  position:sticky;top:0;z-index:20;
 }
 .topbar-title-group{display:flex;align-items:center;gap:10px;}
 .club-logo{width:34px;height:34px;border-radius:50%;flex-shrink:0;}
@@ -286,7 +293,7 @@ header.topbar{
   display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:14px;
   padding:0 !important;flex-shrink:0;
 }
-nav.tabs{display:flex;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:52px;z-index:19;}
+nav.tabs{display:flex;background:var(--card);border-bottom:1px solid var(--line);}
 nav.tabs button{
   flex:1;padding:13px 8px;background:none;border:none;font-size:14px;font-weight:600;color:var(--ink-faint);
   border-bottom:3px solid transparent;
@@ -838,6 +845,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 
 <!-- ===================== APP ===================== -->
 <div id="app" class="hidden">
+  <div id="stickyHeaderGroup">
   <header class="topbar">
     <div class="topbar-title-group">
       <img src="club-logo.png" alt="Znak SK Meteor Praha" class="club-logo">
@@ -854,6 +862,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
     <button data-view="library" class="active"><i class="fa-solid fa-video"></i> Knihovna</button>
     <button data-view="trainings"><i class="fa-solid fa-list-check"></i> Tréninky</button>
   </nav>
+  </div>
 
   <main>
     <!-- ---------- LIBRARY VIEW ---------- -->
@@ -1605,7 +1614,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-26 02:15";
+const APP_VERSION = "2026-07-26 02:30";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
