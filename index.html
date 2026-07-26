@@ -1559,7 +1559,6 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
     <div class="tm-progress" id="tmProgress">1 / 1</div>
   </div>
   <div class="tm-progress-bar"><div class="tm-progress-fill" id="tmProgressFill"></div></div>
-  <div id="tmSeamPatch" style="position:absolute;left:0;right:0;background:#F4F5F2;pointer-events:none;z-index:5;display:none;"></div>
   <div class="tm-body" id="tmBody">
     <div class="tm-up-next hidden" id="tmUpNext"></div>
     <div class="tm-col-left">
@@ -1670,7 +1669,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-26 20:00";
+const APP_VERSION = "2026-07-26 20:15";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -4527,13 +4526,7 @@ function showUpNextPanel(labelOverride) {
   el.style.borderLeftColor = color;
   el.innerHTML = `Následuje: <strong>${esc(label)}</strong> <i class="fa-solid fa-forward"></i>`;
   el.classList.remove("hidden");
-  tmUpNextTimeout = setTimeout(() => {
-    el.classList.add("shown");
-    // Přesně v momentě, kdy banner "Následuje" najede, se na některých telefonech uměl objevit
-    // ten starý zaseknutý pruh na švu (viz positionSeamPatch výše) — přepočítáme ho i tady, ať
-    // ho případně hned zase překryje.
-    requestAnimationFrame(positionSeamPatch);
-  }, 2500);
+  tmUpNextTimeout = setTimeout(() => { el.classList.add("shown"); }, 2500);
 }
 /** Průběhový proužek nahoře aplikace obarví podle právě probíhající části tréninku — poznat na
     dálku, v jaké části jsme, jde teď i bez čtení textu. Aplikace stejnou barvou obarví i pozadí
@@ -4552,20 +4545,6 @@ function updateProgressBar(color) {
     timerEl.style.removeProperty("--tm-timer-bg");
     timerEl.style.removeProperty("--tm-timer-fg");
   }
-  requestAnimationFrame(positionSeamPatch);
-}
-/** Na některých mobilních prohlížečích zůstává přesně na švu mezi obsahem cviku a časovačem
-    "zaseknutý" starý překreslený pruh (potvrzeno diagnostikou — appka/data jsou v pořádku,
-    jde jen o vykreslení telefonu). Místo honění příčiny se přes tohle přesné místo položí
-    čerstvá světlá záplata, co cokoliv pod ní překryje. */
-function positionSeamPatch() {
-  const patch = document.getElementById("tmSeamPatch");
-  const body = document.getElementById("tmBody");
-  if (!patch || !body) return;
-  const seamY = body.getBoundingClientRect().bottom;
-  patch.style.top = (seamY - 16) + "px";
-  patch.style.height = "32px";
-  patch.style.display = "block";
 }
 /** Aplikace vestaví skutečný přehrávač videa (stejná logika jako u detailu videa v Knihovně) —
     u přestávky ani pauzy mezi sériemi aplikace video neukazuje, jen u konkrétního cviku. */
@@ -4762,10 +4741,6 @@ function renderTrainingModeFinished() {
   document.getElementById("tmRepsDisplay").classList.add("hidden");
   document.getElementById("tmBody").classList.add("tm-solo");
   document.getElementById("tmBody").style.background = "var(--court)";
-  // Poslední obrazovka je celá zelená (bez toho světlého pozadí, na které je záplata švu níž
-  // vyladěná) — bez schování by na ní ta záplata (viz positionSeamPatch) prosvítala jako
-  // cizí světlý pruh, protože jinou barvu, než na jaké vznikla, nezná.
-  document.getElementById("tmSeamPatch").style.display = "none";
   document.getElementById("tmProgressFill").style.width = "100%";
   document.getElementById("tmProgressFill").style.background = "var(--court)";
   document.getElementById("tmPartLabel").textContent = "";
