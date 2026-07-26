@@ -320,9 +320,15 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 }
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 .toast-icon{
-  width:20px;height:20px;border-radius:50%;background:var(--court);display:flex;align-items:center;justify-content:center;
+  width:20px;height:20px;border-radius:50%;background:var(--ok);display:flex;align-items:center;justify-content:center;
   font-size:10px;color:#fff;flex-shrink:0;
 }
+.toast-icon.err{background:var(--danger);}
+.toast-icon.warn{background:var(--warn-icon);}
+.toast-icon.progress{background:var(--info-border);}
+.toast-icon.progress i{animation:toastSpin 1s linear infinite;}
+.toast-icon.info{background:var(--info-border);}
+@keyframes toastSpin{to{transform:rotate(360deg);}}
 
 /* ---------- Library toolbar ---------- */
 .toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;align-items:center;}
@@ -1660,7 +1666,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-26 04:00";
+const APP_VERSION = "2026-07-26 17:45";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1755,12 +1761,12 @@ document.getElementById("closeDebugLogBtn").addEventListener("click", () => {
 });
 document.getElementById("copyDebugLogBtn").addEventListener("click", async () => {
   const text = debugLog.join("\n");
-  if (!text) { toast("Zatím není co kopírovat."); return; }
+  if (!text) { toast("Zatím není co kopírovat.", 2200, "warn"); return; }
   try {
     await navigator.clipboard.writeText(text);
     toast("Zkopírováno do schránky.");
   } catch (e) {
-    toast("Kopírování se nepovedlo — aplikace na tohle potřebuje povolení ke schránce prohlížeče.", 6000);
+    toast("Kopírování se nepovedlo — aplikace na tohle potřebuje povolení ke schránce prohlížeče.", 6000, "err");
   }
 });
 
@@ -1777,7 +1783,7 @@ function setDevMode(on) {
   devModeOn = on;
   localStorage.setItem(DEV_MODE_KEY, on ? "1" : "0");
   applyDevModeVisibility();
-  toast(on ? "Vývojářský režim zapnut na tomhle zařízení." : "Vývojářský režim vypnut.");
+  toast(on ? "Vývojářský režim zapnut na tomhle zařízení." : "Vývojářský režim vypnut.", 2200, "info");
   if (!on) document.getElementById("debugLogPanel").classList.add("hidden");
 }
 applyDevModeVisibility();
@@ -1812,7 +1818,7 @@ document.getElementById("checkLibrarySizeBtn").addEventListener("click", () => {
   const newStyleCount = Object.values(state.library).filter(it => it.thumbnail && it.thumbnail.startsWith(LOCAL_THUMB_PREFIX)).length;
   logDebug(`[velikost] náhledy ještě uložené postaru přímo v knihovně: ${oldStyleCount}${oldStyleCount ? " — spusť \"Přestěhovat staré náhledy\"" : ""}`);
   logDebug(`[velikost] náhledy už přestěhované do samostatné kolekce: ${newStyleCount}`);
-  toast(`Hlavní dokument: ~${kb(wholeDoc.length)} KB z ~1024 KB limitu. Detaily v 🐞.`, 8000);
+  toast(`Hlavní dokument: ~${kb(wholeDoc.length)} KB z ~1024 KB limitu. Detaily v 🐞.`, 8000, "info");
 });
 document.getElementById("shrinkOversizedBtn").addEventListener("click", async () => {
   if (uidCurrent !== ADMIN_UID) return;
@@ -1836,7 +1842,7 @@ document.getElementById("shrinkOversizedBtn").addEventListener("click", async ()
   }
   if (!fixedCount) {
     logDebug("[stěhování] aplikace nenašla žádný starý náhled uložený přímo v knihovně — nejspíš už je vše přestěhované.");
-    toast("Aplikace nenašla žádný starý náhled ke stěhování.", 6000);
+    toast("Aplikace nenašla žádný starý náhled ke stěhování.", 6000, "warn");
     return;
   }
   logDebug(`[stěhování] hotovo, přestěhováno ${fixedCount} náhledů, ukládám hlavní dokument…`);
@@ -1846,7 +1852,7 @@ document.getElementById("shrinkOversizedBtn").addEventListener("click", async ()
     renderLibrary();
     toast(`Přestěhováno ${fixedCount} náhledů mimo hlavní dokument.`, 8000);
   } else {
-    toast("Náhledy aplikace přestěhovala, ale uložení hlavního dokumentu selhalo — zkus to prosím znovu.", 8000);
+    toast("Náhledy aplikace přestěhovala, ale uložení hlavního dokumentu selhalo — zkus to prosím znovu.", 8000, "err");
   }
 });
 
@@ -1881,7 +1887,7 @@ function fetchImageAsDataUrl(url) {
 document.getElementById("adoptDriveThumbsBtn").addEventListener("click", async () => {
   if (!isEditor()) return;
   const targets = Object.values(state.library).filter(it => !it.deletedAt && it.platform !== "youtube" && it.thumbnail && /^https?:\/\//.test(it.thumbnail));
-  if (!targets.length) { toast("Aplikace nenašla žádné video s náhledem odkazovaným zvenčí (YouTube náhledy aplikace schválně nechává být, ty jsou spolehlivé samy o sobě)."); return; }
+  if (!targets.length) { toast("Aplikace nenašla žádné video s náhledem odkazovaným zvenčí (YouTube náhledy aplikace schválně nechává být, ty jsou spolehlivé samy o sobě).", 2200, "warn"); return; }
   if (!(await confirmDialog(`Aplikace zkusí stáhnout a uložit natrvalo k sobě ${targets.length} náhledů (Disk, TikTok apod.). U videí z YouTube aplikace nic měnit nebude. Může to chvíli trvat, hlavně u víc videí najednou. Pokračovat?`))) return;
   logDebug(`[náhledy] stahuji a ukládám ${targets.length} externě odkazovaných náhledů…`);
   let okCount = 0, failCount = 0;
@@ -1901,13 +1907,13 @@ document.getElementById("adoptDriveThumbsBtn").addEventListener("click", async (
   }
   logDebug(`[náhledy] hotovo — uloženo ${okCount}, nepovedlo se ${failCount}`);
   if (!okCount) {
-    toast(`Aplikaci se nepovedlo stáhnout ani jeden náhled (${failCount} selhalo) — na tomhle zařízení/prohlížeči to nejspíš nepůjde.`, 10000);
+    toast(`Aplikaci se nepovedlo stáhnout ani jeden náhled (${failCount} selhalo) — na tomhle zařízení/prohlížeči to nejspíš nepůjde.`, 10000, "err");
     return;
   }
   renderLibrary();
   const ok = await saveUserData();
   if (ok) toast(`Uloženo natrvalo: ${okCount} náhledů. ${failCount ? `${failCount} se nepovedlo stáhnout.` : ""}`, 10000);
-  else toast("Náhledy aplikace stáhla, ale uložení selhalo — zkus to prosím znovu.", 8000);
+  else toast("Náhledy aplikace stáhla, ale uložení selhalo — zkus to prosím znovu.", 8000, "err");
 });
 
 document.getElementById("refreshDriveThumbsBtn").addEventListener("click", async () => {
@@ -1917,8 +1923,8 @@ document.getElementById("refreshDriveThumbsBtn").addEventListener("click", async
   // nato tu čerstvou adresu zkusí i stáhnout a uložit aplikaci natrvalo. Když se stažení
   // nepovede, aspoň ta čerstvá adresa zůstane nastavená — lepší než nic.
   const targets = Object.values(state.library).filter(it => !it.deletedAt && it.platform === "drive" && it.videoId && (!it.thumbnail || it.thumbnail.startsWith("http")));
-  if (!targets.length) { toast("Aplikace nenašla žádné video z Disku bez vlastní uložené fotky."); return; }
-  if (!state.driveApiKey) { toast("Aplikace nemá nastavený přístupový klíč k Disku (nastavuje se v Profilu) — bez něj tohle nepůjde.", 6000); return; }
+  if (!targets.length) { toast("Aplikace nenašla žádné video z Disku bez vlastní uložené fotky.", 2200, "warn"); return; }
+  if (!state.driveApiKey) { toast("Aplikace nemá nastavený přístupový klíč k Disku (nastavuje se v Profilu) — bez něj tohle nepůjde.", 6000, "warn"); return; }
   if (!(await confirmDialog(`Aplikace u ${targets.length} videí z Disku nejdřív zkusí získat čerstvou adresu náhledu, a hned nato ji zkusí uložit natrvalo k aplikaci. Může to chvíli trvat. Pokračovat?`))) return;
   logDebug(`[náhledy] obnovuji a ukládám náhledy u ${targets.length} videí z Disku…`);
   let refreshedCount = 0, savedCount = 0;
@@ -1948,7 +1954,7 @@ document.getElementById("refreshDriveThumbsBtn").addEventListener("click", async
   renderLibrary();
   const ok = await saveUserData();
   if (ok) toast(`Hotovo: čerstvá adresa u ${refreshedCount} videí, natrvalo uloženo ${savedCount} z nich.`, 10000);
-  else toast("Náhledy aplikace zpracovala, ale uložení selhalo — zkus to prosím znovu.", 8000);
+  else toast("Náhledy aplikace zpracovala, ale uložení selhalo — zkus to prosím znovu.", 8000, "err");
 });
 
 function myLabel() {
@@ -2057,9 +2063,11 @@ document.querySelectorAll(".modal-backdrop").forEach(backdrop => {
   }).observe(backdrop, { attributes: true, attributeFilter: ["class"] });
 });
 
-function toast(msg, durationMs = 2200) {
+const TOAST_ICONS = { ok: "fa-check", err: "fa-xmark", warn: "fa-exclamation", progress: "fa-arrows-rotate", info: "fa-info" };
+function toast(msg, durationMs = 2200, type = "ok") {
   const t = document.getElementById("toast");
-  t.innerHTML = `<span class="toast-icon"><i class="fa-solid fa-check"></i></span>${esc(msg)}`;
+  const icon = TOAST_ICONS[type] || TOAST_ICONS.ok;
+  t.innerHTML = `<span class="toast-icon ${type}"><i class="fa-solid ${icon}"></i></span>${esc(msg)}`;
   t.classList.add("show");
   clearTimeout(toast._tm);
   toast._tm = setTimeout(() => t.classList.remove("show"), durationMs);
@@ -2367,7 +2375,7 @@ function renderThumbSuggestions(urls, platform) {
       // tyhle adresy totiž mají tendenci časem přestat platit (viděli jsme to naostro). U
       // YouTube aplikace tohle záměrně nedělá, tamní adresy jsou samy o sobě dlouhodobě spolehlivé.
       if (platform === "drive" || platform === "tiktok") {
-        toast("Aplikace si náhled zkouší uložit natrvalo…", 3000);
+        toast("Aplikace si náhled zkouší uložit natrvalo…", 3000, "progress");
         const dataUrl = await fetchImageAsDataUrl(u);
         if (dataUrl && document.getElementById("thumbPreview").dataset.thumb === u) {
           // (kontrola výše: aplikace mezitím nesmí přepsat novější volbu, kdyby uživatel stihl kliknout jinam)
@@ -2647,7 +2655,7 @@ async function checkMembershipAndProceed() {
     }
   } catch (e) {
     console.error("Nepodařilo se ověřit členství:", e);
-    toast("Nepodařilo se ověřit přístup — zkontroluj připojení.", 6000);
+    toast("Nepodařilo se ověřit přístup — zkontroluj připojení.", 6000, "err");
     hideLoginLoading();
     return;
   }
@@ -2677,7 +2685,7 @@ async function checkMembershipAndProceed() {
   if (isEditor()) purgeOldTrash().catch(err => console.warn("Úklid koše selhal:", err));
   const nightHour = new Date().getHours();
   if (nightHour >= 0 && nightHour < 5) {
-    toast("Mazej spát, smrďochu prďochu, nebo pujdeš ráno běhat kopečky s Faunou!!!! Už je po večerce. 😄", 6000);
+    toast("Mazej spát, smrďochu prďochu, nebo pujdeš ráno běhat kopečky s Faunou!!!! Už je po večerce. 😄", 6000, "info");
   }
 }
 document.getElementById("pendingRecheckBtn").addEventListener("click", checkMembershipAndProceed);
@@ -2882,7 +2890,7 @@ async function loadUserData() {
   } catch (e) { console.error("Úklid starých dat se nepovedl (nic se neztratilo, jen to zabírá víc místa):", e); }
 
   if (loadErrors.length) {
-    toast("Nepodařilo se plně načíst: " + loadErrors.join("; ") + ". Zkus obnovit (F5) nebo zkontroluj Firestore pravidla.", 12000);
+    toast("Nepodařilo se plně načíst: " + loadErrors.join("; ") + ". Zkus obnovit (F5) nebo zkontroluj Firestore pravidla.", 12000, "err");
   }
 }
 
@@ -2946,12 +2954,12 @@ function subscribeToOwnMembership() {
     const approved = data.approved || {};
     const kickedAt = data.kickedAt || {};
     if (!approved[uidCurrent]) {
-      toast("Byl ti odebrán přístup. Odhlašuji tě…", 6000);
+      toast("Byl ti odebrán přístup. Odhlašuji tě…", 6000, "info");
       setTimeout(() => signOut(auth), 2500);
       return;
     }
     if (kickedAt[uidCurrent] && kickedAt[uidCurrent] > sessionStartedAt) {
-      toast("Byl jsi odhlášen na dálku administrátorem.", 6000);
+      toast("Byl jsi odhlášen na dálku administrátorem.", 6000, "info");
       setTimeout(() => signOut(auth), 2500);
     }
   }, (err) => console.error("Sledování vlastního přístupu selhalo:", err));
@@ -2994,7 +3002,7 @@ async function saveUserData() {
       if (freshRevision !== state.knownRevision) {
         logDebug("[save] konflikt verzí — moje:", state.knownRevision, "na serveru:", freshRevision, "— beru tu novější");
         applyRemoteSharedUpdate(freshData);
-        toast("Mezitím se aplikace změnila jinde (možná zapomenuté okno) — aplikace se obnovila na nejnovější verzi. Zkus svou poslední změnu prosím zopakovat.", 10000);
+        toast("Mezitím se aplikace změnila jinde (možná zapomenuté okno) — aplikace se obnovila na nejnovější verzi. Zkus svou poslední změnu prosím zopakovat.", 10000, "warn");
         return false;
       }
       baseRevision = freshRevision;
@@ -3038,16 +3046,16 @@ async function saveUserData() {
     console.error("Nepodařilo se uložit data:", e);
     const msg = String(e && (e.message || e.code) || "");
     if (/size|large|exceed|bytes|1048487|1 ?MB/i.test(msg)) {
-      toast("Uložení selhalo — sdílená data jsou moc velká (nejspíš kvůli nějaké obří fotce). Zkus zmenšit/nahradit poslední přidanou fotku.", 10000);
+      toast("Uložení selhalo — sdílená data jsou moc velká (nejspíš kvůli nějaké obří fotce). Zkus zmenšit/nahradit poslední přidanou fotku.", 10000, "err");
     } else {
-      toast(`Uložení se nepovedlo (${msg || "neznámá chyba"}). Screenshot téhle hlášky mi pomůže najít příčinu.`, 12000);
+      toast(`Uložení se nepovedlo (${msg || "neznámá chyba"}). Screenshot téhle hlášky mi pomůže najít příčinu.`, 12000, "err");
     }
     return false;
   }
 }
 async function deleteTrainingRemote(trainingId) {
   try { await deleteDoc(doc(db, "users", uidCurrent, "trainings", trainingId)); }
-  catch (e) { console.error("Smazání tréninku selhalo:", e); toast("Smazání na serveru selhalo, zkontroluj připojení."); }
+  catch (e) { console.error("Smazání tréninku selhalo:", e); toast("Smazání na serveru selhalo, zkontroluj připojení.", 2200, "err"); }
 }
 
 /* =========================================================
@@ -3062,6 +3070,10 @@ function switchView(view) {
   document.getElementById("libraryView").classList.toggle("hidden", view !== "library");
   document.getElementById("trainingsView").classList.toggle("hidden", view !== "trainings");
   document.getElementById("editorView").classList.toggle("hidden", view !== "editor");
+  // Přišpendlený panel Knihovny žije (viz applyToolbarPinState) fyzicky mimo #libraryView, uvnitř
+  // #stickyHeaderGroup — na jiné záložce ho proto musíme schovat ručně, jinak by tam "vlál" i
+  // nad Tréninky.
+  document.getElementById("libraryToolbarArea").classList.toggle("hidden", view !== "library");
   if (view === "library") renderLibrary();
   if (view === "trainings") renderTrainingsList();
   const shownEl = document.getElementById(view + "View");
@@ -3373,7 +3385,7 @@ document.getElementById("bulkDeleteBtn").addEventListener("click", async () => {
   if (ok) toast("Přesunuto do koše.");
 });
 document.getElementById("bulkMoveBtn").addEventListener("click", async () => {
-  if (!state.folders.length) { toast("Nejdřív si založ aspoň jednu složku."); return; }
+  if (!state.folders.length) { toast("Nejdřív si založ aspoň jednu složku.", 2200, "warn"); return; }
   const list = state.folders.map((f, i) => `${i + 1}. ${f.label}`).join("\n");
   const answer = await promptDialog(`Přesunout ${selectedIds.size} videí do složky — napiš číslo:\n${list}`, { title: "Přesunout do složky" });
   const idx = parseInt(answer) - 1;
@@ -3426,7 +3438,7 @@ document.getElementById("bulkEquipInput").addEventListener("keydown", (e) => {
   e.target.value = "";
 });
 document.getElementById("bulkTagBtn").addEventListener("click", () => {
-  if (!selectedIds.size) { toast("Nejdřív něco vyber."); return; }
+  if (!selectedIds.size) { toast("Nejdřív něco vyber.", 2200, "warn"); return; }
   bulkTagAddList = [];
   bulkEquipAddList = [];
   renderBulkTagAddPills();
@@ -3442,7 +3454,7 @@ document.getElementById("closeBulkTagModalBtn").addEventListener("click", () => 
 });
 document.getElementById("bulkTagApplyBtn").addEventListener("click", async () => {
   const bulkShortDesc = document.getElementById("bulkShortDescInput").value.trim();
-  if (!bulkTagAddList.length && !bulkEquipAddList.length && !bulkShortDesc) { toast("Nic k přidání."); return; }
+  if (!bulkTagAddList.length && !bulkEquipAddList.length && !bulkShortDesc) { toast("Nic k přidání.", 2200, "warn"); return; }
   selectedIds.forEach(id => {
     const item = state.library[id];
     if (!item) return;
@@ -3459,7 +3471,7 @@ document.getElementById("bulkTagApplyBtn").addEventListener("click", async () =>
   renderLibrary();
   const ok = await saveUserData();
   if (ok) toast(`Přidáno ${selectedIds.size} videím.`);
-  else toast("Uložení se nepovedlo, zkus to prosím znovu.");
+  else toast("Uložení se nepovedlo, zkus to prosím znovu.", 2200, "err");
 });
 
 function setupFilterToggle(btnId, collapseId) {
@@ -3521,7 +3533,7 @@ function openCardContextMenu(itemId, anchorBtn) {
   });
   menu.querySelector("[data-act='move']")?.addEventListener("click", async () => {
     closeCardContextMenu();
-    if (!state.folders.length) { toast("Nejdřív si založ aspoň jednu složku."); return; }
+    if (!state.folders.length) { toast("Nejdřív si založ aspoň jednu složku.", 2200, "warn"); return; }
     const list = state.folders.map((f, i) => `${i + 1}. ${f.label}`).join("\n");
     const answer = await promptDialog(`Přesunout „${item.title}" do složky — napiš číslo:\n${list}`, { title: "Přesunout do složky" });
     const idx = parseInt(answer) - 1;
@@ -3711,7 +3723,7 @@ document.getElementById("fetchMetaBtn").addEventListener("click", async () => {
   document.getElementById("fetchMetaBtn").classList.remove("pulse");
   if (url.includes("facebook.com")) {
     if (/facebook\.com\/share\//.test(url)) {
-      toast("Tenhle typ sdíleného facebookového odkazu aplikace bohužel nerozezná. Otevři video přímo na Facebooku a zkopíruj adresu, která bude obsahovat „/reel/“ a dlouhé číslo.", 9000);
+      toast("Tenhle typ sdíleného facebookového odkazu aplikace bohužel nerozezná. Otevři video přímo na Facebooku a zkopíruj adresu, která bude obsahovat „/reel/“ a dlouhé číslo.", 9000, "warn");
       return;
     }
     url = normalizeFacebookUrl(url);
@@ -3724,7 +3736,7 @@ document.getElementById("fetchMetaBtn").addEventListener("click", async () => {
   if (platform === "youtube") {
     const ytId = extractYouTubeId(url);
     document.getElementById("thumbPreview").dataset.videoId = ytId || "";
-    toast("Načítám info z YouTube…");
+    toast("Načítám info z YouTube…", 2200, "progress");
     const meta = await fetchYouTubeMeta(url);
     if (meta) {
       if (!document.getElementById("linkTitle").value) document.getElementById("linkTitle").value = meta.title;
@@ -3734,7 +3746,7 @@ document.getElementById("fetchMetaBtn").addEventListener("click", async () => {
       document.getElementById("linkAspectRatio").value = meta.portrait ? "9/16" : "16/9";
       toast("Načteno.");
     } else {
-      toast("Nepodařilo se načíst — zadej název ručně.");
+      toast("Nepodařilo se načíst — zadej název ručně.", 2200, "warn");
     }
     if (ytId) {
       // YouTube si u většiny videí sám generuje náhledy ve třech různých okamžicích videa
@@ -3743,7 +3755,7 @@ document.getElementById("fetchMetaBtn").addEventListener("click", async () => {
   } else if (platform === "drive") {
     const driveId = extractDriveId(url) || "";
     document.getElementById("thumbPreview").dataset.videoId = driveId;
-    toast("Disk: titulek zadej ručně.");
+    toast("Disk: titulek zadej ručně.", 2200, "warn");
     if (driveId && state.driveApiKey) {
       try {
         const res = await fetch(`https://www.googleapis.com/drive/v3/files/${driveId}?fields=thumbnailLink&key=${state.driveApiKey}`);
@@ -3759,13 +3771,13 @@ document.getElementById("fetchMetaBtn").addEventListener("click", async () => {
     }
   } else if (platform === "instagram") {
     document.getElementById("thumbPreview").dataset.videoId = extractInstagramId(url) || "";
-    toast("Instagram: titulek a náhled zadej ručně.");
+    toast("Instagram: titulek a náhled zadej ručně.", 2200, "warn");
   } else if (platform === "tiktok") {
     const tikTokId = extractTikTokId(url);
     document.getElementById("thumbPreview").dataset.videoId = tikTokId || "";
     document.getElementById("linkAspectRatio").value = "9/16";
     if (tikTokId) {
-      toast("Načítám info z TikToku…");
+      toast("Načítám info z TikToku…", 2200, "progress");
       try {
         const res = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`);
         if (res.ok) {
@@ -3774,24 +3786,24 @@ document.getElementById("fetchMetaBtn").addEventListener("click", async () => {
           if (data.thumbnail_url) renderThumbSuggestions([data.thumbnail_url], "tiktok");
           toast("Načteno, náhled zadej ručně, pokud aplikace žádný nenavrhla.");
         } else {
-          toast("TikTok: titulek a náhled zadej ručně.");
+          toast("TikTok: titulek a náhled zadej ručně.", 2200, "warn");
         }
-      } catch (e) { toast("TikTok: titulek a náhled zadej ručně."); }
+      } catch (e) { toast("TikTok: titulek a náhled zadej ručně.", 2200, "warn"); }
     } else {
-      toast("Krátký TikTok odkaz aplikace nerozpozná — vlož prosím ten dlouhý, s /video/ v adrese.");
+      toast("Krátký TikTok odkaz aplikace nerozpozná — vlož prosím ten dlouhý, s /video/ v adrese.", 2200, "warn");
     }
   } else if (platform === "file") {
-    toast("Zkouším z videa vyfotit náhledy…", 4000);
+    toast("Zkouším z videa vyfotit náhledy…", 4000, "progress");
     const frames = await captureVideoFrameThumbnails(url);
     if (frames.length) {
       renderThumbSuggestions(frames);
       toast("Náhledy navrženy, titulek zadej ručně.");
     } else {
-      toast("Náhled aplikace automaticky nezískala (server to nedovolil) — nahraj ho prosím ručně, titulek taky.");
+      toast("Náhled aplikace automaticky nezískala (server to nedovolil) — nahraj ho prosím ručně, titulek taky.", 2200, "warn");
     }
   } else {
     document.getElementById("thumbPreview").dataset.videoId = "";
-    toast(platform === "facebook" ? "Facebook: titulek zadej ručně, embed se pokusí načíst v detailu." : "Titulek zadej ručně.");
+    toast(platform === "facebook" ? "Facebook: titulek zadej ručně, embed se pokusí načíst v detailu." : "Titulek zadej ručně.", 2200, "warn");
   }
   checkForDuplicate(platform, document.getElementById("thumbPreview").dataset.videoId, url);
 });
@@ -3966,7 +3978,7 @@ async function saveDetailRatingChange() {
   else { item.ratings = { ...item.ratings }; delete item.ratings[uidCurrent]; }
   renderDetailChips(item);
   const ok = await saveUserData();
-  if (ok) { toast("Uloženo."); renderLibrary(); } else toast("Uložení se nepovedlo, zkus to prosím znovu.");
+  if (ok) { toast("Uloženo."); renderLibrary(); } else toast("Uložení se nepovedlo, zkus to prosím znovu.", 2200, "err");
 }
 document.querySelectorAll("#detailDiffPicker button").forEach(b => b.addEventListener("click", () => {
   setDetailDiffPicker(parseInt(b.dataset.val));
@@ -3983,7 +3995,7 @@ linkForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   let url = document.getElementById("linkUrl").value.trim();
   if (/facebook\.com\/share\//.test(url)) {
-    toast("Tenhle typ sdíleného facebookového odkazu aplikace bohužel nerozezná. Otevři video přímo na Facebooku a zkopíruj adresu, která bude obsahovat „/reel/“ a dlouhé číslo.", 9000);
+    toast("Tenhle typ sdíleného facebookového odkazu aplikace bohužel nerozezná. Otevři video přímo na Facebooku a zkopíruj adresu, která bude obsahovat „/reel/“ a dlouhé číslo.", 9000, "warn");
     return;
   }
   if (url.includes("facebook.com")) url = normalizeFacebookUrl(url);
@@ -4034,7 +4046,7 @@ linkForm.addEventListener("submit", async (e) => {
       thumbToSave = LOCAL_THUMB_PREFIX + id;
     } catch (err) {
       console.error("Uložení náhledu selhalo:", err);
-      toast("Uložení náhledu se nepovedlo, zkus to prosím znovu.", 6000);
+      toast("Uložení náhledu se nepovedlo, zkus to prosím znovu.", 6000, "err");
       return;
     }
   }
@@ -4105,7 +4117,7 @@ function openDetailModal(id) {
         const codes = { 1: "MEDIA_ERR_ABORTED (přerušeno)", 2: "MEDIA_ERR_NETWORK (síťová chyba)", 3: "MEDIA_ERR_DECODE (chyba dekódování)", 4: "MEDIA_ERR_SRC_NOT_SUPPORTED (server odmítl/nepodporovaný formát)" };
         const code = videoEl.error ? videoEl.error.code : null;
         logDebug(`[video] přehrání selhalo u „${item.title}" — kód ${code}: ${codes[code] || "neznámý"}`);
-        toast(`Video se nepřehrálo (${codes[code] || "neznámá chyba"}). Detail v 🐞.`, 8000);
+        toast(`Video se nepřehrálo (${codes[code] || "neznámá chyba"}). Detail v 🐞.`, 8000, "err");
       }, { once: true });
     }
   }
@@ -4254,7 +4266,7 @@ document.getElementById("trainingBulkArchiveBtn").addEventListener("click", asyn
   renderTrainingsList();
   const ok = await saveUserData();
   if (ok) toast(`Archivováno ${count} tréninků.`);
-  else toast("Uložení se nepovedlo, zkus to prosím znovu.");
+  else toast("Uložení se nepovedlo, zkus to prosím znovu.", 2200, "err");
 });
 document.getElementById("toggleArchiveViewBtn").addEventListener("click", () => {
   showingArchivedTrainings = !showingArchivedTrainings;
@@ -4394,7 +4406,7 @@ let trainingModeRunning = false;
 
 document.getElementById("startTrainingModeBtn").addEventListener("click", () => {
   const t = state.trainings[currentTrainingId];
-  if (!t || !t.items.length) { toast("Trénink je prázdný, není co spustit."); return; }
+  if (!t || !t.items.length) { toast("Trénink je prázdný, není co spustit.", 2200, "warn"); return; }
   trainingModeItems = t.items;
   trainingModeIndex = 0;
   trainingModeSeriesNum = 1;
@@ -4499,7 +4511,13 @@ function showUpNextPanel(labelOverride) {
   el.style.borderLeftColor = color;
   el.innerHTML = `Následuje: <strong>${esc(label)}</strong> <i class="fa-solid fa-forward"></i>`;
   el.classList.remove("hidden");
-  tmUpNextTimeout = setTimeout(() => el.classList.add("shown"), 2500);
+  tmUpNextTimeout = setTimeout(() => {
+    el.classList.add("shown");
+    // Přesně v momentě, kdy banner "Následuje" najede, se na některých telefonech uměl objevit
+    // ten starý zaseknutý pruh na švu (viz positionSeamPatch výše) — přepočítáme ho i tady, ať
+    // ho případně hned zase překryje.
+    requestAnimationFrame(positionSeamPatch);
+  }, 2500);
 }
 /** Průběhový proužek nahoře aplikace obarví podle právě probíhající části tréninku — poznat na
     dálku, v jaké části jsme, jde teď i bez čtení textu. Aplikace stejnou barvou obarví i pozadí
@@ -4864,7 +4882,7 @@ async function enterTrainingLandscape() {
   document.getElementById("tmRotateBtn").innerHTML = '<i class="fa-solid fa-compress"></i>';
   if (!locked) {
     el.classList.add("tm-forced-landscape");
-    toast("Teď telefon otoč na šířku 📱", 4000);
+    toast("Teď telefon otoč na šířku 📱", 4000, "info");
   }
   showTrainingModeVideo(currentTrainingModeLib());
 }
@@ -5601,7 +5619,7 @@ document.getElementById("saveDriveApiKeyBtn").addEventListener("click", async ()
     await setDoc(sharedRef, { driveApiKey: key, revision: newRevision }, { merge: true });
     state.knownRevision = newRevision;
     toast("API klíč uložen.");
-  } catch (e) { console.error(e); toast("Uložení klíče selhalo."); }
+  } catch (e) { console.error(e); toast("Uložení klíče selhalo.", 2200, "err"); }
 });
 
 async function renderPendingApprovals() {
@@ -5637,7 +5655,7 @@ async function renderPendingApprovals() {
       await deleteDoc(doc(db, "pendingRequests", uidToApprove));
       toast(role === "editor" ? "Schváleno jako editor." : "Schváleno jako prohlížeč.");
       renderPendingApprovals();
-    } catch (e) { console.error(e); toast("Schválení se nepovedlo."); }
+    } catch (e) { console.error(e); toast("Schválení se nepovedlo.", 2200, "err"); }
   }));
   wrap.querySelectorAll("[data-reject]").forEach(btn => btn.addEventListener("click", async () => {
     if (!(await confirmDialog("Zamítnout tuhle žádost o přístup?", { confirmLabel: "Zamítnout", danger: true }))) return;
@@ -5645,7 +5663,7 @@ async function renderPendingApprovals() {
       await deleteDoc(doc(db, "pendingRequests", btn.dataset.reject));
       toast("Zamítnuto.");
       renderPendingApprovals();
-    } catch (e) { console.error(e); toast("Nepovedlo se."); }
+    } catch (e) { console.error(e); toast("Nepovedlo se.", 2200, "err"); }
   }));
 }
 async function renderMembersRoleList() {
@@ -5686,7 +5704,7 @@ async function renderMembersRoleList() {
       await setDoc(membersRef, { approved: approvedNow }, { merge: true });
       toast("Role změněna.");
       renderMembersRoleList();
-    } catch (e) { console.error(e); toast("Změna role se nepovedla."); }
+    } catch (e) { console.error(e); toast("Změna role se nepovedla.", 2200, "err"); }
   }));
   wrap.querySelectorAll("[data-kick]").forEach(btn => btn.addEventListener("click", async () => {
     const uid = btn.dataset.kick, name = btn.dataset.name;
@@ -5694,7 +5712,7 @@ async function renderMembersRoleList() {
     try {
       await updateDoc(doc(db, "shared", "members"), { [`kickedAt.${uid}`]: Date.now() });
       toast("Odhlášeno na dálku (projeví se během chvíle).");
-    } catch (e) { console.error(e); toast("Odhlášení na dálku se nepovedlo."); }
+    } catch (e) { console.error(e); toast("Odhlášení na dálku se nepovedlo.", 2200, "err"); }
   }));
   wrap.querySelectorAll("[data-removeaccess]").forEach(btn => btn.addEventListener("click", async () => {
     const uid = btn.dataset.removeaccess, name = btn.dataset.name;
@@ -5706,7 +5724,7 @@ async function renderMembersRoleList() {
       await updateDoc(doc(db, "shared", "members"), { [`approved.${uid}`]: deleteField() });
       toast("Přístup odebrán.");
       renderMembersRoleList();
-    } catch (e) { console.error(e); toast("Odebrání přístupu se nepovedlo."); }
+    } catch (e) { console.error(e); toast("Odebrání přístupu se nepovedlo.", 2200, "err"); }
   }));
 }
 
@@ -5836,7 +5854,7 @@ document.getElementById("profileForm").addEventListener("submit", async (e) => {
     toast("Profil uložen.");
   } catch (err) {
     console.error(err);
-    toast("Uložení profilu selhalo, zkontroluj připojení.");
+    toast("Uložení profilu selhalo, zkontroluj připojení.", 2200, "err");
   }
   profileModalBackdrop.classList.add("hidden");
 });
@@ -5853,7 +5871,7 @@ document.getElementById("darkModeToggle").addEventListener("click", async () => 
     await setDoc(doc(db, "users", uidCurrent), { darkMode: on }, { merge: true });
   } catch (err) {
     console.error(err);
-    toast("Uložení tmavého režimu selhalo, zkontroluj připojení.");
+    toast("Uložení tmavého režimu selhalo, zkontroluj připojení.", 2200, "err");
   }
 });
 
@@ -5868,13 +5886,13 @@ document.getElementById("closeChangePasswordModalBtn").addEventListener("click",
 document.getElementById("changePasswordSubmitBtn").addEventListener("click", async () => {
   const current = document.getElementById("changePassCurrentInput").value;
   const next = document.getElementById("changePassNewInput").value;
-  if (!current || !next) { toast("Vyplň obě pole."); return; }
-  if (next.length < 6) { toast("Nové heslo musí mít aspoň 6 znaků."); return; }
+  if (!current || !next) { toast("Vyplň obě pole.", 2200, "warn"); return; }
+  if (next.length < 6) { toast("Nové heslo musí mít aspoň 6 znaků.", 2200, "warn"); return; }
   const email = auth.currentUser.email;
   try {
     await reauthenticateWithCredential(auth.currentUser, EmailAuthProvider.credential(email, current));
   } catch (err) {
-    toast("Současné heslo nesedí (" + translateAuthError(err.code) + ").", 6000);
+    toast("Současné heslo nesedí (" + translateAuthError(err.code) + ").", 6000, "err");
     return;
   }
   try {
@@ -5882,7 +5900,7 @@ document.getElementById("changePasswordSubmitBtn").addEventListener("click", asy
     document.getElementById("changePasswordModalBackdrop").classList.add("hidden");
     toast("Heslo změněno.");
   } catch (err) {
-    toast("Změna hesla selhala (" + translateAuthError(err.code) + ").", 6000);
+    toast("Změna hesla selhala (" + translateAuthError(err.code) + ").", 6000, "err");
   }
 });
 document.getElementById("deleteAccountBtn").addEventListener("click", async () => {
@@ -5893,7 +5911,7 @@ document.getElementById("deleteAccountBtn").addEventListener("click", async () =
   try {
     await reauthenticateWithCredential(auth.currentUser, EmailAuthProvider.credential(email, password));
   } catch (err) {
-    toast("Heslo nesedí, účet nebyl smazán (" + translateAuthError(err.code) + ").", 6000);
+    toast("Heslo nesedí, účet nebyl smazán (" + translateAuthError(err.code) + ").", 6000, "err");
     return;
   }
   try {
@@ -6304,7 +6322,7 @@ document.getElementById("bulkDriveLoadBtn").addEventListener("click", async () =
 
 document.getElementById("bulkDriveImportBtn").addEventListener("click", async () => {
   const checked = Array.from(document.querySelectorAll("#bulkDriveFileList input[type='checkbox']:checked")).map(cb => cb.dataset.fileid);
-  if (!checked.length) { toast("Nic není vybráno."); return; }
+  if (!checked.length) { toast("Nic není vybráno.", 2200, "warn"); return; }
   const folderId = document.getElementById("bulkDriveFolder").value;
   const bulkShortDesc = document.getElementById("bulkDriveShortDesc").value.trim();
   const now = Date.now();
@@ -6324,12 +6342,12 @@ document.getElementById("bulkDriveImportBtn").addEventListener("click", async ()
     addedCount++;
   });
   renderLibrary();
-  toast(`Přidáno ${addedCount} videí, ukládám…`, 4000);
+  toast(`Přidáno ${addedCount} videí, ukládám…`, 4000, "progress");
   bulkDriveTags.forEach(t => { if (!state.tagPool.includes(t)) state.tagPool.push(t); });
   bulkDriveEquip.forEach(t => { if (!state.equipmentPool.includes(t)) state.equipmentPool.push(t); });
   const ok = await saveUserData();
   if (ok) { toast(`Uloženo — přidáno ${addedCount} videí.`, 6000); closeBulkDriveModal(); }
-  else toast("Videa aplikace přidala, ale uložení selhalo — zkus to prosím znovu.", 8000);
+  else toast("Videa aplikace přidala, ale uložení selhalo — zkus to prosím znovu.", 8000, "err");
 });
 
 if ("serviceWorker" in navigator) {
