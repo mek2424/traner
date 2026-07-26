@@ -168,6 +168,7 @@ button:active{filter:brightness(.9);}
   /* Na mobilu se "Přidat" mění na plovoucí tlačítko (FAB) v pravém dolním rohu obrazovky,
      které se po ťuknutí rozbalí do malého menu (popisek + kolečko s ikonkou u každé položky). */
   .add-link-menu-wrap{position:fixed;right:16px;bottom:16px;z-index:30;}
+  body.bulk-bar-active .add-link-menu-wrap{display:none;}
   #openAddLinkMenuBtn{
     width:56px;height:56px;border-radius:50%;padding:0;font-size:21px;
     box-shadow:0 4px 14px rgba(27,36,48,.35);transition:transform .2s ease;
@@ -206,6 +207,7 @@ button:active{filter:brightness(.9);}
 .folder-nav-btn{background:var(--court);color:#fff;width:44px;height:44px;font-size:17px;border-color:var(--court);flex-shrink:0;}
 #libraryToolbarArea.pinned{
   position:sticky;top:98px;z-index:15;background:var(--paper);padding-bottom:10px;
+  border-radius:0 0 var(--radius) var(--radius);
   box-shadow:0 4px 8px -4px rgba(0,0,0,.15);
 }
 #libraryToolbarArea.pinned .add-link-menu-wrap{margin-bottom:0;}
@@ -929,7 +931,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
         <button type="button" class="btn btn-sm btn-ghost" id="bulkCancelBtn"><i class="fa-solid fa-xmark"></i> <span class="bulk-btn-label">Zrušit výběr</span></button>
       </div>
       <div class="add-link-menu-scrim" id="addLinkMenuScrim"></div>
-      <div class="add-link-menu-wrap">
+      <div class="add-link-menu-wrap" id="addLinkMenuWrap">
         <button class="btn btn-accent" id="openAddLinkMenuBtn"><i class="fa-solid fa-cloud-arrow-up"></i> <span class="add-link-btn-label">Přidat</span> <i class="fa-solid fa-chevron-down add-link-btn-chevron"></i></button>
         <div class="add-link-menu hidden" id="addLinkMenu">
           <button type="button" class="add-link-item" id="openAddLinkBtn"><i class="fa-solid fa-link add-link-icon"></i><span class="add-link-label">Přidat odkaz</span></button>
@@ -1634,7 +1636,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-26 02:50";
+const APP_VERSION = "2026-07-26 03:05";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -3306,6 +3308,14 @@ document.getElementById("togglePinToolbarBtn").addEventListener("click", () => {
   applyToolbarPinState();
 });
 window.addEventListener("resize", syncPinnedToolbarOffset);
+// Font se dotáhne asynchronně a hlavička se tím může (i jen o pár px) přeskládat — kdyby se
+// tohle stihlo AŽ po prvním výpočtu, panel by se pak lepil na starou, už neplatnou výšku.
+// ResizeObserver hlídá hlavičku průběžně, takže to spolehlivě dorovná úplně vždy.
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(syncPinnedToolbarOffset);
+if (window.ResizeObserver) {
+  const headerGroupEl = document.getElementById("stickyHeaderGroup");
+  if (headerGroupEl) new ResizeObserver(syncPinnedToolbarOffset).observe(headerGroupEl);
+}
 applyToolbarPinState();
 document.getElementById("toggleSelectModeBtn").addEventListener("click", () => {
   selectMode = !selectMode;
@@ -3321,8 +3331,12 @@ document.getElementById("selectAllBtn").addEventListener("click", () => {
 });
 function updateBulkBar() {
   const bar = document.getElementById("bulkActionBar");
-  bar.classList.toggle("hidden", !selectMode || selectedIds.size === 0);
+  const show = selectMode && selectedIds.size > 0;
+  bar.classList.toggle("hidden", !show);
   document.getElementById("bulkCount").textContent = `${selectedIds.size} vybráno`;
+  // Na mobilu obě lišty plavou dole na stejném místě — dokud běží hromadný výběr, tlačítko
+  // Přidat by se s ní jen srážkelo, tak se radši schová (přidávat video zrovna teď nedává smysl).
+  document.body.classList.toggle("bulk-bar-active", show);
 }
 document.getElementById("bulkCancelBtn").addEventListener("click", () => { selectMode = false; selectedIds.clear(); document.getElementById("toggleSelectModeBtn").classList.remove("btn-accent"); document.getElementById("selectAllBtn").classList.add("hidden"); renderLibrary(); });
 document.getElementById("bulkDeleteBtn").addEventListener("click", async () => {
