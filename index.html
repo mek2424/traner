@@ -296,7 +296,6 @@ header.topbar{
 .topbar-title-group{display:flex;align-items:center;gap:10px;}
 .club-logo{width:34px;height:34px;border-radius:50%;flex-shrink:0;}
 .topbar-title{font-family:var(--font-display);font-size:24px;letter-spacing:.03em;}
-.offline-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.2);color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;letter-spacing:.02em;}
 .topbar-user{display:flex;align-items:center;gap:10px;font-size:12px;color:rgba(255,255,255,.75);}
 .topbar-user button{background:rgba(255,255,255,.12);border:none;color:#fff;border-radius:var(--radius-sm);padding:6px 10px;font-size:12px;}
 .avatar-btn{
@@ -906,7 +905,6 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
     <div class="topbar-title-group">
       <img src="club-logo.png" alt="Znak SK Meteor Praha" class="club-logo">
       <div class="topbar-title">TRENÉR</div>
-      <span class="offline-badge hidden" id="offlineBadge" title="Chybí signál — vidíš naposledy uložená data, ne nutně nejčerstvější"><i class="fa-solid fa-cloud-arrow-down"></i> Offline</span>
     </div>
     <div class="topbar-user">
       <button id="profileBtn" class="avatar-btn" aria-label="Profil"><span id="avatarInitial">?</span></button>
@@ -1669,7 +1667,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-26 20:15";
+const APP_VERSION = "2026-07-26 20:30";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -2907,9 +2905,6 @@ let sharedDataUnsubscribe = null;
 function subscribeToSharedData() {
   if (sharedDataUnsubscribe) { sharedDataUnsubscribe(); sharedDataUnsubscribe = null; }
   sharedDataUnsubscribe = onSnapshot(doc(db, "shared", "data"), (snap) => {
-    // Firestore sám pozná, jestli data přišla čerstvě ze serveru, nebo jen z místní kopie
-    // (např. bez signálu na hřišti) — díky tomu není potřeba nic odhadovat.
-    document.getElementById("offlineBadge").classList.toggle("hidden", !snap.metadata.fromCache);
     if (snap.metadata.hasPendingWrites) {
       logDebug("[sync] ignoruji ozvěnu vlastního ještě nepotvrzeného zápisu");
       return; // reagujeme jen na potvrzená data ze serveru, ne na naši vlastní optimistickou ozvěnu
