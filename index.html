@@ -474,8 +474,6 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .card-meta{display:flex;flex-wrap:wrap;align-items:center;gap:2px 6px;font-size:11px;color:var(--ink-faint);margin-top:auto;}
 .card-meta-usage{flex-basis:100%;}
 .stars{color:var(--chalk);letter-spacing:1px;}
-.diff-dots span{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--line);margin-right:2px;}
-.diff-dots span.on{background:var(--court);}
 
 /* ---------- Modal ---------- */
 .modal-backdrop{
@@ -516,12 +514,19 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 }
 .autocomplete-list button:hover,.autocomplete-list button:active{background:var(--paper);}
 .diff-picker,.rating-picker{display:flex;gap:6px;}
-.diff-picker button,.rating-picker button{
+.rating-picker button{
   width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--paper);
   font-size:13px;font-weight:700;color:var(--ink-soft);
 }
-.diff-picker button.on{background:var(--court);border-color:var(--court);color:#fff;}
 .rating-picker button.on{background:var(--chalk);border-color:var(--chalk);color:#fff;}
+.diff-picker{align-items:flex-end;height:32px;cursor:pointer;}
+.diff-picker button{width:16px;border:none;border-radius:3px;background:var(--line);padding:0;cursor:pointer;transition:background .12s ease;}
+.diff-picker button[data-val="1"]{height:12px;}
+.diff-picker button[data-val="2"]{height:18px;}
+.diff-picker button[data-val="3"]{height:23px;}
+.diff-picker button[data-val="4"]{height:28px;}
+.diff-picker button[data-val="5"]{height:32px;}
+.diff-picker button.on{background:var(--diff-color, var(--court));}
 .modal-actions{display:flex;gap:8px;margin-top:18px;}
 .modal-actions .btn{flex:1;}
 .duplicate-warning{
@@ -1143,11 +1148,11 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
         <div class="field">
           <label>Moje obtížnost</label>
           <div class="diff-picker" id="diffPicker">
-            <button type="button" data-val="1">1</button>
-            <button type="button" data-val="2">2</button>
-            <button type="button" data-val="3">3</button>
-            <button type="button" data-val="4">4</button>
-            <button type="button" data-val="5">5</button>
+            <button type="button" data-val="1" aria-label="Obtížnost 1 z 5" title="1"></button>
+            <button type="button" data-val="2" aria-label="Obtížnost 2 z 5" title="2"></button>
+            <button type="button" data-val="3" aria-label="Obtížnost 3 z 5" title="3"></button>
+            <button type="button" data-val="4" aria-label="Obtížnost 4 z 5" title="4"></button>
+            <button type="button" data-val="5" aria-label="Obtížnost 5 z 5" title="5"></button>
           </div>
         </div>
         <div class="field">
@@ -1202,11 +1207,11 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
       <div class="two-col" style="margin-top:6px;">
         <div class="field" style="margin-bottom:0;">
           <div class="diff-picker" id="detailDiffPicker">
-            <button type="button" data-val="1">1</button>
-            <button type="button" data-val="2">2</button>
-            <button type="button" data-val="3">3</button>
-            <button type="button" data-val="4">4</button>
-            <button type="button" data-val="5">5</button>
+            <button type="button" data-val="1" aria-label="Obtížnost 1 z 5" title="1"></button>
+            <button type="button" data-val="2" aria-label="Obtížnost 2 z 5" title="2"></button>
+            <button type="button" data-val="3" aria-label="Obtížnost 3 z 5" title="3"></button>
+            <button type="button" data-val="4" aria-label="Obtížnost 4 z 5" title="4"></button>
+            <button type="button" data-val="5" aria-label="Obtížnost 5 z 5" title="5"></button>
           </div>
         </div>
         <div class="field" style="margin-bottom:0;">
@@ -1679,7 +1684,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-07-26 20:45";
+const APP_VERSION = "2026-07-26 21:15";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
@@ -1728,6 +1733,26 @@ function avgOf(map) {
   const vals = Object.values(map || {});
   if (!vals.length) return { avg: 0, count: 0 };
   return { avg: vals.reduce((a, b) => a + b, 0) / vals.length, count: vals.length };
+}
+/** Obtížnost 1–5 se barevně škáluje od zelené (nejlehčí) po červenou (nejtěžší) — obě barvy
+    jsou stejné, jaké aplikace používá i jinde (hlavní zelená, barva chyb), jednotky 2–4 mezi
+    nimi jsou dopočítaný plynulý přechod. */
+const DIFFICULTY_COLORS = { 1: "#339933", 2: "#7A9C1F", 3: "#D4A017", 4: "#E8622C", 5: "#C24545" };
+function difficultyColor(level) {
+  return DIFFICULTY_COLORS[Math.max(1, Math.min(5, Math.round(level)))] || DIFFICULTY_COLORS[3];
+}
+/** Sloupečky rostoucí zleva doprava místo teček — barva celého vyplněného úseku odpovídá
+    aktuální úrovni (ne barva každého sloupečku zvlášť), ať je na první pohled jasné, kde na
+    škále lehké–těžké cvik je, i bez čísla nebo textu vedle. */
+function renderDiffBarsHtml(avgLevel, size) {
+  const rounded = Math.round(avgLevel) || 0;
+  const color = rounded ? difficultyColor(rounded) : null;
+  const heights = size === "lg" ? [7, 11, 15, 18, 22] : [4, 6, 8, 10, 12];
+  const width = size === "lg" ? 5 : 4;
+  const bars = [1, 2, 3, 4, 5].map((n, i) =>
+    `<span style="display:inline-block;width:${width}px;height:${heights[i]}px;border-radius:1px;background:${n <= rounded ? color : "var(--line)"};"></span>`
+  ).join("");
+  return `<span style="display:inline-flex;align-items:flex-end;gap:2px;vertical-align:middle;">${bars}</span>`;
 }
 /** Vykreslí 5 hvězdiček podle průměru, včetně půlky, když průměr není celé číslo
     (zaokrouhluje na nejbližší 0,5 — např. 3,7 se zobrazí jako tři a půl hvězdičky). */
@@ -3287,7 +3312,7 @@ function renderLibrary() {
         <div class="card-title">${esc(item.title)}</div>
         ${folder ? `<div class="card-folder" style="color:${esc(folder.color)}">${esc(folder.label)}</div>` : ""}
         <div class="card-meta">
-          <span class="diff-dots">${[1,2,3,4,5].map(n => `<span class="${n <= diffRounded ? "on" : ""}"></span>`).join("")}</span>
+          ${renderDiffBarsHtml(diffRounded)}
           ${r.count ? `<span class="stars">${renderStarsHtml(r.avg)}</span><span style="color:var(--ink-faint);">(${r.count})</span>` : ""}
           ${usageCounts[item.id] ? `<span class="card-meta-usage" title="Kolikrát se objevuje v tréninku">v tréninku ${usageCounts[item.id]}×</span>` : ""}
         </div>
@@ -3964,8 +3989,10 @@ document.getElementById("thumbFileInput").addEventListener("change", async (e) =
 });
 
 function setDiffPicker(val) {
-  document.querySelectorAll("#diffPicker button").forEach(b => b.classList.toggle("on", parseInt(b.dataset.val) <= val));
-  document.getElementById("diffPicker").dataset.value = val;
+  const wrap = document.getElementById("diffPicker");
+  wrap.querySelectorAll("button").forEach(b => b.classList.toggle("on", parseInt(b.dataset.val) <= val));
+  wrap.dataset.value = val;
+  wrap.style.setProperty("--diff-color", difficultyColor(val));
 }
 document.querySelectorAll("#diffPicker button").forEach(b => b.addEventListener("click", () => setDiffPicker(parseInt(b.dataset.val))));
 function setRatingPicker(val) {
@@ -3981,8 +4008,10 @@ document.querySelectorAll("#ratingPicker button").forEach(b => b.addEventListene
 /** Hodnocení a obtížnost přímo v detailu videa — na rozdíl od pickerů ve formuláři úpravy
     se ukládá hned po kliknutí, ať aplikace nikoho nenutí zajíždět do editace jen kvůli tomuhle. */
 function setDetailDiffPicker(val) {
-  document.querySelectorAll("#detailDiffPicker button").forEach(b => b.classList.toggle("on", parseInt(b.dataset.val) <= val));
-  document.getElementById("detailDiffPicker").dataset.value = val;
+  const wrap = document.getElementById("detailDiffPicker");
+  wrap.querySelectorAll("button").forEach(b => b.classList.toggle("on", parseInt(b.dataset.val) <= val));
+  wrap.dataset.value = val;
+  wrap.style.setProperty("--diff-color", difficultyColor(val));
 }
 function setDetailRatingPicker(val) {
   document.querySelectorAll("#detailRatingPicker button").forEach(b => b.classList.toggle("on", parseInt(b.dataset.val) <= val));
@@ -3995,7 +4024,7 @@ function renderDetailChips(item) {
   item.tags.forEach(t => chips.push(`<span class="chip">${esc(t)}</span>`));
   item.equipment.forEach(t => chips.push(`<span class="chip"><i class="fa-solid fa-wrench"></i> ${esc(t)}</span>`));
   const dAvg = avgOf(item.difficulties), rAvg = avgOf(item.ratings);
-  chips.push(`<span class="chip">Obtížnost ${dAvg.count ? dAvg.avg.toFixed(1) : "—"}/5${dAvg.count > 1 ? ` (${dAvg.count}×)` : ""}</span>`);
+  chips.push(`<span class="chip">Obtížnost ${dAvg.count ? renderDiffBarsHtml(dAvg.avg, "lg") : "—"}${dAvg.count > 1 ? ` (${dAvg.count}×)` : ""}</span>`);
   if (rAvg.count) chips.push(`<span class="chip">${renderStarsHtml(rAvg.avg)} ${rAvg.avg.toFixed(1)}${rAvg.count > 1 ? ` (${rAvg.count}×)` : ""}</span>`);
   document.getElementById("detailChips").innerHTML = `<div class="chip-row">${chips.join("")}</div>`;
 }
