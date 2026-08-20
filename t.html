@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Trénink — Trenér</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+<style>
+:root{
+  --paper:#F4F5F2; --card:#FFFFFF; --ink:#1B2430; --ink-soft:#5B6472; --ink-faint:#8A93A0;
+  --line:#DCDFD9; --court:#339933; --chalk:#E8622C;
+  --part-rozcvicka:#A8C0DE; --part-hra:#E8C468; --part-dril:#7FB0AC; --part-herni:#E39A8A;
+  --part-protazeni:#B8A8D4; --part-posilovani:#C97B5C; --part-kompenzace:#ABA875; --part-prestavka:#C7C9C4;
+  --font-display:'Bebas Neue', sans-serif; --font-body:'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+@media(prefers-color-scheme:dark){
+  :root{ --paper:#151A21; --card:#1F2630; --ink:#E9ECEF; --ink-soft:#9BA4B0; --ink-faint:#929BA8; --line:#454F5C; }
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{background:var(--paper);color:var(--ink);font-family:var(--font-body);min-height:100vh;}
+.wrap{max-width:640px;margin:0 auto;padding:18px 16px 60px;}
+.logo{font-family:var(--font-display);font-size:28px;letter-spacing:.03em;color:var(--court);text-align:center;margin-bottom:4px;}
+.sub{text-align:center;color:var(--ink-soft);font-size:12.5px;margin-bottom:22px;}
+.state-msg{text-align:center;padding:60px 20px;color:var(--ink-faint);}
+.state-msg i{font-size:32px;margin-bottom:14px;display:block;}
+.progress{text-align:center;font-size:12.5px;color:var(--ink-faint);margin-bottom:8px;}
+.card{
+  background:var(--card);border-radius:16px;padding:20px 18px;margin-bottom:16px;
+  border-top:6px solid var(--part-color, var(--court));
+}
+.part-label{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:4px;}
+.series-label{display:inline-block;background:var(--paper);color:var(--ink-soft);font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px;margin-bottom:8px;}
+.title{font-family:var(--font-display);font-size:26px;letter-spacing:.02em;line-height:1.05;margin-bottom:10px;}
+.desc{font-size:13.5px;color:var(--ink-soft);margin-bottom:14px;line-height:1.4;}
+.embed-wrap{position:relative;width:100%;border-radius:10px;overflow:hidden;background:#000;margin-bottom:14px;}
+.embed-wrap.ratio-16-9{aspect-ratio:16/9;}
+.embed-wrap.ratio-4-3{aspect-ratio:4/3;}
+.embed-wrap.ratio-1-1{aspect-ratio:1/1;}
+.embed-wrap.ratio-9-16{aspect-ratio:9/16;max-width:340px;margin-left:auto;margin-right:auto;}
+.embed{position:absolute;inset:0;width:100%;height:100%;border:none;}
+.duration-chip{display:inline-flex;align-items:center;gap:6px;background:var(--paper);color:var(--ink-soft);font-size:12.5px;font-weight:600;padding:5px 12px;border-radius:20px;margin-bottom:14px;}
+.field-label{font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:3px;}
+.field-box{background:var(--paper);border-radius:10px;padding:10px 12px;font-size:14px;line-height:1.4;margin-bottom:10px;}
+.field-box:empty, .field-block:has(.field-box:empty){display:none;}
+.nav-row{display:flex;gap:10px;margin-top:6px;}
+.nav-btn{
+  flex:1;border:none;border-radius:10px;padding:13px;font-family:var(--font-body);font-size:14.5px;font-weight:700;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.nav-btn.prev{background:var(--card);color:var(--ink-soft);border:1px solid var(--line);}
+.nav-btn.next{background:var(--chalk);color:#fff;}
+.nav-btn:disabled{opacity:.4;cursor:default;}
+.fallback-link{color:var(--chalk);font-weight:700;text-decoration:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo">TRENÉR</div>
+  <div class="sub" id="trainingNameSub"></div>
+  <div id="content"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+import { initializeFirestore, persistentLocalCache, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDHEDRx6jJAE1-0fvTmaMetlh4w6CeTREY",
+  authDomain: "trener-6d1b2.firebaseapp.com",
+  projectId: "trener-6d1b2",
+  storageBucket: "trener-6d1b2.firebasestorage.app",
+  messagingSenderId: "796712714371",
+  appId: "1:796712714371:web:740d1c4c73f9319f509bb6"
+};
+const fbApp = initializeApp(firebaseConfig);
+const db = initializeFirestore(fbApp, { localCache: persistentLocalCache() });
+
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[c]));
+}
+function showMessage(icon, title, sub) {
+  document.getElementById("content").innerHTML = `
+    <div class="state-msg">
+      <i class="fa-solid ${icon}"></i>
+      <div style="font-size:17px;font-weight:700;color:var(--ink);margin-bottom:6px;">${esc(title)}</div>
+      <div>${esc(sub)}</div>
+    </div>`;
+}
+function ratioClass(ar) {
+  const known = ["16/9", "4/3", "1/1", "9/16"];
+  const val = known.includes(ar) ? ar : "16/9";
+  return "ratio-" + val.replace("/", "-");
+}
+function renderEmbedHtml(v) {
+  if (!v) return "";
+  if (v.platform === "youtube" && v.videoId) {
+    const params = [];
+    if (v.timestamp) params.push(`start=${v.timestamp}`);
+    const qs = params.length ? `?${params.join("&")}` : "";
+    return `<iframe class="embed" src="https://www.youtube-nocookie.com/embed/${esc(v.videoId)}${qs}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+  }
+  if (v.platform === "drive" && v.videoId) {
+    return `<iframe class="embed" src="https://drive.google.com/file/d/${esc(v.videoId)}/preview" allow="autoplay; picture-in-picture 'none'"></iframe>`;
+  }
+  if (v.platform === "facebook") {
+    return `<iframe class="embed" src="https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(v.url)}&show_text=false" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+  }
+  if (v.platform === "instagram" && v.videoId) {
+    return `<iframe class="embed" src="https://www.instagram.com/p/${esc(v.videoId)}/embed" allowfullscreen></iframe>`;
+  }
+  if (v.platform === "tiktok" && v.videoId) {
+    return `<iframe class="embed" src="https://www.tiktok.com/player/v1/${esc(v.videoId)}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+  }
+  if (v.platform === "file") {
+    const start = v.timestamp ? `#t=${v.timestamp}` : "";
+    return `<video class="embed" src="${esc(v.url)}${start}" controls playsinline preload="metadata" referrerpolicy="no-referrer"></video>`;
+  }
+  return `<a class="fallback-link" href="${esc(v.url)}" target="_blank" rel="noopener">Otevřít odkaz ↗</a>`;
+}
+function durationLabel(row) {
+  if (row.mode === "reps" || row.reps) return row.reps ? `${row.reps}×` : "opakování";
+  const unit = row.durationUnit === "s" ? "s" : "min";
+  return row.duration ? `${row.duration} ${unit}` : "";
+}
+const PART_LABELS = {
+  rozcvicka: "Rozcvička", hra: "Hra", dril: "Dril", herni: "Herní cvičení",
+  protazeni: "Protažení", posilovani: "Posilování", kompenzace: "Kompenzace", prestavka: "Přestávka"
+};
+
+/** Rozloží tréninkové položky (včetně skupin a sérií) do jedné ploché řady kroků, co jde
+    procházet tlačítky Předchozí/Další — jednodušší než plný krokovací režim v hlavní aplikaci
+    (bez automatického odpočtu a pauz mezi sériemi), ale zachovává pořadí a opakování sérií. */
+function flattenSteps(t) {
+  const steps = [];
+  (t.items || []).forEach(row => {
+    if (row.part === "prestavka") {
+      steps.push({ kind: "break", label: row.label || "Přestávka", duration: row.duration, durationUnit: row.durationUnit });
+      return;
+    }
+    const seriesCount = row.seriesCount || 1;
+    for (let s = 1; s <= seriesCount; s++) {
+      if (row.isGroup) {
+        (row.videos || []).forEach(v => {
+          if (v.isBreak) {
+            steps.push({ kind: "break", label: v.label || "Přestávka", duration: v.duration, durationUnit: v.durationUnit });
+            return;
+          }
+          if (v.isText) {
+            steps.push({ kind: "text", part: row.part, title: v.title || "(bez názvu)", groupName: row.name, series: seriesCount > 1 ? { num: s, total: seriesCount } : null, cue: v.cue, note: v.note, duration: v.duration, durationUnit: v.durationUnit, reps: v.reps, mode: v.mode });
+            return;
+          }
+          steps.push({ kind: "video", part: row.part, title: (t.shareSnapshot[v.videoId] || {}).title || "", groupName: row.name, series: seriesCount > 1 ? { num: s, total: seriesCount } : null, videoId: v.videoId, cue: v.cue, note: v.note, duration: v.duration, durationUnit: v.durationUnit, reps: v.reps, mode: v.mode });
+        });
+      } else {
+        steps.push({ kind: "video", part: row.part, title: (t.shareSnapshot[row.videoId] || {}).title || "", series: seriesCount > 1 ? { num: s, total: seriesCount } : null, videoId: row.videoId, cue: row.cue, note: row.note, duration: row.duration, durationUnit: row.durationUnit, reps: row.reps, mode: row.mode });
+      }
+    }
+  });
+  return steps;
+}
+function renderStep(t, steps, idx) {
+  const step = steps[idx];
+  const content = document.getElementById("content");
+  document.getElementById("trainingNameSub").textContent = t.name || "";
+  const progress = `<div class="progress">${idx + 1} / ${steps.length}</div>`;
+  let cardHtml;
+  if (step.kind === "break") {
+    cardHtml = `
+      <div class="card" style="--part-color:var(--part-prestavka);text-align:center;">
+        <div class="part-label">Přestávka</div>
+        <div class="title" style="font-size:22px;">${esc(step.label)}</div>
+        ${step.duration ? `<div class="duration-chip"><i class="fa-regular fa-clock"></i> ${esc(step.duration)} ${step.durationUnit === "s" ? "s" : "min"}</div>` : ""}
+      </div>`;
+  } else if (step.kind === "text") {
+    cardHtml = `
+      <div class="card" style="--part-color:var(--part-${step.part || "dril"});">
+        <div class="part-label">${esc(PART_LABELS[step.part] || "Cvičení")}</div>
+        ${step.series ? `<div class="series-label">Série ${step.series.num} / ${step.series.total}</div>` : ""}
+        ${step.groupName ? `<div class="series-label">${esc(step.groupName)}</div>` : ""}
+        <div class="title">${esc(step.title)}</div>
+        ${durationLabel(step) ? `<div class="duration-chip"><i class="fa-regular fa-clock"></i> ${esc(durationLabel(step))}</div>` : ""}
+        ${step.cue ? `<div class="field-label">Cue</div><div class="field-box">${esc(step.cue)}</div>` : ""}
+        ${step.note ? `<div class="field-label">Poznámka</div><div class="field-box">${step.note}</div>` : ""}
+      </div>`;
+  } else {
+    const video = t.shareSnapshot[step.videoId];
+    const partColor = `var(--part-${step.part || "dril"})`;
+    cardHtml = `
+      <div class="card" style="--part-color:${partColor};">
+        <div class="part-label">${esc(PART_LABELS[step.part] || "Cvičení")}</div>
+        ${step.series ? `<div class="series-label">Série ${step.series.num} / ${step.series.total}</div>` : ""}
+        ${step.groupName ? `<div class="series-label">${esc(step.groupName)}</div>` : ""}
+        <div class="title">${esc(step.title || (video ? video.title : "") || "Cvičení")}</div>
+        ${video ? `<div class="embed-wrap ${ratioClass(video.aspectRatio)}">${renderEmbedHtml(video)}</div>` : ""}
+        ${durationLabel(step) ? `<div class="duration-chip"><i class="fa-regular fa-clock"></i> ${esc(durationLabel(step))}</div>` : ""}
+        ${step.cue ? `<div class="field-label">Cue</div><div class="field-box">${esc(step.cue)}</div>` : ""}
+        ${step.note ? `<div class="field-label">Poznámka</div><div class="field-box">${step.note}</div>` : ""}
+      </div>`;
+  }
+  content.innerHTML = progress + cardHtml + `
+    <div class="nav-row">
+      <button type="button" class="nav-btn prev" id="prevBtn" ${idx === 0 ? "disabled" : ""}><i class="fa-solid fa-arrow-left"></i> Předchozí</button>
+      <button type="button" class="nav-btn next" id="nextBtn" ${idx === steps.length - 1 ? "disabled" : ""}>Další <i class="fa-solid fa-arrow-right"></i></button>
+    </div>`;
+  document.getElementById("prevBtn").addEventListener("click", () => { if (idx > 0) renderStep(t, steps, idx - 1); window.scrollTo(0, 0); });
+  document.getElementById("nextBtn").addEventListener("click", () => { if (idx < steps.length - 1) renderStep(t, steps, idx + 1); window.scrollTo(0, 0); });
+}
+
+async function init() {
+  const params = new URLSearchParams(location.search);
+  const ownerUid = params.get("u");
+  const id = params.get("id");
+  if (!ownerUid || !id) { showMessage("fa-triangle-exclamation", "Chybí odkaz na trénink", "Zkontroluj, jestli je celá adresa zkopírovaná správně."); return; }
+  let snap;
+  try {
+    snap = await getDoc(doc(db, "users", ownerUid, "trainings", id));
+  } catch (e) {
+    showMessage("fa-triangle-exclamation", "Nepodařilo se načíst", "Zkontroluj připojení k internetu a zkus to znovu.");
+    return;
+  }
+  if (!snap.exists()) { showMessage("fa-link-slash", "Odkaz už není platný", "Trénink byl buď smazán, nebo sdílení skončilo."); return; }
+  const t = snap.data();
+  if (!t.share || !t.share.expiresAt || t.share.expiresAt < Date.now()) {
+    showMessage("fa-link-slash", "Odkaz už není platný", "Platnost sdíleného odkazu vypršela.");
+    return;
+  }
+  const steps = flattenSteps(t);
+  if (!steps.length) { showMessage("fa-inbox", "Trénink je prázdný", "Tenhle trénink zatím nemá žádné cviky."); return; }
+  renderStep(t, steps, 0);
+}
+init();
+</script>
+</body>
+</html>
