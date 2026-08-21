@@ -24,8 +24,13 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
 .state-view p{color:var(--ink-soft);font-size:14px;margin:0;max-width:320px;}
 #videoView{display:none;max-width:640px;margin:0 auto;padding:22px 18px 40px;}
 #videoView.shown{display:block;}
-.v-embed-wrap{width:100%;aspect-ratio:16/9;background:#000;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);}
+.v-embed-wrap{width:100%;aspect-ratio:16/9;max-height:70vh;background:#000;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-left:auto;margin-right:auto;}
 .v-embed-wrap.hidden{display:none;}
+/* Video na výšku (9:16, typicky Reels/Shorts) by při 100% šířce sloupce (640px) vyšlo přes
+   1100px vysoké — omezením jen výšky by se ale nesmyslně "vycentrovalo" v širokém černém pásu.
+   Proto se u portrétového poměru navíc zúží i šířka, ať vypadá jako rozumně velké video, ne
+   jako obří sloupec. */
+.v-embed-wrap[style*="9 / 16"],.v-embed-wrap[style*="9/16"]{max-width:min(100%,360px);}
 .embed{width:100%;height:100%;border:none;display:block;}
 .v-part-row{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0 8px;}
 .v-chip{font-size:12px;font-weight:600;padding:3px 11px;border-radius:999px;background:rgba(51,153,51,.1);color:var(--court-dark);border:1px solid rgba(51,153,51,.25);}
