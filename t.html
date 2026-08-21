@@ -14,6 +14,7 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
 :root{ --font-display:'Bebas Neue', sans-serif; --font-body:'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --court:#339933; --court-dark:#286e28; --chalk:#E8622C; --chalk-dark:#a8481f; --radius:14px; --radius-sm:10px; }
 .state-view{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;text-align:center;padding:20px;}
+.state-view.hidden{display:none;}
 .state-view i{font-size:36px;color:#8A93A0;margin-bottom:16px;}
 .state-view h1{font-family:var(--font-display);font-size:26px;color:#1B2430;margin:0 0 8px;letter-spacing:.02em;}
 .state-view p{color:#5B6472;font-size:14px;margin:0;max-width:320px;}
@@ -178,6 +179,8 @@ function esc(s) {
 }
 function showState(icon, title, sub) {
   document.getElementById("trainingModeView").classList.add("hidden");
+  document.getElementById("introView").classList.add("hidden");
+  document.getElementById("stateView").classList.remove("hidden");
   document.getElementById("stateView").innerHTML = `
     <i class="fa-solid ${icon}"></i>
     <h1>${esc(title)}</h1>
@@ -706,7 +709,11 @@ async function init() {
   tmItems = flattenItemsFromTraining(t);
   if (!tmItems.length) { showState("fa-inbox", "Trénink je prázdný", "Tenhle trénink zatím nemá žádné cviky."); return; }
 
+  // Nestačí jen vyprázdnit obsah — #stateView má height:100vh (kvůli vystředění chybové hlášky),
+  // takže by i prázdný zůstal zabírat celou výšku obrazovky nad úvodní obrazovkou. Přesně tohle
+  // způsobovalo tu "musím scrollovat/zvětšit okno, aby se něco ukázalo" hlášku.
   document.getElementById("stateView").innerHTML = "";
+  document.getElementById("stateView").classList.add("hidden");
   document.getElementById("introTitle").textContent = t.name || "Trénink";
   document.getElementById("introSub").textContent =
     `${tmItems.length} cvičení · pro nerušený trénink doporučujeme spustit na celou obrazovku.`;

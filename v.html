@@ -18,6 +18,7 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
   --radius:14px; --radius-sm:10px; --shadow:0 1px 2px rgba(27,36,48,.07), 0 4px 14px rgba(27,36,48,.05);
 }
 .state-view{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:20px;}
+.state-view.hidden{display:none;}
 .state-view i{font-size:36px;color:#8A93A0;margin-bottom:16px;}
 .state-view h1{font-family:var(--font-display);font-size:26px;color:var(--ink);margin:0 0 8px;letter-spacing:.02em;}
 .state-view p{color:var(--ink-soft);font-size:14px;margin:0;max-width:320px;}
@@ -88,6 +89,7 @@ function esc(s) {
 }
 function showState(icon, title, sub) {
   document.getElementById("videoView").classList.remove("shown");
+  document.getElementById("stateView").classList.remove("hidden");
   document.getElementById("stateView").innerHTML = `
     <i class="fa-solid ${icon}"></i>
     <h1>${esc(title)}</h1>
@@ -233,7 +235,11 @@ async function init() {
   }
   window.__driveApiKey = item.driveApiKey || "";
 
+  // #stateView má height:100vh (kvůli vystředění chybové hlášky) — nestačí ho jen vyprázdnit,
+  // i prázdný by zabíral celou výšku obrazovky nad kartou videa a vypadalo by to, že je nad
+  // videem obří prázdný prostor, který se musí odscrollovat.
   document.getElementById("stateView").innerHTML = "";
+  document.getElementById("stateView").classList.add("hidden");
   document.title = (item.title || "Video") + " — Trenér";
   document.getElementById("vTitle").textContent = item.title || "(bez názvu)";
   document.getElementById("vShortDesc").textContent = item.shortDesc || "";
