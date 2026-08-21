@@ -154,7 +154,7 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-import { initializeFirestore, persistentLocalCache, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+import { initializeFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDHEDRx6jJAE1-0fvTmaMetlh4w6CeTREY",
@@ -165,7 +165,13 @@ const firebaseConfig = {
   appId: "1:796712714371:web:740d1c4c73f9319f509bb6"
 };
 const fbApp = initializeApp(firebaseConfig);
-const db = initializeFirestore(fbApp, { localCache: persistentLocalCache() });
+// Bez trvalé (IndexedDB) cache — tahle stránka je jednorázový needitovatelný pohled, offline
+// podpora tu nemá cenu. Hlavní appka (index.html) si trvalou cache zapíná v multi-tab režimu; kdyby
+// si tahle stránka řekla o svou VLASTNÍ trvalou cache (bez multi-tab), a uživatel měl zrovna
+// otevřenou appku v jiné záložce, obě by si o zámek na IndexedDB "přetahovaly" — Firestore by na
+// to spadl na "Failed to obtain exclusive access to the persistence layer" a stránka zůstala
+// prázdná. Paměťová cache (výchozí bez localCache) tohle riziko úplně vynechává.
+const db = initializeFirestore(fbApp, {});
 
 function esc(s) {
   return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[c]));

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Video — Trenér</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+<style>
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;min-height:100%;}
+body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;background:#F4F5F2;color:#1B2430;}
+:root{
+  --font-display:'Bebas Neue', sans-serif; --font-body:'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --paper:#F4F5F2; --card:#FFFFFF; --ink:#1B2430; --ink-soft:#5B6472; --ink-faint:#8A93A0; --line:#DCDFD9;
+  --court:#339933; --court-dark:#286e28; --chalk:#E8622C; --chalk-dark:#a8481f;
+  --radius:14px; --radius-sm:10px; --shadow:0 1px 2px rgba(27,36,48,.07), 0 4px 14px rgba(27,36,48,.05);
+}
+.state-view{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:20px;}
+.state-view i{font-size:36px;color:#8A93A0;margin-bottom:16px;}
+.state-view h1{font-family:var(--font-display);font-size:26px;color:var(--ink);margin:0 0 8px;letter-spacing:.02em;}
+.state-view p{color:var(--ink-soft);font-size:14px;margin:0;max-width:320px;}
+#videoView{display:none;max-width:640px;margin:0 auto;padding:22px 18px 40px;}
+#videoView.shown{display:block;}
+.v-embed-wrap{width:100%;aspect-ratio:16/9;background:#000;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);}
+.v-embed-wrap.hidden{display:none;}
+.embed{width:100%;height:100%;border:none;display:block;}
+.v-part-row{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0 8px;}
+.v-chip{font-size:12px;font-weight:600;padding:3px 11px;border-radius:999px;background:rgba(51,153,51,.1);color:var(--court-dark);border:1px solid rgba(51,153,51,.25);}
+.v-chip.v-chip-equip{background:rgba(232,98,44,.1);color:var(--chalk-dark);border-color:rgba(232,98,44,.25);}
+.v-title{font-family:var(--font-display);font-size:clamp(28px,7vw,38px);line-height:1.12;color:var(--ink);margin:6px 0 6px;letter-spacing:.01em;overflow-wrap:anywhere;}
+.v-short-desc{font-size:16px;color:var(--ink-soft);margin:0 0 4px;overflow-wrap:anywhere;}
+.v-short-desc.hidden{display:none;}
+.v-timestamp-hint{font-size:12.5px;color:var(--ink-faint);margin:8px 0 0;display:flex;align-items:center;gap:6px;}
+.v-timestamp-hint.hidden{display:none;}
+.v-long-desc{font-size:14.5px;color:var(--ink);line-height:1.55;margin-top:18px;}
+.v-long-desc p{margin:0 0 10px;}
+.v-long-desc ul,.v-long-desc ol{margin:0 0 10px;padding-left:22px;}
+.v-long-desc li{margin-bottom:3px;}
+.v-notes{margin-top:26px;}
+.v-notes.hidden{display:none;}
+.v-notes-label{font-family:var(--font-display);font-size:15px;letter-spacing:.06em;color:var(--ink-faint);margin-bottom:10px;}
+.v-note{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:10px;box-shadow:var(--shadow);}
+.v-note-author{display:block;font-size:12.5px;font-weight:700;color:var(--court-dark);margin-bottom:4px;}
+.v-note-text{font-size:14px;color:var(--ink);line-height:1.5;overflow-wrap:anywhere;}
+.v-fallback-link{display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:999px;background:var(--court);color:#fff;text-decoration:none;font-weight:600;font-size:14.5px;}
+</style>
+</head>
+<body>
+
+<div id="stateView" class="state-view"></div>
+
+<div id="videoView">
+  <div class="v-embed-wrap hidden" id="vEmbedWrap"></div>
+  <div class="v-part-row" id="vChips"></div>
+  <h1 class="v-title" id="vTitle"></h1>
+  <p class="v-short-desc" id="vShortDesc"></p>
+  <p class="v-timestamp-hint hidden" id="vTimestampHint"></p>
+  <div class="v-long-desc" id="vLongDesc"></div>
+  <div class="v-notes hidden" id="vNotesWrap">
+    <div class="v-notes-label">POZNÁMKY TRENÉRŮ</div>
+    <div id="vNotesList"></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+import { initializeFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDHEDRx6jJAE1-0fvTmaMetlh4w6CeTREY",
+  authDomain: "trener-6d1b2.firebaseapp.com",
+  projectId: "trener-6d1b2",
+  storageBucket: "trener-6d1b2.firebasestorage.app",
+  messagingSenderId: "796712714371",
+  appId: "1:796712714371:web:740d1c4c73f9319f509bb6"
+};
+const fbApp = initializeApp(firebaseConfig);
+// Bez trvalé (IndexedDB) cache — viz stejná poznámka v t.html: jednorázový pohled bez přihlášení
+// nepotřebuje offline podporu, a kdyby si žádal svou vlastní trvalou cache zatímco appka (index.html)
+// běží v jiné záložce s multi-tab cache, Firestore by na konfliktu zámku spadl na "Failed to
+// obtain exclusive access to the persistence layer" a stránka by zůstala prázdná.
+const db = initializeFirestore(fbApp, {});
+
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[c]));
+}
+function showState(icon, title, sub) {
+  document.getElementById("videoView").classList.remove("shown");
+  document.getElementById("stateView").innerHTML = `
+    <i class="fa-solid ${icon}"></i>
+    <h1>${esc(title)}</h1>
+    <p>${esc(sub)}</p>`;
+}
+
+const RTE_ALLOWED_TAGS = new Set(["P", "DIV", "BR", "UL", "OL", "LI", "B", "STRONG", "I", "EM", "U"]);
+const RTE_STRIP_ENTIRELY = new Set(["SCRIPT", "STYLE", "IFRAME", "OBJECT", "EMBED"]);
+const RICH_HTML_SNIFF_RE = new RegExp(`<\\/?(${[...RTE_ALLOWED_TAGS].join("|")})[ >]`, "i");
+function sanitizeRichHtml(html) {
+  const tmp = document.createElement("div");
+  tmp.innerHTML = html || "";
+  (function clean(node) {
+    [...node.childNodes].forEach(child => {
+      if (child.nodeType === 3) return;
+      if (child.nodeType !== 1) { child.remove(); return; }
+      if (RTE_STRIP_ENTIRELY.has(child.tagName)) { child.remove(); return; }
+      if (!RTE_ALLOWED_TAGS.has(child.tagName)) {
+        while (child.firstChild) node.insertBefore(child.firstChild, child);
+        node.removeChild(child);
+        return;
+      }
+      [...child.attributes].forEach(attr => child.removeAttribute(attr.name));
+      clean(child);
+    });
+  })(tmp);
+  return tmp.innerHTML;
+}
+function richValueToHtml(raw) {
+  if (!raw) return "";
+  const looksLikeRichHtml = RICH_HTML_SNIFF_RE.test(raw);
+  const asHtml = looksLikeRichHtml ? raw : String(raw).split(/\r?\n/).map(line => `<p>${esc(line)}</p>`).join("");
+  return sanitizeRichHtml(asHtml);
+}
+
+function secondsToTimestamp(sec) {
+  if (sec === null || sec === undefined) return "";
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return m + ":" + String(s).padStart(2, "0");
+}
+function fitBoxForRatio(aspectRatioStr, maxW, maxH) {
+  const parts = (aspectRatioStr || "16/9").split("/").map(Number);
+  const rw = parts[0] || 16, rh = parts[1] || 9;
+  let w = maxW, h = w * (rh / rw);
+  if (h > maxH) { h = maxH; w = h * (rw / rh); }
+  return { w: Math.round(w), h: Math.round(h) };
+}
+const DRIVE_FALLBACK_HEIGHT_PX = { "16/9": 480, "4/3": 480, "1/1": 560, "9/16": 640 };
+function applyDriveFallbackSize(wrap, item, opts) {
+  const base = DRIVE_FALLBACK_HEIGHT_PX[item.aspectRatio] || 480;
+  wrap.style.aspectRatio = "auto"; wrap.style.maxHeight = "none";
+  wrap.style.height = Math.min(base, Math.round(window.innerHeight * ((opts.maxVh || 70) / 100))) + "px";
+}
+/** Beze změny portováno z t.html — stejné platformy, stejné chování (u YouTube je timestamp
+    skutečné spuštění v čase přes "start=", ne jen textová poznámka). */
+function renderEmbedHtml(item, opts) {
+  opts = opts || {};
+  const muted = !!opts.muted;
+  const preload = opts.preload || "metadata";
+  if (item.platform === "youtube" && item.videoId) {
+    const params = [];
+    if (item.timestamp) params.push(`start=${item.timestamp}`);
+    if (muted) params.push("mute=1");
+    const qs = params.length ? `?${params.join("&")}` : "";
+    return `<iframe class="embed" src="https://www.youtube-nocookie.com/embed/${esc(item.videoId)}${qs}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+  }
+  if (item.platform === "drive" && item.videoId) {
+    const fallback = `https://drive.google.com/file/d/${esc(item.videoId)}/preview`;
+    const cacheBust = opts.cacheBust ? `&_cb=${Date.now()}` : "";
+    const directSrc = window.__driveApiKey
+      ? `https://www.googleapis.com/drive/v3/files/${esc(item.videoId)}?alt=media&key=${esc(window.__driveApiKey)}${cacheBust}`
+      : "";
+    if (!directSrc) return `<iframe class="embed" src="${fallback}" allow="autoplay; picture-in-picture 'none'"></iframe>`;
+    return `<video class="embed" controls playsinline preload="${preload}"${muted ? " muted" : ""} src="${directSrc}" data-drive-fallback="${fallback}"></video>`;
+  }
+  if (item.platform === "facebook") {
+    return `<iframe class="embed" src="https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(item.url)}&show_text=false" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+  }
+  if (item.platform === "instagram" && item.videoId) {
+    return `<iframe class="embed" src="https://www.instagram.com/p/${esc(item.videoId)}/embed" allowfullscreen></iframe>`;
+  }
+  if (item.platform === "tiktok" && item.videoId) {
+    return `<iframe class="embed" src="https://www.tiktok.com/player/v1/${esc(item.videoId)}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+  }
+  if (item.platform === "file") {
+    const start = item.timestamp ? `#t=${item.timestamp}` : "";
+    return `<video class="embed" src="${esc(item.url)}${start}" controls playsinline preload="${preload}"${muted ? " muted" : ""} referrerpolicy="no-referrer"></video>`;
+  }
+  return `<a class="v-fallback-link" href="${esc(item.url)}" target="_blank" rel="noopener"><i class="fa-solid fa-up-right-from-square"></i> Otevřít odkaz</a>`;
+}
+function setupDriveVideoPlayback(wrap, item, opts) {
+  if (item.platform !== "drive") return;
+  opts = opts || {};
+  const applyRatio = (ratioStr) => {
+    wrap.style.width = ""; wrap.style.height = "";
+    wrap.style.maxHeight = (opts.maxVh || 70) + "vh";
+    wrap.style.aspectRatio = ratioStr || "16/9";
+  };
+  const driveVideoEl = wrap.querySelector("video[data-drive-fallback]");
+  if (!driveVideoEl) { applyDriveFallbackSize(wrap, item, opts); return; }
+  applyRatio(item.aspectRatio);
+  driveVideoEl.addEventListener("error", () => {
+    if (!wrap.contains(driveVideoEl)) return;
+    if (!opts._retriedCacheBust) {
+      wrap.innerHTML = renderEmbedHtml(item, { muted: driveVideoEl.muted, preload: "auto", cacheBust: true });
+      setupDriveVideoPlayback(wrap, item, Object.assign({}, opts, { _retriedCacheBust: true }));
+      return;
+    }
+    wrap.innerHTML = `<iframe class="embed" src="${driveVideoEl.dataset.driveFallback}" allow="autoplay; picture-in-picture 'none'"></iframe>`;
+    applyDriveFallbackSize(wrap, item, opts);
+  }, { once: true });
+  driveVideoEl.addEventListener("loadedmetadata", () => {
+    if (!wrap.contains(driveVideoEl)) return;
+    if (driveVideoEl.videoWidth && driveVideoEl.videoHeight) applyRatio(`${driveVideoEl.videoWidth} / ${driveVideoEl.videoHeight}`);
+  }, { once: true });
+}
+function showVideoEmbed(item) {
+  const wrap = document.getElementById("vEmbedWrap");
+  wrap.classList.remove("hidden");
+  wrap.style.aspectRatio = item.aspectRatio || "16/9";
+  wrap.style.width = ""; wrap.style.height = ""; wrap.style.maxHeight = "";
+  wrap.innerHTML = renderEmbedHtml(item, { preload: "auto" });
+  if (item.platform === "drive") setupDriveVideoPlayback(wrap, item, {});
+}
+
+async function init() {
+  const params = new URLSearchParams(location.search);
+  const id = params.get("id");
+  if (!id) { showState("fa-triangle-exclamation", "Chybí odkaz na video", "Zkontroluj, jestli je celá adresa zkopírovaná správně."); return; }
+  let snap;
+  try {
+    snap = await getDoc(doc(db, "sharedVideos", id));
+  } catch (e) {
+    showState("fa-triangle-exclamation", "Nepodařilo se načíst", "Zkontroluj připojení k internetu a zkus to znovu.");
+    return;
+  }
+  if (!snap.exists()) { showState("fa-link-slash", "Odkaz už není platný", "Video bylo buď smazáno, nebo sdílení skončilo."); return; }
+  const item = snap.data();
+  if (!item.expiresAt || item.expiresAt < Date.now()) {
+    showState("fa-link-slash", "Odkaz už není platný", "Platnost sdíleného odkazu vypršela.");
+    return;
+  }
+  window.__driveApiKey = item.driveApiKey || "";
+
+  document.getElementById("stateView").innerHTML = "";
+  document.title = (item.title || "Video") + " — Trenér";
+  document.getElementById("vTitle").textContent = item.title || "(bez názvu)";
+  document.getElementById("vShortDesc").textContent = item.shortDesc || "";
+  document.getElementById("vShortDesc").classList.toggle("hidden", !item.shortDesc);
+  document.getElementById("vLongDesc").innerHTML = richValueToHtml(item.longDesc || "");
+
+  const chipsWrap = document.getElementById("vChips");
+  const chips = [
+    ...(item.tags || []).map(t => `<span class="v-chip">${esc(t)}</span>`),
+    ...(item.equipment || []).map(e => `<span class="v-chip v-chip-equip"><i class="fa-solid fa-dumbbell"></i> ${esc(e)}</span>`)
+  ];
+  chipsWrap.innerHTML = chips.join("");
+
+  const hint = document.getElementById("vTimestampHint");
+  if (item.timestamp) {
+    hint.innerHTML = `<i class="fa-regular fa-clock"></i> Video začíná v ${esc(secondsToTimestamp(item.timestamp))}`;
+    hint.classList.remove("hidden");
+  } else {
+    hint.classList.add("hidden");
+  }
+
+  const notesWrap = document.getElementById("vNotesWrap");
+  const notes = item.notes || [];
+  if (notes.length) {
+    document.getElementById("vNotesList").innerHTML = notes.map(n => `
+      <div class="v-note">
+        <span class="v-note-author">${esc(n.authorLabel || "Trenér")}</span>
+        <div class="v-note-text">${esc(n.text || "")}</div>
+      </div>
+    `).join("");
+    notesWrap.classList.remove("hidden");
+  } else {
+    notesWrap.classList.add("hidden");
+  }
+
+  showVideoEmbed(item);
+  document.getElementById("videoView").classList.add("shown");
+}
+init();
+</script>
+</body>
+</html>
