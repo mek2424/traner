@@ -166,7 +166,10 @@ function renderEmbedHtml(item, opts) {
     return `<video class="embed" controls playsinline preload="${preload}"${muted ? " muted" : ""} src="${directSrc}" data-drive-fallback="${fallback}"></video>`;
   }
   if (item.platform === "facebook") {
-    return `<iframe class="embed" src="https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(item.url)}&show_text=false" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+    return `<div style="position:relative;width:100%;height:100%;">
+      <iframe class="embed" src="https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(item.url)}&show_text=false" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+      <a href="${esc(item.url)}" target="_blank" rel="noopener" style="position:absolute;bottom:8px;right:8px;z-index:2;background:rgba(0,0,0,.65);color:#fff;font-size:12px;font-weight:600;padding:6px 10px;border-radius:999px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">Otevřít na Facebooku <i class="fa-solid fa-up-right-from-square"></i></a>
+    </div>`;
   }
   if (item.platform === "instagram" && item.videoId) {
     return `<iframe class="embed" src="https://www.instagram.com/p/${esc(item.videoId)}/embed" allowfullscreen></iframe>`;

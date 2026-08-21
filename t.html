@@ -176,16 +176,19 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
     <button type="button" class="tm-info-btn hidden" id="tmInfoBtn" aria-label="Info o cviku" title="Info o cviku"><i class="fa-regular fa-circle-question"></i></button>
     <button type="button" class="tm-nav-btn tm-nav-next" id="tmNextBtn">Další <i class="fa-solid fa-arrow-right"></i></button>
   </div>
-</div>
 
-<div id="exerciseInfoModalBackdrop" class="modal-backdrop hidden">
-  <div class="modal">
-    <div class="modal-head">
-      <h2 id="exerciseInfoModalTitle"></h2>
-      <button class="btn-icon" id="closeExerciseInfoModalBtn"><i class="fa-solid fa-xmark"></i></button>
+  <!-- Na telefonu na výšku jde #trainingModeView do skutečného Fullscreen API — top layer
+       fullscreenu smí překrýt jen to, co je fyzicky UVNITŘ fullscreenovaného elementu, takže
+       tenhle popup musí být tady, ne jako sourozenec za trainingModeView. -->
+  <div id="exerciseInfoModalBackdrop" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-head">
+        <h2 id="exerciseInfoModalTitle"></h2>
+        <button class="btn-icon" id="closeExerciseInfoModalBtn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="exerciseInfoModalShort" style="font-size:14px;font-weight:600;color:var(--court-dark);margin:-8px 0 14px;"></div>
+      <div id="exerciseInfoModalLong" class="rte-display" style="font-size:13.5px;color:#5B6472;line-height:1.6;overflow-y:auto;"></div>
     </div>
-    <div id="exerciseInfoModalShort" style="font-size:14px;font-weight:600;color:var(--court-dark);margin:-8px 0 14px;"></div>
-    <div id="exerciseInfoModalLong" class="rte-display" style="font-size:13.5px;color:#5B6472;line-height:1.6;overflow-y:auto;"></div>
   </div>
 </div>
 
@@ -333,7 +336,10 @@ function renderEmbedHtml(item, opts) {
     return `<video class="embed" controls playsinline preload="${preload}"${muted ? " muted" : ""} src="${directSrc}" data-drive-fallback="${fallback}"></video>`;
   }
   if (item.platform === "facebook") {
-    return `<iframe class="embed" src="https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(item.url)}&show_text=false" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+    return `<div style="position:relative;width:100%;height:100%;">
+      <iframe class="embed" src="https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(item.url)}&show_text=false" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+      <a href="${esc(item.url)}" target="_blank" rel="noopener" style="position:absolute;bottom:8px;right:8px;z-index:2;background:rgba(0,0,0,.65);color:#fff;font-size:12px;font-weight:600;padding:6px 10px;border-radius:999px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">Otevřít na Facebooku <i class="fa-solid fa-up-right-from-square"></i></a>
+    </div>`;
   }
   if (item.platform === "instagram" && item.videoId) {
     return `<iframe class="embed" src="https://www.instagram.com/p/${esc(item.videoId)}/embed" allowfullscreen></iframe>`;
