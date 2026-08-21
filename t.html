@@ -84,6 +84,30 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
 .tm-nav-btn{flex:1;padding:16px;border-radius:var(--radius);border:1px solid #DCDFD9;background:#fff;font-family:var(--font-display);font-size:16px;color:#1B2430;letter-spacing:.02em;}
 .tm-nav-btn:disabled{opacity:.35;}
 .tm-nav-next{background:var(--chalk);color:#fff;border-color:var(--chalk);}
+.tm-info-btn{
+  flex:0 0 60px;border-radius:var(--radius);border:1.5px solid var(--court);background:rgba(51,153,51,.1);
+  color:var(--court-dark);display:flex;align-items:center;justify-content:center;font-size:19px;
+  animation:tmInfoPulse 3.2s ease-in-out infinite;
+}
+.tm-info-btn.hidden{display:none;}
+@keyframes tmInfoPulse{
+  0%,78%,100%{box-shadow:0 0 0 0 rgba(51,153,51,0);}
+  86%{box-shadow:0 0 0 7px rgba(51,153,51,.28);}
+  92%{box-shadow:0 0 0 0 rgba(51,153,51,0);}
+}
+@media(max-width:640px){.tm-info-btn{flex-basis:52px;font-size:16px;}}
+.modal-backdrop{position:fixed;inset:0;z-index:50;background:rgba(20,26,34,.55);display:flex;align-items:center;justify-content:center;padding:20px;}
+.modal-backdrop.hidden{display:none;}
+.modal{width:100%;max-width:420px;max-height:80vh;display:flex;flex-direction:column;background:#fff;border-radius:16px;box-shadow:0 20px 50px rgba(27,36,48,.25);padding:20px;}
+.modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px;}
+.modal-head h2{font-family:var(--font-display);font-size:22px;color:#1B2430;margin:0;line-height:1.15;}
+.btn-icon{width:26px;height:26px;border-radius:50%;background:#F4F5F2;border:none;color:#5B6472;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.rte-display ul,.rte-display ol{margin:2px 0 3px 18px;padding:0;}
+.rte-display li{margin-bottom:1px;}
+.rte-display ul{list-style-type:disc;}
+.rte-display ol{list-style-type:decimal;}
+.rte-display p,.rte-display div{margin:0 0 3px;}
+.rte-display p:last-child,.rte-display div:last-child{margin-bottom:0;}
 @media(orientation:landscape) and (max-height:500px){
   .tm-header{padding:6px 14px;padding-top:calc(6px + env(safe-area-inset-top));}
   .tm-exit{width:34px;height:34px;font-size:15px;}
@@ -149,7 +173,19 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
   </div>
   <div class="tm-nav">
     <button type="button" class="tm-nav-btn" id="tmPrevBtn"><i class="fa-solid fa-arrow-left"></i> Předchozí</button>
+    <button type="button" class="tm-info-btn hidden" id="tmInfoBtn" aria-label="Info o cviku" title="Info o cviku"><i class="fa-regular fa-circle-question"></i></button>
     <button type="button" class="tm-nav-btn tm-nav-next" id="tmNextBtn">Další <i class="fa-solid fa-arrow-right"></i></button>
+  </div>
+</div>
+
+<div id="exerciseInfoModalBackdrop" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="exerciseInfoModalTitle"></h2>
+      <button class="btn-icon" id="closeExerciseInfoModalBtn"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="exerciseInfoModalShort" style="font-size:14px;font-weight:600;color:var(--court-dark);margin:-8px 0 14px;"></div>
+    <div id="exerciseInfoModalLong" class="rte-display" style="font-size:13.5px;color:#5B6472;line-height:1.6;overflow-y:auto;"></div>
   </div>
 </div>
 
@@ -521,9 +557,54 @@ function renderTrainingModeFinished() {
   stopTrainingModeTimer();
   document.getElementById("tmTimer").textContent = "";
   document.getElementById("tmNextBtn").innerHTML = 'Zavřít <i class="fa-solid fa-xmark"></i>';
+  document.getElementById("tmInfoBtn").classList.add("hidden");
+  tmCurrentInfoData = null;
+}
+let tmCurrentInfoData = null;
+function getTmCurrentInfo() {
+  const row = tmItems[tmIndex];
+  if (!row || row.part === "prestavka") return null;
+  if (row.isGroup) {
+    const v = row.videos[tmGroupVideoIndex];
+    if (!v || v.isBreak) return null;
+    const lib = v.isText ? null : videos[v.videoId];
+    return {
+      title: v.isText ? (v.title || "(bez názvu)") : (lib ? lib.title : "(video smazáno)"),
+      shortDesc: v.isText ? (v.shortDesc || "") : (lib ? lib.shortDesc : ""),
+      longDesc: v.isText ? (v.longDesc || "") : (lib ? lib.longDesc : "")
+    };
+  }
+  const lib = row.isText ? null : videos[row.videoId];
+  return {
+    title: row.isText ? (row.title || "(bez názvu)") : (lib ? lib.title : "(video smazáno z knihovny)"),
+    shortDesc: row.isText ? (row.shortDesc || "") : (lib ? lib.shortDesc : ""),
+    longDesc: row.isText ? (row.longDesc || "") : (lib ? lib.longDesc : "")
+  };
+}
+function refreshTmInfoBtn() {
+  const btn = document.getElementById("tmInfoBtn");
+  const info = (tmInSeriesPause || tmFinished) ? null : getTmCurrentInfo();
+  if (!info || !(info.longDesc && info.longDesc.trim())) {
+    btn.classList.add("hidden");
+    tmCurrentInfoData = null;
+    return;
+  }
+  tmCurrentInfoData = info;
+  btn.classList.remove("hidden");
+}
+function openExerciseInfoModal() {
+  if (!tmCurrentInfoData) return;
+  document.getElementById("exerciseInfoModalTitle").textContent = tmCurrentInfoData.title || "";
+  document.getElementById("exerciseInfoModalShort").textContent = tmCurrentInfoData.shortDesc || "";
+  document.getElementById("exerciseInfoModalLong").innerHTML = richValueToHtml(tmCurrentInfoData.longDesc || "");
+  document.getElementById("exerciseInfoModalBackdrop").classList.remove("hidden");
+}
+function closeExerciseInfoModal() {
+  document.getElementById("exerciseInfoModalBackdrop").classList.add("hidden");
 }
 function renderTrainingModeItem() {
   stopTrainingModeTimer();
+  refreshTmInfoBtn();
   if (tmFinished) { renderTrainingModeFinished(); return; }
   if (tmInSeriesPause) { renderSeriesPause(); return; }
   const row = tmItems[tmIndex];
@@ -657,6 +738,11 @@ function retreatTrainingMode() {
 }
 document.getElementById("tmNextBtn").addEventListener("click", advanceTrainingMode);
 document.getElementById("tmPrevBtn").addEventListener("click", retreatTrainingMode);
+document.getElementById("tmInfoBtn").addEventListener("click", openExerciseInfoModal);
+document.getElementById("closeExerciseInfoModalBtn").addEventListener("click", closeExerciseInfoModal);
+document.getElementById("exerciseInfoModalBackdrop").addEventListener("click", (e) => {
+  if (e.target.id === "exerciseInfoModalBackdrop") closeExerciseInfoModal();
+});
 
 function shouldForceTrainingLandscape() { return window.innerWidth < 860 && window.innerHeight > window.innerWidth; }
 let tmLandscapeForced = false;
