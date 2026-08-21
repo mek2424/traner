@@ -17,6 +17,12 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
 .state-view i{font-size:36px;color:#8A93A0;margin-bottom:16px;}
 .state-view h1{font-family:var(--font-display);font-size:26px;color:#1B2430;margin:0 0 8px;letter-spacing:.02em;}
 .state-view p{color:#5B6472;font-size:14px;margin:0;max-width:320px;}
+.intro-start-btn{
+  margin-top:26px;padding:16px 32px;border-radius:999px;border:none;background:var(--court);
+  color:#fff;font-family:var(--font-display);font-size:18px;letter-spacing:.03em;cursor:pointer;
+  display:inline-flex;align-items:center;gap:10px;box-shadow:0 4px 14px rgba(51,153,51,.35);
+}
+.intro-start-btn:active{background:var(--court-dark);}
 #trainingModeView{
   position:fixed;inset:0;background:#F4F5F2;display:flex;flex-direction:column;z-index:1;
   transform:translateZ(0);-webkit-transform:translateZ(0);
@@ -104,6 +110,13 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
 
 <div id="stateView" class="state-view"></div>
 
+<div id="introView" class="state-view hidden">
+  <i class="fa-solid fa-clipboard-list"></i>
+  <h1 id="introTitle">Trénink</h1>
+  <p id="introSub"></p>
+  <button type="button" id="introStartBtn" class="intro-start-btn">Spustit trénink <i class="fa-solid fa-arrow-right"></i></button>
+</div>
+
 <div id="trainingModeView" class="hidden">
   <div class="tm-header">
     <span class="tm-exit" style="visibility:hidden;"></span>
@@ -167,6 +180,10 @@ function showState(icon, title, sub) {
 
 const RTE_ALLOWED_TAGS = new Set(["P", "DIV", "BR", "UL", "OL", "LI", "B", "STRONG", "I", "EM", "U"]);
 const RTE_STRIP_ENTIRELY = new Set(["SCRIPT", "STYLE", "IFRAME", "OBJECT", "EMBED"]);
+// Pozná uloženou hodnotu jako "už je to HTML z RTE" — musí pokrýt všechny povolené tagy, ne jen
+// blokové (p/div/ul/ol/li/br), jinak se krátké pole s holým "<b>text</b>" (bez blokového obalu)
+// vezme za starý čistý text a escapuje — místo tučného písma se pak zobrazí doslova "<b>text</b>".
+const RICH_HTML_SNIFF_RE = new RegExp(`<\\/?(${[...RTE_ALLOWED_TAGS].join("|")})[ >]`, "i");
 function sanitizeRichHtml(html) {
   const tmp = document.createElement("div");
   tmp.innerHTML = html || "";
@@ -188,7 +205,7 @@ function sanitizeRichHtml(html) {
 }
 function richValueToHtml(raw) {
   if (!raw) return "";
-  const looksLikeRichHtml = /<\/?(p|div|ul|ol|li|br)[ >]/i.test(raw);
+  const looksLikeRichHtml = RICH_HTML_SNIFF_RE.test(raw);
   const asHtml = looksLikeRichHtml ? raw : String(raw).split(/\r?\n/).map(line => `<p>${esc(line)}</p>`).join("");
   return sanitizeRichHtml(asHtml);
 }
@@ -204,8 +221,32 @@ function setPartTag(el, color) {
   el.style.background = color + "33";
   el.style.color = darkenHex(color, 0.35);
 }
+/** Podle jasu barvy vybere čitelný text (bílá na sytější/tmavší barvě, tmavě modrošedá na
+    světlé) — stejná logika jako v index.html, pro pozadí časovače podle barvy části. */
+function readableTextColor(hex) {
+  const m = hex.replace("#", "").match(/.{1,2}/g);
+  if (!m || m.length < 3) return "#1B2430";
+  const [r, g, b] = m.map(h => parseInt(h, 16));
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  return brightness < 150 ? "#fff" : "#1B2430";
+}
+/** Průběhový proužek nahoře se obarví podle právě probíhající části a jeho šířka odpovídá
+    postupu tréninkem — tahle část se při portování z index.html ztratila, takže proužek jen
+    stál na místě, ať se scrollovalo cvičeními jakkoli. */
 function updateProgressBar(color) {
-  document.getElementById("tmProgressFill").style.background = color || "var(--court)";
+  const total = tmItems.length || 1;
+  const pct = Math.min(100, Math.max(0, (tmIndex / total) * 100));
+  const fill = document.getElementById("tmProgressFill");
+  fill.style.width = pct + "%";
+  fill.style.background = color || "var(--court)";
+  const timerEl = document.getElementById("tmTimer");
+  if (color) {
+    timerEl.style.setProperty("--tm-timer-bg", color);
+    timerEl.style.setProperty("--tm-timer-fg", readableTextColor(color));
+  } else {
+    timerEl.style.removeProperty("--tm-timer-bg");
+    timerEl.style.removeProperty("--tm-timer-fg");
+  }
 }
 function fitBoxForRatio(aspectRatioStr, maxW, maxH) {
   const parts = (aspectRatioStr || "16/9").split("/").map(Number);
@@ -459,7 +500,10 @@ function renderTrainingModeFinished() {
   document.getElementById("tmBody").style.background = "";
   document.getElementById("tmPartLabel").textContent = "";
   setPartTag(document.getElementById("tmPartLabel"), null);
-  updateProgressBar("var(--court)");
+  // Na konci se proužek nastaví na 100 % napevno, ne přes obecný výpočet v updateProgressBar
+  // (ten by u posledního cviku vyšel jen "(length-1)/length", ne celých 100 %).
+  document.getElementById("tmProgressFill").style.width = "100%";
+  document.getElementById("tmProgressFill").style.background = "var(--court)";
   setScaledText(document.getElementById("tmTitle"), "Hotovo! 🎉");
   document.getElementById("tmDesc").textContent = "";
   document.getElementById("tmCue").innerHTML = "";
@@ -607,9 +651,11 @@ document.getElementById("tmPrevBtn").addEventListener("click", retreatTrainingMo
 
 function shouldForceTrainingLandscape() { return window.innerWidth < 860 && window.innerHeight > window.innerWidth; }
 let tmLandscapeForced = false;
+/** Jen zamkne orientaci na šířku (na úzkých telefonech na výšku) — o samotné vstoupení do
+    fullscreenu se stará startSharedTrainingMode(), protože to musí proběhnout přímo v reakci na
+    klik na úvodní obrazovce (viz níž), jinak by to prohlížeč potichu odmítl. */
 async function enterTrainingLandscape() {
   const el = document.getElementById("trainingModeView");
-  try { if (el.requestFullscreen) await el.requestFullscreen(); else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen(); } catch (e) {}
   let locked = false;
   try { if (screen.orientation && screen.orientation.lock) { await screen.orientation.lock("landscape"); locked = true; } } catch (e) {}
   tmLandscapeForced = true;
@@ -654,11 +700,26 @@ async function init() {
   if (!tmItems.length) { showState("fa-inbox", "Trénink je prázdný", "Tenhle trénink zatím nemá žádné cviky."); return; }
 
   document.getElementById("stateView").innerHTML = "";
+  document.getElementById("introTitle").textContent = t.name || "Trénink";
+  document.getElementById("introSub").textContent =
+    `${tmItems.length} cvičení · pro nerušený trénink doporučujeme spustit na celou obrazovku.`;
+  document.getElementById("introView").classList.remove("hidden");
+}
+/** Spustí se přímo z kliknutí na úvodní obrazovce (viz #introStartBtn níž) — fullscreen se MUSÍ
+    vyžádat tady, v přímé reakci na klik, jinak by ho prohlížeč (bez uživatelského gesta) potichu
+    odmítl, což byl přesně důvod, proč fullscreen dřív fakticky nikdy nenaskočil. */
+async function startSharedTrainingMode() {
+  document.getElementById("introView").classList.add("hidden");
   const tmView = document.getElementById("trainingModeView");
   tmView.classList.remove("hidden");
+  try {
+    if (tmView.requestFullscreen) await tmView.requestFullscreen();
+    else if (tmView.webkitRequestFullscreen) tmView.webkitRequestFullscreen();
+  } catch (e) {}
   renderTrainingModeItem();
   if (shouldForceTrainingLandscape()) enterTrainingLandscape();
 }
+document.getElementById("introStartBtn").addEventListener("click", startSharedTrainingMode);
 init();
 </script>
 </body>
