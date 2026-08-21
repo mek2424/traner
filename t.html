@@ -336,10 +336,7 @@ function renderEmbedHtml(item, opts) {
     return `<video class="embed" controls playsinline preload="${preload}"${muted ? " muted" : ""} src="${directSrc}" data-drive-fallback="${fallback}"></video>`;
   }
   if (item.platform === "facebook") {
-    return `<div style="position:relative;width:100%;height:100%;">
-      <iframe class="embed" src="https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(item.url)}&show_text=false" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-      <a href="${esc(item.url)}" target="_blank" rel="noopener" style="position:absolute;bottom:8px;right:8px;z-index:2;background:rgba(0,0,0,.65);color:#fff;font-size:12px;font-weight:600;padding:6px 10px;border-radius:999px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">Otevřít na Facebooku <i class="fa-solid fa-up-right-from-square"></i></a>
-    </div>`;
+    return `<iframe class="embed" src="https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(item.url)}&show_text=false" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
   }
   if (item.platform === "instagram" && item.videoId) {
     return `<iframe class="embed" src="https://www.instagram.com/p/${esc(item.videoId)}/embed" allowfullscreen></iframe>`;
@@ -763,12 +760,26 @@ async function enterTrainingLandscape() {
   if (!locked) el.classList.add("tm-forced-landscape");
   showTrainingModeVideo(currentTrainingModeLib());
 }
+// Sdílená prezentace nemá (na rozdíl od appky) žádné tlačítko "zavřít trénink" — jde se jen
+// dopředu/dozadu až do konce. Fullscreen ale umí zmizet i bez úmyslu (gesto zpět, stažení
+// oznámení, přepnutí appky), a to spustí fullscreenchange stejně jako schválné opuštění.
+// Dřív se to bralo jako "uživatel už nechce na šířku" a vynucení natrvalo zrušilo — a protože
+// spolu s fullscreenem obvykle zmizí i zámek orientace (ten na něm často závisí), telefon se
+// pak sám otočil zpátky na výšku a nic ho už nevrátilo — trénink zůstal nakřivo napořád.
+// Teď se místo rušení naopak vždycky (znovu) natvrdo vynutí natočení přes CSS transform —
+// to na fullscreenu ani na zámku orientace nezávisí, takže vydrží, ať se s nimi stane cokoli.
 document.addEventListener("fullscreenchange", () => {
-  if (!document.fullscreenElement && tmLandscapeForced) {
-    tmLandscapeForced = false;
-    document.getElementById("trainingModeView").classList.remove("tm-forced-landscape");
-    try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (e) {}
-    showTrainingModeVideo(currentTrainingModeLib());
+  if (!document.fullscreenElement && tmLandscapeForced && shouldForceTrainingLandscape()) {
+    const tmView = document.getElementById("trainingModeView");
+    const wasForced = tmView.classList.contains("tm-forced-landscape");
+    tmView.classList.add("tm-forced-landscape");
+    if (!wasForced) showTrainingModeVideo(currentTrainingModeLib());
+    // Zkusí se i znovu požádat o fullscreen — bez přímé reakce na klik to prohlížeč běžně
+    // odmítne, ale je to zadarmo a někdy to i tak vyjde.
+    try {
+      const p = tmView.requestFullscreen ? tmView.requestFullscreen() : (tmView.webkitRequestFullscreen && tmView.webkitRequestFullscreen());
+      if (p && p.catch) p.catch(() => {});
+    } catch (e) {}
   }
 });
 
