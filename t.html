@@ -647,8 +647,11 @@ function renderTrainingModeItem() {
   else seriesLabel.classList.add("hidden");
 
   if (row.isGroup) {
+    // Prázdný textContent, ale i tak barevná pilulka (setPartTag s barvou) by se ukázala jako
+    // prázdný barevný "zbytek" nad názvem skupiny — jméno skupiny už barvu nese samo (viz níže),
+    // takže tmPartLabel v tomhle stavu chce vždy vypnout (color:null), ne obarvit naprázdno.
     document.getElementById("tmPartLabel").textContent = "";
-    setPartTag(document.getElementById("tmPartLabel"), row.part ? getPart(row.part).color : null);
+    setPartTag(document.getElementById("tmPartLabel"), null);
     updateProgressBar(row.part ? getPart(row.part).color : "#339933");
     groupNameEl.textContent = row.name || "Skupina";
     groupNameEl.classList.remove("hidden");
