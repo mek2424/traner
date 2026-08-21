@@ -690,7 +690,8 @@ async function init() {
   try {
     snap = await getDoc(doc(db, "users", ownerUid, "trainings", id));
   } catch (e) {
-    showState("fa-triangle-exclamation", "Nepodařilo se načíst", "Zkontroluj připojení k internetu a zkus to znovu.");
+    console.error("[t.html] Nepodařilo se načíst trénink:", e);
+    showState("fa-triangle-exclamation", "Nepodařilo se načíst", `Zkontroluj připojení k internetu a zkus to znovu. (${e && (e.code || e.message) || "neznámá chyba"})`);
     return;
   }
   if (!snap.exists()) { showState("fa-link-slash", "Odkaz už není platný", "Trénink byl buď smazán, nebo sdílení skončilo."); return; }
