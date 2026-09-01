@@ -1,0 +1,11 @@
+{
+  "name": "functions",
+  "description": "Cloud Functions pro appku Trenér — posílají adminovi push notifikace o změnách v knihovně, nových/smazaných trénincích ostatních trenérů a o tom, když někdo přijde online.",
+  "engines": { "node": "20" },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^12.6.0",
+    "firebase-functions": "^5.1.0"
+  },
+  "private": true
+}
