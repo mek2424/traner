@@ -1,4 +1,4 @@
-const CACHE_NAME = "trener-v6";
+const CACHE_NAME = "trener-v7";
 const APP_SHELL = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./club-logo.png", "./raptor-sound.mp3"];
 
 /* =========================================================
@@ -24,6 +24,7 @@ messaging.onBackgroundMessage((payload) => {
     body: (payload.notification && payload.notification.body) || "",
     icon: "./icon-192.png",
     badge: "./icon-192.png",
+    vibrate: [80, 40, 80],
     data: payload.data || {}
   };
   self.registration.showNotification(title, options);
