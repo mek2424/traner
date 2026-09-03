@@ -53,6 +53,9 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
 .v-fallback-link{display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:999px;background:var(--court);color:#fff;text-decoration:none;font-weight:600;font-size:14.5px;}
 .v-open-source-link{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:8px;padding:9px 14px;border-radius:var(--radius-sm);background:var(--paper);border:1px solid var(--line);color:var(--ink-soft);text-decoration:none;font-weight:600;font-size:13px;}
 .v-open-source-link.hidden{display:none;}
+/* Video ručně označené jako nefunkční (viz appka #91/#94) — odkaz na zdroj je tu jediná cesta
+   k videu, ne jen záchrana po chybě, proto dostane výraznější, "primární" vzhled. */
+.v-open-source-link.primary{background:var(--court);border-color:var(--court);color:#fff;font-size:14.5px;padding:12px 18px;}
 </style>
 </head>
 <body>
@@ -214,8 +217,38 @@ function setupDriveVideoPlayback(wrap, item, opts) {
     if (driveVideoEl.videoWidth && driveVideoEl.videoHeight) applyRatio(`${driveVideoEl.videoWidth} / ${driveVideoEl.videoHeight}`);
   }, { once: true });
 }
+/** Stejná sada odkazů "otevřít přímo na zdroji" jako appka používá jinde (index.html/t.html
+    #80/#83/#91) — jen platform → čitelný název. */
+const PLATFORM_DIRECT_LINK_LABELS = {
+  facebook: `<i class="fa-brands fa-facebook"></i> Facebook`,
+  drive: `<i class="fa-brands fa-google-drive"></i> Disk`,
+  instagram: `<i class="fa-brands fa-instagram"></i> Instagram`,
+  tiktok: `<i class="fa-brands fa-tiktok"></i> TikTok`,
+  youtube: `<i class="fa-brands fa-youtube"></i> YouTube`,
+  file: `<i class="fa-solid fa-up-right-from-square"></i> video`
+};
 function showVideoEmbed(item) {
   const wrap = document.getElementById("vEmbedWrap");
+  const openLink = document.getElementById("vOpenSourceLink");
+  // Video ručně označené jako nefunkční (appka #91/#94) — appka se ho ani nesnaží načíst (byl
+  // by to jen prázdný/rozbitý embed), na jeho místě zůstane rovnou jen přímý odkaz na zdroj.
+  // Dlouhý popis (a krátký popis) se zobrazují beze změny, appka je na týhle stránce ukazuje
+  // vždycky, ne jen po kliknutí na "?" jako v prezentacích appky.
+  if (item.brokenAt) {
+    wrap.classList.add("hidden");
+    wrap.innerHTML = "";
+    const label = PLATFORM_DIRECT_LINK_LABELS[item.platform];
+    if (label && item.url) {
+      openLink.href = item.url;
+      openLink.innerHTML = `Otevřít přímo — ${label}`;
+      openLink.classList.add("primary");
+      openLink.classList.remove("hidden");
+    } else {
+      openLink.classList.add("hidden");
+    }
+    return;
+  }
+  openLink.classList.remove("primary");
   wrap.classList.remove("hidden");
   wrap.style.aspectRatio = item.aspectRatio || "16/9";
   wrap.style.width = ""; wrap.style.height = ""; wrap.style.maxHeight = "";
@@ -232,7 +265,6 @@ function showVideoEmbed(item) {
     tiktok: `Nejde přehrát? Otevřít přímo na TikToku <i class="fa-brands fa-tiktok"></i>`,
     file: `Nejde přehrát? Otevřít video přímo <i class="fa-solid fa-up-right-from-square"></i>`
   };
-  const openLink = document.getElementById("vOpenSourceLink");
   if (fallbackLinks[item.platform]) {
     openLink.href = item.url || "#";
     openLink.innerHTML = fallbackLinks[item.platform];

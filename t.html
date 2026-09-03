@@ -46,6 +46,13 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
 .tm-body.tm-solo .tm-col-video,.tm-body.tm-solo .tm-col-right{display:none;}
 .tm-video-wrap{width:100%;max-width:220px;aspect-ratio:16/9;background:#000;border-radius:var(--radius-sm);overflow:hidden;margin:0 auto;}
 .tm-video-wrap.hidden{display:none;}
+.tm-video-fallback{text-align:center;margin-top:6px;}
+.tm-video-fallback.hidden{display:none;}
+.tm-video-fallback a{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-soft);text-decoration:none;}
+.tm-video-fallback a:hover{color:var(--court);}
+.tm-text-pane{width:100%;max-width:320px;margin:0 auto;max-height:min(38vh,320px);overflow-y:auto;background:#fff;border:1px solid #DCDFD9;border-radius:var(--radius-sm);padding:14px 16px;font-size:13.5px;line-height:1.6;color:#3A4250;text-align:left;}
+.tm-text-pane.hidden{display:none;}
+.tm-text-pane ul,.tm-text-pane ol{padding-left:20px;margin:4px 0;}
 .embed{width:100%;height:100%;border:none;display:block;}
 .tm-up-next{position:absolute;top:14px;right:16px;z-index:2;display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid #DCDFD9;border-left:4px solid #DCDFD9;border-radius:var(--radius-sm);padding:8px 16px;font-size:12.5px;font-weight:600;color:#5B6472;box-shadow:0 1px 2px rgba(27,36,48,.07), 0 4px 14px rgba(27,36,48,.05);transform:translateX(130%);opacity:0;transition:transform .45s ease,opacity .3s ease;}
 .tm-up-next.hidden{display:none;}
@@ -66,6 +73,7 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
   .tm-body{grid-template-columns:1fr 1.3fr 1fr;grid-template-areas:"left video right";align-items:center;gap:28px;padding:24px 40px;}
   .tm-col-left{margin-top:0;}
   .tm-video-wrap{max-width:100%;}
+  .tm-text-pane{max-width:100%;}
   .tm-desc,.tm-cue,.tm-note{max-width:100%;}
   .tm-up-next{position:fixed;top:calc(14px + env(safe-area-inset-top));right:70px;left:auto;transform:translateX(-100vw);transition:transform .6s ease,opacity .3s ease;}
   .tm-up-next.shown{transform:translateX(0);}
@@ -73,6 +81,7 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
 #trainingModeView.tm-forced-landscape .tm-body{grid-template-columns:1fr 1.3fr 1fr;grid-template-areas:"left video right";align-items:center;gap:28px;padding:24px 40px;}
 #trainingModeView.tm-forced-landscape .tm-col-left{margin-top:0;}
 #trainingModeView.tm-forced-landscape .tm-video-wrap{max-width:100%;}
+#trainingModeView.tm-forced-landscape .tm-text-pane{max-width:100%;}
 #trainingModeView.tm-forced-landscape .tm-desc,#trainingModeView.tm-forced-landscape .tm-cue,#trainingModeView.tm-forced-landscape .tm-note{max-width:100%;}
 #trainingModeView.tm-forced-landscape .tm-up-next{position:fixed;top:calc(6px + env(safe-area-inset-top));right:56px;left:auto;transform:translateX(-100vw);transition:transform .6s ease,opacity .3s ease;}
 #trainingModeView.tm-forced-landscape .tm-up-next.shown{transform:translateX(0);}
@@ -158,6 +167,8 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
     </div>
     <div class="tm-col-video">
       <div class="tm-video-wrap hidden" id="tmVideoWrap"></div>
+      <div class="tm-video-fallback hidden" id="tmVideoFallback"></div>
+      <div class="tm-text-pane hidden" id="tmTextPane"></div>
     </div>
     <div class="tm-col-right">
       <div class="tm-desc" id="tmDesc"></div>
@@ -350,6 +361,23 @@ function renderEmbedHtml(item, opts) {
   }
   return `<a class="fallback-link" href="${esc(item.url)}" target="_blank" rel="noopener">Otevřít odkaz ↗</a>`;
 }
+/** Stejná sada odkazů "otevřít přímo na zdroji" jako v index.html (#80/#83) — u FB/IG/TikTok
+    embed občas mlčky nepůjde přehrát (typicky video s dětmi, zřejmě věkové omezení), takže je
+    odkaz vidět rovnou pod videem, ne jen jako záchrana po chybě. */
+const PLATFORM_DIRECT_LINK_LABELS = {
+  facebook: `<i class="fa-brands fa-facebook"></i> Facebook`,
+  drive: `<i class="fa-brands fa-google-drive"></i> Disk`,
+  instagram: `<i class="fa-brands fa-instagram"></i> Instagram`,
+  tiktok: `<i class="fa-brands fa-tiktok"></i> TikTok`,
+  youtube: `<i class="fa-brands fa-youtube"></i> YouTube`,
+  file: `<i class="fa-solid fa-up-right-from-square"></i> video`
+};
+function platformDirectLinkHtml(item, prefix) {
+  if (!item || !item.url) return "";
+  const label = PLATFORM_DIRECT_LINK_LABELS[item.platform];
+  if (!label) return "";
+  return `<a href="${esc(item.url)}" target="_blank" rel="noopener">${prefix || ""}${label} ↗</a>`;
+}
 function setupDriveVideoPlayback(wrap, item, opts) {
   if (item.platform !== "drive") return;
   opts = opts || {};
@@ -381,10 +409,36 @@ function setupDriveVideoPlayback(wrap, item, opts) {
     if (driveVideoEl.videoWidth && driveVideoEl.videoHeight) applyRatio(`${driveVideoEl.videoWidth} / ${driveVideoEl.videoHeight}`);
   }, { once: true });
 }
-function showTrainingModeVideo(lib) {
+function showTrainingModeVideo(lib, textItem) {
   const wrap = document.getElementById("tmVideoWrap");
-  if (!lib) { wrap.classList.add("hidden"); wrap.innerHTML = ""; return; }
+  const fbEl = document.getElementById("tmVideoFallback");
+  const textPane = document.getElementById("tmTextPane");
+  // Video ručně označené jako nefunkční (viz #91/#92) — appka se ho ani nesnaží načíst. Chová se
+  // jako textové cvičení (dlouhý popis na místě videa), ale navíc zůstane i přímý odkaz na
+  // zdroj — tady je to jediná cesta, jak se k videu vůbec dostat.
+  if (lib && lib.brokenAt) {
+    wrap.classList.add("hidden"); wrap.innerHTML = "";
+    const directLink = platformDirectLinkHtml(lib, "Otevřít přímo — ");
+    fbEl.innerHTML = directLink;
+    fbEl.classList.toggle("hidden", !directLink);
+    const textHtml = lib.longDesc && lib.longDesc.trim() ? richValueToHtml(lib.longDesc) : "";
+    textPane.innerHTML = textHtml;
+    textPane.classList.toggle("hidden", !textHtml);
+    return;
+  }
+  if (!lib) {
+    wrap.classList.add("hidden"); wrap.innerHTML = "";
+    fbEl.classList.add("hidden"); fbEl.innerHTML = "";
+    const textHtml = textItem && textItem.longDesc && textItem.longDesc.trim() ? richValueToHtml(textItem.longDesc) : "";
+    textPane.innerHTML = textHtml;
+    textPane.classList.toggle("hidden", !textHtml);
+    return;
+  }
+  textPane.classList.add("hidden"); textPane.innerHTML = "";
   wrap.classList.remove("hidden");
+  const directLink = platformDirectLinkHtml(lib, "Otevřít přímo — ");
+  fbEl.innerHTML = directLink;
+  fbEl.classList.toggle("hidden", !directLink);
   wrap.style.aspectRatio = ""; wrap.style.width = ""; wrap.style.height = ""; wrap.style.maxHeight = "";
   wrap.innerHTML = renderEmbedHtml(lib, { muted: true, preload: "auto" });
   const isWide = document.getElementById("trainingModeView").classList.contains("tm-forced-landscape")
@@ -430,6 +484,17 @@ function currentTrainingModeLib() {
     return v && !v.isText && !v.isBreak ? videos[v.videoId] : null;
   }
   return row.isText ? null : videos[row.videoId];
+}
+/** Textové cvičení (bez videa) na aktuálním místě v tréninku, nebo null — viz #84. */
+function currentTrainingModeTextItem() {
+  const row = tmItems[tmIndex];
+  if (!row) return null;
+  if (row.part === "prestavka" || tmInSeriesPause) return null;
+  if (row.isGroup) {
+    const v = row.videos[tmGroupVideoIndex];
+    return (v && v.isText) ? v : null;
+  }
+  return row.isText ? row : null;
 }
 function getUpNextLabelForSeriesPause() {
   const row = tmItems[tmIndex];
@@ -574,20 +639,24 @@ function getTmCurrentInfo() {
     return {
       title: v.isText ? (v.title || "(bez názvu)") : (lib ? lib.title : "(video smazáno)"),
       shortDesc: v.isText ? (v.shortDesc || "") : (lib ? lib.shortDesc : ""),
-      longDesc: v.isText ? (v.longDesc || "") : (lib ? lib.longDesc : "")
+      longDesc: v.isText ? (v.longDesc || "") : (lib ? lib.longDesc : ""),
+      isText: !!v.isText || !!(lib && lib.brokenAt)
     };
   }
   const lib = row.isText ? null : videos[row.videoId];
   return {
     title: row.isText ? (row.title || "(bez názvu)") : (lib ? lib.title : "(video smazáno z knihovny)"),
     shortDesc: row.isText ? (row.shortDesc || "") : (lib ? lib.shortDesc : ""),
-    longDesc: row.isText ? (row.longDesc || "") : (lib ? lib.longDesc : "")
+    longDesc: row.isText ? (row.longDesc || "") : (lib ? lib.longDesc : ""),
+    isText: !!row.isText || !!(lib && lib.brokenAt)
   };
 }
 function refreshTmInfoBtn() {
   const btn = document.getElementById("tmInfoBtn");
   const info = (tmInSeriesPause || tmFinished) ? null : getTmCurrentInfo();
-  if (!info || !(info.longDesc && info.longDesc.trim())) {
+  // U textového cvičení je dlouhý popis vidět rovnou na místě videa (#84), tlačítko "?" by ho
+  // jen zbytečně duplikovalo.
+  if (!info || info.isText || !(info.longDesc && info.longDesc.trim())) {
     btn.classList.add("hidden");
     tmCurrentInfoData = null;
     return;
@@ -683,7 +752,7 @@ function renderTrainingModeItem() {
     setScaledText(document.getElementById("tmTitle"), v && v.isText ? (v.title || "(bez názvu)") : (lib ? lib.title : "(video smazáno)"));
     setScaledText(document.getElementById("tmDesc"), `Cvik ${tmGroupVideoIndex + 1} / ${row.videos.length}`);
     document.getElementById("tmNote").innerHTML = richValueToHtml((v && v.note) || row.poznamka || "");
-    showTrainingModeVideo(lib);
+    showTrainingModeVideo(lib, v && v.isText ? v : null);
     if ((row.mode || "time") === "reps") {
       if (v && v.reps) { repsDisplay.textContent = v.reps; repsDisplay.classList.remove("hidden"); }
       setTimerMode("reps");
@@ -706,7 +775,7 @@ function renderTrainingModeItem() {
   setScaledText(document.getElementById("tmDesc"), row.isText ? (row.shortDesc || "") : (lib && lib.shortDesc ? lib.shortDesc : ""));
   document.getElementById("tmCue").innerHTML = row.cue ? `<i class="fa-solid fa-comment"></i> ${esc(row.cue)}` : "";
   document.getElementById("tmNote").innerHTML = richValueToHtml(row.poznamka || "");
-  showTrainingModeVideo(lib);
+  showTrainingModeVideo(lib, row.isText ? row : null);
   if ((row.mode || "time") === "reps") {
     if (row.reps) { repsDisplay.textContent = row.reps; repsDisplay.classList.remove("hidden"); }
     setTimerMode("reps");
@@ -761,7 +830,7 @@ async function enterTrainingLandscape() {
   try { if (screen.orientation && screen.orientation.lock) { await screen.orientation.lock("landscape"); locked = true; } } catch (e) {}
   tmLandscapeForced = true;
   if (!locked) el.classList.add("tm-forced-landscape");
-  showTrainingModeVideo(currentTrainingModeLib());
+  showTrainingModeVideo(currentTrainingModeLib(), currentTrainingModeTextItem());
 }
 // Sdílená prezentace nemá (na rozdíl od appky) žádné tlačítko "zavřít trénink" — jde se jen
 // dopředu/dozadu až do konce. Fullscreen ale umí zmizet i bez úmyslu (gesto zpět, stažení
@@ -776,7 +845,7 @@ document.addEventListener("fullscreenchange", () => {
     const tmView = document.getElementById("trainingModeView");
     const wasForced = tmView.classList.contains("tm-forced-landscape");
     tmView.classList.add("tm-forced-landscape");
-    if (!wasForced) showTrainingModeVideo(currentTrainingModeLib());
+    if (!wasForced) showTrainingModeVideo(currentTrainingModeLib(), currentTrainingModeTextItem());
     // Zkusí se i znovu požádat o fullscreen — bez přímé reakce na klik to prohlížeč běžně
     // odmítne, ale je to zadarmo a někdy to i tak vyjde.
     try {
