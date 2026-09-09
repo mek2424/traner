@@ -94,17 +94,23 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
 .tm-nav-btn:disabled{opacity:.35;}
 .tm-nav-next{background:var(--chalk);color:#fff;border-color:var(--chalk);}
 .tm-info-btn{
-  flex:0 0 60px;border-radius:var(--radius);border:1.5px solid var(--court);background:rgba(51,153,51,.1);
-  color:var(--court-dark);display:flex;align-items:center;justify-content:center;font-size:19px;
-  animation:tmInfoPulse 3.2s ease-in-out infinite;
+  position:relative;flex:0 0 auto;padding:0 14px;gap:6px;border-radius:var(--radius);border:1.5px solid var(--court);
+  background:rgba(51,153,51,.1);color:var(--court-dark);display:flex;align-items:center;justify-content:center;
+  font-size:15px;font-family:var(--font-display);white-space:nowrap;
 }
+.tm-info-btn i{font-size:19px;}
 .tm-info-btn.hidden{display:none;}
-@keyframes tmInfoPulse{
-  0%,78%,100%{box-shadow:0 0 0 0 rgba(51,153,51,0);}
-  86%{box-shadow:0 0 0 7px rgba(51,153,51,.28);}
-  92%{box-shadow:0 0 0 0 rgba(51,153,51,0);}
+.tm-info-dot{
+  position:absolute;top:-4px;right:-4px;width:11px;height:11px;border-radius:50%;background:var(--chalk);
+  animation:tmInfoDotPulse 1.6s ease-out infinite;
 }
-@media(max-width:640px){.tm-info-btn{flex-basis:52px;font-size:16px;}}
+.tm-info-dot.hidden{display:none;animation:none;}
+@keyframes tmInfoDotPulse{
+  0%{box-shadow:0 0 0 0 rgba(232,98,44,.55);}
+  70%{box-shadow:0 0 0 7px rgba(232,98,44,0);}
+  100%{box-shadow:0 0 0 0 rgba(232,98,44,0);}
+}
+@media(max-width:640px){.tm-info-btn{font-size:13px;padding:0 10px;}.tm-info-btn i{font-size:16px;}}
 .modal-backdrop{position:fixed;inset:0;z-index:50;background:rgba(20,26,34,.55);display:flex;align-items:center;justify-content:center;padding:20px;}
 .modal-backdrop.hidden{display:none;}
 .modal{width:100%;max-width:420px;max-height:80vh;display:flex;flex-direction:column;background:#fff;border-radius:16px;box-shadow:0 20px 50px rgba(27,36,48,.25);padding:20px;}
@@ -184,7 +190,7 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
   </div>
   <div class="tm-nav">
     <button type="button" class="tm-nav-btn" id="tmPrevBtn"><i class="fa-solid fa-arrow-left"></i> Předchozí</button>
-    <button type="button" class="tm-info-btn hidden" id="tmInfoBtn" aria-label="Info o cviku" title="Info o cviku"><i class="fa-regular fa-circle-question"></i></button>
+    <button type="button" class="tm-info-btn hidden" id="tmInfoBtn" aria-label="Více info o cviku" title="Více info o cviku"><i class="fa-regular fa-circle-question"></i> Více info<span class="tm-info-dot hidden" id="tmInfoDot"></span></button>
     <button type="button" class="tm-nav-btn tm-nav-next" id="tmNextBtn">Další <i class="fa-solid fa-arrow-right"></i></button>
   </div>
 
@@ -626,6 +632,7 @@ function renderTrainingModeFinished() {
   document.getElementById("tmTimer").textContent = "";
   document.getElementById("tmNextBtn").innerHTML = 'Zavřít <i class="fa-solid fa-xmark"></i>';
   document.getElementById("tmInfoBtn").classList.add("hidden");
+  document.getElementById("tmInfoDot").classList.add("hidden");
   tmCurrentInfoData = null;
 }
 let tmCurrentInfoData = null;
@@ -653,16 +660,19 @@ function getTmCurrentInfo() {
 }
 function refreshTmInfoBtn() {
   const btn = document.getElementById("tmInfoBtn");
+  const dot = document.getElementById("tmInfoDot");
   const info = (tmInSeriesPause || tmFinished) ? null : getTmCurrentInfo();
   // U textového cvičení je dlouhý popis vidět rovnou na místě videa (#84), tlačítko "?" by ho
   // jen zbytečně duplikovalo.
   if (!info || info.isText || !(info.longDesc && info.longDesc.trim())) {
     btn.classList.add("hidden");
+    dot.classList.add("hidden");
     tmCurrentInfoData = null;
     return;
   }
   tmCurrentInfoData = info;
   btn.classList.remove("hidden");
+  dot.classList.remove("hidden");
 }
 function openExerciseInfoModal() {
   if (!tmCurrentInfoData) return;
@@ -670,6 +680,7 @@ function openExerciseInfoModal() {
   document.getElementById("exerciseInfoModalShort").textContent = tmCurrentInfoData.shortDesc || "";
   document.getElementById("exerciseInfoModalLong").innerHTML = richValueToHtml(tmCurrentInfoData.longDesc || "");
   document.getElementById("exerciseInfoModalBackdrop").classList.remove("hidden");
+  document.getElementById("tmInfoDot").classList.add("hidden");
 }
 function closeExerciseInfoModal() {
   document.getElementById("exerciseInfoModalBackdrop").classList.add("hidden");
@@ -815,9 +826,6 @@ document.getElementById("tmNextBtn").addEventListener("click", advanceTrainingMo
 document.getElementById("tmPrevBtn").addEventListener("click", retreatTrainingMode);
 document.getElementById("tmInfoBtn").addEventListener("click", openExerciseInfoModal);
 document.getElementById("closeExerciseInfoModalBtn").addEventListener("click", closeExerciseInfoModal);
-document.getElementById("exerciseInfoModalBackdrop").addEventListener("click", (e) => {
-  if (e.target.id === "exerciseInfoModalBackdrop") closeExerciseInfoModal();
-});
 
 function shouldForceTrainingLandscape() { return window.innerWidth < 860 && window.innerHeight > window.innerWidth; }
 let tmLandscapeForced = false;
