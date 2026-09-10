@@ -69,12 +69,23 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
 .tm-reps-display.hidden{display:none;}
 .tm-cue{font-size:clamp(15px,4vw,18px);font-weight:600;color:#5B6472;margin-bottom:8px;max-width:100%;overflow-wrap:anywhere;}
 .tm-note{font-size:14px;color:#8A93A0;max-width:100%;overflow-wrap:anywhere;}
+.tm-comments{width:100%;max-width:320px;margin:14px auto 0;text-align:left;}
+.tm-comments.hidden{display:none;}
+.tm-comments-label{font-family:var(--font-display);font-size:13px;letter-spacing:.06em;color:#8A93A0;text-transform:uppercase;margin-bottom:8px;}
+.comment-thread{display:flex;flex-direction:column;gap:10px;}
+.comment-item{display:flex;gap:8px;}
+.comment-avatar{width:26px;height:26px;border-radius:50%;background:var(--court);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;flex-shrink:0;}
+.comment-body{flex:1;min-width:0;}
+.comment-meta{font-size:11.5px;color:#8A93A0;}
+.comment-meta .comment-author{font-weight:700;color:#1B2430;}
+.comment-text{font-size:13px;line-height:1.5;margin:2px 0 0;color:#3A4250;white-space:pre-wrap;word-break:break-word;}
+.comment-replies{margin-left:34px;margin-top:8px;display:flex;flex-direction:column;gap:8px;border-left:2px solid #DCDFD9;padding-left:10px;}
 @media(min-width:860px),(orientation:landscape) and (min-width:480px){
   .tm-body{grid-template-columns:1fr 1.3fr 1fr;grid-template-areas:"left video right";align-items:center;gap:28px;padding:24px 40px;}
   .tm-col-left{margin-top:0;}
   .tm-video-wrap{max-width:100%;}
   .tm-text-pane{max-width:100%;}
-  .tm-desc,.tm-cue,.tm-note{max-width:100%;}
+  .tm-desc,.tm-cue,.tm-note,.tm-comments{max-width:100%;}
   .tm-up-next{position:fixed;top:calc(14px + env(safe-area-inset-top));right:70px;left:auto;transform:translateX(-100vw);transition:transform .6s ease,opacity .3s ease;}
   .tm-up-next.shown{transform:translateX(0);}
 }
@@ -185,6 +196,10 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
       <div class="tm-reps-display hidden" id="tmRepsDisplay"></div>
       <div class="tm-cue" id="tmCue"></div>
       <div class="tm-note" id="tmNote"></div>
+      <div class="tm-comments hidden" id="tmComments">
+        <div class="tm-comments-label">Komentáře</div>
+        <div id="commentThread" class="comment-thread"></div>
+      </div>
     </div>
   </div>
   <div class="tm-timer-wrap" id="tmTimerWrap">
@@ -604,6 +619,7 @@ function renderSeriesPause() {
   document.getElementById("tmDesc").textContent = "";
   document.getElementById("tmCue").innerHTML = "";
   document.getElementById("tmNote").textContent = "";
+  renderComments(null);
   showUpNextPanel(getUpNextLabelForSeriesPause());
   showTrainingModeVideo(null);
   setTimerMode("time");
@@ -630,6 +646,7 @@ function renderTrainingModeFinished() {
   document.getElementById("tmDesc").textContent = "";
   document.getElementById("tmCue").innerHTML = "";
   document.getElementById("tmNote").textContent = "";
+  renderComments(null);
   showTrainingModeVideo(null);
   stopTrainingModeTimer();
   document.getElementById("tmTimer").textContent = "";
@@ -688,6 +705,33 @@ function openExerciseInfoModal() {
 function closeExerciseInfoModal() {
   document.getElementById("exerciseInfoModalBackdrop").classList.add("hidden");
 }
+/** Komentáře jsou tu jen ke čtení — appka je do shareSnapshot vloží při uložení tréninku
+    v hlavní appce (viz fetchCommentsSnapshot/buildShareSnapshot v index.html), tahle stránka
+    nemá přihlášení, takže nemůže psát ani číst živou kolekci videoComments napřímo. */
+function commentInitials(name) {
+  return (name || "?").trim().split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase();
+}
+function renderComments(lib) {
+  const wrap = document.getElementById("commentThread");
+  const section = document.getElementById("tmComments");
+  if (!wrap || !section) return;
+  const list = lib && Array.isArray(lib.comments) ? lib.comments : [];
+  if (!list.length) { section.classList.add("hidden"); wrap.innerHTML = ""; return; }
+  section.classList.remove("hidden");
+  const childrenOf = pid => list.filter(c => c.parentId === pid).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  function renderOne(c) {
+    const replies = childrenOf(c.id);
+    return `<div class="comment-item">
+        <div class="comment-avatar">${esc(commentInitials(c.authorLabel))}</div>
+        <div class="comment-body">
+          <div class="comment-meta"><span class="comment-author">${esc(c.authorLabel || "?")}</span></div>
+          <div class="comment-text">${esc(c.text || "")}</div>
+        </div>
+      </div>${replies.length ? `<div class="comment-replies">${replies.map(renderOne).join("")}</div>` : ""}`;
+  }
+  const top = childrenOf(null).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  wrap.innerHTML = top.map(renderOne).join("");
+}
 function renderTrainingModeItem() {
   stopTrainingModeTimer();
   refreshTmInfoBtn();
@@ -717,6 +761,7 @@ function renderTrainingModeItem() {
     document.getElementById("tmDesc").textContent = "";
     document.getElementById("tmCue").innerHTML = "";
     document.getElementById("tmNote").textContent = "";
+    renderComments(null);
     showTrainingModeVideo(null);
     setTimerMode("time");
     tmSeconds = Math.max(1, valueToSeconds(row.duration || 1, row.durationUnit || "min"));
@@ -753,6 +798,7 @@ function renderTrainingModeItem() {
       setScaledText(document.getElementById("tmDesc"), `Cvik ${tmGroupVideoIndex + 1} / ${row.videos.length}`);
       document.getElementById("tmCue").innerHTML = "";
       document.getElementById("tmNote").textContent = "";
+      renderComments(null);
       showTrainingModeVideo(null);
       setTimerMode("time");
       tmSeconds = Math.max(1, valueToSeconds(v.duration != null ? v.duration : 1, v.durationUnit || "min"));
@@ -766,6 +812,7 @@ function renderTrainingModeItem() {
     setScaledText(document.getElementById("tmTitle"), v && v.isText ? (v.title || "(bez názvu)") : (lib ? lib.title : "(video smazáno)"));
     setScaledText(document.getElementById("tmDesc"), `Cvik ${tmGroupVideoIndex + 1} / ${row.videos.length}`);
     document.getElementById("tmNote").innerHTML = richValueToHtml((v && v.note) || row.poznamka || "");
+    renderComments(lib);
     showTrainingModeVideo(lib, v && v.isText ? v : null);
     if ((row.mode || "time") === "reps") {
       if (v && v.reps) { repsDisplay.textContent = v.reps; repsDisplay.classList.remove("hidden"); }
@@ -789,6 +836,7 @@ function renderTrainingModeItem() {
   setScaledText(document.getElementById("tmDesc"), row.isText ? (row.shortDesc || "") : (lib && lib.shortDesc ? lib.shortDesc : ""));
   document.getElementById("tmCue").innerHTML = row.cue ? `<i class="fa-solid fa-comment"></i> ${esc(row.cue)}` : "";
   document.getElementById("tmNote").innerHTML = richValueToHtml(row.poznamka || "");
+  renderComments(lib);
   showTrainingModeVideo(lib, row.isText ? row : null);
   if ((row.mode || "time") === "reps") {
     if (row.reps) { repsDisplay.textContent = row.reps; repsDisplay.classList.remove("hidden"); }
