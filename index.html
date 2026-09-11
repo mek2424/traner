@@ -14,15 +14,18 @@
 /* Volba tmavého režimu žije v profilu na serveru, takže se dozvíme až po přihlášení a načtení
    profilu — do té doby by appka svítila bíle a pak teprve ztmavla. Proto si volbu zrcadlíme do
    prohlížeče a nastavíme ji hned tady, ještě než se cokoli vykreslí. Server pořád rozhoduje;
-   tohle je jen předpověď, kterou applyDarkMode() při přihlášení srovná.
-   Když uživatel volbu nikdy neudělal, řídíme se nastavením systému. */
+   tohle je jen zopakování toho, co si tenhle člověk na tomhle zařízení zvolil naposled.
+
+   Schválně se NEŘÍDÍME nastavením systému (prefers-color-scheme). Do appky se nikdo nedostane
+   bez přihlášení, takže "žádná uložená volba" neznamená "nevíme, co má rád" — znamená to
+   "tady se ještě nepřihlásil". Hádat v tu chvíli podle systému je nejlepší způsob, jak to
+   splést: kdo má tmavý systém a ve svém profilu světlou appku (což je běžná kombinace),
+   dostal by bliknutí tmavou. Výchozí stav appky je světlý, tak začínáme světlou. */
 (function () {
   try {
-    var v = localStorage.getItem("trener_dark");
-    var dark = v === null
-      ? (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches)
-      : v === "1";
-    if (dark) document.documentElement.classList.add("dark-mode-preload");
+    if (localStorage.getItem("trener_dark") === "1") {
+      document.documentElement.classList.add("dark-mode-preload");
+    }
   } catch (e) {}
 })();
 </script>
@@ -2424,7 +2427,7 @@ async function ensureMessaging() {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-09-11 20:30";
+const APP_VERSION = "2026-09-11 20:55";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
