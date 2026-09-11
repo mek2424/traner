@@ -839,7 +839,7 @@ body.popout-mode .popout-btn{display:none !important;}
 }
 .tm-up-next.shown{transform:translateX(0);opacity:1;}
 .tm-up-next strong{color:#1B2430;}
-.tm-part-label{font-family:var(--font-display);font-size:16px;letter-spacing:.08em;color:#8A93A0;margin-bottom:10px;display:inline-block;padding:2px 10px;border-radius:999px;}
+.tm-part-label{font-family:var(--font-display);font-size:16px;letter-spacing:.08em;color:#4A5564;margin-bottom:10px;display:inline-block;padding:2px 10px;border-radius:999px;}
 .tm-series-label{font-size:13px;font-weight:700;color:var(--chalk-dark);background:rgba(232,98,44,.12);display:inline-block;padding:3px 10px;border-radius:999px;margin-bottom:8px;}
 .tm-group-name{
   font-family:var(--font-display);font-size:clamp(20px,5.5vw,30px);letter-spacing:.04em;color:var(--court-dark);
@@ -854,7 +854,7 @@ body.popout-mode .popout-btn{display:none !important;}
   padding:10px 30px;margin:6px 0 16px;display:inline-block;
 }
 .tm-cue{font-size:clamp(15px,4vw,18px);font-weight:600;color:#5B6472;margin-bottom:8px;max-width:100%;overflow-wrap:anywhere;}
-.tm-note{font-size:14px;color:#8A93A0;max-width:100%;overflow-wrap:anywhere;}
+.tm-note{font-size:14px;color:#4A5564;max-width:100%;overflow-wrap:anywhere;}
 @media(min-width:860px),(orientation:landscape) and (min-width:480px){
   .tm-body{grid-template-columns:1fr 1.3fr 1fr;grid-template-areas:"left video right";align-items:center;gap:28px;padding:24px 40px;}
   .tm-col-left{margin-top:0;}
@@ -2199,6 +2199,9 @@ body.popout-mode .popout-btn{display:none !important;}
   <button type="button" id="copyDebugLogBtn" style="position:sticky;top:0;float:right;background:#2B6CB0;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;">Kopírovat záznam</button>
   <button type="button" id="disableDevModeBtn" style="position:sticky;top:0;float:right;background:#5B2B2B;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;">Vypnout vývojářský režim</button>
   <button type="button" id="shrinkOversizedBtn" class="hidden" style="position:sticky;top:0;float:right;background:#C99A2E;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Přestěhovat staré náhledy</button>
+  <button type="button" id="thumbsToStorageDryBtn" class="hidden" style="position:sticky;top:0;float:right;background:#3C6E8F;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Storage: nanečisto</button>
+  <button type="button" id="thumbsToStorageRunBtn" class="hidden" style="position:sticky;top:0;float:right;background:#2F7A4F;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Storage: přestěhovat</button>
+  <button type="button" id="thumbsCleanupBtn" class="hidden" style="position:sticky;top:0;float:right;background:#8A3A3A;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Storage: uklidit Firestore</button>
   <button type="button" id="checkLibrarySizeBtn" class="hidden" style="position:sticky;top:0;float:right;background:#2B6CB0;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Změřit velikost knihovny</button>
   <button type="button" id="adoptDriveThumbsBtn" class="hidden" style="position:sticky;top:0;float:right;background:#2F7A4F;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Uložit Disk náhledy natrvalo</button>
   <button type="button" id="refreshDriveThumbsBtn" class="hidden" style="position:sticky;top:0;float:right;background:#5B8DD9;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Obnovit Disk náhledy</button>
@@ -2263,6 +2266,9 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 import { getMessaging, isSupported as isMessagingSupported, getToken as getFcmToken, onMessage as onFcmMessage } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-messaging.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-functions.js";
+import {
+  getStorage, ref as storageRef, uploadString, getDownloadURL, deleteObject
+} from "https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js";
 
 /* =========================================================
    PUSH NOTIFIKACE — VAPID klíč se generuje ve Firebase Console:
@@ -2295,6 +2301,8 @@ try {
   console.warn("Offline cache se nepodařilo zapnout, aplikace poběží jen online:", e);
   db = initializeFirestore(fbApp, {});
 }
+/* Náhledy videí nově nebydlí ve Firestore, ale ve Firebase Storage — viz saveThumbnail() níž. */
+const storage = getStorage(fbApp);
 
 /* =========================================================
    PUSH NOTIFIKACE — pomocná vrstva nad Firebase Cloud Messaging.
@@ -2460,6 +2468,8 @@ function logDebug(...args) {
 document.getElementById("debugLogBtn").addEventListener("click", () => {
   document.getElementById("debugLogContent").textContent = debugLog.length ? debugLog.join("\n") : "(zatím žádné záznamy — proveď akci, co chceš prověřit, a pak se sem vrať)";
   document.getElementById("shrinkOversizedBtn").classList.toggle("hidden", uidCurrent !== ADMIN_UID);
+  ["thumbsToStorageDryBtn", "thumbsToStorageRunBtn", "thumbsCleanupBtn"]
+    .forEach(bid => document.getElementById(bid).classList.toggle("hidden", uidCurrent !== ADMIN_UID));
   document.getElementById("checkLibrarySizeBtn").classList.toggle("hidden", uidCurrent !== ADMIN_UID);
   document.getElementById("adoptDriveThumbsBtn").classList.toggle("hidden", !isEditor());
   document.getElementById("refreshDriveThumbsBtn").classList.toggle("hidden", !isEditor());
@@ -2538,14 +2548,10 @@ document.getElementById("shrinkOversizedBtn").addEventListener("click", async ()
   for (const [id, item] of Object.entries(state.library)) {
     if (!item.thumbnail || !item.thumbnail.startsWith("data:")) continue; // odkazy (URL) aplikaci nezajímají, jen staré vlastní nahrané fotky
     const beforeLen = item.thumbnail.length;
-    let dataUrl = item.thumbnail;
-    if (dataUrl.length * 0.75 > THUMB_SAFE_BYTES) dataUrl = await enforceThumbSizeBudget(dataUrl);
     try {
-      await setDoc(doc(db, "sharedThumbnails", id), { data: dataUrl, updatedAt: Date.now() });
-      state.thumbnails[id] = dataUrl;
-      item.thumbnail = LOCAL_THUMB_PREFIX + id;
+      item.thumbnail = await saveThumbnail(id, item.thumbnail, "");
       fixedCount++;
-      logDebug(`[stěhování] „${item.title}" přestěhováno (${Math.round(beforeLen * 0.75 / 1024)} KB → ${Math.round(dataUrl.length * 0.75 / 1024)} KB, teď mimo hlavní dokument)`);
+      logDebug(`[stěhování] „${item.title}" přestěhováno (${Math.round(beforeLen * 0.75 / 1024)} KB z hlavního dokumentu → Storage)`);
     } catch (err) {
       logDebug(`[stěhování] „${item.title}" selhalo:`, err.message || err);
     }
@@ -2565,6 +2571,108 @@ document.getElementById("shrinkOversizedBtn").addEventListener("click", async ()
     toast("Náhledy aplikace přestěhovala, ale uložení hlavního dokumentu selhalo — zkus to prosím znovu.", 8000, "err");
   }
 });
+/* =========================================================
+   STĚHOVÁNÍ NÁHLEDŮ Z FIRESTORE DO STORAGE — jen pro admina, jen ve vývojářském režimu.
+   Tři tlačítka schválně odděleně, v tomhle pořadí:
+     1. "nanečisto"  — nic nemění, jen spočítá a vypíše, co by se stalo
+     2. "přestěhovat" — nahraje fotky do Storage a v knihovně přepíše "local:ID" na https adresu
+     3. "uklidit Firestore" — až když je jasné, že všechno funguje, smaže starou kolekci
+   Mezi 2 a 3 schválně není spěch: dokud staré dokumenty v sharedThumbnails existují, dá se
+   celá migrace vrátit zpět tím, že se v knihovně adresy přepíšou nazpátek na "local:ID".
+   ========================================================= */
+/** Pustí práci po několika naráz — 287 fotek po jedné by trvalo věčnost, všechny naráz by
+    prohlížeč i Storage neunesly. */
+async function runWithConcurrency(items, limit, worker, onProgress) {
+  let index = 0, done = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (index < items.length) {
+      const my = index++;
+      try { await worker(items[my], my); } catch (e) { /* worker si chyby řeší sám */ }
+      done++;
+      if (onProgress) onProgress(done, items.length);
+    }
+  });
+  await Promise.all(workers);
+}
+function listThumbsToMigrate() {
+  return Object.values(state.library)
+    .filter(it => it.thumbnail && it.thumbnail.startsWith(LOCAL_THUMB_PREFIX))
+    .map(it => ({ item: it, dataUrl: state.thumbnails[it.id] || "" }));
+}
+document.getElementById("thumbsToStorageDryBtn").addEventListener("click", () => {
+  if (uidCurrent !== ADMIN_UID) return;
+  const all = listThumbsToMigrate();
+  const withData = all.filter(t => t.dataUrl);
+  const orphans = all.filter(t => !t.dataUrl);
+  const bytes = withData.reduce((sum, t) => sum + t.dataUrl.length * 0.75, 0);
+  const alreadyInStorage = Object.values(state.library).filter(it => isStorageThumbUrl(it.thumbnail)).length;
+  logDebug("[storage] === NANEČISTO, nic se nemění ===");
+  logDebug(`[storage] videí v knihovně celkem: ${Object.keys(state.library).length}`);
+  logDebug(`[storage] náhledů k přestěhování: ${withData.length} (~${Math.round(bytes / 1024)} KB)`);
+  logDebug(`[storage] už ve Storage: ${alreadyInStorage}`);
+  logDebug(`[storage] odkazů "local:" BEZ fotky (osiřelé, jen se vyčistí): ${orphans.length}`);
+  orphans.slice(0, 10).forEach(t => logDebug(`[storage]   osiřelé: „${t.item.title}"`));
+  logDebug(`[storage] hlavní dokument se stěhováním zvětší asi o ${Math.round(withData.length * 0.1)} KB (adresy jsou delší než "local:ID")`);
+  logDebug("[storage] kvalita: fotky se přenesou tak, jak jsou — už jednou zmenšené na 20 kB se");
+  logDebug("[storage] tímhle neopraví. Ostré budou až nově nahrané náhledy.");
+  toast(`Nanečisto: k přestěhování ${withData.length} náhledů, ${orphans.length} osiřelých. Detaily v 🐞.`, 9000, "info");
+});
+document.getElementById("thumbsToStorageRunBtn").addEventListener("click", async () => {
+  if (uidCurrent !== ADMIN_UID) return;
+  const targets = listThumbsToMigrate().filter(t => t.dataUrl);
+  if (!targets.length) { toast("Není co stěhovat — buď je hotovo, nebo nejdřív zkus „nanečisto\".", 5000, "warn"); return; }
+  if (!(await confirmDialog(`Přestěhovat ${targets.length} náhledů do Firebase Storage? Stará kolekce ve Firestore zůstane nedotčená, uklidí se až samostatným tlačítkem. Během stěhování prosím neupravuj knihovnu jinde.`))) return;
+
+  logDebug(`[storage] === STĚHUJI ${targets.length} náhledů ===`);
+  let ok = 0, failed = 0, sinceSave = 0;
+  const saveChunk = async () => {
+    const saved = await saveUserData();
+    logDebug(`[storage] průběžné uložení knihovny: ${saved ? "OK" : "SELHALO — uložení se zopakuje v dalším kole"}`);
+    sinceSave = 0;
+  };
+  await runWithConcurrency(targets, 4, async ({ item, dataUrl }) => {
+    try {
+      item.thumbnail = await saveThumbnail(item.id, dataUrl, "");
+      ok++;
+    } catch (err) {
+      failed++;
+      logDebug(`[storage] „${item.title}" selhalo: ${err && (err.code || err.message)}`);
+    }
+  }, async (done, total) => {
+    sinceSave++;
+    if (done % 20 === 0) logDebug(`[storage] hotovo ${done}/${total}…`);
+    if (sinceSave >= 25) await saveChunk();
+  });
+  await saveChunk();
+
+  const left = listThumbsToMigrate().length;
+  logDebug(`[storage] === HOTOVO: přeneseno ${ok}, selhalo ${failed}, v knihovně zbývá "local:" odkazů: ${left} ===`);
+  renderLibrary();
+  if (failed || left) {
+    toast(`Přeneseno ${ok}, selhalo ${failed}, zbývá ${left}. Spusť tlačítko ještě jednou, zbytek dojede. Detaily v 🐞.`, 12000, "warn");
+  } else {
+    toast(`Hotovo — ${ok} náhledů je ve Storage. Zkontroluj, že se v knihovně všechny zobrazují, a teprve pak spusť úklid.`, 12000);
+  }
+});
+document.getElementById("thumbsCleanupBtn").addEventListener("click", async () => {
+  if (uidCurrent !== ADMIN_UID) return;
+  const stillLocal = listThumbsToMigrate().length;
+  if (stillLocal) {
+    toast(`Úklid zatím ne — ${stillLocal} videí má pořád odkaz "local:". Nejdřív dokonči stěhování.`, 9000, "err");
+    return;
+  }
+  const ids = Object.keys(state.thumbnails);
+  if (!ids.length) { toast("Ve Firestore už žádné staré náhledy nejsou.", 5000, "warn"); return; }
+  if (!(await confirmDialog(`Nenávratně smazat ${ids.length} starých náhledů z Firestore? Dělej to až potom, co sis v knihovně ověřil, že se všechny fotky normálně zobrazují — zpátky to nepůjde.`))) return;
+  let deleted = 0, failed = 0;
+  await runWithConcurrency(ids, 6, async (id) => {
+    try { await deleteDoc(doc(db, "sharedThumbnails", id)); deleted++; }
+    catch (e) { failed++; logDebug(`[storage] úklid ${id} selhal: ${e && (e.code || e.message)}`); }
+  });
+  logDebug(`[storage] === ÚKLID: smazáno ${deleted}, selhalo ${failed} ===`);
+  toast(`Uklizeno ${deleted} starých náhledů z Firestore.${failed ? ` ${failed} se nepovedlo.` : ""}`, 9000);
+});
+
 /** Ruční spuštění migrace "Nepřiřazeno" (jinak se zkouší potichu sama při každém přihlášení,
     viz loadUserData) — tohle tlačítko dělá přesně to samé, jen na vyžádání a s reportem, ať
     jde snadno ověřit, jestli se to fakt propsalo do Firestore, ne jen do state.library v
@@ -2638,10 +2746,7 @@ document.getElementById("adoptDriveThumbsBtn").addEventListener("click", async (
     const dataUrl = await fetchImageAsDataUrl(item.thumbnail);
     if (!dataUrl) { failCount++; logDebug(`[náhledy] „${item.title}" — nepovedlo se stáhnout (aplikace to tiše přeskočila, video samo zůstává beze změny)`); continue; }
     try {
-      const budgeted = await enforceThumbSizeBudget(dataUrl);
-      await setDoc(doc(db, "sharedThumbnails", item.id), { data: budgeted, updatedAt: Date.now() });
-      state.thumbnails[item.id] = budgeted;
-      item.thumbnail = LOCAL_THUMB_PREFIX + item.id;
+      item.thumbnail = await saveThumbnail(item.id, dataUrl, item.thumbnail);
       okCount++;
     } catch (err) {
       failCount++;
@@ -2684,10 +2789,7 @@ document.getElementById("refreshDriveThumbsBtn").addEventListener("click", async
     const dataUrl = await fetchImageAsDataUrl(freshUrl);
     if (!dataUrl) { logDebug(`[náhledy] „${item.title}" — čerstvá adresa nastavena, stažení natrvalo se nepovedlo`); continue; }
     try {
-      const budgeted = await enforceThumbSizeBudget(dataUrl);
-      await setDoc(doc(db, "sharedThumbnails", item.id), { data: budgeted, updatedAt: Date.now() });
-      state.thumbnails[item.id] = budgeted;
-      item.thumbnail = LOCAL_THUMB_PREFIX + item.id;
+      item.thumbnail = await saveThumbnail(item.id, dataUrl, "");
       savedCount++;
     } catch (err) {
       logDebug(`[náhledy] „${item.title}" — uložení natrvalo selhalo:`, err.message || err);
@@ -2831,10 +2933,12 @@ function restoreLibraryItem(id) {
   delete it.deletedAt;
 }
 function hardDeleteLibraryItem(id) {
+  const oldThumb = state.library[id] && state.library[id].thumbnail;
   delete state.library[id];
   delete state.thumbnails[id];
   pendingLibraryDeletions.add(id);
-  deleteDoc(doc(db, "sharedThumbnails", id)).catch(() => {}); // nevadí, když tam žádný nebyl
+  deleteThumbObject(oldThumb);                                // fotka ve Storage (nová cesta)
+  deleteDoc(doc(db, "sharedThumbnails", id)).catch(() => {}); // starý náhled ve Firestore, dokud existuje
 }
 let favOnlyFilter = false;
 let selectedIds = new Set();
@@ -3180,9 +3284,11 @@ async function fileToOrientedDataUrl(file, maxDimension = 1600, mimeType = "imag
       img.src = rawDataUrl;
     });
   }
-  // Pojistka: kdyby byl výsledek i tak zbytečně velký (např. hodně detailní fotka), ještě
-  // jednou ho zmenšíme — radši menší náhled než shozené ukládání celé sdílené knihovny.
-  return await enforceThumbSizeBudget(dataUrl, mimeType, quality);
+  // Od přechodu na Storage se tady náhled UŽ NEDRTÍ na 20 kB. Ten limit dával smysl jen
+  // dokud fotka bydlela ve Firestore a mohla shodit ukládání celé knihovny — teď jde do
+  // úložiště souborů, kde je jediné, co ji omezuje, strop 2 MB v storage.rules. Na rozumnou
+  // velikost pro náhled ji zmenší až saveThumbnail() (na 640 px), takže ostrost zůstane.
+  return dataUrl;
 }
 /** Sdílená pojistka: dokud je data URL zbytečně velké, aplikace ho dál zmenšuje. Používá se pro
     ručně nahrané fotky i pro snímky, co aplikace sama zachytí z videa — obojí umí být obří,
@@ -3197,6 +3303,78 @@ function resolveThumbnailUrl(item) {
     return state.thumbnails[item.id] || "";
   }
   return (item && item.thumbnail) || "";
+}
+
+/* =========================================================
+   NÁHLEDY VE FIREBASE STORAGE
+   Dřív každá ručně nahraná/zachycená fotka bydlela jako base64 text ve Firestore (kolekce
+   sharedThumbnails). To mělo tři problémy: appka musela při prvním přihlášení stáhnout všechny
+   naráz (~4 MB), prohlížeč si je nemohl nacachovat, protože to nebyly obrázky ale data, a kvůli
+   limitu na velikost dokumentu se musely komprimovat na 20 kB, takže byly rozmazané.
+
+   Teď jdou do Firebase Storage, což je obyčejné úložiště souborů s CDN — v knihovně po fotce
+   zůstane normální https adresa, prohlížeč si ji nacachuje jako každý jiný obrázek a limit
+   20 kB padá, takže náhledy můžou být ostré.
+
+   Cesta schválně obsahuje časové razítko (thumbs/{id}/{čas}.jpg): kdyby se nahrávalo pořád na
+   stejnou cestu, adresa by se nezměnila a prohlížeč by ještě rok ukazoval starou fotku z cache.
+   S razítkem v názvu je každá nová fotka jiná adresa, může se tedy cachovat opravdu dlouho, a
+   ta předchozí se rovnou smaže, ať se v úložišti nehromadí.
+   ========================================================= */
+const STORAGE_THUMB_MAX_PX = 640;   // šířka náhledu — karta v mřížce má max ~300 px, tohle stačí i na Retinu
+const STORAGE_THUMB_QUALITY = 0.82;
+const STORAGE_THUMB_DIR = "thumbs";
+
+/** Pozná, jestli je uložená hodnota adresa fotky v našem Storage (a jde ji tedy smazat). */
+function isStorageThumbUrl(value) {
+  return typeof value === "string"
+    && /^https:\/\/(firebasestorage\.googleapis\.com|[a-z0-9.-]*\.firebasestorage\.app)\//.test(value)
+    && value.includes(encodeURIComponent(STORAGE_THUMB_DIR + "/"));
+}
+
+/** Zmenší fotku na rozumnou šířku pro náhled. Na rozdíl od enforceThumbSizeBudget() necílí na
+    počet bajtů (ten už nás ve Storage netrápí), ale na rozměr — kvalita zůstane. */
+function resizeDataUrlToMaxWidth(dataUrl, maxPx = STORAGE_THUMB_MAX_PX, quality = STORAGE_THUMB_QUALITY) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxPx / (img.width || maxPx));
+      if (scale >= 1 && /^data:image\/jpeg/.test(dataUrl)) { resolve(dataUrl); return; }
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(img.width * scale));
+      canvas.height = Math.max(1, Math.round(img.height * scale));
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => resolve(dataUrl); // radši nahrát tak jak je, než fotku ztratit
+    img.src = dataUrl;
+  });
+}
+
+/** Úklid předchozí fotky. Schválně "best effort" — když se nepovede, nevadí, jen v úložišti
+    zůstane osiřelý soubor. Nikdy nesmí shodit ukládání videa. */
+async function deleteThumbObject(value) {
+  if (!isStorageThumbUrl(value)) return;
+  try { await deleteObject(storageRef(storage, value)); }
+  catch (e) { logDebug("[náhled] starou fotku se nepovedlo smazat (nevadí):", e && (e.code || e.message)); }
+}
+
+/** Nahraje fotku do Storage a vrátí adresu, která patří do item.thumbnail.
+    @param id        ID videa — jen kvůli přehlednému uspořádání v úložišti
+    @param dataUrl   fotka jako data: URL (z nahrání souboru nebo ze zachyceného snímku videa)
+    @param oldValue  předchozí hodnota item.thumbnail — pokud to byla fotka ve Storage, smaže se */
+async function saveThumbnail(id, dataUrl, oldValue) {
+  const prepared = await resizeDataUrlToMaxWidth(dataUrl);
+  const path = `${STORAGE_THUMB_DIR}/${id}/${Date.now()}.jpg`;
+  const r = storageRef(storage, path);
+  await uploadString(r, prepared, "data_url", {
+    contentType: "image/jpeg",
+    // Adresa je díky časovému razítku jedinečná, takže se smí cachovat, jak dlouho chce.
+    cacheControl: "public, max-age=31536000, immutable"
+  });
+  const url = await getDownloadURL(r);
+  deleteThumbObject(oldValue); // schválně bez await — úklid nemá zdržovat uložení
+  return url;
 }
 async function enforceThumbSizeBudget(dataUrl, mimeType = "image/jpeg", quality = 0.82) {
   let guard = 0;
@@ -5033,7 +5211,9 @@ function captureVideoFrameThumbnails(url) {
           await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           const raw = canvas.toDataURL("image/jpeg", 0.82); // vyhodí SecurityError, pokud video nemá povolené CORS
-          frames.push(await enforceThumbSizeBudget(raw));
+          // Dřív se každý zachycený snímek hned zdrtil na 20 kB kvůli limitu Firestore. Teď
+          // stačí ho zmenšit na rozměr náhledu — stejnou funkcí, jakou pak použije i ukládání.
+          frames.push(await resizeDataUrlToMaxWidth(raw));
         }
         clearTimeout(timeouts);
         cleanup();
@@ -5502,9 +5682,7 @@ linkForm.addEventListener("submit", async (e) => {
   let thumbToSave = pendingThumbUpload || document.getElementById("thumbPreview").dataset.thumb || "";
   if (thumbToSave.startsWith("data:")) {
     try {
-      await setDoc(doc(db, "sharedThumbnails", id), { data: thumbToSave, updatedAt: Date.now() });
-      state.thumbnails[id] = thumbToSave;
-      thumbToSave = LOCAL_THUMB_PREFIX + id;
+      thumbToSave = await saveThumbnail(id, thumbToSave, existing ? existing.thumbnail : "");
     } catch (err) {
       console.error("Uložení náhledu selhalo:", err);
       toast("Uložení náhledu se nepovedlo, zkus to prosím znovu.", 6000, "err");
@@ -7360,7 +7538,7 @@ function pdfDrawEntry(doc, entry, layout, x, y, cols, withClock, timeLabel, durL
 
   if (entry.kind === "break" || entry.kind === "groupBreak") {
     doc.setFont("LibSans", "italic"); doc.setFontSize(layout.fs);
-    pdfSetText(doc, "#8A93A0");
+    pdfSetText(doc, "#5B6472");
     doc.text(entry.label, contentColX + (cols.content + cols.cue) / 2, y + rowH / 2 + layout.fs * 0.15, { align: "center" });
     doc.setFont("LibSans", "bold"); doc.setFontSize(layout.fs);
     pdfSetText(doc, "#C74F1E");
@@ -7410,14 +7588,14 @@ function pdfDrawEntry(doc, entry, layout, x, y, cols, withClock, timeLabel, durL
     layout.descLines.forEach(line => { doc.text(line, cx, ty); ty += pdfLineHeight(layout.descSize); });
   }
   if (layout.longLines.length) {
-    doc.setFont("LibSans", "italic"); doc.setFontSize(layout.longSize); pdfSetText(doc, "#8A93A0");
+    doc.setFont("LibSans", "italic"); doc.setFontSize(layout.longSize); pdfSetText(doc, "#5B6472");
     layout.longLines.forEach(line => { doc.text(line, cx, ty); ty += pdfLineHeight(layout.longSize); });
   }
 
   let cy = y + layout.padY + layout.cueSize * 0.32;
   if (layout.cueLines.length) {
     const bh = layout.cueSize * 0.30;
-    pdfDrawSpeechBubbleIcon(doc, cueColX + layout.padX, cy - bh * 0.82, bh, "#8A93A0");
+    pdfDrawSpeechBubbleIcon(doc, cueColX + layout.padX, cy - bh * 0.82, bh, "#5B6472");
     doc.setFont("LibSans", "italic"); doc.setFontSize(layout.cueSize); pdfSetText(doc, "#5B6472");
     layout.cueLines.forEach(line => {
       doc.text(line, cueColX + layout.padX + PDF_CUE_ICON_W, cy);
@@ -7426,14 +7604,14 @@ function pdfDrawEntry(doc, entry, layout, x, y, cols, withClock, timeLabel, durL
     cy += 1.2;
   }
   if (layout.noteLines.length) {
-    doc.setFont("LibSans", "normal"); doc.setFontSize(layout.noteSize); pdfSetText(doc, "#8A93A0");
+    doc.setFont("LibSans", "normal"); doc.setFontSize(layout.noteSize); pdfSetText(doc, "#5B6472");
     layout.noteLines.forEach(line => { doc.text(line, cueColX + layout.padX, cy); cy += pdfLineHeight(layout.noteSize); });
     cy += 1.6;
   }
   if (layout.equipLines.length) {
     const eh = layout.equipSize * 0.28;
-    pdfDrawToolIcon(doc, cueColX + layout.padX, cy - eh * 0.88, eh, "#8A93A0");
-    doc.setFont("LibSans", "normal"); doc.setFontSize(layout.equipSize); pdfSetText(doc, "#8A93A0");
+    pdfDrawToolIcon(doc, cueColX + layout.padX, cy - eh * 0.88, eh, "#5B6472");
+    doc.setFont("LibSans", "normal"); doc.setFontSize(layout.equipSize); pdfSetText(doc, "#5B6472");
     layout.equipLines.forEach(line => { doc.text(line, cueColX + layout.padX + PDF_CUE_ICON_W, cy); cy += pdfLineHeight(layout.equipSize); });
   }
 
