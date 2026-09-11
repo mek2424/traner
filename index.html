@@ -552,7 +552,9 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
    okno odkudkoli v appce — i zevnitř jiných už otevřených oken (např. "Odhlásit na dálku" uvnitř
    Profilu). Musí proto mít vyšší z-index než VŠECHNY ostatní modaly, jinak by (při stejném
    z-indexu) o pořadí vykreslení rozhodlo jen pořadí v HTML a confirm by skončil vzadu. */
-#confirmModalBackdrop,#promptModalBackdrop{z-index:70;}
+/* Musí být nad VŠÍM, včetně diagnostického panelu (ten má inline z-index:501) — potvrzovací
+   okno se volá i z tlačítek uvnitř něj a schovávalo se pod něj. */
+#confirmModalBackdrop,#promptModalBackdrop{z-index:700;}
 @media(min-width:640px){.modal-backdrop{align-items:center;}}
 .modal{
   background:var(--card);width:100%;max-width:560px;max-height:92vh;overflow-y:auto;
@@ -2199,6 +2201,7 @@ body.popout-mode .popout-btn{display:none !important;}
   <button type="button" id="copyDebugLogBtn" style="position:sticky;top:0;float:right;background:#2B6CB0;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;">Kopírovat záznam</button>
   <button type="button" id="disableDevModeBtn" style="position:sticky;top:0;float:right;background:#5B2B2B;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;">Vypnout vývojářský režim</button>
   <button type="button" id="shrinkOversizedBtn" class="hidden" style="position:sticky;top:0;float:right;background:#C99A2E;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Přestěhovat staré náhledy</button>
+  <button type="button" id="thumbsTestOneBtn" class="hidden" style="position:sticky;top:0;float:right;background:#7A5AA8;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Storage: test 1 fotky</button>
   <button type="button" id="thumbsToStorageDryBtn" class="hidden" style="position:sticky;top:0;float:right;background:#3C6E8F;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Storage: nanečisto</button>
   <button type="button" id="thumbsToStorageRunBtn" class="hidden" style="position:sticky;top:0;float:right;background:#2F7A4F;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Storage: přestěhovat</button>
   <button type="button" id="thumbsCleanupBtn" class="hidden" style="position:sticky;top:0;float:right;background:#8A3A3A;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Storage: uklidit Firestore</button>
@@ -2303,6 +2306,11 @@ try {
 }
 /* Náhledy videí nově nebydlí ve Firestore, ale ve Firebase Storage — viz saveThumbnail() níž. */
 const storage = getStorage(fbApp);
+/* Výchozí chování SDK je zkoušet nahrání dokola celé DVĚ MINUTY, než to vzdá a ohlásí chybu.
+   Při 287 fotkách po čtyřech naráz to znamená, že když je něco špatně, appka mlčí desítky minut
+   a člověk netuší, jestli pracuje, nebo visí. Zkrátíme to, ať se případná chyba ukáže hned. */
+storage.maxUploadRetryTime = 20000;
+storage.maxOperationRetryTime = 20000;
 
 /* =========================================================
    PUSH NOTIFIKACE — pomocná vrstva nad Firebase Cloud Messaging.
@@ -2468,7 +2476,7 @@ function logDebug(...args) {
 document.getElementById("debugLogBtn").addEventListener("click", () => {
   document.getElementById("debugLogContent").textContent = debugLog.length ? debugLog.join("\n") : "(zatím žádné záznamy — proveď akci, co chceš prověřit, a pak se sem vrať)";
   document.getElementById("shrinkOversizedBtn").classList.toggle("hidden", uidCurrent !== ADMIN_UID);
-  ["thumbsToStorageDryBtn", "thumbsToStorageRunBtn", "thumbsCleanupBtn"]
+  ["thumbsTestOneBtn", "thumbsToStorageDryBtn", "thumbsToStorageRunBtn", "thumbsCleanupBtn"]
     .forEach(bid => document.getElementById(bid).classList.toggle("hidden", uidCurrent !== ADMIN_UID));
   document.getElementById("checkLibrarySizeBtn").classList.toggle("hidden", uidCurrent !== ADMIN_UID);
   document.getElementById("adoptDriveThumbsBtn").classList.toggle("hidden", !isEditor());
@@ -2582,14 +2590,17 @@ document.getElementById("shrinkOversizedBtn").addEventListener("click", async ()
    ========================================================= */
 /** Pustí práci po několika naráz — 287 fotek po jedné by trvalo věčnost, všechny naráz by
     prohlížeč i Storage neunesly. */
-async function runWithConcurrency(items, limit, worker, onProgress) {
+async function runWithConcurrency(items, limit, worker, onProgress, shouldAbort) {
   let index = 0, done = 0;
   const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
     while (index < items.length) {
+      if (shouldAbort && shouldAbort()) return;
       const my = index++;
       try { await worker(items[my], my); } catch (e) { /* worker si chyby řeší sám */ }
       done++;
-      if (onProgress) onProgress(done, items.length);
+      // await je tu schválně: bez něj se průběžné ukládání knihovny spouštělo na pozadí
+      // a mohlo běžet několikrát přes sebe.
+      if (onProgress) { try { await onProgress(done, items.length); } catch (e) {} }
     }
   });
   await Promise.all(workers);
@@ -2617,6 +2628,37 @@ document.getElementById("thumbsToStorageDryBtn").addEventListener("click", () =>
   logDebug("[storage] tímhle neopraví. Ostré budou až nově nahrané náhledy.");
   toast(`Nanečisto: k přestěhování ${withData.length} náhledů, ${orphans.length} osiřelých. Detaily v 🐞.`, 9000, "info");
 });
+/** Nahraje JEDNU maličkou testovací fotku a hlasitě vypíše, co se stalo. Smyslem je oddělit
+    "je špatně nastavení/pravidla" od "je špatně stěhovací smyčka" — místo čekání, jestli se
+    z 287 fotek něco pohne, to je odpověď za pár sekund. */
+document.getElementById("thumbsTestOneBtn").addEventListener("click", async () => {
+  if (uidCurrent !== ADMIN_UID) return;
+  const TINY_JPEG = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q==";
+  logDebug("[test] === TEST JEDNÉ FOTKY ===");
+  logDebug(`[test] bucket z konfigurace: ${firebaseConfig.storageBucket}`);
+  logDebug(`[test] přihlášen jako: ${uidCurrent}`);
+  const t0 = Date.now();
+  try {
+    logDebug("[test] 1/3 nahrávám…");
+    const r = storageRef(storage, `${STORAGE_THUMB_DIR}/_test/${Date.now()}.jpg`);
+    await withTimeout(uploadString(r, TINY_JPEG, "data_url", { contentType: "image/jpeg" }), 25000, "nahrání");
+    logDebug(`[test] 2/3 nahráno za ${Date.now() - t0} ms, zjišťuji adresu…`);
+    const url = await withTimeout(getDownloadURL(r), 20000, "získání adresy");
+    logDebug(`[test] 3/3 HOTOVO za ${Date.now() - t0} ms`);
+    logDebug(`[test] adresa: ${url.slice(0, 110)}…`);
+    logDebug("[test] ✓ Storage funguje. Problém je jinde než v nastavení.");
+    toast("Test prošel — Storage funguje.", 6000);
+  } catch (e) {
+    logDebug(`[test] ✗ SELHALO po ${Date.now() - t0} ms`);
+    logDebug(`[test] kód: ${(e && e.code) || "(žádný)"}`);
+    logDebug(`[test] zpráva: ${(e && e.message) || e}`);
+    if (e && e.code === "storage/unauthorized") logDebug("[test] → pravidla Storage zápis nepovolují.");
+    if (e && e.code === "storage/unknown") logDebug("[test] → nejspíš není zapnuté Storage, nebo nesedí jméno bucketu.");
+    if (e && /nenalez|not found|404/i.test(String(e.message))) logDebug("[test] → bucket s tímhle jménem neexistuje.");
+    if (e && /časový limit/.test(String(e.message))) logDebug("[test] → požadavek vůbec nedoběhl. Nejspíš se appka k bucketu nedovolá.");
+    toast("Test selhal — detaily v 🐞.", 8000, "err");
+  }
+});
 document.getElementById("thumbsToStorageRunBtn").addEventListener("click", async () => {
   if (uidCurrent !== ADMIN_UID) return;
   const targets = listThumbsToMigrate().filter(t => t.dataUrl);
@@ -2624,25 +2666,35 @@ document.getElementById("thumbsToStorageRunBtn").addEventListener("click", async
   if (!(await confirmDialog(`Přestěhovat ${targets.length} náhledů do Firebase Storage? Stará kolekce ve Firestore zůstane nedotčená, uklidí se až samostatným tlačítkem. Během stěhování prosím neupravuj knihovnu jinde.`))) return;
 
   logDebug(`[storage] === STĚHUJI ${targets.length} náhledů ===`);
-  let ok = 0, failed = 0, sinceSave = 0;
+  logDebug(`[storage] bucket: ${firebaseConfig.storageBucket}`);
+  let ok = 0, failed = 0, sinceSave = 0, abort = false;
   const saveChunk = async () => {
     const saved = await saveUserData();
     logDebug(`[storage] průběžné uložení knihovny: ${saved ? "OK" : "SELHALO — uložení se zopakuje v dalším kole"}`);
     sinceSave = 0;
   };
-  await runWithConcurrency(targets, 4, async ({ item, dataUrl }) => {
+  // Prvních pět kusů se vypisuje jednotlivě i při úspěchu. Bez toho appka po spuštění mlčela
+  // až do dvacáté hotové fotky a nebylo poznat, jestli pracuje, nebo visí.
+  await runWithConcurrency(targets, 4, async ({ item, dataUrl }, i) => {
+    const t0 = Date.now();
     try {
       item.thumbnail = await saveThumbnail(item.id, dataUrl, "");
       ok++;
+      if (i < 5) logDebug(`[storage] #${i + 1} „${item.title}" OK (${Date.now() - t0} ms)`);
     } catch (err) {
       failed++;
-      logDebug(`[storage] „${item.title}" selhalo: ${err && (err.code || err.message)}`);
+      logDebug(`[storage] #${i + 1} „${item.title}" SELHALO po ${Date.now() - t0} ms: ${(err && err.code) || ""} ${(err && err.message) || err}`);
+      // Když padá hned prvních pár kusů, nemá smysl mlátit hlavou do zdi dalších 280×.
+      if (failed === 5 && ok === 0) {
+        logDebug("[storage] ✗ Prvních pět selhalo a nic neprošlo — zastavuji. Spusť „Storage: test 1 fotky\".");
+        abort = true;
+      }
     }
   }, async (done, total) => {
     sinceSave++;
     if (done % 20 === 0) logDebug(`[storage] hotovo ${done}/${total}…`);
     if (sinceSave >= 25) await saveChunk();
-  });
+  }, () => abort);
   await saveChunk();
 
   const left = listThumbsToMigrate().length;
@@ -3363,16 +3415,25 @@ async function deleteThumbObject(value) {
     @param id        ID videa — jen kvůli přehlednému uspořádání v úložišti
     @param dataUrl   fotka jako data: URL (z nahrání souboru nebo ze zachyceného snímku videa)
     @param oldValue  předchozí hodnota item.thumbnail — pokud to byla fotka ve Storage, smaže se */
+/** Pojistka proti tichému viset: kdyby se krok nedokončil do zadaného času, radši spadne
+    s vysvětlující chybou, než aby appka beze slova stála. */
+function withTimeout(promise, ms, label) {
+  let t;
+  return Promise.race([
+    promise.finally(() => clearTimeout(t)),
+    new Promise((_, reject) => { t = setTimeout(() => reject(new Error(`${label} — vypršel časový limit ${ms / 1000}s`)), ms); })
+  ]);
+}
 async function saveThumbnail(id, dataUrl, oldValue) {
-  const prepared = await resizeDataUrlToMaxWidth(dataUrl);
+  const prepared = await withTimeout(resizeDataUrlToMaxWidth(dataUrl), 15000, "zmenšení fotky");
   const path = `${STORAGE_THUMB_DIR}/${id}/${Date.now()}.jpg`;
   const r = storageRef(storage, path);
-  await uploadString(r, prepared, "data_url", {
+  await withTimeout(uploadString(r, prepared, "data_url", {
     contentType: "image/jpeg",
     // Adresa je díky časovému razítku jedinečná, takže se smí cachovat, jak dlouho chce.
     cacheControl: "public, max-age=31536000, immutable"
-  });
-  const url = await getDownloadURL(r);
+  }), 30000, "nahrání do Storage");
+  const url = await withTimeout(getDownloadURL(r), 20000, "získání adresy");
   deleteThumbObject(oldValue); // schválně bez await — úklid nemá zdržovat uložení
   return url;
 }
