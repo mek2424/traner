@@ -34,13 +34,23 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+<link rel="stylesheet" href="training-mode.css">
 <style>
 :root{
   --paper:#F4F5F2;
   --card:#FFFFFF;
   --ink:#1B2430;
-  --ink-soft:#5B6472;
-  --ink-faint:#8A93A0;
+  /* Dvě spodní patra šedé byla ve světlém režimu moc světlá: --ink-soft mělo 5,47 : 1 a
+     --ink-faint (metadata na kartách, popisky, prázdné stavy — 74 míst, místy na 10px písmu)
+     jen 2,84 : 1, tedy pod normou 4,5 : 1.
+     Posunula se OBĚ naráz schválně. Kdyby se ztmavilo jen --ink-faint, přiblížilo by se
+     --ink-soft (5,47 vs 4,22) a tři patra hierarchie by se opticky slila do dvou — nejvíc
+     na kartách, kde jsou název, složka a metadata pod sebou. Takhle odstup zůstal a celá
+     stupnice se odsunula od podkladu. --ink-soft je navíc stejná hodnota jako .tm-note
+     v tréninkovém režimu, takže je to napříč appkou konzistentní.
+     Tmavého režimu se to netýká — tam vychází --ink-faint na 6,22 : 1 a je v pořádku. */
+  --ink-soft:#4A5564;   /* bylo #5B6472 — 5,47 : 1 → 6,92 : 1 */
+  --ink-faint:#6B7684;  /* bylo #8A93A0 — 2,84 : 1 → 4,22 : 1 */
   --line:#DCDFD9;
   --court:#339933;
   --court-dark:#216321;
@@ -501,6 +511,22 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   background:var(--chalk);border:2px solid #fff;box-shadow:0 0 0 .5px rgba(0,0,0,.15);
 }
 .bell-dot.hidden{display:none;}
+/* Počet lidí, co čekají na schválení. Schválně jiný roh i tvar než .bell-dot (ta sedí vlevo
+   nahoře a hlásí komentáře) — jsou to dvě různé věci a nemají splývat. Číslo, ne jen puntík:
+   "čeká jeden" a "čekají čtyři" je při zvaní nových trenérů podstatný rozdíl. */
+.pending-badge{
+  position:absolute;bottom:-3px;right:-4px;min-width:16px;height:16px;padding:0 4px;
+  border-radius:999px;background:var(--danger);color:#fff;border:2px solid var(--court);
+  font-family:var(--font-body);font-size:10px;font-weight:700;line-height:12px;
+  display:flex;align-items:center;justify-content:center;
+}
+.pending-badge.hidden{display:none;}
+/* Stejný odznak i u položky "Čekají na schválení" uvnitř profilu, ať je jasné, kam kliknout. */
+.pending-inline-count{
+  display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;
+  padding:0 5px;margin-left:8px;border-radius:999px;background:var(--danger);color:#fff;
+  font-size:11px;font-weight:700;vertical-align:middle;
+}
 .comment-activity-list{display:flex;flex-direction:column;gap:2px;max-height:60vh;overflow-y:auto;}
 .comment-activity-item{
   display:flex;gap:10px;align-items:flex-start;padding:10px 4px;border-bottom:1px solid var(--line);
@@ -856,145 +882,7 @@ body.popout-mode .popout-btn{display:none !important;}
 .detail-text{white-space:pre-wrap;font-size:14px;}
 .detail-text.rte-display{white-space:normal;}
 
-/* ---------- Tréninkový režim ---------- */
-#trainingModeView{
-  position:fixed;inset:0;z-index:200;background:#F4F5F2;display:flex;flex-direction:column;
-  transform:translateZ(0);-webkit-transform:translateZ(0);
-}
-/* Vynucené otočení na šířku bez spoléhání na (nespolehlivé, hlavně na Firefoxu pro Android)
-   zamykání orientace prohlížečem — obsah se místo toho otočí rovnou přes CSS transform,
-   člověk pak jen telefon fyzicky otočí, ať se to sejde. */
-#trainingModeView.tm-forced-landscape{
-  top:0;left:0;right:auto;bottom:auto;width:100vh;height:100vw;
-  transform-origin:top left;transform:rotate(90deg) translateY(-100%);
-}
-.tm-header{
-  display:flex;align-items:center;justify-content:space-between;padding:14px 16px;
-  padding-top:calc(14px + env(safe-area-inset-top));flex-shrink:0;background:#F4F5F2;
-}
-.tm-exit{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.06);border:none;color:#5B6472;font-size:18px;display:flex;align-items:center;justify-content:center;}
-.tm-progress{font-family:var(--font-display);font-size:18px;color:#5B6472;letter-spacing:.03em;}
-.tm-progress-bar{height:9px;background:rgba(27,36,48,.08);flex-shrink:0;}
-.tm-progress-fill{height:100%;background:var(--court);transition:width .3s ease,background .3s ease;}
-.tm-body{
-  position:relative;flex:1;display:grid;grid-template-columns:1fr;grid-template-areas:"left" "right" "video";
-  gap:16px;padding:24px 20px;overflow-y:auto;min-height:0;transition:background .25s ease;text-align:center;
-  background:#F4F5F2;
-}
-.tm-col-left{grid-area:left;display:flex;flex-direction:column;align-items:center;margin-top:30px;}
-.tm-col-video{grid-area:video;}
-.tm-col-right{grid-area:right;display:flex;flex-direction:column;align-items:center;}
-.tm-body.tm-solo{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
-.tm-body.tm-solo .tm-col-video,.tm-body.tm-solo .tm-col-right{display:none;}
-.tm-video-wrap{width:100%;max-width:220px;aspect-ratio:16/9;background:#000;border-radius:var(--radius-sm);overflow:hidden;margin:0 auto;}
-.tm-video-fallback{text-align:center;margin-top:6px;}
-.tm-video-fallback a{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-soft);text-decoration:none;}
-.tm-video-fallback a:hover{color:var(--court);}
-.tm-text-pane{
-  width:100%;max-width:320px;margin:0 auto;max-height:min(38vh,320px);overflow-y:auto;
-  background:#fff;border:1px solid #DCDFD9;border-radius:var(--radius-sm);
-  padding:14px 16px;font-size:13.5px;line-height:1.6;color:#3A4250;text-align:left;
-}
-.tm-text-pane ul,.tm-text-pane ol{padding-left:20px;margin:4px 0;}
-.tm-up-next{
-  position:absolute;top:14px;right:16px;z-index:2;
-  display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid #DCDFD9;border-left:4px solid #DCDFD9;
-  border-radius:var(--radius-sm);padding:8px 16px;font-size:12.5px;font-weight:600;color:#5B6472;
-  box-shadow:0 1px 2px rgba(27,36,48,.07), 0 4px 14px rgba(27,36,48,.05);transform:translateX(130%);opacity:0;transition:transform .45s ease,opacity .3s ease;
-}
-.tm-up-next.shown{transform:translateX(0);opacity:1;}
-.tm-up-next strong{color:#1B2430;}
-.tm-part-label{font-family:var(--font-display);font-size:16px;letter-spacing:.08em;color:#4A5564;margin-bottom:10px;display:inline-block;padding:2px 10px;border-radius:999px;}
-.tm-series-label{font-size:13px;font-weight:700;color:var(--chalk-dark);background:rgba(232,98,44,.12);display:inline-block;padding:3px 10px;border-radius:999px;margin-bottom:8px;}
-.tm-group-name{
-  font-family:var(--font-display);font-size:clamp(20px,5.5vw,30px);letter-spacing:.04em;color:var(--court-dark);
-  background:rgba(51,153,51,.1);border:2px solid var(--court);border-radius:var(--radius-sm);
-  padding:7px 18px;margin-bottom:12px;max-width:100%;overflow-wrap:anywhere;display:inline-block;
-}
-.tm-title{font-family:var(--font-display);font-size:clamp(30px,8vw,46px);line-height:1.15;color:#1B2430;margin-bottom:10px;max-width:100%;overflow-wrap:anywhere;}
-.tm-desc{font-family:var(--font-display);font-size:clamp(18px,5vw,24px);letter-spacing:.03em;color:#5B6472;margin-bottom:12px;max-width:520px;overflow-wrap:anywhere;}
-.tm-reps-display{
-  font-family:var(--font-display);font-size:clamp(52px,17vw,100px);line-height:1;letter-spacing:.02em;color:var(--chalk-dark);
-  background:rgba(232,98,44,.1);border:3px solid var(--chalk);border-radius:var(--radius);
-  padding:10px 30px;margin:6px 0 16px;display:inline-block;
-}
-.tm-cue{font-size:clamp(15px,4vw,18px);font-weight:600;color:#5B6472;margin-bottom:8px;max-width:100%;overflow-wrap:anywhere;}
-.tm-note{font-size:14px;color:#4A5564;max-width:100%;overflow-wrap:anywhere;}
-@media(min-width:860px),(orientation:landscape) and (min-width:480px){
-  .tm-body{grid-template-columns:1fr 1.3fr 1fr;grid-template-areas:"left video right";align-items:center;gap:28px;padding:24px 40px;}
-  .tm-col-left{margin-top:0;}
-  .tm-video-wrap{max-width:100%;}
-  .tm-text-pane{max-width:100%;}
-  .tm-desc,.tm-cue,.tm-note{max-width:100%;}
-  .tm-up-next{
-    position:fixed;top:calc(14px + env(safe-area-inset-top));right:70px;left:auto;
-    transform:translateX(-100vw);transition:transform .6s ease,opacity .3s ease;
-  }
-  .tm-up-next.shown{transform:translateX(0);}
-}
-#trainingModeView.tm-forced-landscape .tm-body{grid-template-columns:1fr 1.3fr 1fr;grid-template-areas:"left video right";align-items:center;gap:28px;padding:24px 40px;}
-#trainingModeView.tm-forced-landscape .tm-col-left{margin-top:0;}
-#trainingModeView.tm-forced-landscape .tm-video-wrap{max-width:100%;}
-#trainingModeView.tm-forced-landscape .tm-text-pane{max-width:100%;}
-#trainingModeView.tm-forced-landscape .tm-desc,#trainingModeView.tm-forced-landscape .tm-cue,#trainingModeView.tm-forced-landscape .tm-note{max-width:100%;}
-#trainingModeView.tm-forced-landscape .tm-up-next{
-  position:fixed;top:calc(6px + env(safe-area-inset-top));right:56px;left:auto;
-  transform:translateX(-100vw);transition:transform .6s ease,opacity .3s ease;
-}
-#trainingModeView.tm-forced-landscape .tm-up-next.shown{transform:translateX(0);}
-.tm-timer-wrap{display:flex;align-items:center;justify-content:center;gap:22px;padding:18px 16px;flex-shrink:0;background:#F4F5F2;}
-.tm-timer{font-family:var(--font-display);font-size:clamp(48px,14vw,72px);color:var(--tm-timer-fg,#1B2430);background:var(--tm-timer-bg,transparent);min-width:180px;text-align:center;font-variant-numeric:tabular-nums;border-radius:999px;padding:4px 30px;}
-.tm-timer.tm-timer-done{color:var(--chalk);}
-.tm-timer-btn{width:56px;height:56px;border-radius:50%;background:var(--court);color:#fff;border:none;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.tm-nav{display:flex;gap:10px;padding:12px 16px calc(16px + env(safe-area-inset-bottom));flex-shrink:0;background:#F4F5F2;}
-.tm-nav-btn{flex:1;padding:16px;border-radius:var(--radius);border:1px solid #DCDFD9;background:#fff;font-family:var(--font-display);font-size:16px;color:#1B2430;letter-spacing:.02em;}
-.tm-nav-btn:disabled{opacity:.35;}
-.tm-nav-next{background:var(--chalk);color:#fff;border-color:var(--chalk);}
-.tm-info-btn-row{display:flex;justify-content:flex-end;}
-.tm-info-btn{
-  position:relative;display:flex;align-items:center;justify-content:center;gap:8px;
-  height:44px;padding:0 18px;margin-bottom:10px;border-radius:var(--radius);border:1.5px solid var(--court);
-  background:rgba(51,153,51,.1);color:var(--court-dark);font-size:15px;font-family:var(--font-display);white-space:nowrap;
-}
-.tm-info-btn i{font-size:20px;}
-.tm-info-dot{
-  position:absolute;top:-5px;right:-5px;width:13px;height:13px;border-radius:50%;background:var(--chalk);
-  animation:tmInfoDotPulse 1.6s ease-out infinite;
-}
-.tm-info-dot.hidden{display:none;animation:none;}
-@keyframes tmInfoDotPulse{
-  0%{box-shadow:0 0 0 0 rgba(232,98,44,.55);}
-  70%{box-shadow:0 0 0 8px rgba(232,98,44,0);}
-  100%{box-shadow:0 0 0 0 rgba(232,98,44,0);}
-}
-@media(max-width:640px){.tm-info-btn{height:40px;font-size:13.5px;padding:0 14px;}.tm-info-btn i{font-size:18px;}}
-
-/* Kompaktní chrome pro krátkou/širokou obrazovku (telefon na šířku) — na šířku má telefon
-   spoustu vodorovného, ale málo svislého místa, a hlavička/časovač/navigace mají odsazení
-   odladěné pro portrét, takže samy o sobě spolykaly skoro celou dostupnou výšku. Časovač měl
-   navíc velikost počítanou z šířky (vw) — na šířku obrazovky to spolehlivě vždycky vyjde na
-   maximum bez ohledu na to, jak málo místa nahoru/dolů zbývá, proto se tu přepočítává z výšky. */
-@media(orientation:landscape) and (max-height:500px){
-  .tm-header{padding:6px 14px;padding-top:calc(6px + env(safe-area-inset-top));}
-  .tm-exit{width:34px;height:34px;font-size:15px;}
-  .tm-progress{font-size:14px;}
-  .tm-body{padding-top:10px;padding-bottom:10px;gap:14px;}
-  .tm-timer-wrap{padding:6px 16px;gap:14px;}
-  .tm-timer{font-size:clamp(24px,9vh,40px);min-width:120px;padding:2px 18px;}
-  .tm-timer-btn{width:38px;height:38px;font-size:15px;}
-  .tm-nav{padding:6px 16px calc(6px + env(safe-area-inset-bottom));}
-  .tm-nav-btn{padding:10px;font-size:14px;}
-  .tm-up-next{top:calc(6px + env(safe-area-inset-top));right:56px;}
-}
-#trainingModeView.tm-forced-landscape .tm-header{padding:6px 14px;padding-top:calc(6px + env(safe-area-inset-top));}
-#trainingModeView.tm-forced-landscape .tm-exit{width:34px;height:34px;font-size:15px;}
-#trainingModeView.tm-forced-landscape .tm-progress{font-size:14px;}
-#trainingModeView.tm-forced-landscape .tm-body{padding-top:10px;padding-bottom:10px;gap:14px;}
-#trainingModeView.tm-forced-landscape .tm-timer-wrap{padding:6px 16px;gap:14px;}
-#trainingModeView.tm-forced-landscape .tm-timer{font-size:clamp(24px,9vh,40px);min-width:120px;padding:2px 18px;}
-#trainingModeView.tm-forced-landscape .tm-timer-btn{width:38px;height:38px;font-size:15px;}
-#trainingModeView.tm-forced-landscape .tm-nav{padding:6px 16px calc(6px + env(safe-area-inset-bottom));}
-#trainingModeView.tm-forced-landscape .tm-nav-btn{padding:10px;font-size:14px;}
+/* ---------- Tréninkový režim — přesunuto do sdíleného training-mode.css (viz <link> v hlavičce) ---------- */
 
 /* ---------- Trainings list ---------- */
 .training-row{
@@ -1350,6 +1238,7 @@ body.popout-mode .popout-btn{display:none !important;}
       <button id="profileBtn" class="avatar-btn" aria-label="Profil, nové komentáře" title="Profil">
         <span id="avatarInitial">?</span>
         <span class="bell-dot hidden" id="commentBellDot"></span>
+        <span class="pending-badge hidden" id="pendingBadge" aria-hidden="true"></span>
       </button>
       <span id="userEmailLabel"></span>
       <button id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Odhlásit</button>
@@ -2143,7 +2032,7 @@ body.popout-mode .popout-btn{display:none !important;}
       <p style="font-size:11.5px;color:var(--ink-faint);margin:6px 0 0;">Vlož připravenou tabulku (název/štítky/vybavení/popis pro víc videí najednou) a jedním klikem ji zapiš.</p>
     </div>
     <div id="adminPendingSection" class="hidden" style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line);">
-      <h3 style="font-size:14px;font-family:var(--font-body);font-weight:700;color:var(--ink-soft);margin:0 0 8px;">Čekají na schválení</h3>
+      <h3 style="font-size:14px;font-family:var(--font-body);font-weight:700;color:var(--ink-soft);margin:0 0 8px;">Čekají na schválení<span id="pendingInlineCount" class="pending-inline-count hidden"></span></h3>
       <div id="pendingApprovalsList"></div>
     </div>
     <div id="adminMembersSection" class="hidden" style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line);">
@@ -2427,7 +2316,7 @@ async function ensureMessaging() {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-09-11 20:55";
+const APP_VERSION = "2026-09-11 23:15";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -3055,6 +2944,8 @@ let sessionBadgeThreshold = 0; // čas posledního přihlášení — cokoli nov
 let commentsSeenAt = 0; // čas, kdy uživatel naposled otevřel panel "Co je nového" u komentářů
 let commentActivityList = []; // živě poslouchané poslední záznamy z kolekce commentActivity
 let commentActivityUnsub = null;
+let pendingRequestsUnsub = null;
+let pendingRequestsCount = 0;
 const TRASH_RETENTION_DAYS = 14; // po tolika dnech aplikace položku z koše sama nadobro odstraní
 /** "Smazání" videa z běžné knihovny je měkké — video zůstane v datech, jen označené jako
     smazané, a pár dní čeká v Koši, než aplikace provede skutečné, nevratné smazání. */
@@ -3929,19 +3820,45 @@ loginSwitchBtn.addEventListener("click", () => {
 });
 
 document.getElementById("forgotPassBtn").addEventListener("click", async () => {
-  const email = document.getElementById("loginEmail").value.trim();
   const infoEl = document.getElementById("loginInfo");
   loginError.textContent = "";
   infoEl.textContent = "";
+  /* Appka se na adresu VÝSLOVNĚ zeptá, i když ji má v poli nahoře. Dřív si ji tiše vzala
+     z přihlašovacího pole — jenže to bývá předvyplněné prohlížečem, takže člověk klikl,
+     dostal "Odesláno" a neměl tušení, kam se to vlastně odeslalo (a jestli je to vůbec
+     adresa, kterou má zaregistrovanou). Předvyplníme, ale ať to má před očima a může to
+     opravit. */
+  const prefill = document.getElementById("loginEmail").value.trim();
+  const answer = await promptDialog(
+    "Pošleme na ni odkaz pro nastavení nového hesla. Musí to být přesně ta adresa, kterou máš v aplikaci zaregistrovanou.",
+    { title: "Na jaký e-mail?", defaultValue: prefill, inputType: "email", confirmLabel: "Odeslat odkaz" }
+  );
+  if (answer === null) return;
+  const email = String(answer).trim();
   if (!email) {
-    loginError.textContent = "Nejdřív napiš svůj e-mail nahoře, pak klikni na tohle znovu.";
+    loginError.textContent = "Bez e-mailu to nepůjde — zkus to prosím znovu.";
     return;
   }
+  /* Pozor na past: Firebase má u novějších projektů zapnutou "ochranu proti zjišťování
+     e-mailů". S ní sendPasswordResetEmail() NIKDY neohlásí, že účet neexistuje — skončí
+     úspěchem a prostě nic nepošle. Je to schválně (jinak by šlo tímhle tlačítkem zjišťovat,
+     kdo je v appce registrovaný), ale znamená to, že "úspěch" tady nesmíme hlásit jako
+     jistotu odeslání. Proto to opatrné "pokud účet existuje" — lhát uživateli, že mu něco
+     přišlo, je horší než přiznat, že to nevíme. */
+  const btn = document.getElementById("forgotPassBtn");
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Odesílám…";
   try {
     await sendPasswordResetEmail(auth, email);
-    infoEl.textContent = "Odesláno — mrkni do e-mailu (i do spamu) na odkaz pro nastavení nového hesla.";
+    infoEl.textContent = `Pokud je ${email} zaregistrovaný, dorazí na něj odkaz pro nastavení nového hesla. Mrkni i do spamu — chodí to z adresy noreply@…firebaseapp.com, kterou schránky rády odfiltrují.`;
+    logDebug("[heslo] žádost o obnovu odeslána pro:", email);
   } catch (err) {
     loginError.textContent = translateAuthError(err.code);
+    logDebug("[heslo] obnova selhala:", err && err.code, err && err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalLabel;
   }
 });
 
@@ -3974,7 +3891,10 @@ function translateAuthError(code) {
     "auth/invalid-credential": "Špatný e-mail nebo heslo.",
     "auth/email-already-in-use": "Tenhle e-mail už je zaregistrovaný — zkus se přihlásit.",
     "auth/weak-password": "Heslo musí mít alespoň 6 znaků.",
-    "auth/network-request-failed": "Problém s připojením k internetu."
+    "auth/network-request-failed": "Problém s připojením k internetu.",
+    "auth/too-many-requests": "Moc pokusů po sobě. Počkej pár minut a zkus to znovu.",
+    "auth/missing-email": "Napiš nejdřív e-mail.",
+    "auth/user-disabled": "Tenhle účet je zablokovaný."
   };
   return map[code] || ("Něco se nepovedlo (" + code + ").");
 }
@@ -4010,6 +3930,7 @@ onAuthStateChanged(auth, async (user) => {
     unsubscribeFromSharedData();
     unsubscribeFromSharedThumbnails();
     unsubscribeFromOwnMembership();
+    unsubscribeFromPendingRequests();
     stopHeartbeat();
     document.getElementById("app").classList.add("hidden");
     document.getElementById("pendingScreen").classList.add("hidden");
@@ -4070,6 +3991,7 @@ async function checkMembershipAndProceed() {
   subscribeToSharedThumbnails();
   subscribeToOwnMembership();
   subscribeToCommentActivity();
+  subscribeToPendingRequests();
   if (isEditor()) purgeOldTrash().catch(err => console.warn("Úklid koše selhal:", err));
   // Tréninky ostatních trenérů se dotáhnou na pozadí, až když má prohlížeč chvilku klidu —
   // appka je potřebuje jen pro údaj "v tréninku N×" na kartách a pro Tržiště, takže nemají
@@ -6281,6 +6203,46 @@ function isRelevantCommentActivity(a) {
   if (a.authorUid === uidCurrent) return false;
   if ((a.mentions || []).includes(uidCurrent)) return true;
   return a.isTopLevel && a.videoOwnerUid === uidCurrent;
+}
+/** Čekající žádosti o přístup — bez tohohle se nový trenér zaregistruje a v appce se to
+    NIKDE neprojeví; admin se o něm dozví, jen když si sám otevře Profil a odscrolluje dolů.
+    Sledujeme to živě, ať odznak naskočí hned, i když je appka zrovna otevřená v jiné záložce.
+    Pravidla pouští čtení celé kolekce jen adminovi, takže pro ostatní se odběr ani nezakládá. */
+function subscribeToPendingRequests() {
+  if (pendingRequestsUnsub) { pendingRequestsUnsub(); pendingRequestsUnsub = null; }
+  if (uidCurrent !== ADMIN_UID) { pendingRequestsCount = 0; renderPendingBadge(); return; }
+  pendingRequestsUnsub = onSnapshot(collection(db, "pendingRequests"), (snap) => {
+    pendingRequestsCount = snap.size;
+    renderPendingBadge();
+    // Když je profil zrovna otevřený, rovnou obnov i seznam pod nadpisem.
+    if (!document.getElementById("profileModalBackdrop").classList.contains("hidden")) {
+      renderPendingApprovals();
+    }
+  }, (err) => console.warn("Sledování čekajících žádostí selhalo:", err));
+}
+function unsubscribeFromPendingRequests() {
+  if (pendingRequestsUnsub) { pendingRequestsUnsub(); pendingRequestsUnsub = null; }
+  pendingRequestsCount = 0;
+  renderPendingBadge();
+}
+function renderPendingBadge() {
+  const badge = document.getElementById("pendingBadge");
+  const inline = document.getElementById("pendingInlineCount");
+  const n = pendingRequestsCount;
+  if (badge) {
+    badge.classList.toggle("hidden", n === 0);
+    badge.textContent = n > 9 ? "9+" : String(n);
+  }
+  if (inline) {
+    inline.classList.toggle("hidden", n === 0);
+    inline.textContent = String(n);
+  }
+  const profileBtn = document.getElementById("profileBtn");
+  if (profileBtn) {
+    profileBtn.setAttribute("aria-label", n
+      ? `Profil — ${n} ${n === 1 ? "člověk čeká" : (n < 5 ? "lidé čekají" : "lidí čeká")} na schválení`
+      : "Profil, nové komentáře");
+  }
 }
 function subscribeToCommentActivity() {
   if (commentActivityUnsub) { commentActivityUnsub(); commentActivityUnsub = null; }
