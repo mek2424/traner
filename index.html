@@ -2352,7 +2352,7 @@ async function ensureMessaging() {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-09-12 09:40";
+const APP_VERSION = "2026-09-12 17:05";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -11000,7 +11000,8 @@ const HELP_DATA = [
       { q: "Jaký je rozdíl mezi rolí Editor a Prohlížeč?", a: "Editor smí přidávat a upravovat videa v knihovně i vytvářet a upravovat tréninky. Prohlížeč vidí celou sdílenou knihovnu, ale nemůže do ní zasahovat — může si ale volně skládat a upravovat vlastní tréninky z toho, co v knihovně najde.", kw: "role prohlizec editor" },
       { q: "Kdo je admin a co může navíc?", a: "Admin je jeden konkrétní účet se správou aplikace navíc — schvaluje nové trenéry, mění jim role a spravuje pár nastavení, která platí pro všechny (třeba „Části tréninku“). Běžný trenér tyhle nástroje v aplikaci vůbec nevidí." },
       { q: "Co se stane po založení nového účtu?", a: "Aplikace účet rovnou založí, ale přepne tě na obrazovku „čeká na schválení“ — dokud tě admin neschválí, dovnitř se nedostaneš. Stačí pak aplikaci znovu otevřít, nebo dát tlačítko „Zkontrolovat znovu“.", kw: "cekani schvaleni pending registrace" },
-      { q: "Zapomněl jsem heslo, co teď?", a: "Na přihlašovací obrazovce klikni na „Zapomenuté heslo?“ a zadej svůj e-mail — aplikace ti pošle odkaz na nastavení nového hesla." }
+      { q: "Zapomněl jsem heslo, co teď?", a: "Na přihlašovací obrazovce klikni na „Zapomenuté heslo?“. Aplikace se zeptá, na jakou adresu odkaz poslat — musí to být přesně ta, kterou máš u účtu zaregistrovanou. Pak ti přijde e-mail s odkazem na nastavení nového hesla (mrkni i do spamu).", kw: "zapomenute heslo obnova reset" },
+      { q: "Odkaz na nové heslo mi nepřišel. Proč?", a: "Skoro jistě proto, že máš účet na české schránce. Seznam, Centrum, Volný a spol. e-maily z aplikace tiše zahazují — nedorazí ani do spamu, prostě zmizí cestou. Řešení je mít účet na Gmailu: přihlas se (heslo zatím znáš) a v profilu si přes „Změnit e-mail“ přepni adresu. Když už se přihlásit nemůžeš, ozvi se adminovi, ten to umí přepnout za tebe.", kw: "seznam centrum volny email nedorazil nechodi spam" }
     ]},
     { title: "Instalace a základy aplikace", icon: "fa-solid fa-mobile-screen-button", qa: [
       { q: "Jak si dám aplikaci na plochu telefonu?", a: "V prohlížeči otevři nabídku (tři tečky, nebo ikona sdílení u iPhonu) a vyber „Přidat na plochu“ / „Nainstalovat aplikaci“. Pak funguje jako běžná nainstalovaná aplikace v telefonu — vlastní ikona, bez adresního řádku prohlížeče." },
@@ -11008,13 +11009,15 @@ const HELP_DATA = [
       { q: "Proč aplikace najednou vypadá jinak, nebo mám pocit, že mám starou verzi?", a: "Aplikace se sama tiše aktualizuje na pozadí a po instalaci nové verze se jednou automaticky obnoví. Když přesto něco nesedí, zkus stránku ručně obnovit (potáhnutí dolů na mobilu, F5/Ctrl+R na počítači)." },
       { q: "Co dělá tlačítko Zpět na telefonu?", a: "Zavře aktuálně otevřené okno — třeba detail videa, editaci tréninku nebo Tréninkový režim — místo aby rovnou zavřelo celou aplikaci. Teprve když nic není otevřené, tlačítko Zpět aplikaci doopravdy opustí." },
       { q: "Proč se otevřené okno nezavře, když kliknu vedle něj?", a: "Je to záměr — kliknutí mimo okno ho už nikdy samo nezavře, aby se nic nezavřelo omylem rozklepnutím. Zavíráš ho vždy křížkem nebo tlačítkem přímo v okně, případně tlačítkem Zpět na telefonu.", kw: "kliknuti mimo zavrit" },
+      { q: "Jak zavřu okno na počítači?", a: "Křížkem v rohu, nebo klávesou Escape — ta vždycky zavře jen to okno, které je navrchu. Když máš rozepsaný text v nějakém poli, první Escape jen odklikne z pole a teprve druhý zavře okno.", kw: "escape klavesa zavrit okno pocitac" },
       { q: "Jak přepnu tmavý/světlý režim?", a: "V profilu (kolečko s tvojí iniciálou vpravo nahoře) najdeš přepínač se sluníčkem a měsícem — jedním klepnutím přepneš celý vzhled aplikace." }
     ]},
     { title: "Profil", icon: "fa-solid fa-user", qa: [
       { q: "Jak si změním přezdívku, klub nebo fotku?", a: "Klikni na kolečko se svou iniciálou vpravo nahoře — v profilu jde upravit přezdívka, kategorie, klub i profilová fotka (včetně oříznutí)." },
       { q: "K čemu jsou barvy nastavené v profilu?", a: "Nastaví barevné ladění celé aplikace jen pro tebe — každý trenér si tak může mít svůj vlastní vzhled, aniž by to ovlivnilo, jak aplikaci vidí kolegové." },
-      { q: "Jak si zapnu upozornění (notifikace)?", a: "V profilu je přepínač „Zapnuto na tomhle zařízení“ a výběr, na co přesně chceš upozornit — buď jen na větší akce (přidání/smazání videa, složky, štítku…), nebo na úplně každou uloženou změnu.", kw: "push notifikace" },
-      { q: "Jak si změním heslo?", a: "V profilu najdeš možnost změny hesla — aplikace tě požádá o současné heslo a pak o nové." }
+      { q: "Jak si změním heslo?", a: "V profilu najdeš tlačítko „Změnit heslo“ — aplikace tě požádá o současné heslo a pak o nové (aspoň 6 znaků)." },
+      { q: "Jak si změním e-mail u účtu?", a: "V profilu je tlačítko „Změnit e-mail“. Zadáš novou adresu a svoje heslo, a na tu NOVOU adresu ti přijde ověřovací odkaz — teprve po kliknutí na něj se adresa doopravdy změní. Dokud na odkaz neklikneš, platí pořád ta stará a nic se nerozbije. Účet přitom zůstává ten samý, takže o svoje tréninky, hodnocení ani poznámky nepřijdeš.", kw: "zmena emailu adresa ucet" },
+      { q: "Proč bych si měl přehodit účet na Gmail?", a: "Protože české schránky (Seznam, Centrum, Volný) e-maily z aplikace zahazují, a ty pak nemáš jak si obnovit zapomenuté heslo — odkaz ti nikdy nedorazí. Na Gmailu to funguje. Přehození zabere minutu přes „Změnit e-mail“ v profilu a nic tím neztratíš.", kw: "gmail seznam schranka" }
     ]}
   ]},
   { group: "Proč na tom záleží", blocks: [

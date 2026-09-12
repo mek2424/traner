@@ -1,4 +1,4 @@
-const CACHE_NAME = "trener-v12";
+const CACHE_NAME = "trener-v13";
 const APP_SHELL = ["./", "./index.html", "./training-mode.css", "./manifest.json", "./icon-192.png", "./icon-512.png", "./club-logo.png", "./raptor-sound.mp3"];
 
 /* =========================================================
