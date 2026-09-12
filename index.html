@@ -621,6 +621,9 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 #changeEmailModalBackdrop{z-index:60;}
 #adminActivityModalBackdrop{z-index:60;}
 #exerciseInfoModalBackdrop{z-index:210;}
+/* Karta videa z Knihovny teď jde otevřít i z Fáze cvičení (klik na náhled) — bez tohohle
+   by se v Tréninkovém režimu (z-index 200) otevřela schovaná za ním. */
+#detailModalBackdrop{z-index:210;}
 .coach-activity-card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--card);}
 .coach-activity-card.is-me{border-color:var(--court);}
 .coach-activity-head{display:flex;align-items:center;gap:14px;margin-bottom:12px;}
@@ -1208,12 +1211,22 @@ body.popout-mode .popout-btn{display:none !important;}
 .tmf-brief-row{display:flex;gap:20px;align-items:center;justify-content:center;flex-wrap:wrap;max-width:100%;}
 .tmf-thumb{border-radius:10px;overflow:hidden;background:#000;position:relative;flex-shrink:0;border:2px solid #fff;box-shadow:0 4px 16px rgba(0,0,0,.22);}
 .tmf-thumb .embed{width:100%;height:100%;display:block;border:none;}
+/* Neviditelná vrstva nad živým embedem (hlavně YouTube) — chytí kliky/tapy, ať netrefí
+   YouTube vlastní klikatelné UI (odkaz na kanál autora) v takhle malém rámečku. */
+.tmf-thumb-catch{position:absolute;inset:0;cursor:pointer;}
+/* Stejný jemný vodoznak jako .detail-broken-thumb v Knihovně, jen zmenšený pro malý náhled. */
+.tmf-thumb-broken{width:100%;height:100%;background-color:#2b2f36;background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.tmf-thumb-watermark{font-family:var(--font-display);font-size:11px;letter-spacing:.04em;color:rgba(255,255,255,.88);background:rgba(20,22,20,.4);padding:4px 10px;border-radius:999px;text-align:center;}
 .tmf-brief-info{display:flex;flex-direction:column;gap:10px;align-items:flex-start;text-align:left;min-width:0;max-width:min(60vw,420px);}
 .tmf-brief-info.tmf-solo{align-items:center;text-align:center;max-width:min(90vw,520px);}
 .tmf-title{font-family:var(--font-display);line-height:1.08;color:#1B2430;letter-spacing:.01em;font-size:clamp(24px,4.6vw,42px);overflow-wrap:anywhere;}
 .tmf-reps-chip{font-family:var(--font-display);line-height:1;color:#fff;background:var(--chalk);border-radius:10px;padding:4px 16px;display:inline-block;font-size:clamp(18px,3vw,28px);}
 .tmf-detail-btn{display:inline-flex;align-items:center;gap:9px;border:2px solid var(--court);background:rgba(51,153,51,.12);color:var(--court-dark);font-family:var(--font-display);letter-spacing:.04em;border-radius:11px;padding:9px 20px;font-size:16px;cursor:pointer;}
-.tmf-detail-btn .tmf-dot{width:8px;height:8px;border-radius:50%;background:var(--chalk);flex-shrink:0;display:inline-block;}
+.tmf-detail-btn .tmf-dot{width:8px;height:8px;border-radius:50%;background:var(--chalk);flex-shrink:0;display:inline-block;animation:tmfDotBlink 2.6s ease-in-out infinite;}
+/* Jemné blikání s rozestupy: dlouho svítí naplno, krátce pohasne, zase naplno - ne tvrdé
+   zapnuto/vypnuto a ne bez pauzy mezi bliknutími. */
+@keyframes tmfDotBlink{0%,60%{opacity:1;}80%{opacity:.25;}100%{opacity:1;}}
+@media(prefers-reduced-motion:reduce){.tmf-detail-btn .tmf-dot{animation:none;}}
 .tmf-direct-link{color:var(--court-dark);font-weight:600;text-decoration:underline;font-size:12.5px;}
 
 .tmf-run-title{font-family:var(--font-display);font-size:14px;color:#4A5564;letter-spacing:.04em;opacity:.75;max-width:90%;overflow-wrap:anywhere;}
@@ -1229,6 +1242,7 @@ body.popout-mode .popout-btn{display:none !important;}
 .tmf-nextcard .tmf-lbl{font-family:var(--font-display);font-size:12px;letter-spacing:.13em;color:var(--chalk-dark);}
 .tmf-nextcard.tmf-good .tmf-lbl{color:var(--court-dark);}
 .tmf-nextcard .tmf-nexttitle{font-family:var(--font-display);font-size:clamp(20px,4.4vw,32px);color:#1B2430;overflow-wrap:anywhere;}
+.tmf-nowrap{white-space:nowrap;}
 .tmf-gear{font-size:12.5px;color:#4A5564;overflow-wrap:anywhere;}
 .tmf-gear b{color:#1B2430;}
 
@@ -1254,12 +1268,12 @@ body.popout-mode .popout-btn{display:none !important;}
 @media(orientation:landscape) and (max-height:500px){
   .tmf-topbar{padding:6px 14px;padding-top:calc(6px + env(safe-area-inset-top));}
   .tmf-main{padding:6px 20px;gap:8px;}
-  .tmf-clock{font-size:clamp(34px,11vh,64px);}
+  .tmf-clock{font-size:clamp(46px,19vh,120px);}
   .tmf-foot{padding:6px 16px calc(6px + env(safe-area-inset-bottom));}
 }
 #trainingModeView.tm-forced-landscape .tmf-topbar{padding:6px 14px;padding-top:calc(6px + env(safe-area-inset-top));}
 #trainingModeView.tm-forced-landscape .tmf-main{padding:6px 20px;gap:8px;}
-#trainingModeView.tm-forced-landscape .tmf-clock{font-size:clamp(34px,11vh,64px);}
+#trainingModeView.tm-forced-landscape .tmf-clock{font-size:clamp(46px,19vh,120px);}
 #trainingModeView.tm-forced-landscape .tmf-foot{padding:6px 16px calc(6px + env(safe-area-inset-bottom));}
 </style>
 </head>
@@ -2475,7 +2489,7 @@ async function ensureMessaging() {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-09-12 19:15";
+const APP_VERSION = "2026-09-12 20:30";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -6948,6 +6962,10 @@ let trainingModeRunning = false;
 let trainingModeSkin = "classic"; // "classic" | "faze"
 let tmfPhase = "brief"; // "brief" | "run" | "wrap"  (Zadání / Průběh / Konec)
 let tmfAlertActive = false; // je vidět celoobrazovkové červené upozornění na přesah?
+// Tečka u "Detail cvičení" — stejná logika jako u tečky v refreshTmInfoBtn (starý vzhled):
+// naznačuje "u tohohle cviku je něco k přečtení, co jsi ještě neotevřel", zmizí hned po
+// otevření a znovu se objeví až u dalšího cviku (žádné trvalé počítadlo napříč cviky).
+let tmfDetailSeen = false;
 
 function startTrainingMode(trainingId, skin) {
   const id = trainingId || currentTrainingId;
@@ -7767,7 +7785,7 @@ function getFazeCurrentEntry() {
       shortDesc: v.isText ? (v.shortDesc || "") : (lib ? lib.shortDesc : ""),
       longDesc: v.isText ? (v.longDesc || "") : (lib ? lib.longDesc : ""),
       equipment: v.isText ? (v.equipment || []) : [...new Set([...((lib && lib.equipment) || []), ...(v.extraEquipment || [])])],
-      isText: !!v.isText, broken: !!(lib && lib.brokenAt), lib
+      isText: !!v.isText, broken: !!(lib && lib.brokenAt), lib, videoId: v.isText ? null : v.videoId
     };
   }
   const lib = row.isText ? null : state.library[row.videoId];
@@ -7779,7 +7797,7 @@ function getFazeCurrentEntry() {
     shortDesc: row.isText ? (row.shortDesc || "") : (lib ? lib.shortDesc : ""),
     longDesc: row.isText ? (row.longDesc || "") : (lib ? lib.longDesc : ""),
     equipment: row.isText ? (row.equipment || []) : [...new Set([...((lib && lib.equipment) || []), ...(row.extraEquipment || [])])],
-    isText: !!row.isText, broken: !!(lib && lib.brokenAt), lib
+    isText: !!row.isText, broken: !!(lib && lib.brokenAt), lib, videoId: row.isText ? null : row.videoId
   };
 }
 /** Stejná větvící logika jako getUpNextLabel/getUpNextColor výš (další video ve skupině →
@@ -7881,6 +7899,35 @@ function fazeBuildAxisHtml() {
     return `<div class="${cls}" style="flex:${Math.max(seconds, 15)};background:${color}">${fillPct != null ? `<i style="width:${fillPct}%"></i>` : ""}</div>`;
   }).join("");
 }
+/** Karta videa z Knihovny (otevřená klikem na náhled ve Fázi cvičení, viz renderFazeVideoArea
+    níž) žije mimo #trainingModeView. V reálném (ne jen CSS) fullscreenu — el.requestFullscreen()
+    v enterTrainingLandscape výš — by se tak otevřela schovaná za ním: fullscreen "top layer" umí
+    ukázat jen potomky fullscreenovaného prvku (stejný důvod, proč je #exerciseInfoModalBackdrop
+    vnořený uvnitř #trainingModeView). Řešení: na chvíli fullscreen opustit a po zavření karty se
+    do něj vrátit — ať už se zavřela křížkem, Esc, kliknutím mimo nebo tlačítkem Zpět, všechny
+    cesty vedou přes stejnou třídu "hidden", proto se sleduje přes MutationObserver stejně jako
+    appka už dělá u popout okna (viz handlePopoutDeepLink výš), místo navěšování na jedno konkrétní
+    tlačítko. */
+function fazeOpenLibraryCard(videoId) {
+  if (!videoId) return;
+  const tv = document.getElementById("trainingModeView");
+  const wasFullscreen = document.fullscreenElement === tv;
+  const doOpen = () => {
+    openDetailModal(videoId);
+    if (!wasFullscreen) return;
+    const backdrop = document.getElementById("detailModalBackdrop");
+    const obs = new MutationObserver(() => {
+      if (!backdrop.classList.contains("hidden")) return;
+      obs.disconnect();
+      if (trainingModeSkin === "faze" && !tv.classList.contains("hidden") && tv.requestFullscreen) {
+        tv.requestFullscreen().catch(() => {});
+      }
+    });
+    obs.observe(backdrop, { attributes: true, attributeFilter: ["class"] });
+  };
+  if (wasFullscreen && document.exitFullscreen) document.exitFullscreen().then(doOpen).catch(doOpen);
+  else doOpen();
+}
 /** Detail cvičení ve fázi Zadání — sdílí getTmCurrentInfo/openExerciseInfoModal se starým
     vzhledem, ale BEZ podmínky z refreshTmInfoBtn výš, co u textových cvičení a rozbitých videí
     tlačítko schová (tam ho starý vzhled nepotřebuje, protože popis je vidět rovnou — v novém
@@ -7890,6 +7937,9 @@ function fazeOpenDetail() {
   if (!info) return;
   if (!((info.shortDesc && info.shortDesc.trim()) || (info.longDesc && info.longDesc.trim()))) return;
   tmCurrentInfoData = info;
+  tmfDetailSeen = true;
+  const dot = document.querySelector("#tmfDetailBtn .tmf-dot");
+  if (dot) dot.remove();
   openExerciseInfoModal();
 }
 /** Živé video ve fázi Zadání — stejný princip jako showTrainingModeVideo výš (embed +
@@ -7905,6 +7955,19 @@ function renderFazeVideoArea(entry) {
     ? { maxW: 180, maxH: Math.round(window.innerHeight * 0.5) }
     : { maxW: 140, maxH: Math.round(window.innerHeight * 0.32) };
   wrap.style.width = ""; wrap.style.height = ""; wrap.style.aspectRatio = ""; wrap.style.maxHeight = "";
+  wrap.onclick = null;
+  if (entry.broken) {
+    // Nefunkční video — appka se ho ani nesnaží přehrát (byl by to jen prázdný/rozbitý embed),
+    // jen tichý náhledový obrázek se stejným jemným vodoznakem jako karta v Knihovně
+    // (viz openDetailModal výš). Klik na něj otevře tu samou kartu.
+    const thumbUrl = resolveThumbnailUrl(lib);
+    wrap.innerHTML = `<div class="tmf-thumb-broken"${thumbUrl ? ` style="background-image:url('${esc(thumbUrl)}')"` : ""}><span class="tmf-thumb-watermark">Video nevideuje</span></div>`;
+    const fit = fitBoxForRatio(lib.aspectRatio, box.maxW, box.maxH);
+    wrap.style.width = fit.w + "px";
+    wrap.style.height = fit.h + "px";
+    if (entry.videoId) wrap.onclick = () => fazeOpenLibraryCard(entry.videoId);
+    return;
+  }
   wrap.innerHTML = renderEmbedHtml(lib, { muted: true, preload: "auto" });
   if (lib.platform === "drive") {
     setupDriveVideoPlayback(wrap, lib, { box });
@@ -7913,24 +7976,35 @@ function renderFazeVideoArea(entry) {
     wrap.style.width = fit.w + "px";
     wrap.style.height = fit.h + "px";
   }
+  // Neviditelná vrstva přes celý živý embed — malý přehrávač (hlavně YouTube) má vlastní
+  // klikatelné UI (odkaz na kanál autora), co se v takhle malém rámečku snadno trefí omylem
+  // (Mekova zpětná vazba z ostrého provozu). Vrstva pohltí všechny kliky/tapy a místo YouTube
+  // otevře kartu videa jako v Knihovně — stejnou, jakou otevírá klik na náhled tam.
+  if (entry.videoId) {
+    const catcher = document.createElement("div");
+    catcher.className = "tmf-thumb-catch";
+    catcher.addEventListener("click", () => fazeOpenLibraryCard(entry.videoId));
+    wrap.appendChild(catcher);
+  }
 }
 function renderFazeBrief(main, entry) {
-  const hasVid = !entry.isText && !entry.broken && !!entry.lib;
+  const hasThumb = !entry.isText && !!entry.lib;
+  const hasVid = hasThumb && !entry.broken;
   const hasDetail = !!((entry.shortDesc && entry.shortDesc.trim()) || (entry.longDesc && entry.longDesc.trim()));
   main.innerHTML = `
     ${entry.groupName ? `<div class="tmf-tag-group">${esc(entry.groupName)}${entry.groupTotal > 1 ? ` · ${entry.groupIndex + 1}/${entry.groupTotal}` : ""}</div>` : ""}
     <div class="tmf-brief-row">
-      ${hasVid ? `<div class="tmf-thumb" id="tmfThumb"></div>` : ""}
-      <div class="tmf-brief-info${hasVid ? "" : " tmf-solo"}">
+      ${hasThumb ? `<div class="tmf-thumb" id="tmfThumb"></div>` : ""}
+      <div class="tmf-brief-info${hasThumb ? "" : " tmf-solo"}">
         <div class="tmf-title">${esc(entry.title)}</div>
         ${entry.reps ? `<div class="tmf-reps-chip">${esc(entry.reps)}</div>` : ""}
-        ${hasDetail ? `<button type="button" class="tmf-detail-btn" id="tmfDetailBtn">${hasVid ? '<i class="fa-solid fa-circle-play"></i>' : '<i class="fa-regular fa-circle-question"></i>'} Detail cvičení <span class="tmf-dot"></span></button>` : ""}
+        ${hasDetail ? `<button type="button" class="tmf-detail-btn" id="tmfDetailBtn">${hasVid ? '<i class="fa-solid fa-circle-play"></i>' : '<i class="fa-regular fa-circle-question"></i>'} Detail cvičení ${tmfDetailSeen ? "" : '<span class="tmf-dot"></span>'}</button>` : ""}
         ${entry.broken ? `<span class="tmf-direct-link">${platformDirectLinkHtml(entry.lib, "Otevřít přímo — ")}</span>` : ""}
       </div>
     </div>`;
   const detailBtn = document.getElementById("tmfDetailBtn");
   if (detailBtn) detailBtn.addEventListener("click", fazeOpenDetail);
-  if (hasVid) renderFazeVideoArea(entry);
+  if (hasThumb) renderFazeVideoArea(entry);
 }
 function renderFazeRun(main, entry) {
   main.innerHTML = `
@@ -7953,7 +8027,7 @@ function renderFazeWrap(main, entry) {
     nextHtml = `
       <div class="tmf-nextcard tmf-good">
         <div class="tmf-lbl">Trénink hotový</div>
-        <div class="tmf-nexttitle" style="font-size:clamp(18px,3.6vw,26px);">${stats.count} cvičení · ${stats.totalMin} min</div>
+        <div class="tmf-nexttitle" style="font-size:clamp(18px,3.6vw,26px);"><span class="tmf-nowrap">${stats.count} cvičení</span> · <span class="tmf-nowrap">${stats.totalMin} min</span></div>
         ${stats.topPart ? `<div class="tmf-gear">Nejvíc času: <b>${esc(stats.topPart)}</b></div>` : ""}
       </div>`;
   } else {
@@ -8030,7 +8104,7 @@ function renderFazeFinished() {
       <div class="tmf-title" style="color:var(--court-dark);">Hotovo 💪</div>
       <div class="tmf-nextcard tmf-good">
         <div class="tmf-lbl">Trénink hotový</div>
-        <div class="tmf-nexttitle" style="font-size:clamp(18px,3.6vw,26px);">${stats.count} cvičení · ${stats.totalMin} min</div>
+        <div class="tmf-nexttitle" style="font-size:clamp(18px,3.6vw,26px);"><span class="tmf-nowrap">${stats.count} cvičení</span> · <span class="tmf-nowrap">${stats.totalMin} min</span></div>
         ${stats.topPart ? `<div class="tmf-gear">Nejvíc času: <b>${esc(stats.topPart)}</b></div>` : ""}
       </div>
     </div>`;
@@ -8040,6 +8114,7 @@ function renderFazeFinished() {
     nové cvičení) a případné zapomenuté upozornění na přesah z minulého cviku zmizí. */
 function paintFazeForNewItem() {
   tmfPhase = "brief";
+  tmfDetailSeen = false;
   fazeDismissAlert();
   renderFazeItem();
 }
