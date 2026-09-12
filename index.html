@@ -624,6 +624,25 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 /* Karta videa z Knihovny teď jde otevřít i z Fáze cvičení (klik na náhled) — bez tohohle
    by se v Tréninkovém režimu (z-index 200) otevřela schovaná za ním. */
 #detailModalBackdrop{z-index:210;}
+/* Otevřená z Fáze cvičení se karta na tu dobu přestěhuje dovnitř #trainingModeView (viz
+   fazeOpenLibraryCard) a dostane tuhle podobu: panel vyjede zespodu uprostřed, trénink za ním
+   zůstane vidět rozostřený a schová se všechno, co trenér uprostřed tréninku nepotřebuje
+   (obtížnost/hodnocení, komentáře, Upravit). Scroll zůstává — dlouhé popisy se musí projet.
+   Rozměry schválně v PROCENTECH, ne ve vh/vw: v záložním CSS otočení (tm-forced-landscape) je
+   celý režim otočený transformem, takže vh/vw míří na fyzicky neotočenou obrazovku a panel by
+   vyšel úplně mimo, kdežto procenta se počítají ze správného, už otočeného rámu. */
+#detailModalBackdrop.tmf-sheet{
+  align-items:flex-end;background:rgba(27,36,48,.45);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+}
+#detailModalBackdrop.tmf-sheet .modal{
+  width:min(46%,430px);max-height:94%;
+  border-radius:var(--radius) var(--radius) 0 0;
+}
+#detailModalBackdrop.tmf-sheet #popoutDetailBtn,
+#detailModalBackdrop.tmf-sheet #detailMyRatingRow,
+#detailModalBackdrop.tmf-sheet .modal-actions,
+#detailModalBackdrop.tmf-sheet #detailCommentsSection{display:none;}
 .coach-activity-card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--card);}
 .coach-activity-card.is-me{border-color:var(--court);}
 .coach-activity-head{display:flex;align-items:center;gap:14px;margin-bottom:12px;}
@@ -1656,7 +1675,7 @@ body.popout-mode .popout-btn{display:none !important;}
     <div id="detailFbFallback"></div>
     <div class="detail-title" id="detailTitle"></div>
     <div class="detail-row" id="detailChips"></div>
-    <div class="detail-row">
+    <div class="detail-row" id="detailMyRatingRow">
       <div class="detail-label">Tvoje obtížnost a hodnocení</div>
       <div class="two-col" style="margin-top:6px;">
         <div class="field" style="margin-bottom:0;">
@@ -2489,7 +2508,7 @@ async function ensureMessaging() {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-09-12 20:30";
+const APP_VERSION = "2026-09-12 22:40";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -7559,6 +7578,7 @@ document.getElementById("tmNextBtn").addEventListener("click", advanceTrainingMo
 function closeTrainingMode() {
   stopTrainingModeTimer();
   clearTimeout(tmUpNextTimeout);
+  fazeReturnLibraryCardHome(); // karta videa nesmí zůstat zaparkovaná uvnitř schovaného režimu
   exitTrainingLandscape();
   document.getElementById("trainingModeView").classList.add("hidden");
   document.body.style.background = "";
@@ -7900,33 +7920,44 @@ function fazeBuildAxisHtml() {
   }).join("");
 }
 /** Karta videa z Knihovny (otevřená klikem na náhled ve Fázi cvičení, viz renderFazeVideoArea
-    níž) žije mimo #trainingModeView. V reálném (ne jen CSS) fullscreenu — el.requestFullscreen()
-    v enterTrainingLandscape výš — by se tak otevřela schovaná za ním: fullscreen "top layer" umí
-    ukázat jen potomky fullscreenovaného prvku (stejný důvod, proč je #exerciseInfoModalBackdrop
-    vnořený uvnitř #trainingModeView). Řešení: na chvíli fullscreen opustit a po zavření karty se
-    do něj vrátit — ať už se zavřela křížkem, Esc, kliknutím mimo nebo tlačítkem Zpět, všechny
-    cesty vedou přes stejnou třídu "hidden", proto se sleduje přes MutationObserver stejně jako
-    appka už dělá u popout okna (viz handlePopoutDeepLink výš), místo navěšování na jedno konkrétní
-    tlačítko. */
+    níž) žije v dokumentu MIMO #trainingModeView, protože ji používá i Knihovna. V reálném
+    (ne jen CSS) fullscreenu — el.requestFullscreen() v enterTrainingLandscape výš — by se tak
+    otevřela schovaná za ním: fullscreen "top layer" umí ukázat jen potomky fullscreenovaného
+    prvku. Přesně proto je #exerciseInfoModalBackdrop rovnou vnořený uvnitř #trainingModeView.
+    Karta videa to samé natrvalo udělat nemůže (mimo trénink by skončila uvnitř schovaného
+    režimu a v Knihovně by nešla otevřít), takže si ji appka na dobu otevření dovnitř
+    PŘESTĚHUJE a po zavření vrátí přesně tam, odkud ji vzala. Fullscreen se tím pádem vůbec
+    neopouští — dřív se opouštěl a hned zase obnovoval, jenže ten návrat do něj na telefonu
+    nefungoval spolehlivě.
+    Zavřít kartu jde křížkem, Esc, klikem mimo i tlačítkem Zpět a všechny ty cesty vedou přes
+    stejnou třídu "hidden" — proto se hlídá MutationObserverem (stejně jako to appka už dělá
+    u popout okna, viz handlePopoutDeepLink výš), ne navěšením na jedno konkrétní tlačítko. */
+let fazeCardHome = null; // odkud se karta vzala: { parent, next } — kam přesně ji vrátit
 function fazeOpenLibraryCard(videoId) {
-  if (!videoId) return;
-  const tv = document.getElementById("trainingModeView");
-  const wasFullscreen = document.fullscreenElement === tv;
-  const doOpen = () => {
-    openDetailModal(videoId);
-    if (!wasFullscreen) return;
-    const backdrop = document.getElementById("detailModalBackdrop");
-    const obs = new MutationObserver(() => {
-      if (!backdrop.classList.contains("hidden")) return;
-      obs.disconnect();
-      if (trainingModeSkin === "faze" && !tv.classList.contains("hidden") && tv.requestFullscreen) {
-        tv.requestFullscreen().catch(() => {});
-      }
-    });
-    obs.observe(backdrop, { attributes: true, attributeFilter: ["class"] });
-  };
-  if (wasFullscreen && document.exitFullscreen) document.exitFullscreen().then(doOpen).catch(doOpen);
-  else doOpen();
+  if (!videoId || !state.library[videoId]) return;
+  const backdrop = document.getElementById("detailModalBackdrop");
+  if (!fazeCardHome) fazeCardHome = { parent: backdrop.parentElement, next: backdrop.nextSibling };
+  backdrop.classList.add("tmf-sheet");
+  document.getElementById("trainingModeView").appendChild(backdrop);
+  const obs = new MutationObserver(() => {
+    if (!backdrop.classList.contains("hidden")) return;
+    obs.disconnect();
+    fazeReturnLibraryCardHome();
+  });
+  obs.observe(backdrop, { attributes: true, attributeFilter: ["class"] });
+  openDetailModal(videoId);
+}
+/** Vrátí kartu videa tam, kde normálně bydlí. Volá se po jejím zavření a pro jistotu i při
+    ukončení tréninkového režimu — kdyby režim skončil dřív než karta, zůstala by zaparkovaná
+    uvnitř schovaného #trainingModeView a v Knihovně by pak nešla otevřít. */
+function fazeReturnLibraryCardHome() {
+  if (!fazeCardHome) return;
+  const backdrop = document.getElementById("detailModalBackdrop");
+  const home = fazeCardHome;
+  fazeCardHome = null; // dřív než případné closeDetailModal(), ať se sem observer nevrátí podruhé
+  if (!backdrop.classList.contains("hidden")) closeDetailModal();
+  backdrop.classList.remove("tmf-sheet");
+  home.parent.insertBefore(backdrop, home.next);
 }
 /** Detail cvičení ve fázi Zadání — sdílí getTmCurrentInfo/openExerciseInfoModal se starým
     vzhledem, ale BEZ podmínky z refreshTmInfoBtn výš, co u textových cvičení a rozbitých videí
