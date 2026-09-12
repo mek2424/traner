@@ -1,5 +1,5 @@
-const CACHE_NAME = "trener-v8";
-const APP_SHELL = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./club-logo.png", "./raptor-sound.mp3"];
+const CACHE_NAME = "trener-v12";
+const APP_SHELL = ["./", "./index.html", "./training-mode.css", "./manifest.json", "./icon-192.png", "./icon-512.png", "./club-logo.png", "./raptor-sound.mp3"];
 
 /* =========================================================
    PUSH NOTIFIKACE (Firebase Cloud Messaging) — tahle část stará

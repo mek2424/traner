@@ -618,6 +618,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 }
 .modal-backdrop.modal-anim-in{opacity:1;}
 #changePasswordModalBackdrop{z-index:60;}
+#changeEmailModalBackdrop{z-index:60;}
 #adminActivityModalBackdrop{z-index:60;}
 #exerciseInfoModalBackdrop{z-index:210;}
 .coach-activity-card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--card);}
@@ -1777,6 +1778,38 @@ body.popout-mode .popout-btn{display:none !important;}
   </div>
 </div>
 
+<!-- ===================== ZMĚNA E-MAILU ===================== -->
+<div id="changeEmailModalBackdrop" class="modal-backdrop hidden">
+  <div class="modal" style="max-width:430px;">
+    <div class="modal-head">
+      <h2 style="font-size:20px;">Změnit e-mail</h2>
+      <button class="btn btn-icon btn-ghost" id="closeChangeEmailModalBtn"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="duplicate-warning" style="background:var(--info-bg);border-color:var(--info-border);color:var(--info-ink);">
+      <i class="fa-solid fa-circle-info"></i>
+      <span>Na <strong>novou</strong> adresu přijde ověřovací odkaz. Dokud na něj neklikneš, zůstává v platnosti ta stará — účet ani nic v aplikaci se nemění.</span>
+    </div>
+    <p style="font-size:13px;color:var(--ink-soft);margin:0 0 14px;">
+      Účet zůstává pořád ten samý, mění se jen adresa. O tréninky, hodnocení ani poznámky nepřijdeš.
+      <strong>Schránky Seznamu a Centra e-maily z aplikace zahazují</strong> — když tam máš účet, tohle je způsob, jak si zprovoznit obnovu hesla.
+    </p>
+    <div class="field">
+      <label for="changeEmailNewInput">Nová e-mailová adresa</label>
+      <input type="email" id="changeEmailNewInput" autocomplete="email" placeholder="napr.jmeno@gmail.com">
+    </div>
+    <div class="field">
+      <label for="changeEmailPassInput">Tvoje heslo (pro potvrzení, že jsi to ty)</label>
+      <div class="pass-field-wrap">
+        <input type="password" id="changeEmailPassInput" autocomplete="current-password">
+        <button type="button" class="pass-reveal-btn" data-for="changeEmailPassInput" aria-label="Podržením zobrazit heslo"><i class="fa-solid fa-eye"></i></button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-primary btn-block" id="changeEmailSubmitBtn">Poslat ověřovací odkaz</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===================== ADMIN: KDO JE ONLINE ===================== -->
 <div id="adminActivityModalBackdrop" class="modal-backdrop hidden">
   <div class="modal" style="max-width:640px;max-height:85vh;display:flex;flex-direction:column;">
@@ -2013,7 +2046,10 @@ body.popout-mode .popout-btn{display:none !important;}
           <span class="theme-toggle-knob"><i class="fa-solid fa-sun"></i><i class="fa-solid fa-moon"></i></span>
         </button>
       </div>
-      <button type="button" class="btn btn-sm" id="openChangePasswordBtn" style="margin-bottom:12px;"><i class="fa-solid fa-key"></i> Změnit heslo</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+        <button type="button" class="btn btn-sm" id="openChangePasswordBtn" style="margin-bottom:0;"><i class="fa-solid fa-key"></i> Změnit heslo</button>
+        <button type="button" class="btn btn-sm" id="openChangeEmailBtn" style="margin-bottom:0;"><i class="fa-solid fa-envelope"></i> Změnit e-mail</button>
+      </div>
       <div class="modal-actions">
         <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Uložit profil</button>
         <button type="button" class="btn btn-ghost" id="resetColorsBtn">Výchozí barvy</button>
@@ -2214,7 +2250,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/fireba
 import {
   getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
   onAuthStateChanged, signOut, sendPasswordResetEmail, setPersistence, browserLocalPersistence,
-  deleteUser, EmailAuthProvider, reauthenticateWithCredential, updatePassword
+  deleteUser, EmailAuthProvider, reauthenticateWithCredential, updatePassword, verifyBeforeUpdateEmail
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
@@ -2316,7 +2352,7 @@ async function ensureMessaging() {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-09-11 23:15";
+const APP_VERSION = "2026-09-12 09:40";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -3894,7 +3930,9 @@ function translateAuthError(code) {
     "auth/network-request-failed": "Problém s připojením k internetu.",
     "auth/too-many-requests": "Moc pokusů po sobě. Počkej pár minut a zkus to znovu.",
     "auth/missing-email": "Napiš nejdřív e-mail.",
-    "auth/user-disabled": "Tenhle účet je zablokovaný."
+    "auth/user-disabled": "Tenhle účet je zablokovaný.",
+    "auth/requires-recent-login": "Kvůli bezpečnosti se musíš znovu přihlásit a zkusit to hned potom.",
+    "auth/operation-not-allowed": "Tuhle operaci projekt nemá povolenou."
   };
   return map[code] || ("Něco se nepovedlo (" + code + ").");
 }
@@ -10374,6 +10412,71 @@ document.getElementById("openAdminActivityBtn").addEventListener("click", () => 
 document.getElementById("closeAdminActivityModalBtn").addEventListener("click", () => {
   document.getElementById("adminActivityModalBackdrop").classList.add("hidden");
 });
+/* ---- Změna e-mailu ----
+   Vzniklo z konkrétního problému: schránky Seznamu (a dalších českých) e-maily od Firebase
+   tiše zahazují, takže komu na nich běží účet, tomu nedorazí odkaz na obnovu hesla — a nemá
+   se jak dostat zpátky, když ho zapomene.
+
+   Tohle to řeší bez ztráty čehokoli: účet (a tím i jeho ID, na kterém visí tréninky,
+   hodnocení a poznámky) zůstává ten samý, mění se jen adresa. A hlavně — ověřovací odkaz
+   chodí na NOVOU adresu, tedy tam, kam doručování funguje. Nefunkční schránkou se tedy
+   celý ten proces nemusí vůbec protáhnout.
+
+   Používá verifyBeforeUpdateEmail(), ne updateEmail(): ta druhá by změnila adresu okamžitě
+   a bez ověření, což Firebase u novějších projektů rovnou blokuje (a správně — jinak by
+   překlep v adrese znamenal nevratně ztracený účet). */
+document.getElementById("openChangeEmailBtn").addEventListener("click", () => {
+  document.getElementById("changeEmailNewInput").value = "";
+  document.getElementById("changeEmailPassInput").value = "";
+  document.getElementById("changeEmailModalBackdrop").classList.remove("hidden");
+});
+document.getElementById("closeChangeEmailModalBtn").addEventListener("click", () => {
+  document.getElementById("changeEmailModalBackdrop").classList.add("hidden");
+});
+document.getElementById("changeEmailSubmitBtn").addEventListener("click", async () => {
+  const btn = document.getElementById("changeEmailSubmitBtn");
+  const newEmail = document.getElementById("changeEmailNewInput").value.trim();
+  const pass = document.getElementById("changeEmailPassInput").value;
+  if (!newEmail || !pass) { toast("Vyplň obě pole.", 2200, "warn"); return; }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(newEmail)) { toast("To nevypadá jako e-mailová adresa.", 2600, "warn"); return; }
+  if (newEmail.toLowerCase() === (auth.currentUser.email || "").toLowerCase()) {
+    toast("To je adresa, kterou máš teď.", 2600, "warn"); return;
+  }
+  if (/@(seznam|centrum|volny|email)\.cz$/i.test(newEmail)) {
+    const goOn = await confirmDialog(
+      "Na tuhle schránku aplikace nejspíš nedoručí — české schránky e-maily od Firebase zahazují. " +
+      "Ověřovací odkaz by ti nepřišel a změna by neproběhla. Doporučuju Gmail. Chceš to i tak zkusit?",
+      { title: "Tahle adresa asi nebude fungovat", confirmLabel: "Zkusit i tak", cancelLabel: "Zpátky" }
+    );
+    if (!goOn) return;
+  }
+  btn.disabled = true;
+  const originalLabel = btn.textContent;
+  btn.textContent = "Odesílám…";
+  try {
+    // Firebase vyžaduje čerstvé přihlášení — bez tohohle to spadne na auth/requires-recent-login.
+    await reauthenticateWithCredential(auth.currentUser, EmailAuthProvider.credential(auth.currentUser.email, pass));
+  } catch (err) {
+    toast("Heslo nesedí (" + translateAuthError(err.code) + ").", 6000, "err");
+    btn.disabled = false; btn.textContent = originalLabel;
+    return;
+  }
+  try {
+    await verifyBeforeUpdateEmail(auth.currentUser, newEmail);
+    document.getElementById("changeEmailModalBackdrop").classList.add("hidden");
+    await alertDialog(
+      `Na ${newEmail} jsme poslali ověřovací odkaz (mrkni i do spamu). Klikni na něj a pak se do aplikace přihlas UŽ NOVOU adresou.\n\n` +
+      `Dokud na odkaz neklikneš, platí pořád ta stará — nic se nerozbije.`,
+      { title: "Odkaz odeslán" }
+    );
+    logDebug("[e-mail] ověřovací odkaz odeslán na:", newEmail);
+  } catch (err) {
+    toast("Nepovedlo se (" + translateAuthError(err.code) + ").", 7000, "err");
+    logDebug("[e-mail] změna selhala:", err && err.code, err && err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = originalLabel;
+  }
+});
 document.getElementById("changePasswordSubmitBtn").addEventListener("click", async () => {
   const current = document.getElementById("changePassCurrentInput").value;
   const next = document.getElementById("changePassNewInput").value;
@@ -11156,6 +11259,7 @@ document.getElementById("helpSearchInput").addEventListener("input", (e) => rend
     promptModalBackdrop: "promptModalCancelBtn",
     visibilityModalBackdrop: null,
     changePasswordModalBackdrop: "closeChangePasswordModalBtn",
+    changeEmailModalBackdrop: "closeChangeEmailModalBtn",
     adminActivityModalBackdrop: "closeAdminActivityModalBtn",
     partsModalBackdrop: "closePartsModalBtn",
     bulkDriveModalBackdrop: "closeBulkDriveModalBtn",
