@@ -1175,6 +1175,93 @@ body.popout-mode .popout-btn{display:none !important;}
 ::-webkit-scrollbar{width:8px;height:8px;}
 ::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px;}
 </style>
+<style id="tmfStyle">
+/* =========================================================
+   FÁZE CVIČENÍ — nový tréninkový režim, zatím jen tady v index.html (admin-only test,
+   viz claude/trener-treninkovy-rezim.md). Vlastní styl, NEZÁVISLÝ na training-mode.css —
+   ten zůstává beze změny, sdílí ho i t.html a tahle appka do něj zatím záměrně nesahá.
+   Barvy: stejná konvence jako training-mode.css — --court/--chalk/--radius/--font-display
+   přes proměnné (ty se v tmavém režimu appky neliší), ink/pozadí/linky natvrdo (pevná
+   světlá paleta bez ohledu na tmavý/světlý motiv appky — viz komentář v training-mode.css).
+   ========================================================= */
+#tmfRoot{position:absolute;inset:0;z-index:1;background:#F4F5F2;display:flex;flex-direction:column;font-family:var(--font-body);}
+#tmfRoot.hidden{display:none;}
+
+.tmf-topbar{flex-shrink:0;padding:10px 16px 0;padding-top:calc(10px + env(safe-area-inset-top));}
+.tmf-axis{display:flex;gap:2px;height:20px;}
+.tmf-axis>div{border-radius:3px;opacity:.3;position:relative;overflow:hidden;flex-shrink:0;}
+.tmf-axis>div.tmf-done{opacity:.45;}
+.tmf-axis>div.tmf-now{opacity:1;}
+.tmf-axis>div.tmf-now>i{position:absolute;left:0;top:0;bottom:0;background:rgba(255,255,255,.35);}
+.tmf-metarow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px;}
+.tmf-meta{font-size:11px;color:#4A5564;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tmf-phases{display:flex;gap:3px;background:rgba(27,36,48,.06);border-radius:999px;padding:2px;flex-shrink:0;}
+.tmf-phases.hidden{display:none;}
+.tmf-phases button{border:none;background:none;font-family:var(--font-display);font-size:13px;letter-spacing:.08em;color:#4A5564;padding:5px 14px;border-radius:999px;cursor:pointer;white-space:nowrap;}
+.tmf-phases button[aria-pressed="true"]{background:var(--court);color:#fff;}
+.tmf-phases button:focus-visible{outline:2px solid var(--court);outline-offset:2px;}
+
+.tmf-main{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:10px 20px;position:relative;text-align:center;overflow-y:auto;}
+.tmf-solo-view{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;}
+
+.tmf-tag-group{font-family:var(--font-display);letter-spacing:.04em;color:var(--court-dark);background:rgba(51,153,51,.12);border:1.5px solid var(--court);border-radius:6px;padding:2px 12px;display:inline-block;}
+.tmf-brief-row{display:flex;gap:20px;align-items:center;justify-content:center;flex-wrap:wrap;max-width:100%;}
+.tmf-thumb{border-radius:10px;overflow:hidden;background:#000;position:relative;flex-shrink:0;border:2px solid #fff;box-shadow:0 4px 16px rgba(0,0,0,.22);}
+.tmf-thumb .embed{width:100%;height:100%;display:block;border:none;}
+.tmf-brief-info{display:flex;flex-direction:column;gap:10px;align-items:flex-start;text-align:left;min-width:0;max-width:min(60vw,420px);}
+.tmf-brief-info.tmf-solo{align-items:center;text-align:center;max-width:min(90vw,520px);}
+.tmf-title{font-family:var(--font-display);line-height:1.08;color:#1B2430;letter-spacing:.01em;font-size:clamp(24px,4.6vw,42px);overflow-wrap:anywhere;}
+.tmf-reps-chip{font-family:var(--font-display);line-height:1;color:#fff;background:var(--chalk);border-radius:10px;padding:4px 16px;display:inline-block;font-size:clamp(18px,3vw,28px);}
+.tmf-detail-btn{display:inline-flex;align-items:center;gap:9px;border:2px solid var(--court);background:rgba(51,153,51,.12);color:var(--court-dark);font-family:var(--font-display);letter-spacing:.04em;border-radius:11px;padding:9px 20px;font-size:16px;cursor:pointer;}
+.tmf-detail-btn .tmf-dot{width:8px;height:8px;border-radius:50%;background:var(--chalk);flex-shrink:0;display:inline-block;}
+.tmf-direct-link{color:var(--court-dark);font-weight:600;text-decoration:underline;font-size:12.5px;}
+
+.tmf-run-title{font-family:var(--font-display);font-size:14px;color:#4A5564;letter-spacing:.04em;opacity:.75;max-width:90%;overflow-wrap:anywhere;}
+.tmf-clock{font-family:var(--font-display);line-height:.92;color:#1B2430;font-variant-numeric:tabular-nums;font-size:clamp(56px,15vw,108px);}
+.tmf-clock.tmf-warn{color:var(--chalk-dark);}
+.tmf-cue-line{display:flex;gap:9px;align-items:flex-start;text-align:left;color:#1B2430;font-weight:600;max-width:min(92%,560px);font-size:clamp(16px,3vw,20px);}
+.tmf-cue-line svg{flex-shrink:0;margin-top:4px;}
+.tmf-note-line{color:#4A5564;text-align:center;max-width:min(88%,560px);font-size:14px;}
+.tmf-note-line ul,.tmf-note-line ol{text-align:left;padding-left:20px;margin:4px auto;display:inline-block;}
+
+.tmf-nextcard{background:rgba(232,98,44,.1);border:2px solid var(--chalk);border-radius:13px;padding:12px 24px;display:flex;flex-direction:column;align-items:center;gap:5px;max-width:min(86%,520px);}
+.tmf-nextcard.tmf-good{background:rgba(51,153,51,.12);border-color:var(--court);}
+.tmf-nextcard .tmf-lbl{font-family:var(--font-display);font-size:12px;letter-spacing:.13em;color:var(--chalk-dark);}
+.tmf-nextcard.tmf-good .tmf-lbl{color:var(--court-dark);}
+.tmf-nextcard .tmf-nexttitle{font-family:var(--font-display);font-size:clamp(20px,4.4vw,32px);color:#1B2430;overflow-wrap:anywhere;}
+.tmf-gear{font-size:12.5px;color:#4A5564;overflow-wrap:anywhere;}
+.tmf-gear b{color:#1B2430;}
+
+.tmf-foot{flex-shrink:0;display:flex;gap:8px;padding:10px 16px calc(12px + env(safe-area-inset-bottom));align-items:center;}
+.tmf-mini{margin-right:auto;font-size:11px;color:#4A5564;font-variant-numeric:tabular-nums;}
+.tmf-tbtn{width:38px;height:38px;border-radius:50%;background:var(--court);color:#fff;border:none;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.tmf-navbtn{padding:11px 16px;border-radius:var(--radius-sm);border:1px solid #DCDFD9;background:#fff;font-family:var(--font-display);font-size:15px;color:#1B2430;letter-spacing:.02em;}
+.tmf-navbtn:disabled{opacity:.35;}
+.tmf-go{background:var(--chalk);color:#fff;border-color:var(--chalk);padding:11px 22px;}
+
+.tmf-exit{position:absolute;top:calc(10px + env(safe-area-inset-top));left:16px;width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,.08);border:none;color:#4A5564;font-size:16px;display:flex;align-items:center;justify-content:center;z-index:3;}
+
+.tmf-expired{position:absolute;inset:0;background:rgba(232,98,44,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;z-index:50;color:#fff;padding:20px;text-align:center;cursor:pointer;border:none;width:100%;}
+.tmf-expired.hidden{display:none;}
+.tmf-elbl{font-family:var(--font-display);font-size:16px;letter-spacing:.16em;opacity:.85;}
+.tmf-ebig{font-family:var(--font-display);font-size:clamp(56px,16vw,104px);line-height:.85;letter-spacing:.02em;font-variant-numeric:tabular-nums;animation:tmfPulse 1s ease-in-out infinite;}
+.tmf-esub{font-family:var(--font-display);font-size:clamp(16px,3.5vw,22px);letter-spacing:.06em;opacity:.9;overflow-wrap:anywhere;max-width:90%;}
+.tmf-ewho{font-size:12.5px;opacity:.85;max-width:60ch;}
+.tmf-etap{margin-top:6px;background:rgba(255,255,255,.2);border:2px solid rgba(255,255,255,.65);color:#fff;font-family:var(--font-display);font-size:15px;letter-spacing:.05em;border-radius:10px;padding:8px 22px;}
+@keyframes tmfPulse{0%,100%{opacity:1;}50%{opacity:.55;}}
+@media(prefers-reduced-motion:reduce){.tmf-ebig{animation:none;}}
+
+@media(orientation:landscape) and (max-height:500px){
+  .tmf-topbar{padding:6px 14px;padding-top:calc(6px + env(safe-area-inset-top));}
+  .tmf-main{padding:6px 20px;gap:8px;}
+  .tmf-clock{font-size:clamp(34px,11vh,64px);}
+  .tmf-foot{padding:6px 16px calc(6px + env(safe-area-inset-bottom));}
+}
+#trainingModeView.tm-forced-landscape .tmf-topbar{padding:6px 14px;padding-top:calc(6px + env(safe-area-inset-top));}
+#trainingModeView.tm-forced-landscape .tmf-main{padding:6px 20px;gap:8px;}
+#trainingModeView.tm-forced-landscape .tmf-clock{font-size:clamp(34px,11vh,64px);}
+#trainingModeView.tm-forced-landscape .tmf-foot{padding:6px 16px calc(6px + env(safe-area-inset-bottom));}
+</style>
 </head>
 <body>
 
@@ -1354,6 +1441,7 @@ body.popout-mode .popout-btn{display:none !important;}
       </div>
       <div style="display:flex;gap:8px;margin-bottom:12px;">
         <button type="button" class="btn btn-primary" id="startTrainingModeBtn" style="flex:1;"><i class="fa-solid fa-play"></i> Spustit trénink</button>
+        <button type="button" class="btn btn-ghost hidden" id="startTrainingModeFazeBtn" title="Nový rozpracovaný vzhled tréninkové prezentace — zatím jen pro admina, na vyzkoušení"><i class="fa-solid fa-flask"></i> Fáze cvičení (test)</button>
       </div>
       <div id="readOnlyBanner" class="hidden" style="background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-sm);padding:9px 12px;font-size:12.5px;color:var(--ink-soft);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
         <span><i class="fa-solid fa-eye"></i> <span id="readOnlyBannerText"></span></span>
@@ -2164,6 +2252,41 @@ body.popout-mode .popout-btn{display:none !important;}
     <button type="button" class="tm-nav-btn tm-nav-next" id="tmNextBtn">Další <i class="fa-solid fa-arrow-right"></i></button>
   </div>
 
+  <!-- ============ FÁZE CVIČENÍ — nový vzhled, zatím jen pro admina (test) ============
+       Sdílí #trainingModeView se starým vzhledem výš (kvůli Fullscreen API musí být fyzicky
+       uvnitř, viz komentář u #exerciseInfoModalBackdrop níž) — startTrainingMode() podle
+       trainingModeSkin přepíná, který z obou bloků je vidět. Detail cvičení používá TENTÝŽ
+       #exerciseInfoModalBackdrop/openExerciseInfoModal jako starý vzhled, žádný nový modal. -->
+  <div id="tmfRoot" class="hidden">
+    <div class="tmf-topbar">
+      <div class="tmf-axis" id="tmfAxis"></div>
+      <div class="tmf-metarow">
+        <span class="tmf-meta" id="tmfMeta"></span>
+        <div class="tmf-phases" id="tmfPhases">
+          <button type="button" data-p="brief" aria-pressed="true">Zadání</button>
+          <button type="button" data-p="run" aria-pressed="false">Průběh</button>
+          <button type="button" data-p="wrap" aria-pressed="false">Konec</button>
+        </div>
+      </div>
+    </div>
+    <div class="tmf-main" id="tmfMain"></div>
+    <div class="tmf-foot">
+      <span class="tmf-mini" id="tmfMini"></span>
+      <button type="button" class="tmf-tbtn" id="tmfTimerToggle" aria-label="Pauza/pokračovat"><i class="fa-solid fa-pause"></i></button>
+      <button type="button" class="tmf-tbtn" id="tmfTimerReset" aria-label="Restartovat čas"><i class="fa-solid fa-rotate-left"></i></button>
+      <button type="button" class="tmf-navbtn" id="tmfPrevBtn"><i class="fa-solid fa-arrow-left"></i> Předchozí</button>
+      <button type="button" class="tmf-navbtn tmf-go" id="tmfNextBtn">Další cvičení <i class="fa-solid fa-arrow-right"></i></button>
+    </div>
+    <button type="button" class="tmf-exit" id="tmfExitBtn" aria-label="Zavřít"><i class="fa-solid fa-xmark"></i></button>
+    <div class="tmf-expired hidden" id="tmfExpired">
+      <div class="tmf-elbl">PŘESAH</div>
+      <div class="tmf-ebig" id="tmfExpiredBig"></div>
+      <div class="tmf-esub" id="tmfExpiredSub"></div>
+      <div class="tmf-ewho">Číslo běží dál nahoru, takže při návratu k telefonu rovnou vidíš, o kolik jsi přetáhl. Zvuk se ozval jednou, vibrace (na Androidu) se opakuje každé 3 minuty, dokud neťukneš.</div>
+      <div class="tmf-etap">Ťukni a pokračuj →</div>
+    </div>
+  </div>
+
   <!-- Na telefonu na výšku se #trainingModeView pouští do skutečného Fullscreen API
        (viz enterTrainingLandscape) — prvky "top layer" fullscreenu smí překrýt jen to, co je
        fyzicky UVNITŘ fullscreenovaného elementu, žádný z-index na tom nic nezmění. Proto tenhle
@@ -2352,7 +2475,7 @@ async function ensureMessaging() {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-09-12 17:05";
+const APP_VERSION = "2026-09-12 19:15";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -6819,7 +6942,14 @@ let trainingModeSeconds = 0;
 let trainingModeInterval = null;
 let trainingModeRunning = false;
 
-function startTrainingMode(trainingId) {
+/* ---- FÁZE CVIČENÍ — nový, zatím admin-only test režim (viz claude/trener-treninkovy-rezim.md) ----
+   Sdílí VŠECHEN stavový stroj výše (trainingModeItems/Index/… i navigační funkce) — jen se
+   kreslí jinak. Když je trainingModeSkin "classic", appka se chová 1:1 jako dřív. */
+let trainingModeSkin = "classic"; // "classic" | "faze"
+let tmfPhase = "brief"; // "brief" | "run" | "wrap"  (Zadání / Průběh / Konec)
+let tmfAlertActive = false; // je vidět celoobrazovkové červené upozornění na přesah?
+
+function startTrainingMode(trainingId, skin) {
   const id = trainingId || currentTrainingId;
   const t = state.trainings[id];
   if (!t || !t.items.length) { toast("Trénink je prázdný, není co spustit.", 2200, "warn"); return; }
@@ -6830,6 +6960,15 @@ function startTrainingMode(trainingId) {
   trainingModeGroupVideoIndex = 0;
   trainingModeInSeriesPause = false;
   trainingModeFinished = false;
+  trainingModeSkin = skin === "faze" ? "faze" : "classic";
+  tmfPhase = "brief";
+  tmfAlertActive = false;
+  // Starý vzhled a nový "Fáze cvičení" vzhled sdílí tenhle jeden #trainingModeView (kvůli
+  // Fullscreen API — viz komentář u #exerciseInfoModalBackdrop) — přepne se jen to, co je
+  // vidět. Zbytek appky (navigace, časovač, …) běží úplně stejně pro oba vzhledy.
+  document.querySelectorAll(".tm-header, .tm-progress-bar, #tmBody, .tm-timer-wrap, .tm-nav")
+    .forEach(el => el.classList.toggle("hidden", trainingModeSkin === "faze"));
+  document.getElementById("tmfRoot").classList.toggle("hidden", trainingModeSkin !== "faze");
   document.getElementById("tmTitle").style.color = "";
   // Tréninkový režim se vždy kreslí ve svém vlastním pevném světlém vzhledu (nezávisle na
   // tmavém/světlém motivu) — na některých mobilních prohlížečích se ale při vykreslení
@@ -6857,6 +6996,7 @@ function startTrainingMode(trainingId) {
   }, 60);
 }
 document.getElementById("startTrainingModeBtn").addEventListener("click", () => startTrainingMode());
+document.getElementById("startTrainingModeFazeBtn").addEventListener("click", () => startTrainingMode(null, "faze"));
 
 /** Aplikace u režimu na opakování jen schová odpočet času — aplikace pro pokračování dál používá
     to samé tlačítko "Další" jako u času, žádné zvláštní tlačítko navíc aplikace nemá. */
@@ -7103,7 +7243,14 @@ function openExerciseInfoModal() {
 function closeExerciseInfoModal() {
   document.getElementById("exerciseInfoModalBackdrop").classList.add("hidden");
 }
+/** Vstupní bod pro vykreslení aktuální položky — jen rozhodne mezi starým vzhledem a novým
+    "Fáze cvičení" (viz trainingModeSkin) a zavolá tu pravou vykreslovací funkci. Samotné
+    kreslení pro starý vzhled beze změny v renderTrainingModeItemClassic níž. */
 function renderTrainingModeItem() {
+  renderTrainingModeItemClassic();
+  if (trainingModeSkin === "faze") paintFazeForNewItem();
+}
+function renderTrainingModeItemClassic() {
   stopTrainingModeTimer();
   refreshTmInfoBtn();
   if (trainingModeInSeriesPause) { renderSeriesPause(); return; }
@@ -7267,6 +7414,10 @@ function renderSeriesPause() {
 }
 
 function renderTrainingModeFinished() {
+  renderTrainingModeFinishedClassic();
+  if (trainingModeSkin === "faze") { fazeDismissAlert(); renderFazeFinished(); }
+}
+function renderTrainingModeFinishedClassic() {
   stopTrainingModeTimer();
   clearTimeout(tmUpNextTimeout);
   document.getElementById("tmUpNext").classList.add("hidden");
@@ -7300,6 +7451,7 @@ function updateTrainingModeTimerDisplay() {
   const sign = trainingModeSeconds < 0 ? "+" : "";
   timerEl.textContent = `${sign}${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   timerEl.classList.toggle("tm-timer-done", trainingModeSeconds <= 0);
+  if (trainingModeSkin === "faze") updateFazeTimerDisplay(sign, m, s);
 }
 function startTrainingModeTimer() {
   trainingModeRunning = true;
@@ -7308,7 +7460,12 @@ function startTrainingModeTimer() {
   trainingModeInterval = setInterval(() => {
     trainingModeSeconds--;
     updateTrainingModeTimerDisplay();
-    if (trainingModeSeconds === 0 && "vibrate" in navigator) { try { navigator.vibrate(400); } catch {} }
+    if (trainingModeSeconds === 0 && trainingModeSkin !== "faze" && "vibrate" in navigator) { try { navigator.vibrate(400); } catch {} }
+    // Fáze cvičení: zvuk (jen jednou, při první nule) + vibrace (opakovaně po 3 min, dokud
+    // se to neodklikne) — viz fazeFireAlert a poznámky v claude/trener-treninkovy-rezim.md.
+    if (trainingModeSkin === "faze" && trainingModeSeconds <= 0 && trainingModeSeconds % 180 === 0) {
+      fazeFireAlert(trainingModeSeconds === 0);
+    }
   }, 1000);
 }
 function stopTrainingModeTimer() {
@@ -7423,6 +7580,7 @@ async function enterTrainingLandscape() {
     toast("Teď telefon otoč na šířku 📱", 4000, "info");
   }
   showTrainingModeVideo(currentTrainingModeLib(), currentTrainingModeTextItem());
+  if (trainingModeSkin === "faze") renderFazeItem();
 }
 function exitTrainingLandscape() {
   if (!tmLandscapeForced) return;
@@ -7431,6 +7589,7 @@ function exitTrainingLandscape() {
   try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (e) {}
   if (document.fullscreenElement) { try { document.exitFullscreen(); } catch (e) {} }
   showTrainingModeVideo(currentTrainingModeLib(), currentTrainingModeTextItem());
+  if (trainingModeSkin === "faze") renderFazeItem();
 }
 function currentTrainingModeLib() {
   const row = trainingModeItems[trainingModeIndex];
@@ -7466,6 +7625,7 @@ document.addEventListener("fullscreenchange", () => {
   if (!shouldForceTrainingLandscape()) { exitTrainingLandscape(); return; }
   document.getElementById("trainingModeView").classList.add("tm-forced-landscape");
   showTrainingModeVideo(currentTrainingModeLib(), currentTrainingModeTextItem());
+  if (trainingModeSkin === "faze") renderFazeItem();
   try {
     const el = document.getElementById("trainingModeView");
     const p = el.requestFullscreen ? el.requestFullscreen() : (el.webkitRequestFullscreen && el.webkitRequestFullscreen());
@@ -7542,6 +7702,399 @@ document.getElementById("exportTrainingBtn").addEventListener("click", () => {
   const safeName = (t.name || "trenink").replace(/[^\p{L}\p{N}]+/gu, "-").toLowerCase();
   downloadTextFile(`${safeName}.txt`, text, "text/plain");
   toast("Staženo.");
+});
+
+/* =========================================================
+   FÁZE CVIČENÍ — vykreslování nového vzhledu (zatím admin-only test)
+   Nenavigujeme tu vůbec — navigace (Další/Předchozí/pauza/reset/zavřít) pořád dělají úplně
+   stejné staré funkce/tlačítka jako u klasického vzhledu (viz tmf*Btn listenery níž, které na
+   ně jen proklikávají) — tenhle blok jen ČTE výsledný stav (trainingModeItems/Index/…,
+   trainingModeSeconds) a maluje ho jinak. Detail cvičení sdílí existující
+   openExerciseInfoModal/getTmCurrentInfo, jen bez podmínky, co dřív schovávala tlačítko
+   u textových cvičení a rozbitých videí (ty teď Detail chtějí taky — viz Mekovo zadání).
+   ========================================================= */
+const FAZE_BELL_SRC = "Boxing%20Bell%20Sound%20Effect.mp3"; // = "Boxing Bell Sound Effect.mp3" (mezery v názvu)
+const FAZE_VIBRATE_PATTERN = [300, 150, 300, 150, 600];
+
+/** Celková délka JEDNÉ položky tréninku (řádek v t.items) ve vteřinách — počítá se stejně
+    jako v calculateTrainingTotalSeconds/buildPdfEntries výš, jen vrací součet PER ŘÁDEK
+    (skupina = jeden součet za celou kartu), ať se dá postavit osa tréninku po blocích. */
+function fazeItemTotalSeconds(row) {
+  if (!row) return 0;
+  if (row.part === "prestavka") return valueToSeconds(row.duration != null ? row.duration : 1, row.durationUnit || "min");
+  const isReps = (row.mode || "time") === "reps";
+  const seriesCount = row.seriesCount || 1;
+  const pauseSeconds = getSeriesPauseSeconds(row);
+  if (row.isGroup) {
+    let sum = 0;
+    (row.videos || []).forEach(v => {
+      if (v.isBreak) { sum += valueToSeconds(v.duration != null ? v.duration : 1, v.durationUnit || "min"); return; }
+      sum += isReps
+        ? (v.estimate != null && v.estimate > 0 ? valueToSeconds(v.estimate, v.estimateUnit || "min") : 0)
+        : valueToSeconds(v.duration != null ? v.duration : 1, v.durationUnit || "min");
+    });
+    return sum * seriesCount + (seriesCount > 1 ? (seriesCount - 1) * pauseSeconds : 0);
+  }
+  const base = isReps
+    ? (row.estimate != null && row.estimate > 0 ? valueToSeconds(row.estimate, row.estimateUnit || "min") : 0)
+    : valueToSeconds(row.duration != null ? row.duration : 1, row.durationUnit || "min");
+  return base * seriesCount + (seriesCount > 1 ? (seriesCount - 1) * pauseSeconds : 0);
+}
+function fazeClockText(seconds) {
+  const sign = seconds < 0 ? "+" : "";
+  const m = Math.floor(Math.abs(seconds) / 60), s = Math.abs(seconds) % 60;
+  return `${sign}${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+/** Odvodí obsah aktuálně zobrazené položky (název/cue/poznámka/vybavení/…) — stejné zdroje
+    dat jako getTmCurrentInfo/renderTrainingModeItemClassic výš, jen sesbírané do jednoho
+    objektu pro kreslení všech tří fází. Vrací null u přestávky (ta má vlastní, prostší větev
+    přímo v renderFazeItem) a u série na konci skupiny/tréninku (o tom rozhoduje volající). */
+function getFazeCurrentEntry() {
+  const row = trainingModeItems[trainingModeIndex];
+  if (!row) return null;
+  if (row.part === "prestavka") return { isBreak: true, title: row.label || "Přestávka" };
+  if (row.isGroup) {
+    const v = row.videos[trainingModeGroupVideoIndex];
+    if (!v) return null;
+    if (v.isBreak) return { isBreak: true, title: v.label || "Přestávka", groupName: row.name || "Skupina", groupIndex: trainingModeGroupVideoIndex, groupTotal: row.videos.length };
+    const lib = v.isText ? null : state.library[v.videoId];
+    return {
+      isBreak: false, part: getPart(row.part),
+      groupName: row.name || "Skupina", groupIndex: trainingModeGroupVideoIndex, groupTotal: row.videos.length,
+      title: v.isText ? (v.title || "(bez názvu)") : (lib ? lib.title : "(video smazáno)"),
+      reps: (row.mode || "time") === "reps" ? (v.reps || "") : "",
+      cue: v.cue || row.cue || "", note: (v && v.note) || row.poznamka || "",
+      shortDesc: v.isText ? (v.shortDesc || "") : (lib ? lib.shortDesc : ""),
+      longDesc: v.isText ? (v.longDesc || "") : (lib ? lib.longDesc : ""),
+      equipment: v.isText ? (v.equipment || []) : [...new Set([...((lib && lib.equipment) || []), ...(v.extraEquipment || [])])],
+      isText: !!v.isText, broken: !!(lib && lib.brokenAt), lib
+    };
+  }
+  const lib = row.isText ? null : state.library[row.videoId];
+  return {
+    isBreak: false, part: getPart(row.part), groupName: "",
+    title: row.isText ? (row.title || "(bez názvu)") : (lib ? lib.title : "(video smazáno z knihovny)"),
+    reps: (row.mode || "time") === "reps" ? (row.reps || "") : "",
+    cue: row.cue || "", note: row.poznamka || "",
+    shortDesc: row.isText ? (row.shortDesc || "") : (lib ? lib.shortDesc : ""),
+    longDesc: row.isText ? (row.longDesc || "") : (lib ? lib.longDesc : ""),
+    equipment: row.isText ? (row.equipment || []) : [...new Set([...((lib && lib.equipment) || []), ...(row.extraEquipment || [])])],
+    isText: !!row.isText, broken: !!(lib && lib.brokenAt), lib
+  };
+}
+/** Stejná větvící logika jako getUpNextLabel/getUpNextColor výš (další video ve skupině →
+    pauza mezi sériemi → další položka v pořadí), jen navíc vrací i vybavení pro řádek
+    "Připrav:" ve fázi Konec. */
+function getFazeUpNextEntry() {
+  const row = trainingModeItems[trainingModeIndex];
+  if (!row) return null;
+  if (row.isGroup && trainingModeGroupVideoIndex < row.videos.length - 1) {
+    const nextV = row.videos[trainingModeGroupVideoIndex + 1];
+    if (!nextV) return null;
+    if (nextV.isBreak) return { title: nextV.label || "Přestávka", equipment: [] };
+    const lib = nextV.isText ? null : state.library[nextV.videoId];
+    return {
+      title: nextV.isText ? (nextV.title || "(bez názvu)") : (lib ? lib.title : "(video smazáno)"),
+      equipment: nextV.isText ? (nextV.equipment || []) : [...new Set([...((lib && lib.equipment) || []), ...(nextV.extraEquipment || [])])]
+    };
+  }
+  if (trainingModeSeriesNum < (row.seriesCount || 1)) return { seriesPause: true };
+  const next = trainingModeItems[trainingModeIndex + 1];
+  if (!next) return null;
+  if (next.part === "prestavka") return { title: next.label || "Přestávka", equipment: [] };
+  if (next.isGroup) {
+    const firstV = next.videos && next.videos[0];
+    if (!firstV) return { title: next.name || "Skupina", equipment: [] };
+    if (firstV.isBreak) return { title: firstV.label || "Přestávka", equipment: [] };
+    const lib = firstV.isText ? null : state.library[firstV.videoId];
+    return {
+      title: firstV.isText ? (firstV.title || (next.name || "Skupina")) : (lib ? lib.title : (next.name || "Skupina")),
+      equipment: firstV.isText ? (firstV.equipment || []) : [...new Set([...((lib && lib.equipment) || []), ...(firstV.extraEquipment || [])])]
+    };
+  }
+  const lib = next.isText ? null : state.library[next.videoId];
+  return {
+    title: next.isText ? (next.title || "(bez názvu)") : (lib ? lib.title : "(video smazáno z knihovny)"),
+    equipment: next.isText ? (next.equipment || []) : [...new Set([...((lib && lib.equipment) || []), ...(next.extraEquipment || [])])]
+  };
+}
+/** Souhrn pro "Shrnutí" (poslední cvičení tréninku) — počet cvičení (bez přestávek), celková
+    délka a část, které v tréninku připadlo nejvíc času. Skutečná data, ne placeholder z
+    mockupu — viz claude/trener-treninkovy-rezim.md. */
+function computeFazeSummaryStats(t) {
+  if (!t) return { count: 0, totalMin: 0, topPart: "" };
+  const items = t.items || [];
+  const { totalSeconds } = calculateTrainingTotalSeconds(t);
+  const partSeconds = {};
+  items.forEach(row => {
+    if (row.part === "prestavka") return;
+    const key = row.part || "";
+    partSeconds[key] = (partSeconds[key] || 0) + fazeItemTotalSeconds(row);
+  });
+  let topKey = "", topVal = -1;
+  Object.keys(partSeconds).forEach(k => { if (partSeconds[k] > topVal) { topVal = partSeconds[k]; topKey = k; } });
+  return {
+    count: items.filter(r => r.part !== "prestavka").length,
+    totalMin: Math.round(totalSeconds / 60),
+    topPart: topKey ? (getPart(topKey).label || topKey) : ""
+  };
+}
+function fazeMetaText() {
+  const t = state.trainings[currentTrainingId];
+  const { totalSeconds, hasReps } = calculateTrainingTotalSeconds(t);
+  let elapsed = 0;
+  for (let i = 0; i < trainingModeIndex; i++) elapsed += fazeItemTotalSeconds(trainingModeItems[i]);
+  const row = trainingModeItems[trainingModeIndex];
+  // Zjednodušení: dopočet uvnitř AKTUÁLNÍHO bloku bere jen běžící odpočet vůči celkové délce
+  // bloku, ne přesně rozpočítané už-hotové série/členy skupiny uvnitř něj (přesnější by
+  // vyžadovalo hlídat i start každého člena zvlášť) — pro orientační "uplynulo/zbývá" stačí.
+  if (row && !trainingModeInSeriesPause) {
+    const blockTotal = fazeItemTotalSeconds(row) || 0;
+    elapsed += Math.max(0, Math.min(blockTotal, blockTotal - Math.max(0, trainingModeSeconds)));
+  }
+  const remain = Math.max(0, totalSeconds - elapsed);
+  const posTxt = `${trainingModeIndex + 1} / ${trainingModeItems.length}`;
+  let endTxt = "";
+  if (!hasReps) {
+    const startSec = timeInputToSeconds((state.profile && state.profile.trainingStartTime) || "09:00");
+    const endSec = (startSec + totalSeconds) % 86400;
+    endTxt = ` · konec ${String(Math.floor(endSec / 3600)).padStart(2, "0")}:${String(Math.floor((endSec % 3600) / 60)).padStart(2, "0")}`;
+  }
+  return `${posTxt} · uplynulo ${Math.round(elapsed / 60)} min · zbývá ${hasReps ? "?" : Math.round(remain / 60) + " min"}${endTxt}`;
+}
+/** Osa tréninku nahoře — jeden segment za každou položku t.items (skupina = jeden segment za
+    celou kartu), šířka podle délky, barva podle části; aktuální segment vysvícený a plní se
+    zleva podle toho, jak moc odpočtu v NĚM ubylo (zjednodušení stejného druhu jako u
+    fazeMetaText — u vícečlenné skupiny/série to není do vteřiny přesné). */
+function fazeBuildAxisHtml() {
+  return trainingModeItems.map((row, i) => {
+    const isBreak = row.part === "prestavka";
+    const color = isBreak ? "#C7C9C4" : (getPart(row.part).color || "#339933");
+    const seconds = fazeItemTotalSeconds(row);
+    let cls = "", fillPct = null;
+    if (i < trainingModeIndex) cls = "tmf-done";
+    else if (i === trainingModeIndex) {
+      cls = "tmf-now";
+      const blockTotal = seconds || 1;
+      fillPct = Math.min(100, Math.max(0, (1 - Math.max(0, trainingModeSeconds) / blockTotal) * 100));
+    }
+    return `<div class="${cls}" style="flex:${Math.max(seconds, 15)};background:${color}">${fillPct != null ? `<i style="width:${fillPct}%"></i>` : ""}</div>`;
+  }).join("");
+}
+/** Detail cvičení ve fázi Zadání — sdílí getTmCurrentInfo/openExerciseInfoModal se starým
+    vzhledem, ale BEZ podmínky z refreshTmInfoBtn výš, co u textových cvičení a rozbitých videí
+    tlačítko schová (tam ho starý vzhled nepotřebuje, protože popis je vidět rovnou — v novém
+    vzhledu popis zmizel úplně, takže i tahle cvičení chtějí Detail, viz Mekovo zadání). */
+function fazeOpenDetail() {
+  const info = trainingModeInSeriesPause ? null : getTmCurrentInfo();
+  if (!info) return;
+  if (!((info.shortDesc && info.shortDesc.trim()) || (info.longDesc && info.longDesc.trim()))) return;
+  tmCurrentInfoData = info;
+  openExerciseInfoModal();
+}
+/** Živé video ve fázi Zadání — stejný princip jako showTrainingModeVideo výš (embed +
+    fitBoxForRatio/setupDriveVideoPlayback), jen jiný cílový element a jiný poměr rámečku
+    (na výšku, vedle textu, ne přes celou šířku pod video). */
+function renderFazeVideoArea(entry) {
+  const wrap = document.getElementById("tmfThumb");
+  if (!wrap || !entry || !entry.lib) return;
+  const lib = entry.lib;
+  const isWide = document.getElementById("trainingModeView").classList.contains("tm-forced-landscape")
+    || window.matchMedia("(min-width:860px),(orientation:landscape) and (min-width:480px)").matches;
+  const box = isWide
+    ? { maxW: 180, maxH: Math.round(window.innerHeight * 0.5) }
+    : { maxW: 140, maxH: Math.round(window.innerHeight * 0.32) };
+  wrap.style.width = ""; wrap.style.height = ""; wrap.style.aspectRatio = ""; wrap.style.maxHeight = "";
+  wrap.innerHTML = renderEmbedHtml(lib, { muted: true, preload: "auto" });
+  if (lib.platform === "drive") {
+    setupDriveVideoPlayback(wrap, lib, { box });
+  } else {
+    const fit = fitBoxForRatio(lib.aspectRatio, box.maxW, box.maxH);
+    wrap.style.width = fit.w + "px";
+    wrap.style.height = fit.h + "px";
+  }
+}
+function renderFazeBrief(main, entry) {
+  const hasVid = !entry.isText && !entry.broken && !!entry.lib;
+  const hasDetail = !!((entry.shortDesc && entry.shortDesc.trim()) || (entry.longDesc && entry.longDesc.trim()));
+  main.innerHTML = `
+    ${entry.groupName ? `<div class="tmf-tag-group">${esc(entry.groupName)}${entry.groupTotal > 1 ? ` · ${entry.groupIndex + 1}/${entry.groupTotal}` : ""}</div>` : ""}
+    <div class="tmf-brief-row">
+      ${hasVid ? `<div class="tmf-thumb" id="tmfThumb"></div>` : ""}
+      <div class="tmf-brief-info${hasVid ? "" : " tmf-solo"}">
+        <div class="tmf-title">${esc(entry.title)}</div>
+        ${entry.reps ? `<div class="tmf-reps-chip">${esc(entry.reps)}</div>` : ""}
+        ${hasDetail ? `<button type="button" class="tmf-detail-btn" id="tmfDetailBtn">${hasVid ? '<i class="fa-solid fa-circle-play"></i>' : '<i class="fa-regular fa-circle-question"></i>'} Detail cvičení <span class="tmf-dot"></span></button>` : ""}
+        ${entry.broken ? `<span class="tmf-direct-link">${platformDirectLinkHtml(entry.lib, "Otevřít přímo — ")}</span>` : ""}
+      </div>
+    </div>`;
+  const detailBtn = document.getElementById("tmfDetailBtn");
+  if (detailBtn) detailBtn.addEventListener("click", fazeOpenDetail);
+  if (hasVid) renderFazeVideoArea(entry);
+}
+function renderFazeRun(main, entry) {
+  main.innerHTML = `
+    <div class="tmf-run-title">${esc(entry.title)}</div>
+    <div class="tmf-clock" id="tmfClockRun">${fazeClockText(trainingModeSeconds)}</div>
+    ${entry.reps ? `<div class="tmf-reps-chip">${esc(entry.reps)}</div>` : ""}
+    ${entry.cue ? `<div class="tmf-cue-line"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M4 4.5h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-9.5L6 22v-4.5H4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2z" fill="var(--chalk)"/></svg>${esc(entry.cue)}</div>` : ""}
+    ${richHasContent(entry.note) ? `<div class="tmf-note-line">${richValueToHtml(entry.note)}</div>` : ""}`;
+}
+function renderFazeWrap(main, entry) {
+  const isOver = trainingModeSeconds < 0;
+  const clockHtml = `<div class="tmf-clock${isOver ? " tmf-warn" : ""}" id="tmfClockWrap">${fazeClockText(trainingModeSeconds)}</div>`;
+  const row = trainingModeItems[trainingModeIndex];
+  const isLastOverall = trainingModeIndex >= trainingModeItems.length - 1
+    && trainingModeSeriesNum >= (row.seriesCount || 1)
+    && !(row.isGroup && trainingModeGroupVideoIndex < row.videos.length - 1);
+  let nextHtml = "";
+  if (isLastOverall) {
+    const stats = computeFazeSummaryStats(state.trainings[currentTrainingId]);
+    nextHtml = `
+      <div class="tmf-nextcard tmf-good">
+        <div class="tmf-lbl">Trénink hotový</div>
+        <div class="tmf-nexttitle" style="font-size:clamp(18px,3.6vw,26px);">${stats.count} cvičení · ${stats.totalMin} min</div>
+        ${stats.topPart ? `<div class="tmf-gear">Nejvíc času: <b>${esc(stats.topPart)}</b></div>` : ""}
+      </div>`;
+  } else {
+    const nx = getFazeUpNextEntry();
+    if (nx && nx.seriesPause) {
+      nextHtml = `<div class="tmf-nextcard"><div class="tmf-lbl">Následuje</div><div class="tmf-nexttitle" style="font-size:22px;">Pauza mezi sériemi</div></div>`;
+    } else if (nx) {
+      nextHtml = `
+        <div class="tmf-nextcard">
+          <div class="tmf-lbl">Následuje</div>
+          <div class="tmf-nexttitle">${esc(nx.title || "")}</div>
+          ${nx.equipment && nx.equipment.length ? `<div class="tmf-gear">Připrav: <b>${esc(nx.equipment.join(" · "))}</b></div>` : ""}
+        </div>`;
+    }
+  }
+  main.innerHTML = `${clockHtml}${nextHtml}`;
+}
+/** Hlavní vstupní bod pro překreslení nového vzhledu — volá se po každé navigaci (přes
+    paintFazeForNewItem) i po každém ťuknutí na fázi (Zadání/Průběh/Konec). Video (živý embed)
+    se tím pádem překresluje i při pouhém přepnutí fáze zpátky na Zadání — u admin-only
+    zkušební verze je to přijatelný kompromis, jde to případně později zjednodušit. */
+function renderFazeItem() {
+  if (trainingModeFinished) { renderFazeFinished(); return; }
+  document.getElementById("tmfExpired").classList.toggle("hidden", !tmfAlertActive);
+  document.getElementById("tmfAxis").innerHTML = fazeBuildAxisHtml();
+  document.getElementById("tmfMeta").textContent = fazeMetaText();
+  document.querySelectorAll("#tmfPhases button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.p === tmfPhase)));
+  document.getElementById("tmfPhases").classList.toggle("hidden", trainingModeInSeriesPause);
+  document.getElementById("tmfPrevBtn").disabled = trainingModeIndex === 0 && !trainingModeInSeriesPause;
+  document.getElementById("tmfNextBtn").innerHTML = 'Další cvičení <i class="fa-solid fa-arrow-right"></i>';
+  document.getElementById("tmfMini").textContent = (!trainingModeInSeriesPause && tmfPhase === "run") ? "" : fazeClockText(trainingModeSeconds);
+
+  const main = document.getElementById("tmfMain");
+  if (trainingModeInSeriesPause) {
+    const row = trainingModeItems[trainingModeIndex];
+    const nx = getFazeUpNextEntry();
+    main.innerHTML = `
+      <div class="tmf-solo-view">
+        <div class="tmf-title" style="font-size:clamp(22px,4.4vw,34px);">Za chvíli série ${trainingModeSeriesNum} / ${row.seriesCount}</div>
+        <div class="tmf-clock" id="tmfClockWrap">${fazeClockText(trainingModeSeconds)}</div>
+        ${nx && nx.title ? `<div class="tmf-nextcard tmf-good"><div class="tmf-lbl">Následuje</div><div class="tmf-nexttitle">${esc(nx.title)}</div></div>` : ""}
+      </div>`;
+    return;
+  }
+
+  const entry = getFazeCurrentEntry();
+  if (!entry) { main.innerHTML = ""; return; }
+
+  if (entry.isBreak) {
+    main.innerHTML = `
+      <div class="tmf-solo-view">
+        <div class="tmf-title" style="font-size:clamp(22px,4.4vw,34px);">${esc(entry.title)}</div>
+        ${entry.groupName ? `<div class="tmf-run-title">${esc(entry.groupName)} · ${entry.groupIndex + 1} / ${entry.groupTotal}</div>` : ""}
+        <div class="tmf-clock" id="tmfClockWrap">${fazeClockText(trainingModeSeconds)}</div>
+      </div>`;
+    return;
+  }
+
+  if (tmfPhase === "run") renderFazeRun(main, entry);
+  else if (tmfPhase === "wrap") renderFazeWrap(main, entry);
+  else renderFazeBrief(main, entry);
+}
+function renderFazeFinished() {
+  document.getElementById("tmfExpired").classList.add("hidden");
+  document.getElementById("tmfPhases").classList.add("hidden");
+  document.getElementById("tmfAxis").innerHTML = fazeBuildAxisHtml();
+  document.getElementById("tmfMeta").textContent = "";
+  document.getElementById("tmfMini").textContent = "";
+  document.getElementById("tmfPrevBtn").disabled = true;
+  document.getElementById("tmfNextBtn").innerHTML = 'Zavřít <i class="fa-solid fa-xmark"></i>';
+  const stats = computeFazeSummaryStats(state.trainings[currentTrainingId]);
+  document.getElementById("tmfMain").innerHTML = `
+    <div class="tmf-solo-view">
+      <div class="tmf-title" style="color:var(--court-dark);">Hotovo 💪</div>
+      <div class="tmf-nextcard tmf-good">
+        <div class="tmf-lbl">Trénink hotový</div>
+        <div class="tmf-nexttitle" style="font-size:clamp(18px,3.6vw,26px);">${stats.count} cvičení · ${stats.totalMin} min</div>
+        ${stats.topPart ? `<div class="tmf-gear">Nejvíc času: <b>${esc(stats.topPart)}</b></div>` : ""}
+      </div>
+    </div>`;
+}
+/** Volá se z (přejmenované) renderTrainingModeItem po každé navigaci na novou položku —
+    fáze se u KAŽDÉHO nového cviku/přestávky vrací na Zadání (přirozený start pohledu na
+    nové cvičení) a případné zapomenuté upozornění na přesah z minulého cviku zmizí. */
+function paintFazeForNewItem() {
+  tmfPhase = "brief";
+  fazeDismissAlert();
+  renderFazeItem();
+}
+function updateFazeTimerDisplay(sign, m, s) {
+  const txt = `${sign}${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  const run = document.getElementById("tmfClockRun");
+  if (run) run.textContent = txt;
+  const wrap = document.getElementById("tmfClockWrap");
+  if (wrap) { wrap.textContent = txt; wrap.classList.toggle("tmf-warn", trainingModeSeconds < 0); }
+  if (tmfPhase !== "run" && !trainingModeInSeriesPause) {
+    const mini = document.getElementById("tmfMini");
+    if (mini) mini.textContent = txt;
+  }
+  if (tmfAlertActive) {
+    const big = document.getElementById("tmfExpiredBig");
+    if (big) big.textContent = txt;
+  }
+}
+/** Upozornění na přesah — zvuk (Boxing Bell) jen při PRVNÍM dosažení nuly, vibrace (kde appka
+    umí) se opakuje s ním i při každém dalším 3minutovém zásahu, dokud trenér neťukne pryč
+    (viz podmínka v startTrainingModeTimer výš a poznámky v trener-treninkovy-rezim.md). */
+function fazeFireAlert(isFirst) {
+  if (isFirst) { try { new Audio(FAZE_BELL_SRC).play().catch(() => {}); } catch (e) {} }
+  if ("vibrate" in navigator) { try { navigator.vibrate(FAZE_VIBRATE_PATTERN); } catch (e) {} }
+  tmfAlertActive = true;
+  const el = document.getElementById("tmfExpired");
+  if (!el) return;
+  const entry = trainingModeInSeriesPause ? null : getFazeCurrentEntry();
+  document.getElementById("tmfExpiredSub").textContent = entry ? entry.title : "";
+  document.getElementById("tmfExpiredBig").textContent = fazeClockText(trainingModeSeconds);
+  el.classList.remove("hidden");
+}
+function fazeDismissAlert() {
+  tmfAlertActive = false;
+  const el = document.getElementById("tmfExpired");
+  if (el) el.classList.add("hidden");
+}
+document.getElementById("tmfPhases").addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (!b || trainingModeInSeriesPause) return;
+  tmfPhase = b.dataset.p;
+  renderFazeItem();
+});
+document.getElementById("tmfExpired").addEventListener("click", fazeDismissAlert);
+// Navigace/časovač/zavření pro nový vzhled jen proklikávají na skutečná (skrytá) tlačítka
+// starého vzhledu — veškerá logika (postup skupinou/sériemi, přestávky, konec tréninku,
+// start/stop odpočtu) tak zůstává na jednom místě, beze změny, viz komentář výš u
+// renderTrainingModeItem.
+document.getElementById("tmfPrevBtn").addEventListener("click", () => { document.getElementById("tmPrevBtn").click(); });
+document.getElementById("tmfNextBtn").addEventListener("click", () => { document.getElementById("tmNextBtn").click(); });
+document.getElementById("tmfExitBtn").addEventListener("click", () => { document.getElementById("tmExitBtn").click(); });
+document.getElementById("tmfTimerReset").addEventListener("click", () => { document.getElementById("tmTimerReset").click(); });
+document.getElementById("tmfTimerToggle").addEventListener("click", () => {
+  document.getElementById("tmTimerToggle").click();
+  document.getElementById("tmfTimerToggle").innerHTML = trainingModeRunning ? '<i class="fa-solid fa-pause"></i>' : '<i class="fa-solid fa-play"></i>';
 });
 
 /* =========================================================
@@ -8127,6 +8680,9 @@ function openEditor(id) {
   document.getElementById("saveTrainingBtn").classList.toggle("hidden", editorReadOnly);
   document.getElementById("deleteTrainingBtn").classList.toggle("hidden", editorReadOnly);
   document.getElementById("trainingVisibilityBtn").classList.toggle("hidden", editorReadOnly);
+  // "Fáze cvičení (test)" — nový tréninkový režim, zatím jen pro admina, viz
+  // claude/trener-treninkovy-rezim.md. Starý "Spustit trénink" zůstává pro všechny beze změny.
+  document.getElementById("startTrainingModeFazeBtn").classList.toggle("hidden", uidCurrent !== ADMIN_UID);
   renderTrainingVisibilityBtn();
   pickerTagFilter.clear();
   pickerEquipFilter.clear();
