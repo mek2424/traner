@@ -1210,32 +1210,20 @@ body.popout-mode .popout-btn{display:none !important;}
 #tmfRoot.hidden{display:none;}
 
 .tmf-topbar{flex-shrink:0;padding:10px 16px 0;padding-top:calc(10px + env(safe-area-inset-top));}
-.tmf-axis{display:flex;gap:2px;height:20px;}
-/* Ukazovátko plánovaného času — trojúhelník nad osou + tenká čárka skrz ni. Zelené, dokud se
-   skluz vejde do rezervy (FAZE_PACE_RESERVE), pak oranžové a s číslem. Pruh nahoře dělá místo
-   pro špičku trojúhelníku. */
-.tmf-axiswrap{position:relative;padding-top:9px;}
-.tmf-pace{position:absolute;top:0;bottom:-2px;width:0;z-index:3;pointer-events:none;}
-.tmf-pace.hidden{display:none;}
-.tmf-pace::before{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid var(--court);}
-.tmf-pace::after{content:"";position:absolute;top:7px;bottom:0;left:-1px;width:2px;background:var(--court);}
-.tmf-pace.tmf-late::before{border-top-color:var(--chalk);}
-.tmf-pace.tmf-late::after{background:var(--chalk);}
-.tmf-pace span{position:absolute;top:-2px;left:9px;font-family:var(--font-display);font-size:11px;letter-spacing:.04em;color:#fff;background:var(--chalk);border-radius:5px;padding:0 6px;white-space:nowrap;}
-.tmf-pace span:empty{display:none;}
-/* Čtení B: šrafovaný pruh mezi tím, kde jsme, a tím, kde bychom podle hodin měli být. */
-.tmf-paceband{position:absolute;top:9px;height:20px;border-radius:3px;z-index:2;pointer-events:none;
-  background:repeating-linear-gradient(45deg,rgba(232,98,44,.5) 0 4px,rgba(232,98,44,.16) 4px 8px);
-  outline:1px solid rgba(232,98,44,.5);}
-.tmf-paceband.hidden{display:none;}
-.tmf-pacetoggle{border:1px solid var(--line);background:var(--card);color:var(--ink-faint);font-family:var(--font-display);font-size:11px;letter-spacing:.06em;border-radius:999px;padding:2px 9px;flex-shrink:0;cursor:pointer;line-height:1.4;}
-.tmf-pacetoggle:focus-visible{outline:2px solid var(--court);outline-offset:2px;}
-.tmf-axis>div{border-radius:3px;opacity:.3;position:relative;overflow:hidden;flex-shrink:0;}
-.tmf-axis>div.tmf-done{opacity:.45;}
-.tmf-axis>div.tmf-now{opacity:1;}
-.tmf-axis>div.tmf-now>i{position:absolute;left:0;top:0;bottom:0;background:rgba(255,255,255,.35);}
-.tmf-metarow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px;}
-.tmf-meta{font-size:11px;color:#4A5564;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* Osa tréninku. Aktuální blok musí být poznat z druhého konce tělocvičny — je proto dvakrát
+   vyšší než ostatní, plně sytý a orámovaný; zbytek osy je nízký a vybledlý. */
+.tmf-axis{display:flex;gap:2px;height:26px;align-items:center;}
+.tmf-axis>div{border-radius:3px;opacity:.3;position:relative;overflow:hidden;flex-shrink:0;height:12px;}
+.tmf-axis>div.tmf-done{opacity:.5;}
+.tmf-axis>div.tmf-now{opacity:1;height:26px;border-radius:5px;box-shadow:0 0 0 2px #1B2430;}
+.tmf-axis>div.tmf-now>i{position:absolute;left:0;top:0;bottom:0;background:rgba(255,255,255,.42);}
+/* Přesah času se ukáže i na ose: rám aktuálního bloku zčervená a zprava z něj vyleze proužek,
+   jak moc se přetáhlo. Jen u cviku, který má vyplněnou délku — jinak appka nemá z čeho počítat
+   a raději neukazuje nic (viz fazeBuildAxisHtml). */
+.tmf-axis>div.tmf-over{box-shadow:0 0 0 2px var(--chalk-dark);}
+.tmf-axis>div.tmf-over>i{background:rgba(232,98,44,.5);}
+.tmf-axis>b.tmf-overrun{height:26px;border-radius:0 5px 5px 0;background:var(--chalk);flex-shrink:0;margin-left:-2px;box-shadow:0 0 0 2px var(--chalk-dark);}
+.tmf-metarow{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:6px;}
 .tmf-phases{display:flex;gap:3px;background:rgba(27,36,48,.06);border-radius:999px;padding:2px;flex-shrink:0;}
 .tmf-phases.hidden{display:none;}
 .tmf-phases button{border:none;background:none;font-family:var(--font-display);font-size:13px;letter-spacing:.08em;color:#4A5564;padding:5px 14px;border-radius:999px;cursor:pointer;white-space:nowrap;}
@@ -1265,6 +1253,10 @@ body.popout-mode .popout-btn{display:none !important;}
 .tmf-segs.tmf-ser i{background:rgba(232,98,44,.24);}
 .tmf-segs.tmf-ser i.on{background:var(--chalk);}
 .tmf-segs.tmf-tight i{width:11px;}
+/* Přestávka uvnitř skupiny není cvičení — v počítadle je jen úzká šedá zarážka mezi
+   obdélníky cviků, a nerozsvěcí se. */
+.tmf-segs.tmf-grp i.tmf-seg-break,.tmf-segs.tmf-grp i.tmf-seg-break.on{width:5px;background:var(--part-prestavka);}
+.tmf-segs.tmf-tight i.tmf-seg-break{width:4px;}
 .tmf-seglbl{font-family:var(--font-display);font-size:10px;letter-spacing:.09em;color:var(--ink-faint);margin-right:2px;}
 .tmf-segnum{font-family:var(--font-display);font-size:13px;letter-spacing:.05em;color:var(--chalk-dark);}
 .tmf-brief-row{display:flex;gap:20px;align-items:center;justify-content:center;flex-wrap:wrap;max-width:100%;}
@@ -1296,7 +1288,9 @@ body.popout-mode .popout-btn{display:none !important;}
 .tmf-note-line{color:#4A5564;text-align:center;max-width:min(88%,560px);font-size:14px;}
 .tmf-note-line ul,.tmf-note-line ol{text-align:left;padding-left:20px;margin:4px auto;display:inline-block;}
 
-.tmf-nextcard{background:rgba(232,98,44,.1);border:2px solid var(--chalk);border-radius:13px;padding:12px 24px;display:flex;flex-direction:column;align-items:center;gap:5px;max-width:min(86%,520px);}
+/* Ve fázi Konec jsou na obrazovce jen dva prvky a po stranách zbývá spousta místa — karta se
+   proto roztáhne do šířky, místo aby název lámala na řádky a přetékala dolů z obrazovky. */
+.tmf-nextcard{background:rgba(232,98,44,.1);border:2px solid var(--chalk);border-radius:13px;padding:12px 28px;display:flex;flex-direction:column;align-items:center;gap:5px;max-width:min(96%,900px);}
 .tmf-nextcard.tmf-good{background:rgba(51,153,51,.12);border-color:var(--court);}
 .tmf-nextcard .tmf-lbl{font-family:var(--font-display);font-size:12px;letter-spacing:.13em;color:var(--chalk-dark);}
 .tmf-nextcard.tmf-good .tmf-lbl{color:var(--court-dark);}
@@ -2332,18 +2326,8 @@ body.popout-mode .popout-btn{display:none !important;}
        #exerciseInfoModalBackdrop/openExerciseInfoModal jako starý vzhled, žádný nový modal. -->
   <div id="tmfRoot" class="hidden">
     <div class="tmf-topbar">
-      <!-- Ukazovátko plánovaného času nad osou (trojúhelník s čárkou) — viz
-           updateFazePaceMarker. Přepínač A/B vedle času je DOČASNÝ: Mek si zkouší obě čtení
-           (A = ukazovátko se zastaví na hraně bloku, B = jde dál a mezeru vyšrafuje) a až si
-           vybere, zmizí i s tím, co nevybral. -->
-      <div class="tmf-axiswrap">
-        <div class="tmf-axis" id="tmfAxis"></div>
-        <div class="tmf-paceband hidden" id="tmfPaceBand"></div>
-        <div class="tmf-pace hidden" id="tmfPace"><span id="tmfPaceTip"></span></div>
-      </div>
+      <div class="tmf-axis" id="tmfAxis"></div>
       <div class="tmf-metarow">
-        <span class="tmf-meta" id="tmfMeta"></span>
-        <button type="button" class="tmf-pacetoggle" id="tmfPaceToggle" title="Test: přepnout zobrazení skluzu (A zarážka / B stín)">A</button>
         <div class="tmf-phases" id="tmfPhases">
           <button type="button" data-p="brief" aria-pressed="true">Zadání</button>
           <button type="button" data-p="run" aria-pressed="false">Průběh</button>
@@ -2562,7 +2546,7 @@ async function ensureMessaging() {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-09-13 01:20";
+const APP_VERSION = "2026-09-13 02:40";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -7039,14 +7023,6 @@ let tmfAlertActive = false; // je vidět celoobrazovkové červené upozornění
 // naznačuje "u tohohle cviku je něco k přečtení, co jsi ještě neotevřel", zmizí hned po
 // otevření a znovu se objeví až u dalšího cviku (žádné trvalé počítadlo napříč cviky).
 let tmfDetailSeen = false;
-// Ukazovátko plánovaného času na ose. Počítá se od SKUTEČNÉHO spuštění prezentace, ne od
-// plánovaného začátku z profilu — jinak by trénink, co začne o deset minut později, byl od
-// první vteřiny "ve skluzu" a ukazovátko by bylo k ničemu (Mekovo rozhodnutí).
-let tmfStartedAt = 0;
-// DOČASNÉ: "A" = ukazovátko se zastaví na hraně aktuálního bloku, "B" = jde dál podle hodin
-// a mezeru vyšrafuje. Mek si obě zkouší naživo, pak jedno i s přepínačem zmizí.
-let tmfPaceMode = "A";
-const FAZE_PACE_RESERVE = 300; // 5 minut skluzu se toleruje, teprve pak ukazovátko zoranžoví
 
 function startTrainingMode(trainingId, skin) {
   const id = trainingId || currentTrainingId;
@@ -7062,7 +7038,6 @@ function startTrainingMode(trainingId, skin) {
   trainingModeSkin = skin === "faze" ? "faze" : "classic";
   tmfPhase = "brief";
   tmfAlertActive = false;
-  tmfStartedAt = Date.now();
   // Starý vzhled a nový "Fáze cvičení" vzhled sdílí tenhle jeden #trainingModeView (kvůli
   // Fullscreen API — viz komentář u #exerciseInfoModalBackdrop) — přepne se jen to, co je
   // vidět. Zbytek appky (navigace, časovač, …) běží úplně stejně pro oba vzhledy.
@@ -7592,10 +7567,27 @@ document.getElementById("tmTimerReset").addEventListener("click", () => {
   }
   updateTrainingModeTimerDisplay();
   startTrainingModeTimer();
+  // Ve fázi Zadání není velký časovač vidět, takže reset bez téhle hlášky vypadá, že nic neudělal.
+  toast(`Čas cvičení nastaven znovu na ${fazeClockText(trainingModeSeconds)}`, 1800, "info");
 });
+/** Zrcadlo k advanceTrainingMode: krok zpět jde nejdřív po členech skupiny, pak po sériích a
+    teprve nakonec na předchozí položku tréninku. Dřív skákal rovnou na předchozí položku a
+    vynuloval člena skupiny, takže se ze skupiny nedalo vrátit o jediný cvik. */
 document.getElementById("tmPrevBtn").addEventListener("click", () => {
   if (trainingModeFinished) return;
   if (trainingModeInSeriesPause) { trainingModeInSeriesPause = false; renderTrainingModeItem(); return; }
+  const row = trainingModeItems[trainingModeIndex];
+  if (row && row.isGroup && trainingModeGroupVideoIndex > 0) {
+    trainingModeGroupVideoIndex--;
+    renderTrainingModeItem();
+    return;
+  }
+  if (row && trainingModeSeriesNum > 1) {
+    trainingModeSeriesNum--;
+    trainingModeGroupVideoIndex = row.isGroup ? Math.max(0, (row.videos || []).length - 1) : 0;
+    renderTrainingModeItem();
+    return;
+  }
   if (trainingModeIndex > 0) {
     trainingModeIndex--;
     trainingModeSeriesNum = 1;
@@ -7948,112 +7940,37 @@ function computeFazeSummaryStats(t) {
     topPart: topKey ? (getPart(topKey).label || topKey) : ""
   };
 }
-function fazeMetaText() {
-  const t = state.trainings[currentTrainingId];
-  const { totalSeconds, hasReps } = calculateTrainingTotalSeconds(t);
-  let elapsed = 0;
-  for (let i = 0; i < trainingModeIndex; i++) elapsed += fazeItemTotalSeconds(trainingModeItems[i]);
-  const row = trainingModeItems[trainingModeIndex];
-  // Zjednodušení: dopočet uvnitř AKTUÁLNÍHO bloku bere jen běžící odpočet vůči celkové délce
-  // bloku, ne přesně rozpočítané už-hotové série/členy skupiny uvnitř něj (přesnější by
-  // vyžadovalo hlídat i start každého člena zvlášť) — pro orientační "uplynulo/zbývá" stačí.
-  if (row && !trainingModeInSeriesPause) {
-    const blockTotal = fazeItemTotalSeconds(row) || 0;
-    elapsed += Math.max(0, Math.min(blockTotal, blockTotal - Math.max(0, trainingModeSeconds)));
-  }
-  const remain = Math.max(0, totalSeconds - elapsed);
-  const posTxt = `${trainingModeIndex + 1} / ${trainingModeItems.length}`;
-  let endTxt = "";
-  if (!hasReps) {
-    const startSec = timeInputToSeconds((state.profile && state.profile.trainingStartTime) || "09:00");
-    const endSec = (startSec + totalSeconds) % 86400;
-    endTxt = ` · konec ${String(Math.floor(endSec / 3600)).padStart(2, "0")}:${String(Math.floor((endSec % 3600) / 60)).padStart(2, "0")}`;
-  }
-  return `${posTxt} · uplynulo ${Math.round(elapsed / 60)} min · zbývá ${hasReps ? "?" : Math.round(remain / 60) + " min"}${endTxt}`;
-}
 /** Osa tréninku nahoře — jeden segment za každou položku t.items (skupina = jeden segment za
     celou kartu), šířka podle délky, barva podle části; aktuální segment vysvícený a plní se
-    zleva podle toho, jak moc odpočtu v NĚM ubylo (zjednodušení stejného druhu jako u
-    fazeMetaText — u vícečlenné skupiny/série to není do vteřiny přesné). */
+    zleva podle toho, jak moc odpočtu v NĚM ubylo (u vícečlenné skupiny/série to není do
+    vteřiny přesné — pro orientaci na ose to stačí). */
 function fazeBuildAxisHtml() {
-  return trainingModeItems.map((row, i) => {
+  const parts = [];
+  trainingModeItems.forEach((row, i) => {
     const isBreak = row.part === "prestavka";
-    const color = isBreak ? "#C7C9C4" : (getPart(row.part).color || "#339933");
+    // Přestávka se na ose kreslí pruhovaně — stejně jako v editoru tréninků (.seq-item.is-break),
+    // ať je to na obou místech tentýž vizuální jazyk.
+    const bg = isBreak
+      ? "repeating-linear-gradient(135deg,var(--part-prestavka),var(--part-prestavka) 4px,var(--break-stripe) 4px,var(--break-stripe) 8px)"
+      : (getPart(row.part).color || "#339933");
     const seconds = fazeItemTotalSeconds(row);
-    let cls = "", fillPct = null;
+    let cls = "", fillPct = null, overSeconds = 0;
     if (i < trainingModeIndex) cls = "tmf-done";
     else if (i === trainingModeIndex) {
       cls = "tmf-now";
       const blockTotal = seconds || 1;
       fillPct = Math.min(100, Math.max(0, (1 - Math.max(0, trainingModeSeconds) / blockTotal) * 100));
+      // Přesah se ukáže JEN u cviku s vyplněnou délkou — bez ní by appka neměla z čeho počítat
+      // a radši neukáže nic. Proužek je zastropovaný délkou samotného bloku, ať osa nezdivočí.
+      if (seconds > 0 && trainingModeSeconds < 0) {
+        cls += " tmf-over";
+        overSeconds = Math.min(-trainingModeSeconds, seconds);
+      }
     }
-    return `<div class="${cls}" style="flex:${Math.max(seconds, 15)};background:${color}">${fillPct != null ? `<i style="width:${fillPct}%"></i>` : ""}</div>`;
-  }).join("");
-}
-/** Váhy bloků v ose. MUSÍ být identické s fazeBuildAxisHtml (flex:Math.max(sekundy,15)) —
-    krátké bloky tam mají větší podíl, než kolik doopravdy trvají, a ukazovátko plánovaného
-    času by jinak ukazovalo vedle. */
-function fazeAxisWeights() {
-  return trainingModeItems.map(r => Math.max(fazeItemTotalSeconds(r), 15));
-}
-/** Kde na ose (v % šířky) leží daný okamžik plánovaného času. */
-function fazePosForPlannedSeconds(sec) {
-  const w = fazeAxisWeights();
-  const totalW = w.reduce((a, b) => a + b, 0) || 1;
-  let acc = 0, accW = 0;
-  for (let i = 0; i < trainingModeItems.length; i++) {
-    const dur = fazeItemTotalSeconds(trainingModeItems[i]);
-    if (sec <= acc + dur) {
-      const frac = dur > 0 ? Math.min(1, Math.max(0, (sec - acc) / dur)) : 1;
-      return Math.min(100, (accW + w[i] * frac) / totalW * 100);
-    }
-    acc += dur; accW += w[i];
-  }
-  return 100;
-}
-/** Pravá hrana bloku v % šířky osy — na ni se ve čtení A ukazovátko zastaví. */
-function fazeBlockRightPct(idx) {
-  const w = fazeAxisWeights();
-  const totalW = w.reduce((a, b) => a + b, 0) || 1;
-  return Math.min(100, w.slice(0, idx + 1).reduce((a, b) => a + b, 0) / totalW * 100);
-}
-/** Kde bychom na plánované ose měli být podle toho, kam trenér doopravdy došel. Stejný výpočet
-    jako v fazeMetaText — uvnitř aktuálního bloku jen podle běžícího odpočtu. */
-function fazePlannedElapsed() {
-  let e = 0;
-  for (let i = 0; i < trainingModeIndex; i++) e += fazeItemTotalSeconds(trainingModeItems[i]);
-  const row = trainingModeItems[trainingModeIndex];
-  if (row && !trainingModeInSeriesPause) {
-    const blockTotal = fazeItemTotalSeconds(row) || 0;
-    e += Math.max(0, Math.min(blockTotal, blockTotal - Math.max(0, trainingModeSeconds)));
-  }
-  return e;
-}
-/** Přesune ukazovátko (a ve čtení B i šrafu). Volá se po každé vteřině z updateFazeTimerDisplay
-    a po každém překreslení — je to jen posun stylu, nic se nepřekresluje. */
-function updateFazePaceMarker() {
-  const pace = document.getElementById("tmfPace");
-  const band = document.getElementById("tmfPaceBand");
-  if (!pace || !band) return;
-  if (!tmfStartedAt || trainingModeFinished || !trainingModeItems.length) {
-    pace.classList.add("hidden"); band.classList.add("hidden"); return;
-  }
-  const real = Math.max(0, Math.round((Date.now() - tmfStartedAt) / 1000));
-  const drift = real - fazePlannedElapsed();
-  const late = drift > FAZE_PACE_RESERVE;
-  const herePct = fazePosForPlannedSeconds(real - drift);
-  const realPct = fazePosForPlannedSeconds(real);
-  const atPct = tmfPaceMode === "A" ? Math.min(realPct, fazeBlockRightPct(trainingModeIndex)) : realPct;
-
-  pace.classList.remove("hidden");
-  pace.style.left = atPct + "%";
-  pace.classList.toggle("tmf-late", late);
-  const tip = document.getElementById("tmfPaceTip");
-  if (tip) tip.textContent = late ? `+${Math.round(drift / 60)} min` : "";
-
-  const showBand = tmfPaceMode === "B" && realPct - herePct > 0.3;
-  band.classList.toggle("hidden", !showBand);
-  if (showBand) { band.style.left = herePct + "%"; band.style.width = (realPct - herePct) + "%"; }
+    parts.push(`<div class="${cls}" style="flex:${Math.max(seconds, 15)};background:${bg}">${fillPct != null ? `<i style="width:${fillPct}%"></i>` : ""}</div>`);
+    if (overSeconds > 0) parts.push(`<b class="tmf-overrun" style="flex:${Math.max(overSeconds, 15)}"></b>`);
+  });
+  return parts.join("");
 }
 /** Obdélníky na hraně rámečku — jedna gramatika dvakrát: zelené = kolikátý člen skupiny,
     oranžové = kolikátá série. Nad deset kusů už se nedají spočítat pohledem, tak se místo nich
@@ -8069,19 +7986,28 @@ function fazeSegsHtml(side, kind, total, done, label) {
 /** Rámeček kolem obsahu, když cvičení patří do skupiny NEBO se opakuje v sériích (série jdou
     v editoru nastavit i obyčejnému cviku, ne jen skupině — pak je rám bez názvu a znamená
     prostě "tohle se opakuje"). */
+/** Počítadlo členů skupiny. Přestávky uvnitř skupiny nejsou cvičení, takže se nepočítají —
+    kreslí se jen jako úzké šedé zarážky mezi obdélníky cviků. */
+function fazeGroupSegsHtml(row, currentIdx) {
+  const vids = (row && row.videos) || [];
+  if (vids.length < 2) return "";
+  const cells = vids.map((v, i) =>
+    `<i class="${v.isBreak ? "tmf-seg-break" : ""}${(!v.isBreak && i <= currentIdx) ? " on" : ""}"></i>`).join("");
+  return `<span class="tmf-segs tmf-right tmf-grp${vids.length > 6 ? " tmf-tight" : ""}">${cells}</span>`;
+}
 function renderFazeFrame(entry) {
   const el = document.getElementById("tmfFrame");
   if (!el) return;
   const row = trainingModeItems[trainingModeIndex];
   const seriesTotal = (row && row.seriesCount) || 1;
-  const memberTotal = (entry && entry.groupTotal > 1) ? entry.groupTotal : 0;
-  const show = !!entry && !trainingModeFinished && (memberTotal > 1 || seriesTotal > 1);
+  const isGroup = !!(row && row.isGroup && (row.videos || []).length > 1);
+  const show = !!entry && !trainingModeFinished && (isGroup || seriesTotal > 1);
   el.classList.toggle("hidden", !show);
   if (!show) { el.innerHTML = ""; return; }
   el.innerHTML =
-    (entry.groupName ? `<span class="tmf-frame-legend">${esc(entry.groupName)}</span>` : "") +
+    (isGroup && row.name ? `<span class="tmf-frame-legend">${esc(row.name)}</span>` : "") +
     fazeSegsHtml("tmf-left", "tmf-ser", seriesTotal, trainingModeSeriesNum, "Série") +
-    fazeSegsHtml("tmf-right", "tmf-grp", memberTotal, (entry.groupIndex || 0) + 1, "");
+    (isGroup ? fazeGroupSegsHtml(row, entry.groupIndex != null ? entry.groupIndex : -1) : "");
 }
 /** Karta videa z Knihovny (otevřená klikem na náhled ve Fázi cvičení, viz renderFazeVideoArea
     níž) žije v dokumentu MIMO #trainingModeView, protože ji používá i Knihovna. V reálném
@@ -8203,7 +8129,7 @@ function renderFazeBrief(main, entry) {
 function renderFazeRun(main, entry) {
   main.innerHTML = `
     <div class="tmf-run-title">${esc(entry.title)}</div>
-    <div class="tmf-clock" id="tmfClockRun">${fazeClockText(trainingModeSeconds)}</div>
+    <div class="tmf-clock${trainingModeSeconds < 0 ? " tmf-warn" : ""}" id="tmfClockRun">${fazeClockText(trainingModeSeconds)}</div>
     ${entry.reps ? `<div class="tmf-reps-chip">${esc(entry.reps)}</div>` : ""}
     ${entry.cue ? `<div class="tmf-cue-line"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M4 4.5h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-9.5L6 22v-4.5H4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2z" fill="var(--chalk)"/></svg>${esc(entry.cue)}</div>` : ""}
     ${richHasContent(entry.note) ? `<div class="tmf-note-line">${richValueToHtml(entry.note)}</div>` : ""}`;
@@ -8234,6 +8160,17 @@ function renderFazeWrap(main, entry) {
     sériemi, samotné "Pauza mezi sériemi" trenérovi nic neřekne — appka proto rovnou pojmenuje
     cvik, kterým další série začne, stejně jako to dělá stará prezentace (viz
     getUpNextLabelForSeriesPause výš). */
+/** Obrazovka přestávky — jedna pro přestávku mezi cviky i pro pauzu mezi sériemi, aby se obojí
+    tvářilo úplně stejně (Mekův požadavek). Název skupiny a pořadí člena nese rámeček, tady se
+    to neopakuje. */
+function fazePauseViewHtml(title) {
+  return `
+      <div class="tmf-solo-view">
+        <div class="tmf-title" style="font-size:clamp(22px,4.4vw,34px);">${esc(title)}</div>
+        <div class="tmf-clock${trainingModeSeconds < 0 ? " tmf-warn" : ""}" id="tmfClockWrap">${fazeClockText(trainingModeSeconds)}</div>
+        ${tmfPhase === "wrap" ? fazeNextCardHtml() : ""}
+      </div>`;
+}
 function fazeNextCardHtml() {
   const nx = getFazeUpNextEntry();
   if (!nx) return "";
@@ -8263,25 +8200,17 @@ function renderFazeItem() {
   if (trainingModeFinished) { renderFazeFinished(); return; }
   document.getElementById("tmfExpired").classList.toggle("hidden", !tmfAlertActive);
   document.getElementById("tmfAxis").innerHTML = fazeBuildAxisHtml();
-  updateFazePaceMarker();
-  document.getElementById("tmfMeta").textContent = fazeMetaText();
   document.querySelectorAll("#tmfPhases button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.p === tmfPhase)));
-  document.getElementById("tmfPhases").classList.toggle("hidden", trainingModeInSeriesPause);
   document.getElementById("tmfPrevBtn").disabled = trainingModeIndex === 0 && !trainingModeInSeriesPause;
   document.getElementById("tmfNextBtn").innerHTML = 'Další cvičení <i class="fa-solid fa-arrow-right"></i>';
   document.getElementById("tmfMini").textContent = (!trainingModeInSeriesPause && tmfPhase === "run") ? "" : fazeClockText(trainingModeSeconds);
 
   const main = document.getElementById("tmfMain");
   if (trainingModeInSeriesPause) {
-    renderFazeFrame(null); // mezi sériemi nese číslo série samotná obrazovka, rám by jen dublovat
-    const row = trainingModeItems[trainingModeIndex];
-    const nx = getFazeUpNextEntry();
-    main.innerHTML = `
-      <div class="tmf-solo-view">
-        <div class="tmf-title" style="font-size:clamp(22px,4.4vw,34px);">Za chvíli série ${trainingModeSeriesNum} / ${row.seriesCount}</div>
-        <div class="tmf-clock" id="tmfClockWrap">${fazeClockText(trainingModeSeconds)}</div>
-        ${nx && nx.title ? `<div class="tmf-nextcard tmf-good"><div class="tmf-lbl">Následuje</div><div class="tmf-nexttitle">${esc(nx.title)}</div></div>` : ""}
-      </div>`;
+    // groupIndex -1 = mezi sériemi nesvítí žádný člen skupiny; kolikátá série běží, ukazují
+    // oranžové obdélníky v rámečku.
+    renderFazeFrame({ groupIndex: -1 });
+    main.innerHTML = fazePauseViewHtml("Přestávka mezi sériemi");
     return;
   }
 
@@ -8290,13 +8219,7 @@ function renderFazeItem() {
   renderFazeFrame(entry);
 
   if (entry.isBreak) {
-    // Název skupiny a pořadí člena už nese rámeček, tady se to neopakuje.
-    main.innerHTML = `
-      <div class="tmf-solo-view">
-        <div class="tmf-title" style="font-size:clamp(22px,4.4vw,34px);">${esc(entry.title)}</div>
-        <div class="tmf-clock" id="tmfClockWrap">${fazeClockText(trainingModeSeconds)}</div>
-        ${tmfPhase === "wrap" ? fazeNextCardHtml() : ""}
-      </div>`;
+    main.innerHTML = fazePauseViewHtml(entry.title);
     return;
   }
 
@@ -8308,9 +8231,7 @@ function renderFazeFinished() {
   document.getElementById("tmfExpired").classList.add("hidden");
   document.getElementById("tmfPhases").classList.add("hidden");
   renderFazeFrame(null);
-  updateFazePaceMarker();
   document.getElementById("tmfAxis").innerHTML = fazeBuildAxisHtml();
-  document.getElementById("tmfMeta").textContent = "";
   document.getElementById("tmfMini").textContent = "";
   document.getElementById("tmfPrevBtn").disabled = true;
   document.getElementById("tmfNextBtn").innerHTML = 'Zavřít <i class="fa-solid fa-xmark"></i>';
@@ -8337,7 +8258,7 @@ function paintFazeForNewItem() {
 function updateFazeTimerDisplay(sign, m, s) {
   const txt = `${sign}${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   const run = document.getElementById("tmfClockRun");
-  if (run) run.textContent = txt;
+  if (run) { run.textContent = txt; run.classList.toggle("tmf-warn", trainingModeSeconds < 0); }
   const wrap = document.getElementById("tmfClockWrap");
   if (wrap) { wrap.textContent = txt; wrap.classList.toggle("tmf-warn", trainingModeSeconds < 0); }
   if (tmfPhase !== "run" && !trainingModeInSeriesPause) {
@@ -8348,7 +8269,6 @@ function updateFazeTimerDisplay(sign, m, s) {
     const big = document.getElementById("tmfExpiredBig");
     if (big) big.textContent = txt;
   }
-  updateFazePaceMarker();
 }
 /** Upozornění na přesah — zvuk (Boxing Bell) jen při PRVNÍM dosažení nuly, vibrace (kde appka
     umí) se opakuje s ním i při každém dalším 3minutovém zásahu, dokud trenér neťukne pryč
@@ -8371,17 +8291,11 @@ function fazeDismissAlert() {
 }
 document.getElementById("tmfPhases").addEventListener("click", (e) => {
   const b = e.target.closest("button");
-  if (!b || trainingModeInSeriesPause) return;
+  if (!b) return;
   tmfPhase = b.dataset.p;
   renderFazeItem();
 });
 document.getElementById("tmfExpired").addEventListener("click", fazeDismissAlert);
-// DOČASNÝ přepínač čtení skluzu — až si Mek vybere, zmizí i s variantou, kterou nevybral.
-document.getElementById("tmfPaceToggle").addEventListener("click", () => {
-  tmfPaceMode = tmfPaceMode === "A" ? "B" : "A";
-  document.getElementById("tmfPaceToggle").textContent = tmfPaceMode;
-  updateFazePaceMarker();
-});
 // Navigace/časovač/zavření pro nový vzhled jen proklikávají na skutečná (skrytá) tlačítka
 // starého vzhledu — veškerá logika (postup skupinou/sériemi, přestávky, konec tréninku,
 // start/stop odpočtu) tak zůstává na jednom místě, beze změny, viz komentář výš u
