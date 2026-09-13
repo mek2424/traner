@@ -621,6 +621,13 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 #changeEmailModalBackdrop{z-index:60;}
 #adminActivityModalBackdrop{z-index:60;}
 #exerciseInfoModalBackdrop{z-index:210;}
+/* Výška schválně v PROCENTECH, ne ve vh: v záložním CSS otočení (tm-forced-landscape) je celý
+   tréninkový režim otočený transformem, takže vh míří na fyzicky neotočenou obrazovku — okno
+   pak bylo mnohem vyšší než viditelná plocha, dlouhý popis přetekl dolů ven a nedal se
+   odscrollovat. min-height:0 je nutné, aby se text ve flexovém sloupci vůbec směl zmenšit
+   a spustil vlastní posuvník. */
+#exerciseInfoModalCard{max-width:420px;max-height:86%;display:flex;flex-direction:column;}
+#exerciseInfoModalLong{font-size:13.5px;color:var(--ink-soft);line-height:1.6;overflow-y:auto;min-height:0;flex:1;-webkit-overflow-scrolling:touch;}
 /* Karta videa z Knihovny teď jde otevřít i z Fáze cvičení (klik na náhled) — bez tohohle
    by se v Tréninkovém režimu (z-index 200) otevřela schovaná za ním. */
 #detailModalBackdrop{z-index:210;}
@@ -642,7 +649,15 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 #detailModalBackdrop.tmf-sheet #popoutDetailBtn,
 #detailModalBackdrop.tmf-sheet #detailMyRatingRow,
 #detailModalBackdrop.tmf-sheet .modal-actions,
-#detailModalBackdrop.tmf-sheet #detailCommentsSection{display:none;}
+#detailModalBackdrop.tmf-sheet #detailCommentsSection,
+/* Uprostřed tréninku zajímá trenéra jen video, odkaz, nářadí a Více info — zařazení do složky,
+   štítky ani průměrné hodnocení a obtížnost ne. Slovo "Popis" nad textem je taky navíc. */
+#detailModalBackdrop.tmf-sheet .chip-folder,
+#detailModalBackdrop.tmf-sheet .chip-tag,
+#detailModalBackdrop.tmf-sheet .chip-rating,
+#detailModalBackdrop.tmf-sheet #detailShortDescRow .detail-label{display:none;}
+/* Když po skrytí štítků nezbude žádné nářadí, ať po prázdném řádku nezůstane mezera. */
+#detailModalBackdrop.tmf-sheet #detailChips:not(:has(.chip-equip)){display:none;}
 .coach-activity-card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--card);}
 .coach-activity-card.is-me{border-color:var(--court);}
 .coach-activity-head{display:flex;align-items:center;gap:14px;margin-bottom:12px;}
@@ -1283,6 +1298,8 @@ body.popout-mode .popout-btn{display:none !important;}
 .tmf-run-title{font-family:var(--font-display);font-size:14px;color:#4A5564;letter-spacing:.04em;opacity:.75;max-width:90%;overflow-wrap:anywhere;}
 .tmf-clock{font-family:var(--font-display);line-height:.92;color:#1B2430;font-variant-numeric:tabular-nums;font-size:clamp(56px,15vw,108px);}
 .tmf-clock.tmf-warn{color:var(--chalk-dark);}
+/* Opakování ve fázi Průběh — stejná váha jako časovač, jen snese i delší text ("3×12 na obě strany"). */
+.tmf-bigreps{font-family:var(--font-display);line-height:.95;color:#1B2430;font-size:clamp(40px,11vw,92px);max-width:94%;overflow-wrap:anywhere;}
 .tmf-cue-line{display:flex;gap:9px;align-items:flex-start;text-align:left;color:#1B2430;font-weight:600;max-width:min(92%,560px);font-size:clamp(16px,3vw,20px);}
 .tmf-cue-line svg{flex-shrink:0;margin-top:4px;}
 .tmf-note-line{color:#4A5564;text-align:center;max-width:min(88%,560px);font-size:14px;}
@@ -1322,11 +1339,13 @@ body.popout-mode .popout-btn{display:none !important;}
   .tmf-topbar{padding:6px 14px;padding-top:calc(6px + env(safe-area-inset-top));}
   .tmf-main{padding:6px 20px;gap:8px;}
   .tmf-clock{font-size:clamp(46px,19vh,120px);}
+  .tmf-bigreps{font-size:clamp(34px,14vh,88px);}
   .tmf-foot{padding:6px 16px calc(6px + env(safe-area-inset-bottom));}
 }
 #trainingModeView.tm-forced-landscape .tmf-topbar{padding:6px 14px;padding-top:calc(6px + env(safe-area-inset-top));}
 #trainingModeView.tm-forced-landscape .tmf-main{padding:6px 20px;gap:8px;}
 #trainingModeView.tm-forced-landscape .tmf-clock{font-size:clamp(46px,19vh,120px);}
+#trainingModeView.tm-forced-landscape .tmf-bigreps{font-size:clamp(34px,14vh,88px);}
 #trainingModeView.tm-forced-landscape .tmf-foot{padding:6px 16px calc(6px + env(safe-area-inset-bottom));}
 </style>
 </head>
@@ -1732,7 +1751,7 @@ body.popout-mode .popout-btn{display:none !important;}
         </div>
       </div>
     </div>
-    <div class="detail-row">
+    <div class="detail-row" id="detailShortDescRow">
       <div class="detail-label">Popis</div>
       <div class="detail-text" id="detailShortDesc"></div>
     </div>
@@ -2363,13 +2382,13 @@ body.popout-mode .popout-btn{display:none !important;}
        fyzicky UVNITŘ fullscreenovaného elementu, žádný z-index na tom nic nezmění. Proto tenhle
        popup musí být přímo tady, ne jako sourozenec za trainingModeView. -->
   <div id="exerciseInfoModalBackdrop" class="modal-backdrop hidden">
-    <div class="modal" style="max-width:420px;max-height:80vh;display:flex;flex-direction:column;">
+    <div class="modal" id="exerciseInfoModalCard">
       <div class="modal-head">
         <h2 id="exerciseInfoModalTitle" style="font-size:22px;"></h2>
         <button class="btn btn-icon btn-ghost" id="closeExerciseInfoModalBtn"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div id="exerciseInfoModalShort" style="font-size:14px;font-weight:600;color:var(--court-dark);margin:-8px 0 14px;"></div>
-      <div id="exerciseInfoModalLong" class="rte-display" style="font-size:13.5px;color:var(--ink-soft);line-height:1.6;overflow-y:auto;"></div>
+      <div id="exerciseInfoModalLong" class="rte-display"></div>
     </div>
   </div>
 </div>
@@ -2546,7 +2565,7 @@ async function ensureMessaging() {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-09-13 08:15";
+const APP_VERSION = "2026-09-13 14:45";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -5873,12 +5892,14 @@ function setDetailRatingPicker(val) {
 function renderDetailChips(item) {
   const chips = [];
   const detailFolder = getFolder(item.folderId);
-  if (detailFolder) chips.push(`<span class="chip" style="border-color:${esc(detailFolder.color)};color:${esc(detailFolder.color)};">${esc(detailFolder.label)}</span>`);
-  item.tags.forEach(t => chips.push(`<span class="chip">${esc(t)}</span>`));
-  item.equipment.forEach(t => chips.push(`<span class="chip"><i class="fa-solid fa-wrench"></i> ${esc(t)}</span>`));
+  // Třídy podle druhu štítku — v Knihovně se nic nemění, ale karta otevřená z tréninku si díky
+  // nim nechá jen nářadí (viz .tmf-sheet v CSS).
+  if (detailFolder) chips.push(`<span class="chip chip-folder" style="border-color:${esc(detailFolder.color)};color:${esc(detailFolder.color)};">${esc(detailFolder.label)}</span>`);
+  item.tags.forEach(t => chips.push(`<span class="chip chip-tag">${esc(t)}</span>`));
+  item.equipment.forEach(t => chips.push(`<span class="chip chip-equip"><i class="fa-solid fa-wrench"></i> ${esc(t)}</span>`));
   const dAvg = avgOf(item.difficulties), rAvg = avgOf(item.ratings);
-  chips.push(`<span class="chip">Obtížnost ${dAvg.count ? renderDiffBarsHtml(dAvg.avg, "lg") : "—"}${dAvg.count > 1 ? ` (${dAvg.count}×)` : ""}</span>`);
-  if (rAvg.count) chips.push(`<span class="chip">${renderStarsHtml(rAvg.avg)} ${rAvg.avg.toFixed(1)}${rAvg.count > 1 ? ` (${rAvg.count}×)` : ""}</span>`);
+  chips.push(`<span class="chip chip-rating">Obtížnost ${dAvg.count ? renderDiffBarsHtml(dAvg.avg, "lg") : "—"}${dAvg.count > 1 ? ` (${dAvg.count}×)` : ""}</span>`);
+  if (rAvg.count) chips.push(`<span class="chip chip-rating">${renderStarsHtml(rAvg.avg)} ${rAvg.avg.toFixed(1)}${rAvg.count > 1 ? ` (${rAvg.count}×)` : ""}</span>`);
   document.getElementById("detailChips").innerHTML = `<div class="chip-row">${chips.join("")}</div>`;
 }
 async function saveDetailRatingChange() {
@@ -7841,6 +7862,27 @@ function fazeItemTotalSeconds(row) {
     : valueToSeconds(row.duration != null ? row.duration : 1, row.durationUnit || "min");
   return base * seriesCount + (seriesCount > 1 ? (seriesCount - 1) * pauseSeconds : 0);
 }
+/** Cvik na počet opakování žádný odpočet nemá — starý vzhled u něj schová celou lištu
+    s časovačem (setTimerMode("reps") výš) a renderTrainingModeItemClassic ho ani nespustí,
+    takže by v novém vzhledu svítil zamrzlý čas z předchozího cviku. Přestávky a pauzy mezi
+    sériemi odpočet mají vždycky, i uvnitř skupiny nastavené na opakování. */
+function fazeIsRepsEntry(entry) {
+  if (trainingModeInSeriesPause) return false;
+  if (entry && entry.isBreak) return false;
+  const row = trainingModeItems[trainingModeIndex];
+  return !!row && (row.mode || "time") === "reps";
+}
+let tmfNoCountdown = false; // aktuální položka je na počet opakování (viz fazeApplyTimerChrome)
+/** Spodní lišta podle toho, jestli je co odpočítávat: u cviku na opakování zmizí pauza, reset
+    i malý čas v rohu. Odhadovaný čas takového cviku se používá jen pro šířku bloku v ose. */
+function fazeApplyTimerChrome(isReps) {
+  tmfNoCountdown = !!isReps;
+  document.getElementById("tmfTimerToggle").classList.toggle("hidden", tmfNoCountdown);
+  document.getElementById("tmfTimerReset").classList.toggle("hidden", tmfNoCountdown);
+  document.getElementById("tmfMini").textContent = tmfNoCountdown
+    ? ""
+    : ((!trainingModeInSeriesPause && tmfPhase === "run") ? "" : fazeClockText(trainingModeSeconds));
+}
 function fazeClockText(seconds) {
   const sign = seconds < 0 ? "+" : "";
   const m = Math.floor(Math.abs(seconds) / 60), s = Math.abs(seconds) % 60;
@@ -8127,16 +8169,25 @@ function renderFazeBrief(main, entry) {
   if (hasThumb) renderFazeVideoArea(entry);
 }
 function renderFazeRun(main, entry) {
+  // U cviku na opakování je hlavní informace "kolikrát", ne čas — nastoupí proto na místo
+  // obřího časovače, ve stejné velikosti. Pilulka s opakováním by pak byla dvakrát.
+  const isReps = fazeIsRepsEntry(entry);
+  const bigHtml = isReps
+    ? (entry.reps ? `<div class="tmf-bigreps">${esc(entry.reps)}</div>` : "")
+    : `<div class="tmf-clock${trainingModeSeconds < 0 ? " tmf-warn" : ""}" id="tmfClockRun">${fazeClockText(trainingModeSeconds)}</div>`;
   main.innerHTML = `
     <div class="tmf-run-title">${esc(entry.title)}</div>
-    <div class="tmf-clock${trainingModeSeconds < 0 ? " tmf-warn" : ""}" id="tmfClockRun">${fazeClockText(trainingModeSeconds)}</div>
-    ${entry.reps ? `<div class="tmf-reps-chip">${esc(entry.reps)}</div>` : ""}
+    ${bigHtml}
+    ${(!isReps && entry.reps) ? `<div class="tmf-reps-chip">${esc(entry.reps)}</div>` : ""}
     ${entry.cue ? `<div class="tmf-cue-line"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M4 4.5h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-9.5L6 22v-4.5H4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2z" fill="var(--chalk)"/></svg>${esc(entry.cue)}</div>` : ""}
     ${richHasContent(entry.note) ? `<div class="tmf-note-line">${richValueToHtml(entry.note)}</div>` : ""}`;
 }
 function renderFazeWrap(main, entry) {
   const isOver = trainingModeSeconds < 0;
-  const clockHtml = `<div class="tmf-clock${isOver ? " tmf-warn" : ""}" id="tmfClockWrap">${fazeClockText(trainingModeSeconds)}</div>`;
+  // U cviku na opakování není co odpočítávat, takže ve fázi Konec zůstane jen karta Následuje.
+  const clockHtml = fazeIsRepsEntry(entry)
+    ? ""
+    : `<div class="tmf-clock${isOver ? " tmf-warn" : ""}" id="tmfClockWrap">${fazeClockText(trainingModeSeconds)}</div>`;
   const row = trainingModeItems[trainingModeIndex];
   const isLastOverall = trainingModeIndex >= trainingModeItems.length - 1
     && trainingModeSeriesNum >= (row.seriesCount || 1)
@@ -8207,20 +8258,21 @@ function renderFazeItem() {
   document.querySelectorAll("#tmfPhases button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.p === tmfPhase)));
   document.getElementById("tmfPrevBtn").disabled = trainingModeIndex === 0 && !trainingModeInSeriesPause;
   document.getElementById("tmfNextBtn").innerHTML = 'Další cvičení <i class="fa-solid fa-arrow-right"></i>';
-  document.getElementById("tmfMini").textContent = (!trainingModeInSeriesPause && tmfPhase === "run") ? "" : fazeClockText(trainingModeSeconds);
 
   const main = document.getElementById("tmfMain");
   if (trainingModeInSeriesPause) {
     // groupIndex -1 = mezi sériemi nesvítí žádný člen skupiny; kolikátá série běží, ukazují
     // oranžové obdélníky v rámečku.
     renderFazeFrame({ groupIndex: -1 });
+    fazeApplyTimerChrome(false);
     main.innerHTML = fazePauseViewHtml("Přestávka mezi sériemi");
     return;
   }
 
   const entry = getFazeCurrentEntry();
-  if (!entry) { main.innerHTML = ""; renderFazeFrame(null); return; }
+  if (!entry) { main.innerHTML = ""; renderFazeFrame(null); fazeApplyTimerChrome(false); return; }
   renderFazeFrame(entry);
+  fazeApplyTimerChrome(fazeIsRepsEntry(entry));
 
   if (entry.isBreak) {
     main.innerHTML = fazePauseViewHtml(entry.title);
@@ -8232,6 +8284,7 @@ function renderFazeItem() {
   else renderFazeBrief(main, entry);
 }
 function renderFazeFinished() {
+  fazeApplyTimerChrome(false); // ať lišta nezůstane schovaná po cviku na opakování
   document.getElementById("tmfExpired").classList.add("hidden");
   document.getElementById("tmfPhases").classList.add("hidden");
   renderFazeFrame(null);
@@ -8265,7 +8318,7 @@ function updateFazeTimerDisplay(sign, m, s) {
   if (run) { run.textContent = txt; run.classList.toggle("tmf-warn", trainingModeSeconds < 0); }
   const wrap = document.getElementById("tmfClockWrap");
   if (wrap) { wrap.textContent = txt; wrap.classList.toggle("tmf-warn", trainingModeSeconds < 0); }
-  if (tmfPhase !== "run" && !trainingModeInSeriesPause) {
+  if (!tmfNoCountdown && tmfPhase !== "run" && !trainingModeInSeriesPause) {
     const mini = document.getElementById("tmfMini");
     if (mini) mini.textContent = txt;
   }
