@@ -643,7 +643,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
 }
 #detailModalBackdrop.tmf-sheet .modal{
-  width:min(46%,430px);max-height:94%;
+  width:min(94%,430px);max-height:94%;
   border-radius:var(--radius) var(--radius) 0 0;
 }
 #detailModalBackdrop.tmf-sheet #popoutDetailBtn,
@@ -1347,6 +1347,49 @@ body.popout-mode .popout-btn{display:none !important;}
 #trainingModeView.tm-forced-landscape .tmf-clock{font-size:clamp(46px,19vh,120px);}
 #trainingModeView.tm-forced-landscape .tmf-bigreps{font-size:clamp(34px,14vh,88px);}
 #trainingModeView.tm-forced-landscape .tmf-foot{padding:6px 16px calc(6px + env(safe-area-inset-bottom));}
+
+/* ============ PŘEHLED TRÉNINKU ============
+   Karta videa se v Přehledu otevírá na výšku přes skoro celou šířku; úzká (46 %) je jen
+   v tréninkovém režimu, který běží na šířku. */
+#trainingModeView #detailModalBackdrop.tmf-sheet .modal{width:min(46%,430px);}
+#overviewView{position:fixed;inset:0;z-index:200;background:var(--paper);display:flex;flex-direction:column;}
+#overviewView.hidden{display:none;}
+.ov-head{flex-shrink:0;background:var(--card);border-bottom:1px solid var(--line);padding:14px 16px 12px;padding-top:calc(14px + env(safe-area-inset-top));}
+.ov-back{background:none;border:none;color:var(--court-dark);font-weight:700;font-size:13px;padding:0;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.ov-name{font-family:var(--font-display);font-size:26px;line-height:1.08;letter-spacing:.01em;color:var(--ink);overflow-wrap:anywhere;}
+.ov-sum{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:7px;}
+.ov-badge{font-family:var(--font-display);font-size:14px;letter-spacing:.04em;color:var(--ink-soft);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:2px 11px;}
+.ov-badge.ov-on{background:var(--court);border-color:var(--court);color:#fff;}
+.ov-list{flex:1;min-height:0;overflow-y:auto;padding:10px 10px 14px;display:flex;flex-direction:column;gap:8px;-webkit-overflow-scrolling:touch;}
+.ov-card{position:relative;background:var(--card);border:1px solid var(--line);border-left:6px solid var(--line);border-radius:12px;padding:10px 11px;box-shadow:0 1px 4px rgba(0,0,0,.05);cursor:pointer;}
+.ov-card.ov-break{background:repeating-linear-gradient(135deg,var(--part-prestavka),var(--part-prestavka) 8px,var(--break-stripe) 8px,var(--break-stripe) 16px);border-left-color:var(--part-prestavka);cursor:default;}
+.ov-card.ov-group{border:2px dashed var(--court);border-left:2px dashed var(--court);cursor:default;}
+.ov-card.ov-now{box-shadow:0 0 0 3px var(--chalk),0 4px 12px rgba(232,98,44,.28);}
+.ov-top{display:flex;align-items:center;gap:9px;}
+.ov-thumb{width:64px;height:42px;border-radius:6px;flex-shrink:0;background:#2b2f36 center/cover no-repeat;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.82);font-size:15px;}
+.ov-title{font-size:15px;font-weight:700;line-height:1.25;flex:1;min-width:0;color:var(--ink);overflow-wrap:anywhere;}
+.ov-dur{font-family:var(--font-display);font-size:16px;letter-spacing:.03em;color:var(--ink);flex-shrink:0;align-self:flex-start;white-space:nowrap;}
+.ov-dur.ov-reps{color:var(--court-dark);}
+.ov-cue{display:flex;gap:6px;align-items:flex-start;margin-top:7px;font-size:13px;font-weight:600;color:var(--ink);line-height:1.35;}
+.ov-cue i{color:var(--chalk);font-size:11px;margin-top:3px;flex-shrink:0;}
+.ov-note{margin-top:5px;font-size:12.5px;color:var(--ink-soft);line-height:1.45;}
+.ov-note p{margin:0 0 4px;}
+.ov-note p:last-child{margin-bottom:0;}
+.ov-members{display:flex;flex-direction:column;gap:6px;margin-top:8px;padding-left:8px;border-left:2px solid rgba(51,153,51,.3);}
+.ov-member{display:flex;align-items:center;gap:8px;cursor:pointer;}
+.ov-member.ov-mbreak{cursor:default;opacity:.75;}
+.ov-member .ov-thumb{width:44px;height:29px;font-size:12px;}
+.ov-mtitle{font-size:13.5px;font-weight:700;flex:1;min-width:0;color:var(--ink);overflow-wrap:anywhere;}
+.ov-gname{font-family:var(--font-display);font-size:17px;letter-spacing:.03em;color:var(--court-dark);flex:1;}
+.ov-series{font-family:var(--font-display);font-size:12.5px;letter-spacing:.04em;background:rgba(232,98,44,.12);border:1px solid var(--chalk);color:var(--chalk-dark);border-radius:5px;padding:1px 7px;}
+.ov-gear{display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:5px 9px;border-radius:8px;background:var(--paper);border:1px dashed var(--line);}
+.ov-gear b{font-family:var(--font-display);font-size:12px;letter-spacing:.06em;color:var(--ink-faint);font-weight:400;}
+.ov-gear span{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:1px 9px;color:var(--ink-soft);background:var(--card);}
+.ov-foot{flex-shrink:0;background:var(--card);border-top:1px solid var(--line);padding:10px 12px calc(12px + env(safe-area-inset-bottom));}
+.ov-go{width:100%;background:var(--court);color:#fff;border:none;border-radius:11px;padding:11px 0;font-family:var(--font-display);font-size:19px;letter-spacing:.05em;line-height:1.15;}
+.ov-go small{display:block;font-size:11.5px;letter-spacing:.03em;opacity:.85;font-family:var(--font-body);font-weight:400;}
+#ovAskBackdrop{z-index:210;}
+.ov-timeinput{width:100%;border:2px solid var(--court);border-radius:10px;padding:10px;font-family:var(--font-display);font-size:32px;letter-spacing:.03em;text-align:center;color:var(--ink);background:var(--paper);}
 </style>
 </head>
 <body>
@@ -1528,6 +1571,7 @@ body.popout-mode .popout-btn{display:none !important;}
       <div style="display:flex;gap:8px;margin-bottom:12px;">
         <button type="button" class="btn btn-primary" id="startTrainingModeBtn" style="flex:1;"><i class="fa-solid fa-play"></i> Spustit trénink</button>
         <button type="button" class="btn btn-ghost hidden" id="startTrainingModeFazeBtn" title="Nový rozpracovaný vzhled tréninkové prezentace — zatím jen pro admina, na vyzkoušení"><i class="fa-solid fa-flask"></i> Fáze cvičení (test)</button>
+        <button type="button" class="btn btn-ghost hidden" id="openOverviewBtn" title="Přehled tréninku — celý plán na jedné obrazovce, jen ke čtení; zatím jen pro admina"><i class="fa-solid fa-list-ul"></i> Přehled (test)</button>
       </div>
       <div id="readOnlyBanner" class="hidden" style="background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-sm);padding:9px 12px;font-size:12.5px;color:var(--ink-soft);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
         <span><i class="fa-solid fa-eye"></i> <span id="readOnlyBannerText"></span></span>
@@ -2393,6 +2437,36 @@ body.popout-mode .popout-btn{display:none !important;}
   </div>
 </div>
 
+<!-- ============ PŘEHLED TRÉNINKU — třetí zobrazení, zatím jen pro admina (test) ============
+     Celý trénink na jedné rolovací obrazovce, na výšku, jen ke čtení. Není to prezentace:
+     prezentace se pouští a odchází se od ní (tablet na stole), tohle je pro trenéra, co má
+     telefon pořád v ruce a chce se podívat o pár kroků dopředu. -->
+<div id="overviewView" class="hidden">
+  <div class="ov-head">
+    <button type="button" class="ov-back" id="ovBackBtn"><i class="fa-solid fa-arrow-left"></i> Zpět</button>
+    <div class="ov-name" id="ovName"></div>
+    <div class="ov-sum">
+      <button type="button" class="ov-badge ov-on" id="ovStartBtn">od 9:00</button>
+      <span class="ov-badge" id="ovEnd"></span>
+    </div>
+  </div>
+  <div class="ov-list" id="ovList"></div>
+  <div class="ov-foot">
+    <button type="button" class="ov-go" id="ovStartPresBtn">Spustit prezentaci</button>
+  </div>
+</div>
+<div id="ovAskBackdrop" class="modal-backdrop hidden">
+  <div class="modal" style="max-width:360px;">
+    <div class="modal-head"><h2 style="font-size:22px;">Kdy trénink začíná?</h2></div>
+    <p style="font-size:13.5px;color:var(--ink-soft);margin:-8px 0 14px;">Podle toho přehled pozná, u kterého cviku bys teď měl být. Bez času se ukáže jen plán.</p>
+    <input type="time" id="ovAskTime" class="ov-timeinput" value="09:00">
+    <div class="modal-actions">
+      <button type="button" class="btn btn-primary" id="ovAskOkBtn">Pokračovat</button>
+      <button type="button" class="btn btn-ghost" id="ovAskSkipBtn" style="margin-bottom:0;">Přeskočit</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===================== DIAGNOSTICKÝ ZÁZNAM (dočasné) ===================== -->
 <div id="appVersionLabel" style="position:fixed;bottom:14px;left:14px;z-index:500;font-size:10.5px;color:var(--ink-faint);font-family:monospace;background:var(--card);padding:3px 7px;border-radius:5px;pointer-events:none;"></div>
 <button type="button" id="debugLogBtn" aria-label="Diagnostický záznam" class="hidden" style="position:fixed;bottom:14px;right:14px;z-index:500;width:38px;height:38px;border-radius:50%;background:rgba(27,36,48,.55);color:#fff;border:none;font-size:16px;">🐞</button>
@@ -2565,7 +2639,7 @@ async function ensureMessaging() {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-09-13 14:45";
+const APP_VERSION = "2026-09-13 19:10";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -6022,8 +6096,19 @@ linkForm.addEventListener("submit", async (e) => {
     try {
       thumbToSave = await saveThumbnail(id, thumbToSave, existing ? existing.thumbnail : "");
     } catch (err) {
+      // Skutečný důvod dřív skončil jenom v konzoli prohlížeče, kam se na telefonu nikdo
+      // nepodívá — proto to vypadalo, že appka jen tak "nechce". Teď jde kód i zpráva do
+      // diagnostického záznamu (🐞) a kód rovnou do hlášky, ať je z čeho vyjít.
+      const code = (err && err.code) || "";
+      const msg = (err && err.message) || String(err);
       console.error("Uložení náhledu selhalo:", err);
-      toast("Uložení náhledu se nepovedlo, zkus to prosím znovu.", 6000, "err");
+      logDebug(`[náhled] ✗ NAHRÁNÍ SELHALO — kód: ${code || "(žádný)"} — ${msg}`);
+      if (code === "storage/unauthorized") logDebug("[náhled] → pravidla Firebase Storage zápis nepovolují (typicky jim vypršela platnost).");
+      if (code === "storage/unknown") logDebug("[náhled] → nejspíš není zapnuté Storage, nebo nesedí jméno bucketu v konfiguraci.");
+      if (code === "storage/retry-limit-exceeded") logDebug("[náhled] → nahrávání se vůbec nedovolalo serveru (síť, nebo blokované spojení).");
+      if (/časový limit/.test(msg)) logDebug("[náhled] → požadavek nedoběhl do limitu, appka ho utnula sama.");
+      logDebug(`[náhled] bucket z konfigurace: ${firebaseConfig.storageBucket}`);
+      toast(`Uložení náhledu se nepovedlo${code ? ` (${code})` : ""}. Detaily v 🐞.`, 9000, "err");
       return;
     }
   }
@@ -8065,12 +8150,12 @@ function renderFazeFrame(entry) {
     stejnou třídu "hidden" — proto se hlídá MutationObserverem (stejně jako to appka už dělá
     u popout okna, viz handlePopoutDeepLink výš), ne navěšením na jedno konkrétní tlačítko. */
 let fazeCardHome = null; // odkud se karta vzala: { parent, next } — kam přesně ji vrátit
-function fazeOpenLibraryCard(videoId) {
+function fazeOpenLibraryCard(videoId, hostId) {
   if (!videoId || !state.library[videoId]) return;
   const backdrop = document.getElementById("detailModalBackdrop");
   if (!fazeCardHome) fazeCardHome = { parent: backdrop.parentElement, next: backdrop.nextSibling };
   backdrop.classList.add("tmf-sheet");
-  document.getElementById("trainingModeView").appendChild(backdrop);
+  document.getElementById(hostId || "trainingModeView").appendChild(backdrop);
   const obs = new MutationObserver(() => {
     if (!backdrop.classList.contains("hidden")) return;
     obs.disconnect();
@@ -8364,6 +8449,257 @@ document.getElementById("tmfTimerReset").addEventListener("click", () => { docum
 document.getElementById("tmfTimerToggle").addEventListener("click", () => {
   document.getElementById("tmTimerToggle").click();
   document.getElementById("tmfTimerToggle").innerHTML = trainingModeRunning ? '<i class="fa-solid fa-pause"></i>' : '<i class="fa-solid fa-play"></i>';
+});
+
+/* =========================================================
+   PŘEHLED TRÉNINKU — třetí zobrazení (zatím jen pro admina, test)
+   Celý trénink na jedné rolovací obrazovce, na výšku, JEN KE ČTENÍ. Jiné použití než
+   prezentace: tu si člověk spustí a odejde od ní (tablet na stole), tohle má u sebe v ruce,
+   reálný čas čte z telefonu a chce se podívat o pár kroků dopředu.
+   Podle zadaného začátku orámuje cvik, u kterého by podle času MĚL být — appka skutečnou
+   polohu nezná, dokud neběží prezentace, takže je to "kde bys měl být", ne "kde jsi".
+   Prezentace se proto od rámečku nespouští sama: tlačítko dole píše, odkud startuje.
+   ========================================================= */
+let ovStartSeconds = null; // začátek tréninku v sekundách od půlnoci; null = nezadáno
+let ovAskedForId = null;   // na který trénink už se appka ptala (ptá se jednou, ne při každém otevření)
+let ovTick = null;
+
+function ovNowSeconds() {
+  const d = new Date();
+  return d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds();
+}
+function ovMinText(sec) {
+  if (sec >= 60) return `${Math.round(sec / 60)} min`;
+  return `${Math.max(1, Math.round(sec))} s`;
+}
+function ovRowSeconds(row) {
+  return valueToSeconds(row.duration != null ? row.duration : 1, row.durationUnit || "min");
+}
+/** Nářadí jedné položky — sjednocení knihovny a ručních příloh, u skupiny přes všechny členy. */
+function ovItemEquipment(row) {
+  const out = [];
+  const add = arr => (arr || []).forEach(e => { if (e && out.indexOf(e) === -1) out.push(e); });
+  if (row.part === "prestavka") return out;
+  if (row.isGroup) {
+    (row.videos || []).forEach(v => {
+      if (v.isBreak) return;
+      if (v.isText) { add(v.equipment); return; }
+      const lib = state.library[v.videoId];
+      add(lib && lib.equipment); add(v.extraEquipment);
+    });
+    return out;
+  }
+  if (row.isText) { add(row.equipment); return out; }
+  const lib = state.library[row.videoId];
+  add(lib && lib.equipment); add(row.extraEquipment);
+  return out;
+}
+function ovThumbHtml(lib, isText) {
+  if (isText) return '<span class="ov-thumb"><i class="fa-regular fa-file-lines"></i></span>';
+  const url = lib ? resolveThumbnailUrl(lib) : "";
+  return `<span class="ov-thumb"${url ? ` style="background-image:url('${esc(url)}')"` : ""}></span>`;
+}
+function ovMemberHtml(row, v) {
+  if (v.isBreak) {
+    return `<div class="ov-member ov-mbreak"><span class="ov-mtitle">${esc(v.label || "Přestávka")}</span>
+      <span class="ov-dur">${ovMinText(valueToSeconds(v.duration != null ? v.duration : 1, v.durationUnit || "min"))}</span></div>`;
+  }
+  const isReps = (row.mode || "time") === "reps";
+  const lib = v.isText ? null : state.library[v.videoId];
+  const title = v.isText ? (v.title || "(bez názvu)") : (lib ? lib.title : "(video smazáno)");
+  const dur = isReps ? (v.reps || "opakování") : ovMinText(valueToSeconds(v.duration != null ? v.duration : 1, v.durationUnit || "min"));
+  return `<div class="ov-member" data-vid="${esc(v.videoId || "")}" data-text="${v.isText ? "1" : ""}" data-mid="${esc(v.memberId || "")}">
+    ${ovThumbHtml(lib, v.isText)}<span class="ov-mtitle">${esc(title)}</span>
+    <span class="ov-dur${isReps ? " ov-reps" : ""}">${esc(dur)}</span></div>`;
+}
+function ovCardHtml(row) {
+  const isReps = (row.mode || "time") === "reps";
+  if (row.part === "prestavka") {
+    return `<div class="ov-card ov-break" data-itemid="${esc(row.itemId)}" style="border-left-color:var(--part-prestavka)">
+      <div class="ov-top"><span class="ov-title">${esc(row.label || "Přestávka")}</span>
+      <span class="ov-dur">${ovMinText(ovRowSeconds(row))}</span></div></div>`;
+  }
+  const color = getPart(row.part).color || "var(--court)";
+  if (row.isGroup) {
+    const series = row.seriesCount || 1;
+    return `<div class="ov-card ov-group" data-itemid="${esc(row.itemId)}">
+      <div class="ov-top">
+        <span class="ov-gname">${esc(row.name || "Skupina")}</span>
+        ${series > 1 ? `<span class="ov-series">${series} série</span>` : ""}
+      </div>
+      <div class="ov-members">${(row.videos || []).map(v => ovMemberHtml(row, v)).join("")}</div>
+      ${row.cue ? `<div class="ov-cue"><i class="fa-solid fa-comment"></i>${esc(row.cue)}</div>` : ""}
+      ${richHasContent(row.poznamka) ? `<div class="ov-note">${richValueToHtml(row.poznamka)}</div>` : ""}
+    </div>`;
+  }
+  const lib = row.isText ? null : state.library[row.videoId];
+  const title = row.isText ? (row.title || "(bez názvu)") : (lib ? lib.title : "(video smazáno z knihovny)");
+  const dur = isReps ? (row.reps || "opakování") : ovMinText(ovRowSeconds(row));
+  return `<div class="ov-card" data-itemid="${esc(row.itemId)}" data-vid="${esc(row.videoId || "")}" data-text="${row.isText ? "1" : ""}" style="border-left-color:${esc(color)}">
+    <div class="ov-top">
+      ${ovThumbHtml(lib, row.isText)}
+      <span class="ov-title">${esc(title)}</span>
+      <span class="ov-dur${isReps ? " ov-reps" : ""}">${esc(dur)}</span>
+    </div>
+    ${row.cue ? `<div class="ov-cue"><i class="fa-solid fa-comment"></i>${esc(row.cue)}</div>` : ""}
+    ${richHasContent(row.poznamka) ? `<div class="ov-note">${richValueToHtml(row.poznamka)}</div>` : ""}
+  </div>`;
+}
+/** Proužek "připrav" se vloží vždycky, když se mění část tréninku — shrne nářadí všech
+    položek, které do nové části patří, ať trenér ví, co nachystat na další blok. */
+function ovGearStripHtml(items, from) {
+  const part = items[from].part;
+  const gear = [];
+  for (let i = from; i < items.length && items[i].part === part; i++) {
+    ovItemEquipment(items[i]).forEach(e => { if (gear.indexOf(e) === -1) gear.push(e); });
+  }
+  if (!gear.length) return "";
+  return `<div class="ov-gear"><b>${esc((getPart(part).label || part).toUpperCase())} &middot; PŘIPRAV</b>${gear.map(g => `<span>${esc(g)}</span>`).join("")}</div>`;
+}
+/** Plánovaný začátek každé položky od začátku tréninku. Schválně přes fazeItemTotalSeconds,
+    tedy přes stejný výpočet, jakým se kreslí osa v prezentaci — ne přes computeRowClockTimes,
+    které od první položky s neznámou délkou (cvik na opakování bez vyplněného odhadu) označí
+    všechno další za neznámé. Tady by to znamenalo, že se rámeček po prvním takovém cviku
+    navždy zastaví, což je horší než to, že takový cvik počítáme jako nulový a rámeček pak jde
+    kousek napřed. Kdo chce mít rámeček přesný, vyplní u opakovacích cviků odhad. */
+function ovRowStartTimes(t) {
+  const out = {};
+  let acc = 0;
+  (t.items || []).forEach(row => { out[row.itemId] = acc; acc += fazeItemTotalSeconds(row); });
+  return out;
+}
+function ovNowItemId(t) {
+  if (ovStartSeconds == null) return null;
+  const times = ovRowStartTimes(t);
+  const elapsed = ovNowSeconds() - ovStartSeconds;
+  if (elapsed < 0) return null;
+  let found = null;
+  (t.items || []).forEach(row => { if (times[row.itemId] <= elapsed) found = row.itemId; });
+  return found;
+}
+function ovRefreshNow() {
+  const t = state.trainings[currentTrainingId];
+  if (!t) return;
+  const id = ovNowItemId(t);
+  let nowTitle = "";
+  document.querySelectorAll("#ovList .ov-card").forEach(el => {
+    const on = el.dataset.itemid === id;
+    el.classList.toggle("ov-now", on);
+    if (on) {
+      const tEl = el.querySelector(".ov-title, .ov-gname");
+      nowTitle = tEl ? tEl.textContent : "";
+    }
+  });
+  const btn = document.getElementById("ovStartPresBtn");
+  btn.innerHTML = nowTitle
+    ? `Spustit prezentaci<small>od „${esc(nowTitle)}"</small>`
+    : "Spustit prezentaci<small>od začátku</small>";
+}
+function renderOverview() {
+  const t = state.trainings[currentTrainingId];
+  if (!t) return;
+  document.getElementById("ovName").textContent = t.name || "Trénink";
+  const startBtn = document.getElementById("ovStartBtn");
+  const endEl = document.getElementById("ovEnd");
+  if (ovStartSeconds == null) {
+    startBtn.textContent = "zadat začátek";
+    endEl.classList.add("hidden");
+  } else {
+    startBtn.textContent = `od ${pdfFmtClock(ovStartSeconds)}`;
+    const { totalSeconds, hasReps } = calculateTrainingTotalSeconds(t);
+    endEl.classList.toggle("hidden", hasReps);
+    if (!hasReps) endEl.textContent = `končíme ${pdfFmtClock((ovStartSeconds + totalSeconds) % 86400)}`;
+  }
+  const items = t.items || [];
+  let html = "", lastPart = null;
+  items.forEach((row, i) => {
+    if (row.part !== "prestavka" && row.part !== lastPart) {
+      html += ovGearStripHtml(items, i);
+      lastPart = row.part;
+    }
+    html += ovCardHtml(row);
+  });
+  document.getElementById("ovList").innerHTML = html;
+  ovRefreshNow();
+}
+function openOverview() {
+  const t = state.trainings[currentTrainingId];
+  if (!t || !t.items.length) { toast("Trénink je prázdný, není co ukazovat.", 2200, "warn"); return; }
+  document.getElementById("overviewView").classList.remove("hidden");
+  if (ovAskedForId !== currentTrainingId) {
+    ovAskedForId = currentTrainingId;
+    document.getElementById("ovAskTime").value = (state.profile && state.profile.trainingStartTime) || "09:00";
+    document.getElementById("ovAskBackdrop").classList.remove("hidden");
+  }
+  renderOverview();
+  if (ovTick) clearInterval(ovTick);
+  ovTick = setInterval(ovRefreshNow, 30000);
+}
+function closeOverview() {
+  if (ovTick) { clearInterval(ovTick); ovTick = null; }
+  document.getElementById("ovAskBackdrop").classList.add("hidden");
+  document.getElementById("overviewView").classList.add("hidden");
+}
+document.getElementById("openOverviewBtn").addEventListener("click", openOverview);
+document.getElementById("ovBackBtn").addEventListener("click", closeOverview);
+document.getElementById("ovStartBtn").addEventListener("click", () => {
+  document.getElementById("ovAskTime").value = ovStartSeconds == null
+    ? ((state.profile && state.profile.trainingStartTime) || "09:00")
+    : pdfFmtClock(ovStartSeconds).padStart(5, "0");
+  document.getElementById("ovAskBackdrop").classList.remove("hidden");
+});
+document.getElementById("ovAskOkBtn").addEventListener("click", () => {
+  const v = document.getElementById("ovAskTime").value;
+  ovStartSeconds = v ? timeInputToSeconds(v) : null;
+  document.getElementById("ovAskBackdrop").classList.add("hidden");
+  renderOverview();
+});
+document.getElementById("ovAskSkipBtn").addEventListener("click", () => {
+  ovStartSeconds = null;
+  document.getElementById("ovAskBackdrop").classList.add("hidden");
+  renderOverview();
+});
+/** Ťuknutí na kartu otevře u videa tu samou ořezanou kartu jako v prezentaci, u textového
+    cvičení okno s popisem. Přestávky a hlavička skupiny se neotvírají — není co ukázat. */
+document.getElementById("ovList").addEventListener("click", (e) => {
+  const member = e.target.closest(".ov-member");
+  const card = e.target.closest(".ov-card");
+  const src = member && !member.classList.contains("ov-mbreak") ? member : card;
+  if (!src || src.classList.contains("ov-break") || src.classList.contains("ov-group")) return;
+  if (src.dataset.text === "1") { ovOpenTextInfo(src.dataset.itemid, src.dataset.mid); return; }
+  if (src.dataset.vid) fazeOpenLibraryCard(src.dataset.vid, "overviewView");
+});
+/** Popis textového cvičení. Okno "Detail cvičení" bydlí uvnitř #trainingModeView (kvůli
+    fullscreenu), který je tady schovaný — na dobu otevření se proto přestěhuje do Přehledu
+    a po zavření vrátí zpátky, stejně jako to dělá karta videa. */
+function ovOpenTextInfo(itemId, memberId) {
+  const t = state.trainings[currentTrainingId];
+  const row = (t.items || []).find(r => r.itemId === itemId);
+  if (!row) return;
+  const src = memberId ? (row.videos || []).find(v => v.memberId === memberId) : row;
+  if (!src) return;
+  tmCurrentInfoData = { title: src.title || "(bez názvu)", shortDesc: src.shortDesc || "", longDesc: src.longDesc || "" };
+  const backdrop = document.getElementById("exerciseInfoModalBackdrop");
+  const home = { parent: backdrop.parentElement, next: backdrop.nextSibling };
+  document.getElementById("overviewView").appendChild(backdrop);
+  const obs = new MutationObserver(() => {
+    if (!backdrop.classList.contains("hidden")) return;
+    obs.disconnect();
+    home.parent.insertBefore(backdrop, home.next);
+  });
+  obs.observe(backdrop, { attributes: true, attributeFilter: ["class"] });
+  openExerciseInfoModal();
+}
+/** Prezentace se spouští od cviku, u kterého rámeček stojí — a tlačítko to má napsané, takže
+    se nikdy nic nepřeskočí potichu. */
+document.getElementById("ovStartPresBtn").addEventListener("click", () => {
+  const t = state.trainings[currentTrainingId];
+  if (!t) return;
+  const id = ovNowItemId(t);
+  const idx = Math.max(0, (t.items || []).findIndex(r => r.itemId === id));
+  closeOverview();
+  startTrainingMode(currentTrainingId, "faze");
+  if (idx > 0) { trainingModeIndex = idx; renderTrainingModeItem(); }
 });
 
 /* =========================================================
@@ -8952,6 +9288,7 @@ function openEditor(id) {
   // "Fáze cvičení (test)" — nový tréninkový režim, zatím jen pro admina, viz
   // claude/trener-treninkovy-rezim.md. Starý "Spustit trénink" zůstává pro všechny beze změny.
   document.getElementById("startTrainingModeFazeBtn").classList.toggle("hidden", uidCurrent !== ADMIN_UID);
+  document.getElementById("openOverviewBtn").classList.toggle("hidden", uidCurrent !== ADMIN_UID);
   renderTrainingVisibilityBtn();
   pickerTagFilter.clear();
   pickerEquipFilter.clear();
@@ -12071,7 +12408,7 @@ document.getElementById("helpSearchInput").addEventListener("input", (e) => rend
    smysl z něj jít tlačítkem Zpět tam, odkud přišel, ne rovnou ven z appky.
 */
 (function setupBackButtonNav() {
-  const TRACKED_SELECTOR = ".modal-backdrop, #trainingModeView, #editorView";
+  const TRACKED_SELECTOR = ".modal-backdrop, #trainingModeView, #overviewView, #editorView";
   // Mapování otevřeného okna -> jeho vlastní zavírací tlačítko. Appka radši "klikne" na
   // existující tlačítko (ať se spustí i případné vedlejší účinky zavření), než aby okno
   // zavírala natvrdo sama. Prázdná hodnota = okno záměrně nemá zavírací tlačítko (viz
@@ -12102,6 +12439,7 @@ document.getElementById("helpSearchInput").addEventListener("input", (e) => rend
     cropModalBackdrop: "closeCropModalBtn",
     helpModalBackdrop: "closeHelpModalBtn",
     trainingModeView: "tmExitBtn",
+    overviewView: "ovBackBtn",
     editorView: "backToTrainingsBtn",
   };
 
