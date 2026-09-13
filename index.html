@@ -2639,7 +2639,7 @@ async function ensureMessaging() {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-09-13 19:10";
+const APP_VERSION = "2026-09-13 20:05";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -3080,7 +3080,7 @@ document.getElementById("adoptDriveThumbsBtn").addEventListener("click", async (
     const dataUrl = await fetchImageAsDataUrl(item.thumbnail);
     if (!dataUrl) { failCount++; logDebug(`[náhledy] „${item.title}" — nepovedlo se stáhnout (aplikace to tiše přeskočila, video samo zůstává beze změny)`); continue; }
     try {
-      item.thumbnail = await saveThumbnail(item.id, dataUrl, item.thumbnail);
+      item.thumbnail = await saveThumbnailToFirestore(item.id, dataUrl);
       okCount++;
     } catch (err) {
       failCount++;
@@ -3123,7 +3123,7 @@ document.getElementById("refreshDriveThumbsBtn").addEventListener("click", async
     const dataUrl = await fetchImageAsDataUrl(freshUrl);
     if (!dataUrl) { logDebug(`[náhledy] „${item.title}" — čerstvá adresa nastavena, stažení natrvalo se nepovedlo`); continue; }
     try {
-      item.thumbnail = await saveThumbnail(item.id, dataUrl, "");
+      item.thumbnail = await saveThumbnailToFirestore(item.id, dataUrl);
       savedCount++;
     } catch (err) {
       logDebug(`[náhledy] „${item.title}" — uložení natrvalo selhalo:`, err.message || err);
@@ -3653,6 +3653,23 @@ function resolveThumbnailUrl(item) {
     return state.thumbnails[item.id] || "";
   }
   return (item && item.thumbnail) || "";
+}
+
+/** Zápis náhledu do Firestore, do vlastní kolekce sharedThumbnails — jeden dokument na video,
+    takže limit 1 MB platí zvlášť pro každý náhled a hlavní knihovnu to netíží. V knihovně po
+    něm zůstane jen krátký odkaz "local:ID", který umí přečíst resolveThumbnailUrl výš.
+
+    Proč zase tudy, když je níž hotová cesta přes Firebase Storage: Storage není na projektu
+    doopravdy zapnuté. Nahrání do něj končí po dvaceti vteřinách chybou
+    "storage/retry-limit-exceeded", tedy požadavek se vůbec nedovolá bucketu — a všech 287
+    stávajících náhledů pořád leží v téhle kolekci ve Firestore, odkud se i čtou. Kód přes
+    Storage zůstává celý na místě (používají ho stěhovací nástroje pro admina), takže až
+    Storage v konzoli Firebase přibude, stačí tady zavolat saveThumbnail() místo téhle funkce. */
+async function saveThumbnailToFirestore(id, dataUrl) {
+  const prepared = await enforceThumbSizeBudget(dataUrl);
+  await setDoc(doc(db, "sharedThumbnails", id), { data: prepared, updatedAt: Date.now() });
+  state.thumbnails[id] = prepared; // ať je náhled vidět hned, než dorazí onSnapshot
+  return LOCAL_THUMB_PREFIX + id;
 }
 
 /* =========================================================
@@ -6094,7 +6111,7 @@ linkForm.addEventListener("submit", async (e) => {
   let thumbToSave = pendingThumbUpload || document.getElementById("thumbPreview").dataset.thumb || "";
   if (thumbToSave.startsWith("data:")) {
     try {
-      thumbToSave = await saveThumbnail(id, thumbToSave, existing ? existing.thumbnail : "");
+      thumbToSave = await saveThumbnailToFirestore(id, thumbToSave);
     } catch (err) {
       // Skutečný důvod dřív skončil jenom v konzoli prohlížeče, kam se na telefonu nikdo
       // nepodívá — proto to vypadalo, že appka jen tak "nechce". Teď jde kód i zpráva do
@@ -6103,11 +6120,9 @@ linkForm.addEventListener("submit", async (e) => {
       const msg = (err && err.message) || String(err);
       console.error("Uložení náhledu selhalo:", err);
       logDebug(`[náhled] ✗ NAHRÁNÍ SELHALO — kód: ${code || "(žádný)"} — ${msg}`);
-      if (code === "storage/unauthorized") logDebug("[náhled] → pravidla Firebase Storage zápis nepovolují (typicky jim vypršela platnost).");
-      if (code === "storage/unknown") logDebug("[náhled] → nejspíš není zapnuté Storage, nebo nesedí jméno bucketu v konfiguraci.");
-      if (code === "storage/retry-limit-exceeded") logDebug("[náhled] → nahrávání se vůbec nedovolalo serveru (síť, nebo blokované spojení).");
-      if (/časový limit/.test(msg)) logDebug("[náhled] → požadavek nedoběhl do limitu, appka ho utnula sama.");
-      logDebug(`[náhled] bucket z konfigurace: ${firebaseConfig.storageBucket}`);
+      if (code === "permission-denied") logDebug("[náhled] → pravidla Firestore zápis do sharedThumbnails nepovolují.");
+      if (code === "invalid-argument") logDebug("[náhled] → fotka je nejspíš moc velká na jeden dokument (limit 1 MB).");
+      if (code === "unavailable") logDebug("[náhled] → Firestore je zrovna nedostupný (síť).");
       toast(`Uložení náhledu se nepovedlo${code ? ` (${code})` : ""}. Detaily v 🐞.`, 9000, "err");
       return;
     }
