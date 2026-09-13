@@ -2546,7 +2546,7 @@ async function ensureMessaging() {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-09-13 02:40";
+const APP_VERSION = "2026-09-13 08:15";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -8200,6 +8200,10 @@ function renderFazeItem() {
   if (trainingModeFinished) { renderFazeFinished(); return; }
   document.getElementById("tmfExpired").classList.toggle("hidden", !tmfAlertActive);
   document.getElementById("tmfAxis").innerHTML = fazeBuildAxisHtml();
+  // Pilulky fází schovává renderFazeFinished kvůli Shrnutí a nikdo jiný je nevracel — druhý
+  // trénink v téže relaci pak běžel bez nich. Tady se vrací BEZPODMÍNEČNĚ: během pauzy mezi
+  // sériemi se schovávat nemají (na rozdíl od dřívějška), takže tu není co podmiňovat.
+  document.getElementById("tmfPhases").classList.remove("hidden");
   document.querySelectorAll("#tmfPhases button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.p === tmfPhase)));
   document.getElementById("tmfPrevBtn").disabled = trainingModeIndex === 0 && !trainingModeInSeriesPause;
   document.getElementById("tmfNextBtn").innerHTML = 'Další cvičení <i class="fa-solid fa-arrow-right"></i>';
