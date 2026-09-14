@@ -2669,7 +2669,7 @@ async function ensureMessaging() {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-09-14 13:20";
+const APP_VERSION = "2026-09-14 14:05";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -8673,8 +8673,9 @@ function renderOverview() {
   });
   if (items.length) html += ovTickHtml(acc, null) + `<div class="ov-endrow">konec tréninku</div>`;
   // Seznam se zapisuje VŽDYCKY a jako první — ať se sem dostane cokoliv, nikdy tu nezůstane
-  // viset předchozí trénink.
-  document.getElementById("ovList").innerHTML = html;
+  // viset předchozí trénink. Obal .ov-rows je POVINNÝ: nese mřížku (58px časová páska | karty).
+  // Bez něj se rysky i karty roztáhnou přes celou šířku a osa se rozsype.
+  document.getElementById("ovList").innerHTML = `<div class="ov-rows">${html}</div>`;
   // Hlavička se počítá až teď, a to ze STEJNÉHO součtu (acc), jakým se kreslila páska. Dřív
   // měla vlastní průchod přes fazeItemTotalSeconds a uměla se s páskou rozejít — Mek viděl
   // "končíme 06:58" nad páskou, která končila v 07:20.
