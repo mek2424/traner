@@ -1605,7 +1605,9 @@ body.popout-mode .popout-btn{display:none !important;}
         <button type="button" class="btn btn-sm" id="trainingVisibilityBtn" style="margin-bottom:0;"></button>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:12px;">
-        <button type="button" class="btn btn-primary" id="openOverviewBtn" style="flex:1;" title="Otevře Přehled tréninku — celý plán na jedné obrazovce; z něj se dá spustit prezentace"><i class="fa-solid fa-play"></i> Začít trénovat</button>
+        <button type="button" class="btn btn-primary" id="startTrainingModeBtn" style="flex:1;"><i class="fa-solid fa-play"></i> Spustit trénink</button>
+        <button type="button" class="btn btn-ghost hidden" id="startTrainingModeFazeBtn" title="Nový rozpracovaný vzhled tréninkové prezentace — zatím jen pro admina, na vyzkoušení"><i class="fa-solid fa-flask"></i> Fáze cvičení (test)</button>
+        <button type="button" class="btn btn-ghost hidden" id="openOverviewBtn" title="Přehled tréninku — celý plán na jedné obrazovce, jen ke čtení; zatím jen pro admina"><i class="fa-solid fa-list-ul"></i> Přehled (test)</button>
       </div>
       <div id="readOnlyBanner" class="hidden" style="background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-sm);padding:9px 12px;font-size:12.5px;color:var(--ink-soft);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
         <span><i class="fa-solid fa-eye"></i> <span id="readOnlyBannerText"></span></span>
@@ -2674,7 +2676,7 @@ async function ensureMessaging() {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-09-14 18:40";
+const APP_VERSION = "2026-09-14 15:10";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -4793,12 +4795,6 @@ async function saveUserData() {
     const activeMine = mine.filter(isShareActive);
     const trainingSnapshots = await Promise.all(activeMine.map(buildShareSnapshot));
     activeMine.forEach((t, i) => { t.shareSnapshot = trainingSnapshots[i]; });
-    // ÚKLID PO VYPRŠENÍ. Odkaz platí 3 dny, ale kopie dat pro veřejnou stránku zůstávala
-    // v tréninku napořád (mazalo ji jen ruční "Zrušit sdílení"). A protože se tímhle jedním
-    // zápisem přepisují VŠECHNY tréninky, vozila se s sebou při každém uložení donekonečna —
-    // s náhledy jde o stovky kB na trénink. Jakmile odkaz vyprší, kopie letí pryč; nové
-    // sdílení si postaví čerstvou. Pole share zůstává, nese jen datum a je drobné.
-    mine.forEach(t => { if (t.shareSnapshot && !isShareActive(t)) t.shareSnapshot = null; });
     await Promise.all(mine.map(t => setDoc(doc(db, "users", uidCurrent, "trainings", t.id), t)));
     return true;
   } catch (e) {
@@ -4875,7 +4871,7 @@ function handlePopoutDeepLink() {
     if (type === "video") openDetailModal(id);
     else if (type === "editVideo") openLinkModal(id);
     else if (type === "trainingEditor") { switchView("trainings"); openEditor(id); }
-    else if (type === "trainingMode") { switchView("trainings"); currentTrainingId = id; openOverview(); }
+    else if (type === "trainingMode") { switchView("trainings"); startTrainingMode(id); }
     else if (type === "help") openHelpModal();
   } catch (e) { console.error("Otevření z popoutu selhalo:", e); }
 }
@@ -6743,14 +6739,7 @@ async function buildShareSnapshot(t) {
       title: item.title || "", platform: item.platform || "", videoId: item.videoId || "",
       url: item.url || "", timestamp: item.timestamp || null, aspectRatio: item.aspectRatio || "16/9",
       shortDesc: item.shortDesc || "", longDesc: item.longDesc || "",
-      brokenAt: item.brokenAt || null,
-      // Přehled potřebuje nářadí (proužky "PŘIPRAV" a souhrn v hlavičce) a náhled na kartě.
-      // U náhledu je tady schválně resolveThumbnailUrl, ne item.thumbnail: vlastní nahrané
-      // náhledy jsou odkaz "local:ID" na kolekci, do které nepřihlášený nevidí, takže se do
-      // snímku musí vložit rovnou obrázek. Je to ~27 kB na kus — proto se snímek po vypršení
-      // sdílení zahazuje, viz úklid v saveUserData.
-      equipment: item.equipment || [],
-      thumbnail: resolveThumbnailUrl(item) || ""
+      brokenAt: item.brokenAt || null
     };
   });
   const videoIds = Object.keys(videos);
@@ -7205,12 +7194,7 @@ function startTrainingMode(trainingId, skin) {
   trainingModeGroupVideoIndex = 0;
   trainingModeInSeriesPause = false;
   trainingModeFinished = false;
-  // Stará prezentace ("Spustit trénink") je z appky pryč — tréninkový režim jede vždycky
-  // v novém vzhledu. Parametr skin zůstal jen kvůli volajícím, hodnota se ignoruje. Klasické
-  // vykreslování pod tím ale ŽIJE DÁL a je potřeba: nový vzhled na něm stojí (renderTrainingModeItem
-  // volá renderTrainingModeItemClassic a tlačítka proklikávají ta skrytá stará), takže se
-  // smazat nedá, aniž by se přepsal celý nový vzhled. Viz záloha u Meka.
-  trainingModeSkin = "faze";
+  trainingModeSkin = skin === "faze" ? "faze" : "classic";
   tmfPhase = "brief";
   tmfAlertActive = false;
   // Starý vzhled a nový "Fáze cvičení" vzhled sdílí tenhle jeden #trainingModeView (kvůli
@@ -7245,6 +7229,8 @@ function startTrainingMode(trainingId, skin) {
     requestAnimationFrame(() => { tmView.style.opacity = ""; });
   }, 60);
 }
+document.getElementById("startTrainingModeBtn").addEventListener("click", () => startTrainingMode());
+document.getElementById("startTrainingModeFazeBtn").addEventListener("click", () => startTrainingMode(null, "faze"));
 
 /** Aplikace u režimu na opakování jen schová odpočet času — aplikace pro pokračování dál používá
     to samé tlačítko "Další" jako u času, žádné zvláštní tlačítko navíc aplikace nemá. */
@@ -9395,6 +9381,10 @@ function openEditor(id) {
   document.getElementById("saveTrainingBtn").classList.toggle("hidden", editorReadOnly);
   document.getElementById("deleteTrainingBtn").classList.toggle("hidden", editorReadOnly);
   document.getElementById("trainingVisibilityBtn").classList.toggle("hidden", editorReadOnly);
+  // "Fáze cvičení (test)" — nový tréninkový režim, zatím jen pro admina, viz
+  // claude/trener-treninkovy-rezim.md. Starý "Spustit trénink" zůstává pro všechny beze změny.
+  document.getElementById("startTrainingModeFazeBtn").classList.toggle("hidden", uidCurrent !== ADMIN_UID);
+  document.getElementById("openOverviewBtn").classList.toggle("hidden", uidCurrent !== ADMIN_UID);
   renderTrainingVisibilityBtn();
   pickerTagFilter.clear();
   pickerEquipFilter.clear();
@@ -12408,27 +12398,21 @@ const HELP_DATA = [
     ]}
   ]},
   { group: "Tréninkový režim", blocks: [
-    { title: "Přehled tréninku", icon: "fa-solid fa-play", qa: [
-      { q: "Jak spustím trénink?", a: "V editoru tréninku klikni na „Začít trénovat“. Otevře se Přehled tréninku — celý plán na jedné obrazovce, na výšku, jen ke čtení. Z něj se dá dole spustit prezentace na vedení tréninku naživo.", kw: "zacit trenovat spustit" },
-      { q: "Proč se mě aplikace ptá, kdy trénink začíná?", a: "Podle toho času dopočítá, kdy které cvičení začíná a končí — je to prostý součet délek, nic víc. Otázku můžeš přeskočit, pak se místo hodin ukážou jen délky cvičení. Čas jde kdykoli změnit ťuknutím na něj v hlavičce." },
-      { q: "Co je ta svislá páska vlevo?", a: "Časová osa tréninku. U každé rysky je hodina, kdy dané cvičení začíná, a pod ní jeho délka. Konec jednoho cvičení je začátek toho dalšího, proto je tam jen jedno číslo místo dvou.", kw: "osa cara casy kolecka" },
-      { q: "Proč u některých cvičení čas nesedí?", a: "Cviky na počet opakování bez vyplněného odhadu aplikace neumí spočítat, tak jim dosadí náhradní odhad, aby se osa nezastavila. Když chceš přesné časy, vyplň u takových cviků odhad." },
-      { q: "K čemu je řádek s vybavením nahoře?", a: "Souhrn všeho, co je na celý trénink potřeba — tohle si nachystáš, než vyrazíš. Proužky mezi cvičeními pak ukazují, co nachystat na konkrétní část tréninku." },
-      { q: "Jak si přečtu poznámku u cvičení?", a: "Cue je vidět rovnou. Poznámka je schovaná pod značkou „poznámka“ — ťukni na ni a rozbalí se. Kde značka není, tam poznámka není." },
-      { q: "Co se stane, když ťuknu na cvičení?", a: "Otevře se karta videa — samotné video, přímý odkaz, nářadí a Více info. U textového cvičení se místo toho otevře jeho popis. U přestávky a u hlavičky skupiny se neděje nic, není co ukazovat." }
+    { title: "Spuštění a základní ovládání", icon: "fa-solid fa-play", qa: [
+      { q: "Jak spustím Tréninkový režim?", a: "V editoru tréninku klikni na tlačítko pro spuštění — aplikace přejde do celoobrazovkového režimu určeného na vedení tréninku naživo." },
+      { q: "Proč se mi telefon sám otočil na šířku?", a: "Tréninkový režim je navržený jen na šířku (kvůli přehlednosti videa i textu), takže si na úzké obrazovce otočení vynutí sám — na tabletu nebo počítači se to netýká." },
+      { q: "Jak přejdu na další nebo předchozí cvičení?", a: "Ovládacími tlačítky dole na obrazovce Tréninkového režimu — jde přeskočit i zpátky, kdyby bylo potřeba se k cvičení vrátit." },
+      { q: "Jak funguje časovač a tlačítko pauzy?", a: "Časovač odpočítává nastavenou dobu cvičení sám, tlačítko pauzy ho kdykoli zastaví/spustí — hodí se, když je potřeba cvičení na chvíli přerušit." }
     ]},
-    { title: "Prezentace tréninku", icon: "fa-solid fa-display", qa: [
-      { q: "Co udělá „Spustit prezentaci“?", a: "Spustí celoobrazovkovou prezentaci na vedení tréninku naživo, od prvního cviku. Na telefonu si sama vynutí otočení na šířku — na tabletu a počítači se to netýká.", kw: "prezentace fullscreen otoceni sirka" },
-      { q: "Co znamenají ty tři pilulky nahoře?", a: "Zadání, Průběh a Konec jsou tři pohledy na to samé cvičení a přepínají se ťuknutím, ne časem. Zadání ukazuje, co se cvičí, Průběh velký časovač, Konec to, co bude následovat." },
-      { q: "Jak funguje časovač?", a: "Odpočítává nastavenou dobu cvičení. Tlačítko pauzy ho zastaví a zase spustí, kolečko se šipkou ho nastaví znovu od začátku. Když čas přeteče, číslo zčervená a začne přičítat, kolik jsi přetáhl." },
-      { q: "Co když je cvičení na počet opakování?", a: "Místo časovače se ukáže počet opakování — odpočet se u takového cviku vůbec nespouští. Na další cvik se přepne tlačítkem, stejně jako u času." },
-      { q: "Co znamená ten přerušovaný rámeček kolem cvičení?", a: "Že cvik patří do skupiny nebo se opakuje v sériích. Zelené obdélníky vpravo dole jsou členi skupiny a ukazují, kolikátý zrovna běží; oranžové vlevo dole počítají série.", kw: "ramecek skupina serie obdelniky" },
-      { q: "K čemu slouží karta „Následuje“?", a: "Ve fázi Konec ukáže, co přijde po aktuálním cvičení, i s nářadím, co je na to potřeba — ať se stihneš připravit dřív, než cvičení skončí." },
-      { q: "Jak se v prezentaci zobrazí textové cvičení nebo nefunkční video?", a: "Místo přehrávače se ukáže popis cvičení; u nefunkčního videa navíc odkaz, kterým jde zkusit otevřít původní zdroj. Ovládání je jinak úplně stejné jako u videí." }
+    { title: "Za běhu tréninku", icon: "fa-solid fa-forward", qa: [
+      { q: "K čemu slouží panel „Následuje“?", a: "Ukáže náhled dalšího cvičení ještě před koncem toho aktuálního, ať se trenér i hráči stihnou připravit na to, co bude dál." },
+      { q: "Co udělá tlačítko „Více info“?", a: "Otevře detail aktuálního cvičení — plný popis, cue a poznámku — pro případ, že si trenér potřebuje při vedení tréninku něco rychle připomenout. Objeví se jen u cviků, kde je co k otevření, a dokud ho nerozklikneš, svítí na něm malá tečka.", kw: "otaznik info tecka vice" },
+      { q: "Jak se v Tréninkovém režimu zobrazí textové cvičení (bez videa)?", a: "Místo přehrávače se ukáže jen text popisu cvičení — ovládání (časovač, další/předchozí) funguje úplně stejně jako u videí." },
+      { q: "Jak se zachová video označené jako nefunkční?", a: "Chová se stejně jako textové cvičení — ukáže se popis místo videa, s možností otevřít původní zdroj přímo, pokud by šel i tak přehrát." }
     ]},
-    { title: "Ukončení", icon: "fa-solid fa-flag-checkered", qa: [
-      { q: "Jak prezentaci ukončím?", a: "Křížkem vlevo nahoře, klávesou Escape, nebo systémovým tlačítkem zpět — všechny tři tě vrátí do Přehledu tréninku, odkud jsi prezentaci spustil." },
-      { q: "Co se stane, když projedu celý trénink až do konce?", a: "Aplikace ukáže závěrečné shrnutí — kolik cvičení a kolik minut. Na samotném tréninku se tím nic nezmění ani neuloží jinak, než jak ho máš rozepsaný." }
+    { title: "Ukončení tréninku", icon: "fa-solid fa-flag-checkered", qa: [
+      { q: "Jak Tréninkový režim předčasně ukončím?", a: "Křížkem v horní části obrazovky Tréninkového režimu — vrátíš se zpátky do editoru tréninku." },
+      { q: "Co se stane, když projedu celý trénink až do konce?", a: "Aplikace ukáže závěrečnou obrazovku a poté se vrátí do editoru — samotný trénink se tím nijak neupraví ani neuloží jinak, než jak ho máš rozepsaný." }
     ]}
   ]}
 ];

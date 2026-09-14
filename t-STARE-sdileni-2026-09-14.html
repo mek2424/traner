@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Trénink — Trenér</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+<link rel="stylesheet" href="training-mode.css">
+<style>
+/* Tréninkový režim má společný stylopis s index.html — viz <link href="training-mode.css">
+   v hlavičce. Zůstávají tu jen pravidla, která má tahle veřejná stránka navíc (panel
+   s komentáři pro hráčky, varianty .hidden) nebo jinak než trenérská appka. */
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;height:100%;overflow:hidden;}
+body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;background:#F4F5F2;}
+:root{ --font-display:'Bebas Neue', sans-serif; --font-body:'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --court:#339933; --court-dark:#286e28; --chalk:#E8622C; --chalk-dark:#a8481f; --radius:14px; --radius-sm:10px; }
+.state-view{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;text-align:center;padding:20px;}
+.state-view.hidden{display:none;}
+.state-view i{font-size:36px;color:#8A93A0;margin-bottom:16px;}
+.state-view h1{font-family:var(--font-display);font-size:26px;color:#1B2430;margin:0 0 8px;letter-spacing:.02em;}
+.state-view p{color:#5B6472;font-size:14px;margin:0;max-width:320px;}
+.intro-start-btn{
+  margin-top:26px;padding:16px 32px;border-radius:999px;border:none;background:var(--court);
+  color:#fff;font-family:var(--font-display);font-size:18px;letter-spacing:.03em;cursor:pointer;
+  display:inline-flex;align-items:center;gap:10px;box-shadow:0 4px 14px rgba(51,153,51,.35);
+}
+.intro-start-btn:active{background:var(--court-dark);}
+#trainingModeView{
+  position:fixed;inset:0;background:#F4F5F2;display:flex;flex-direction:column;z-index:1;
+  transform:translateZ(0);-webkit-transform:translateZ(0);
+}
+#trainingModeView.hidden{display:none;}
+
+.tm-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;padding-top:calc(14px + env(safe-area-inset-top));flex-shrink:0;background:#F4F5F2;}
+.tm-exit{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.06);border:none;color:#5B6472;font-size:18px;display:flex;align-items:center;justify-content:center;text-decoration:none;}
+
+.tm-body{position:relative;flex:1;display:grid;grid-template-columns:1fr;grid-template-areas:"left" "right" "video";gap:16px;padding:24px 20px;overflow-y:auto;min-height:0;transition:background .25s ease;text-align:center;background:#F4F5F2;}
+
+.tm-video-wrap.hidden{display:none;}
+
+.tm-video-fallback.hidden{display:none;}
+
+.tm-text-pane{width:100%;max-width:320px;margin:0 auto;max-height:min(38vh,320px);overflow-y:auto;background:#fff;border:1px solid #DCDFD9;border-radius:var(--radius-sm);padding:14px 16px;font-size:13.5px;line-height:1.6;color:#3A4250;text-align:left;}
+.tm-text-pane.hidden{display:none;}
+
+.embed{width:100%;height:100%;border:none;display:block;}
+.tm-up-next{position:absolute;top:14px;right:16px;z-index:2;display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid #DCDFD9;border-left:4px solid #DCDFD9;border-radius:var(--radius-sm);padding:8px 16px;font-size:12.5px;font-weight:600;color:#5B6472;box-shadow:0 1px 2px rgba(27,36,48,.07), 0 4px 14px rgba(27,36,48,.05);transform:translateX(130%);opacity:0;transition:transform .45s ease,opacity .3s ease;}
+.tm-up-next.hidden{display:none;}
+
+.tm-series-label.hidden{display:none;}
+.tm-group-name{font-family:var(--font-display);font-size:clamp(20px,5.5vw,30px);letter-spacing:.04em;color:var(--court-dark);background:rgba(51,153,51,.1);border:2px solid var(--court);border-radius:var(--radius-sm);padding:7px 18px;margin-bottom:12px;max-width:100%;overflow-wrap:anywhere;display:inline-block;}
+.tm-group-name.hidden{display:none;}
+
+.tm-reps-display{font-family:var(--font-display);font-size:clamp(52px,17vw,100px);line-height:1;letter-spacing:.02em;color:var(--chalk-dark);background:rgba(232,98,44,.1);border:3px solid var(--chalk);border-radius:var(--radius);padding:10px 30px;margin:6px 0 16px;display:inline-block;}
+.tm-reps-display.hidden{display:none;}
+
+.tm-comments{width:100%;max-width:320px;margin:14px auto 0;text-align:left;}
+.tm-comments.hidden{display:none;}
+.tm-comments-label{font-family:var(--font-display);font-size:13px;letter-spacing:.06em;color:#8A93A0;text-transform:uppercase;margin-bottom:8px;}
+.comment-thread{display:flex;flex-direction:column;gap:10px;}
+.comment-item{display:flex;gap:8px;}
+.comment-avatar{width:26px;height:26px;border-radius:50%;background:var(--court);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;flex-shrink:0;}
+.comment-body{flex:1;min-width:0;}
+.comment-meta{font-size:11.5px;color:#8A93A0;}
+.comment-meta .comment-author{font-weight:700;color:#1B2430;}
+.comment-text{font-size:13px;line-height:1.5;margin:2px 0 0;color:#3A4250;white-space:pre-wrap;word-break:break-word;}
+.comment-replies{margin-left:34px;margin-top:8px;display:flex;flex-direction:column;gap:8px;border-left:2px solid #DCDFD9;padding-left:10px;}
+@media(min-width:860px),(orientation:landscape) and (min-width:480px){
+  .tm-body{grid-template-columns:1fr 1.3fr 1fr;grid-template-areas:"left video right";align-items:center;gap:28px;padding:24px 40px;}
+  .tm-col-left{margin-top:0;}
+  .tm-video-wrap{max-width:100%;}
+  .tm-text-pane{max-width:100%;}
+  .tm-desc,.tm-cue,.tm-note,.tm-comments{max-width:100%;}
+  .tm-up-next{position:fixed;top:calc(14px + env(safe-area-inset-top));right:70px;left:auto;transform:translateX(-100vw);transition:transform .6s ease,opacity .3s ease;}
+  .tm-up-next.shown{transform:translateX(0);}
+}
+
+#trainingModeView.tm-forced-landscape .tm-up-next{position:fixed;top:calc(6px + env(safe-area-inset-top));right:56px;left:auto;transform:translateX(-100vw);transition:transform .6s ease,opacity .3s ease;}
+
+.tm-info-btn.hidden{display:none;}
+
+.modal-backdrop{position:fixed;inset:0;z-index:50;background:rgba(20,26,34,.55);display:flex;align-items:center;justify-content:center;padding:20px;}
+.modal-backdrop.hidden{display:none;}
+.modal{width:100%;max-width:420px;max-height:80vh;display:flex;flex-direction:column;background:#fff;border-radius:16px;box-shadow:0 20px 50px rgba(27,36,48,.25);padding:20px;}
+.modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px;}
+.modal-head h2{font-family:var(--font-display);font-size:22px;color:#1B2430;margin:0;line-height:1.15;}
+.btn-icon{width:26px;height:26px;border-radius:50%;background:#F4F5F2;border:none;color:#5B6472;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.rte-display ul,.rte-display ol{margin:2px 0 3px 18px;padding:0;}
+.rte-display li{margin-bottom:1px;}
+.rte-display ul{list-style-type:disc;}
+.rte-display ol{list-style-type:decimal;}
+.rte-display p,.rte-display div{margin:0 0 3px;}
+.rte-display p:last-child,.rte-display div:last-child{margin-bottom:0;}
+
+#trainingModeView.tm-forced-landscape .tm-body{padding-top:10px;padding-bottom:10px;gap:14px;}
+</style>
+</head>
+<body>
+
+<div id="stateView" class="state-view"></div>
+
+<div id="introView" class="state-view hidden">
+  <i class="fa-solid fa-clipboard-list"></i>
+  <h1 id="introTitle">Trénink</h1>
+  <p id="introSub"></p>
+  <button type="button" id="introStartBtn" class="intro-start-btn">Spustit trénink <i class="fa-solid fa-arrow-right"></i></button>
+</div>
+
+<div id="trainingModeView" class="hidden">
+  <div class="tm-header">
+    <span class="tm-exit" style="visibility:hidden;"></span>
+    <div class="tm-progress" id="tmProgress">1 / 1</div>
+  </div>
+  <div class="tm-progress-bar"><div class="tm-progress-fill" id="tmProgressFill"></div></div>
+  <div class="tm-body" id="tmBody">
+    <div class="tm-up-next hidden" id="tmUpNext"></div>
+    <div class="tm-col-left">
+      <div class="tm-part-label" id="tmPartLabel"></div>
+      <div class="tm-series-label hidden" id="tmSeriesLabel"></div>
+      <div class="tm-group-name hidden" id="tmGroupName"></div>
+      <div class="tm-title" id="tmTitle"></div>
+    </div>
+    <div class="tm-col-video">
+      <div class="tm-info-btn-row">
+        <button type="button" class="tm-info-btn hidden" id="tmInfoBtn" aria-label="Více info o cviku" title="Více info o cviku"><i class="fa-regular fa-circle-question"></i> Více info<span class="tm-info-dot hidden" id="tmInfoDot"></span></button>
+      </div>
+      <div class="tm-video-wrap hidden" id="tmVideoWrap"></div>
+      <div class="tm-video-fallback hidden" id="tmVideoFallback"></div>
+      <div class="tm-text-pane hidden" id="tmTextPane"></div>
+    </div>
+    <div class="tm-col-right">
+      <div class="tm-desc" id="tmDesc"></div>
+      <div class="tm-reps-display hidden" id="tmRepsDisplay"></div>
+      <div class="tm-cue" id="tmCue"></div>
+      <div class="tm-note" id="tmNote"></div>
+      <div class="tm-comments hidden" id="tmComments">
+        <div class="tm-comments-label">Komentáře</div>
+        <div id="commentThread" class="comment-thread"></div>
+      </div>
+    </div>
+  </div>
+  <div class="tm-timer-wrap" id="tmTimerWrap">
+    <button type="button" class="tm-timer-btn" id="tmTimerToggle" aria-label="Pauza/pokračovat"><i class="fa-solid fa-pause"></i></button>
+    <div class="tm-timer" id="tmTimer">10:00</div>
+    <button type="button" class="tm-timer-btn" id="tmTimerReset" aria-label="Restartovat čas"><i class="fa-solid fa-rotate-left"></i></button>
+  </div>
+  <div class="tm-nav">
+    <button type="button" class="tm-nav-btn" id="tmPrevBtn"><i class="fa-solid fa-arrow-left"></i> Předchozí</button>
+    <button type="button" class="tm-nav-btn tm-nav-next" id="tmNextBtn">Další <i class="fa-solid fa-arrow-right"></i></button>
+  </div>
+
+  <!-- Na telefonu na výšku jde #trainingModeView do skutečného Fullscreen API — top layer
+       fullscreenu smí překrýt jen to, co je fyzicky UVNITŘ fullscreenovaného elementu, takže
+       tenhle popup musí být tady, ne jako sourozenec za trainingModeView. -->
+  <div id="exerciseInfoModalBackdrop" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-head">
+        <h2 id="exerciseInfoModalTitle"></h2>
+        <button class="btn-icon" id="closeExerciseInfoModalBtn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="exerciseInfoModalShort" style="font-size:14px;font-weight:600;color:var(--court-dark);margin:-8px 0 14px;"></div>
+      <div id="exerciseInfoModalLong" class="rte-display" style="font-size:13.5px;color:#5B6472;line-height:1.6;overflow-y:auto;"></div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+import { initializeFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDHEDRx6jJAE1-0fvTmaMetlh4w6CeTREY",
+  authDomain: "trener-6d1b2.firebaseapp.com",
+  projectId: "trener-6d1b2",
+  storageBucket: "trener-6d1b2.firebasestorage.app",
+  messagingSenderId: "796712714371",
+  appId: "1:796712714371:web:740d1c4c73f9319f509bb6"
+};
+const fbApp = initializeApp(firebaseConfig);
+// Bez trvalé (IndexedDB) cache — tahle stránka je jednorázový needitovatelný pohled, offline
+// podpora tu nemá cenu. Hlavní appka (index.html) si trvalou cache zapíná v multi-tab režimu; kdyby
+// si tahle stránka řekla o svou VLASTNÍ trvalou cache (bez multi-tab), a uživatel měl zrovna
+// otevřenou appku v jiné záložce, obě by si o zámek na IndexedDB "přetahovaly" — Firestore by na
+// to spadl na "Failed to obtain exclusive access to the persistence layer" a stránka zůstala
+// prázdná. Paměťová cache (výchozí bez localCache) tohle riziko úplně vynechává.
+const db = initializeFirestore(fbApp, {});
+
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[c]));
+}
+function showState(icon, title, sub) {
+  document.getElementById("trainingModeView").classList.add("hidden");
+  document.getElementById("introView").classList.add("hidden");
+  document.getElementById("stateView").classList.remove("hidden");
+  document.getElementById("stateView").innerHTML = `
+    <i class="fa-solid ${icon}"></i>
+    <h1>${esc(title)}</h1>
+    <p>${esc(sub)}</p>`;
+}
+
+const RTE_ALLOWED_TAGS = new Set(["P", "DIV", "BR", "UL", "OL", "LI", "B", "STRONG", "I", "EM", "U"]);
+const RTE_STRIP_ENTIRELY = new Set(["SCRIPT", "STYLE", "IFRAME", "OBJECT", "EMBED"]);
+// Pozná uloženou hodnotu jako "už je to HTML z RTE" — musí pokrýt všechny povolené tagy, ne jen
+// blokové (p/div/ul/ol/li/br), jinak se krátké pole s holým "<b>text</b>" (bez blokového obalu)
+// vezme za starý čistý text a escapuje — místo tučného písma se pak zobrazí doslova "<b>text</b>".
+const RICH_HTML_SNIFF_RE = new RegExp(`<\\/?(${[...RTE_ALLOWED_TAGS].join("|")})[ >]`, "i");
+function sanitizeRichHtml(html) {
+  const tmp = document.createElement("div");
+  tmp.innerHTML = html || "";
+  (function clean(node) {
+    [...node.childNodes].forEach(child => {
+      if (child.nodeType === 3) return;
+      if (child.nodeType !== 1) { child.remove(); return; }
+      if (RTE_STRIP_ENTIRELY.has(child.tagName)) { child.remove(); return; }
+      if (!RTE_ALLOWED_TAGS.has(child.tagName)) {
+        while (child.firstChild) node.insertBefore(child.firstChild, child);
+        node.removeChild(child);
+        return;
+      }
+      [...child.attributes].forEach(attr => child.removeAttribute(attr.name));
+      clean(child);
+    });
+  })(tmp);
+  return tmp.innerHTML;
+}
+function richValueToHtml(raw) {
+  if (!raw) return "";
+  const looksLikeRichHtml = RICH_HTML_SNIFF_RE.test(raw);
+  const asHtml = looksLikeRichHtml ? raw : String(raw).split(/\r?\n/).map(line => `<p>${esc(line)}</p>`).join("");
+  return sanitizeRichHtml(asHtml);
+}
+function darkenHex(hex, amount) {
+  const n = parseInt(hex.replace("#", ""), 16);
+  const r = Math.max(0, Math.round(((n >> 16) & 255) * (1 - amount)));
+  const g = Math.max(0, Math.round(((n >> 8) & 255) * (1 - amount)));
+  const b = Math.max(0, Math.round((n & 255) * (1 - amount)));
+  return "#" + [r, g, b].map(v => v.toString(16).padStart(2, "0")).join("");
+}
+function setPartTag(el, color) {
+  if (!color) { el.style.background = ""; el.style.color = ""; return; }
+  el.style.background = color + "33";
+  el.style.color = darkenHex(color, 0.35);
+}
+/** Podle jasu barvy vybere čitelný text (bílá na sytější/tmavší barvě, tmavě modrošedá na
+    světlé) — stejná logika jako v index.html, pro pozadí časovače podle barvy části. */
+function readableTextColor(hex) {
+  const m = hex.replace("#", "").match(/.{1,2}/g);
+  if (!m || m.length < 3) return "#1B2430";
+  const [r, g, b] = m.map(h => parseInt(h, 16));
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  return brightness < 150 ? "#fff" : "#1B2430";
+}
+/** Průběhový proužek nahoře se obarví podle právě probíhající části a jeho šířka odpovídá
+    postupu tréninkem — tahle část se při portování z index.html ztratila, takže proužek jen
+    stál na místě, ať se scrollovalo cvičeními jakkoli. */
+function updateProgressBar(color) {
+  const total = tmItems.length || 1;
+  const pct = Math.min(100, Math.max(0, (tmIndex / total) * 100));
+  const fill = document.getElementById("tmProgressFill");
+  fill.style.width = pct + "%";
+  fill.style.background = color || "var(--court)";
+  const timerEl = document.getElementById("tmTimer");
+  if (color) {
+    timerEl.style.setProperty("--tm-timer-bg", color);
+    timerEl.style.setProperty("--tm-timer-fg", readableTextColor(color));
+  } else {
+    timerEl.style.removeProperty("--tm-timer-bg");
+    timerEl.style.removeProperty("--tm-timer-fg");
+  }
+}
+function fitBoxForRatio(aspectRatioStr, maxW, maxH) {
+  const parts = (aspectRatioStr || "16/9").split("/").map(Number);
+  const rw = parts[0] || 16, rh = parts[1] || 9;
+  let w = maxW, h = w * (rh / rw);
+  if (h > maxH) { h = maxH; w = h * (rw / rh); }
+  return { w: Math.round(w), h: Math.round(h) };
+}
+const DRIVE_FALLBACK_HEIGHT_PX = { "16/9": 480, "4/3": 480, "1/1": 560, "9/16": 640 };
+function applyDriveFallbackSize(wrap, item, opts) {
+  if (opts.box) {
+    const fit = fitBoxForRatio(item.aspectRatio, opts.box.maxW, opts.box.maxH);
+    wrap.style.aspectRatio = ""; wrap.style.maxHeight = "";
+    wrap.style.width = fit.w + "px"; wrap.style.height = fit.h + "px";
+    return;
+  }
+  const base = DRIVE_FALLBACK_HEIGHT_PX[item.aspectRatio] || 480;
+  wrap.style.aspectRatio = "auto"; wrap.style.maxHeight = "none";
+  wrap.style.height = Math.min(base, Math.round(window.innerHeight * ((opts.maxVh || 70) / 100))) + "px";
+}
+function renderEmbedHtml(item, opts) {
+  opts = opts || {};
+  const muted = !!opts.muted;
+  const preload = opts.preload || "metadata";
+  if (item.platform === "youtube" && item.videoId) {
+    const params = [];
+    if (item.timestamp) params.push(`start=${item.timestamp}`);
+    if (muted) params.push("mute=1");
+    const qs = params.length ? `?${params.join("&")}` : "";
+    return `<iframe class="embed" src="https://www.youtube-nocookie.com/embed/${esc(item.videoId)}${qs}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+  }
+  if (item.platform === "drive" && item.videoId) {
+    const fallback = `https://drive.google.com/file/d/${esc(item.videoId)}/preview`;
+    const cacheBust = opts.cacheBust ? `&_cb=${Date.now()}` : "";
+    const directSrc = window.__driveApiKey
+      ? `https://www.googleapis.com/drive/v3/files/${esc(item.videoId)}?alt=media&key=${esc(window.__driveApiKey)}${cacheBust}`
+      : "";
+    if (!directSrc) return `<iframe class="embed" src="${fallback}" allow="autoplay; picture-in-picture 'none'"></iframe>`;
+    return `<video class="embed" controls playsinline preload="${preload}"${muted ? " muted" : ""} src="${directSrc}" data-drive-fallback="${fallback}"></video>`;
+  }
+  if (item.platform === "facebook") {
+    return `<iframe class="embed" src="https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(item.url)}&show_text=false" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+  }
+  if (item.platform === "instagram" && item.videoId) {
+    return `<iframe class="embed" src="https://www.instagram.com/p/${esc(item.videoId)}/embed" allowfullscreen></iframe>`;
+  }
+  if (item.platform === "tiktok" && item.videoId) {
+    return `<iframe class="embed" src="https://www.tiktok.com/player/v1/${esc(item.videoId)}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+  }
+  if (item.platform === "file") {
+    const start = item.timestamp ? `#t=${item.timestamp}` : "";
+    return `<video class="embed" src="${esc(item.url)}${start}" controls playsinline preload="${preload}"${muted ? " muted" : ""} referrerpolicy="no-referrer"></video>`;
+  }
+  return `<a class="fallback-link" href="${esc(item.url)}" target="_blank" rel="noopener">Otevřít odkaz ↗</a>`;
+}
+/** Stejná sada odkazů "otevřít přímo na zdroji" jako v index.html (#80/#83) — u FB/IG/TikTok
+    embed občas mlčky nepůjde přehrát (typicky video s dětmi, zřejmě věkové omezení), takže je
+    odkaz vidět rovnou pod videem, ne jen jako záchrana po chybě. */
+const PLATFORM_DIRECT_LINK_LABELS = {
+  facebook: `<i class="fa-brands fa-facebook"></i> Facebook`,
+  drive: `<i class="fa-brands fa-google-drive"></i> Disk`,
+  instagram: `<i class="fa-brands fa-instagram"></i> Instagram`,
+  tiktok: `<i class="fa-brands fa-tiktok"></i> TikTok`,
+  youtube: `<i class="fa-brands fa-youtube"></i> YouTube`,
+  file: `<i class="fa-solid fa-up-right-from-square"></i> video`
+};
+function platformDirectLinkHtml(item, prefix) {
+  if (!item || !item.url) return "";
+  const label = PLATFORM_DIRECT_LINK_LABELS[item.platform];
+  if (!label) return "";
+  return `<a href="${esc(item.url)}" target="_blank" rel="noopener">${prefix || ""}${label} ↗</a>`;
+}
+function setupDriveVideoPlayback(wrap, item, opts) {
+  if (item.platform !== "drive") return;
+  opts = opts || {};
+  const applyRatio = (ratioStr) => {
+    if (opts.box) {
+      const fit = fitBoxForRatio(ratioStr, opts.box.maxW, opts.box.maxH);
+      wrap.style.width = fit.w + "px"; wrap.style.height = fit.h + "px";
+    } else {
+      wrap.style.width = ""; wrap.style.height = "";
+      wrap.style.maxHeight = (opts.maxVh || 70) + "vh";
+      wrap.style.aspectRatio = ratioStr || "16/9";
+    }
+  };
+  const driveVideoEl = wrap.querySelector("video[data-drive-fallback]");
+  if (!driveVideoEl) { applyDriveFallbackSize(wrap, item, opts); return; }
+  applyRatio(item.aspectRatio);
+  driveVideoEl.addEventListener("error", () => {
+    if (!wrap.contains(driveVideoEl)) return;
+    if (!opts._retriedCacheBust) {
+      wrap.innerHTML = renderEmbedHtml(item, { muted: driveVideoEl.muted, preload: "auto", cacheBust: true });
+      setupDriveVideoPlayback(wrap, item, Object.assign({}, opts, { _retriedCacheBust: true }));
+      return;
+    }
+    wrap.innerHTML = `<iframe class="embed" src="${driveVideoEl.dataset.driveFallback}" allow="autoplay; picture-in-picture 'none'"></iframe>`;
+    applyDriveFallbackSize(wrap, item, opts);
+  }, { once: true });
+  driveVideoEl.addEventListener("loadedmetadata", () => {
+    if (!wrap.contains(driveVideoEl)) return;
+    if (driveVideoEl.videoWidth && driveVideoEl.videoHeight) applyRatio(`${driveVideoEl.videoWidth} / ${driveVideoEl.videoHeight}`);
+  }, { once: true });
+}
+function showTrainingModeVideo(lib, textItem) {
+  const wrap = document.getElementById("tmVideoWrap");
+  const fbEl = document.getElementById("tmVideoFallback");
+  const textPane = document.getElementById("tmTextPane");
+  // Video ručně označené jako nefunkční (viz #91/#92) — appka se ho ani nesnaží načíst. Chová se
+  // jako textové cvičení (dlouhý popis na místě videa), ale navíc zůstane i přímý odkaz na
+  // zdroj — tady je to jediná cesta, jak se k videu vůbec dostat.
+  if (lib && lib.brokenAt) {
+    wrap.classList.add("hidden"); wrap.innerHTML = "";
+    const directLink = platformDirectLinkHtml(lib, "Otevřít přímo — ");
+    fbEl.innerHTML = directLink;
+    fbEl.classList.toggle("hidden", !directLink);
+    const textHtml = lib.longDesc && lib.longDesc.trim() ? richValueToHtml(lib.longDesc) : "";
+    textPane.innerHTML = textHtml;
+    textPane.classList.toggle("hidden", !textHtml);
+    return;
+  }
+  if (!lib) {
+    wrap.classList.add("hidden"); wrap.innerHTML = "";
+    fbEl.classList.add("hidden"); fbEl.innerHTML = "";
+    const textHtml = textItem && textItem.longDesc && textItem.longDesc.trim() ? richValueToHtml(textItem.longDesc) : "";
+    textPane.innerHTML = textHtml;
+    textPane.classList.toggle("hidden", !textHtml);
+    return;
+  }
+  textPane.classList.add("hidden"); textPane.innerHTML = "";
+  wrap.classList.remove("hidden");
+  const directLink = platformDirectLinkHtml(lib, "Otevřít přímo — ");
+  fbEl.innerHTML = directLink;
+  fbEl.classList.toggle("hidden", !directLink);
+  wrap.style.aspectRatio = ""; wrap.style.width = ""; wrap.style.height = ""; wrap.style.maxHeight = "";
+  wrap.innerHTML = renderEmbedHtml(lib, { muted: true, preload: "auto" });
+  const isWide = document.getElementById("trainingModeView").classList.contains("tm-forced-landscape")
+    || window.matchMedia("(min-width:860px),(orientation:landscape) and (min-width:480px)").matches;
+  const box = isWide ? { maxW: 420, maxH: Math.round(window.innerHeight * 0.45) } : { maxW: 190, maxH: Math.round(window.innerHeight * 0.22) };
+  if (lib.platform === "drive") {
+    setupDriveVideoPlayback(wrap, lib, { box });
+  } else {
+    const fit = fitBoxForRatio(lib.aspectRatio, box.maxW, box.maxH);
+    wrap.style.width = fit.w + "px"; wrap.style.height = fit.h + "px";
+  }
+}
+function setScaledText(el, text, opts) {
+  opts = opts || {};
+  const shrinkFrom = opts.shrinkFrom !== undefined ? opts.shrinkFrom : 14;
+  const minScale = opts.minScale !== undefined ? opts.minScale : 0.55;
+  const rate = opts.rate !== undefined ? opts.rate : 0.018;
+  el.style.fontSize = "";
+  el.textContent = text;
+  const len = (text || "").length;
+  if (len <= shrinkFrom) return;
+  const baseSize = parseFloat(getComputedStyle(el).fontSize);
+  const scale = Math.max(minScale, 1 - (len - shrinkFrom) * rate);
+  el.style.fontSize = (baseSize * scale) + "px";
+}
+function valueToSeconds(value, unit) { return unit === "min" ? (value || 0) * 60 : (value || 0); }
+function getSeriesPauseSeconds(row) { return valueToSeconds(row.seriesPause != null ? row.seriesPause : 30, row.seriesPauseUnit || "s"); }
+
+let t, videos, parts;
+let tmItems = [], tmIndex = 0, tmGroupVideoIndex = 0, tmSeriesNum = 1, tmInSeriesPause = false, tmFinished = false;
+let tmSeconds = 0, tmTimerMode = "time", tmTimerInterval = null, tmTimerRunning = false;
+let tmUpNextTimeout = null;
+
+function getPart(key) {
+  return (parts[key]) || { label: key, color: "#C7C9C4" };
+}
+function currentTrainingModeLib() {
+  const row = tmItems[tmIndex];
+  if (!row) return null;
+  if (row.part === "prestavka" || tmInSeriesPause) return null;
+  if (row.isGroup) {
+    const v = row.videos[tmGroupVideoIndex];
+    return v && !v.isText && !v.isBreak ? videos[v.videoId] : null;
+  }
+  return row.isText ? null : videos[row.videoId];
+}
+/** Textové cvičení (bez videa) na aktuálním místě v tréninku, nebo null — viz #84. */
+function currentTrainingModeTextItem() {
+  const row = tmItems[tmIndex];
+  if (!row) return null;
+  if (row.part === "prestavka" || tmInSeriesPause) return null;
+  if (row.isGroup) {
+    const v = row.videos[tmGroupVideoIndex];
+    return (v && v.isText) ? v : null;
+  }
+  return row.isText ? row : null;
+}
+function getUpNextLabelForSeriesPause() {
+  const row = tmItems[tmIndex];
+  if (row.isGroup) {
+    const firstV = row.videos && row.videos[0];
+    const lib = firstV && !firstV.isText ? videos[firstV.videoId] : null;
+    return lib ? lib.title : (firstV && firstV.title) || (row.name || "Skupina");
+  }
+  const lib = videos[row.videoId];
+  return lib ? lib.title : (row.title || null);
+}
+function getUpNextLabel() {
+  const row = tmItems[tmIndex];
+  if (row.isGroup && tmGroupVideoIndex < row.videos.length - 1) {
+    const nextV = row.videos[tmGroupVideoIndex + 1];
+    const lib = nextV && !nextV.isText ? videos[nextV.videoId] : null;
+    return lib ? lib.title : (nextV && nextV.title) || null;
+  }
+  if (tmSeriesNum < (row.seriesCount || 1)) return "Pauza mezi sériemi";
+  const next = tmItems[tmIndex + 1];
+  if (!next) return null;
+  if (next.part === "prestavka") return next.label || "Přestávka";
+  if (next.isGroup) {
+    const firstV = next.videos && next.videos[0];
+    const lib = firstV && !firstV.isText ? videos[firstV.videoId] : null;
+    return lib ? lib.title : (firstV && firstV.title) || (next.name || "Skupina");
+  }
+  const lib = videos[next.videoId];
+  return lib ? lib.title : (next.title || null);
+}
+function showUpNextPanel(labelOverride) {
+  clearTimeout(tmUpNextTimeout);
+  const el = document.getElementById("tmUpNext");
+  el.classList.add("hidden"); el.classList.remove("shown");
+  const label = labelOverride !== undefined ? labelOverride : getUpNextLabel();
+  if (!label) return;
+  el.innerHTML = `Následuje: <strong>${esc(label)}</strong> <i class="fa-solid fa-forward"></i>`;
+  el.classList.remove("hidden");
+  tmUpNextTimeout = setTimeout(() => el.classList.add("shown"), 2500);
+}
+function updateTrainingModeTimerDisplay() {
+  const el = document.getElementById("tmTimer");
+  if (tmTimerMode === "reps") { el.textContent = ""; return; }
+  const m = Math.floor(tmSeconds / 60), s = tmSeconds % 60;
+  el.textContent = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  el.classList.toggle("tm-timer-done", tmSeconds === 0);
+}
+function stopTrainingModeTimer() {
+  clearInterval(tmTimerInterval); tmTimerInterval = null; tmTimerRunning = false;
+  document.getElementById("tmTimerToggle").innerHTML = '<i class="fa-solid fa-play"></i>';
+}
+function startTrainingModeTimer() {
+  stopTrainingModeTimer();
+  if (tmTimerMode === "reps") return;
+  tmTimerRunning = true;
+  document.getElementById("tmTimerToggle").innerHTML = '<i class="fa-solid fa-pause"></i>';
+  tmTimerInterval = setInterval(() => {
+    if (tmSeconds > 0) { tmSeconds--; updateTrainingModeTimerDisplay(); }
+    else stopTrainingModeTimer();
+  }, 1000);
+}
+function setTimerMode(mode) {
+  tmTimerMode = mode;
+  document.getElementById("tmTimerWrap").style.visibility = mode === "reps" ? "hidden" : "visible";
+}
+document.getElementById("tmTimerToggle").addEventListener("click", () => {
+  if (tmTimerMode === "reps") return;
+  if (tmTimerRunning) stopTrainingModeTimer(); else startTrainingModeTimer();
+});
+document.getElementById("tmTimerReset").addEventListener("click", () => {
+  const row = tmItems[tmIndex];
+  if (tmInSeriesPause) { tmSeconds = Math.max(1, getSeriesPauseSeconds(row)); updateTrainingModeTimerDisplay(); startTrainingModeTimer(); return; }
+  if (row.part === "prestavka") { tmSeconds = Math.max(1, valueToSeconds(row.duration || 1, row.durationUnit || "min")); updateTrainingModeTimerDisplay(); startTrainingModeTimer(); return; }
+  if (row.isGroup) {
+    const v = row.videos[tmGroupVideoIndex];
+    if (v && v.isBreak) { tmSeconds = Math.max(1, valueToSeconds(v.duration != null ? v.duration : 1, v.durationUnit || "min")); updateTrainingModeTimerDisplay(); startTrainingModeTimer(); return; }
+    const durVal = v && v.duration != null ? v.duration : 1, durUnit = v ? (v.durationUnit || "min") : "min";
+    tmSeconds = Math.max(1, valueToSeconds(durVal, durUnit)); updateTrainingModeTimerDisplay(); startTrainingModeTimer(); return;
+  }
+  tmSeconds = Math.max(1, valueToSeconds(row.duration || 1, row.durationUnit || "min"));
+  updateTrainingModeTimerDisplay(); startTrainingModeTimer();
+});
+
+function renderSeriesPause() {
+  const row = tmItems[tmIndex];
+  document.getElementById("tmSeriesLabel").classList.add("hidden");
+  document.getElementById("tmGroupName").classList.add("hidden");
+  document.getElementById("tmRepsDisplay").classList.add("hidden");
+  document.getElementById("tmProgress").textContent = `${tmIndex + 1} / ${tmItems.length}`;
+  document.getElementById("tmPrevBtn").disabled = true;
+  document.getElementById("tmNextBtn").innerHTML = 'Další <i class="fa-solid fa-arrow-right"></i>';
+  document.getElementById("tmBody").classList.add("tm-solo");
+  document.getElementById("tmBody").style.background = "#C7C9C4";
+  document.getElementById("tmPartLabel").textContent = "PAUZA MEZI SÉRIEMI";
+  setPartTag(document.getElementById("tmPartLabel"), "#C7C9C4");
+  updateProgressBar("#C7C9C4");
+  setScaledText(document.getElementById("tmTitle"), `Za chvíli série ${tmSeriesNum} / ${row.seriesCount}`);
+  document.getElementById("tmDesc").textContent = "";
+  document.getElementById("tmCue").innerHTML = "";
+  document.getElementById("tmNote").textContent = "";
+  renderComments(null);
+  showUpNextPanel(getUpNextLabelForSeriesPause());
+  showTrainingModeVideo(null);
+  setTimerMode("time");
+  tmSeconds = Math.max(1, getSeriesPauseSeconds(row));
+  updateTrainingModeTimerDisplay();
+  startTrainingModeTimer();
+}
+function renderTrainingModeFinished() {
+  document.getElementById("tmSeriesLabel").classList.add("hidden");
+  document.getElementById("tmGroupName").classList.add("hidden");
+  document.getElementById("tmRepsDisplay").classList.add("hidden");
+  document.getElementById("tmUpNext").classList.add("hidden");
+  document.getElementById("tmProgress").textContent = `${tmItems.length} / ${tmItems.length}`;
+  document.getElementById("tmPrevBtn").disabled = false;
+  document.getElementById("tmBody").classList.add("tm-solo");
+  document.getElementById("tmBody").style.background = "";
+  document.getElementById("tmPartLabel").textContent = "";
+  setPartTag(document.getElementById("tmPartLabel"), null);
+  // Na konci se proužek nastaví na 100 % napevno, ne přes obecný výpočet v updateProgressBar
+  // (ten by u posledního cviku vyšel jen "(length-1)/length", ne celých 100 %).
+  document.getElementById("tmProgressFill").style.width = "100%";
+  document.getElementById("tmProgressFill").style.background = "var(--court)";
+  setScaledText(document.getElementById("tmTitle"), "Hotovo! 🎉");
+  document.getElementById("tmDesc").textContent = "";
+  document.getElementById("tmCue").innerHTML = "";
+  document.getElementById("tmNote").textContent = "";
+  renderComments(null);
+  showTrainingModeVideo(null);
+  stopTrainingModeTimer();
+  document.getElementById("tmTimer").textContent = "";
+  document.getElementById("tmNextBtn").innerHTML = 'Zavřít <i class="fa-solid fa-xmark"></i>';
+  document.getElementById("tmInfoBtn").classList.add("hidden");
+  document.getElementById("tmInfoDot").classList.add("hidden");
+  tmCurrentInfoData = null;
+}
+let tmCurrentInfoData = null;
+function getTmCurrentInfo() {
+  const row = tmItems[tmIndex];
+  if (!row || row.part === "prestavka") return null;
+  if (row.isGroup) {
+    const v = row.videos[tmGroupVideoIndex];
+    if (!v || v.isBreak) return null;
+    const lib = v.isText ? null : videos[v.videoId];
+    return {
+      title: v.isText ? (v.title || "(bez názvu)") : (lib ? lib.title : "(video smazáno)"),
+      shortDesc: v.isText ? (v.shortDesc || "") : (lib ? lib.shortDesc : ""),
+      longDesc: v.isText ? (v.longDesc || "") : (lib ? lib.longDesc : ""),
+      isText: !!v.isText || !!(lib && lib.brokenAt)
+    };
+  }
+  const lib = row.isText ? null : videos[row.videoId];
+  return {
+    title: row.isText ? (row.title || "(bez názvu)") : (lib ? lib.title : "(video smazáno z knihovny)"),
+    shortDesc: row.isText ? (row.shortDesc || "") : (lib ? lib.shortDesc : ""),
+    longDesc: row.isText ? (row.longDesc || "") : (lib ? lib.longDesc : ""),
+    isText: !!row.isText || !!(lib && lib.brokenAt)
+  };
+}
+function refreshTmInfoBtn() {
+  const btn = document.getElementById("tmInfoBtn");
+  const dot = document.getElementById("tmInfoDot");
+  const info = (tmInSeriesPause || tmFinished) ? null : getTmCurrentInfo();
+  // U textového cvičení je dlouhý popis vidět rovnou na místě videa (#84), tlačítko "?" by ho
+  // jen zbytečně duplikovalo.
+  if (!info || info.isText || !(info.longDesc && info.longDesc.trim())) {
+    btn.classList.add("hidden");
+    dot.classList.add("hidden");
+    tmCurrentInfoData = null;
+    return;
+  }
+  tmCurrentInfoData = info;
+  btn.classList.remove("hidden");
+  dot.classList.remove("hidden");
+}
+function openExerciseInfoModal() {
+  if (!tmCurrentInfoData) return;
+  document.getElementById("exerciseInfoModalTitle").textContent = tmCurrentInfoData.title || "";
+  document.getElementById("exerciseInfoModalShort").textContent = tmCurrentInfoData.shortDesc || "";
+  document.getElementById("exerciseInfoModalLong").innerHTML = richValueToHtml(tmCurrentInfoData.longDesc || "");
+  document.getElementById("exerciseInfoModalBackdrop").classList.remove("hidden");
+  document.getElementById("tmInfoDot").classList.add("hidden");
+}
+function closeExerciseInfoModal() {
+  document.getElementById("exerciseInfoModalBackdrop").classList.add("hidden");
+}
+/** Komentáře jsou tu jen ke čtení — appka je do shareSnapshot vloží při uložení tréninku
+    v hlavní appce (viz fetchCommentsSnapshot/buildShareSnapshot v index.html), tahle stránka
+    nemá přihlášení, takže nemůže psát ani číst živou kolekci videoComments napřímo. */
+function commentInitials(name) {
+  return (name || "?").trim().split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase();
+}
+function renderComments(lib) {
+  const wrap = document.getElementById("commentThread");
+  const section = document.getElementById("tmComments");
+  if (!wrap || !section) return;
+  const list = lib && Array.isArray(lib.comments) ? lib.comments : [];
+  if (!list.length) { section.classList.add("hidden"); wrap.innerHTML = ""; return; }
+  section.classList.remove("hidden");
+  const childrenOf = pid => list.filter(c => c.parentId === pid).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  function renderOne(c) {
+    const replies = childrenOf(c.id);
+    return `<div class="comment-item">
+        <div class="comment-avatar">${esc(commentInitials(c.authorLabel))}</div>
+        <div class="comment-body">
+          <div class="comment-meta"><span class="comment-author">${esc(c.authorLabel || "?")}</span></div>
+          <div class="comment-text">${esc(c.text || "")}</div>
+        </div>
+      </div>${replies.length ? `<div class="comment-replies">${replies.map(renderOne).join("")}</div>` : ""}`;
+  }
+  const top = childrenOf(null).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  wrap.innerHTML = top.map(renderOne).join("");
+}
+function renderTrainingModeItem() {
+  stopTrainingModeTimer();
+  refreshTmInfoBtn();
+  if (tmFinished) { renderTrainingModeFinished(); return; }
+  if (tmInSeriesPause) { renderSeriesPause(); return; }
+  const row = tmItems[tmIndex];
+  document.getElementById("tmProgress").textContent = `${tmIndex + 1} / ${tmItems.length}`;
+  document.getElementById("tmPrevBtn").disabled = tmIndex === 0;
+  document.getElementById("tmNextBtn").innerHTML = 'Další <i class="fa-solid fa-arrow-right"></i>';
+  const body = document.getElementById("tmBody");
+  const seriesLabel = document.getElementById("tmSeriesLabel");
+  const groupNameEl = document.getElementById("tmGroupName");
+  const repsDisplay = document.getElementById("tmRepsDisplay");
+  groupNameEl.classList.add("hidden");
+  repsDisplay.classList.add("hidden");
+  body.classList.remove("tm-solo");
+  body.style.background = "";
+  showUpNextPanel();
+
+  if (row.part === "prestavka") {
+    seriesLabel.classList.add("hidden");
+    body.classList.add("tm-solo");
+    document.getElementById("tmPartLabel").textContent = "PŘESTÁVKA";
+    setPartTag(document.getElementById("tmPartLabel"), "#C7C9C4");
+    updateProgressBar("#C7C9C4");
+    setScaledText(document.getElementById("tmTitle"), row.label || "Přestávka");
+    document.getElementById("tmDesc").textContent = "";
+    document.getElementById("tmCue").innerHTML = "";
+    document.getElementById("tmNote").textContent = "";
+    renderComments(null);
+    showTrainingModeVideo(null);
+    setTimerMode("time");
+    tmSeconds = Math.max(1, valueToSeconds(row.duration || 1, row.durationUnit || "min"));
+    updateTrainingModeTimerDisplay();
+    startTrainingModeTimer();
+    return;
+  }
+
+  const seriesCount = row.seriesCount || 1;
+  if (seriesCount > 1) { seriesLabel.textContent = `Série ${tmSeriesNum} / ${seriesCount}`; seriesLabel.classList.remove("hidden"); }
+  else seriesLabel.classList.add("hidden");
+
+  if (row.isGroup) {
+    // Prázdný textContent, ale i tak barevná pilulka (setPartTag s barvou) by se ukázala jako
+    // prázdný barevný "zbytek" nad názvem skupiny — jméno skupiny už barvu nese samo (viz níže),
+    // takže tmPartLabel v tomhle stavu chce vždy vypnout (color:null), ne obarvit naprázdno.
+    document.getElementById("tmPartLabel").textContent = "";
+    setPartTag(document.getElementById("tmPartLabel"), null);
+    updateProgressBar(row.part ? getPart(row.part).color : "#339933");
+    groupNameEl.textContent = row.name || "Skupina";
+    groupNameEl.classList.remove("hidden");
+    if (row.part) {
+      const gp = getPart(row.part);
+      groupNameEl.style.color = darkenHex(gp.color, 0.5);
+      groupNameEl.style.background = gp.color + "33";
+      groupNameEl.style.borderColor = gp.color;
+    } else { groupNameEl.style.color = ""; groupNameEl.style.background = ""; groupNameEl.style.borderColor = ""; }
+    const v = row.videos[tmGroupVideoIndex];
+    if (v && v.isBreak) {
+      document.getElementById("tmPartLabel").textContent = "PŘESTÁVKA";
+      setPartTag(document.getElementById("tmPartLabel"), "#C7C9C4");
+      updateProgressBar("#C7C9C4");
+      setScaledText(document.getElementById("tmTitle"), v.label || "Přestávka");
+      setScaledText(document.getElementById("tmDesc"), `Cvik ${tmGroupVideoIndex + 1} / ${row.videos.length}`);
+      document.getElementById("tmCue").innerHTML = "";
+      document.getElementById("tmNote").textContent = "";
+      renderComments(null);
+      showTrainingModeVideo(null);
+      setTimerMode("time");
+      tmSeconds = Math.max(1, valueToSeconds(v.duration != null ? v.duration : 1, v.durationUnit || "min"));
+      updateTrainingModeTimerDisplay();
+      startTrainingModeTimer();
+      return;
+    }
+    const lib = v && !v.isText ? videos[v.videoId] : null;
+    const memberCue = (v && v.cue) || row.cue || "";
+    document.getElementById("tmCue").innerHTML = memberCue ? `<i class="fa-solid fa-comment"></i> ${esc(memberCue)}` : "";
+    setScaledText(document.getElementById("tmTitle"), v && v.isText ? (v.title || "(bez názvu)") : (lib ? lib.title : "(video smazáno)"));
+    setScaledText(document.getElementById("tmDesc"), `Cvik ${tmGroupVideoIndex + 1} / ${row.videos.length}`);
+    document.getElementById("tmNote").innerHTML = richValueToHtml((v && v.note) || row.poznamka || "");
+    renderComments(lib);
+    showTrainingModeVideo(lib, v && v.isText ? v : null);
+    if ((row.mode || "time") === "reps") {
+      if (v && v.reps) { repsDisplay.textContent = v.reps; repsDisplay.classList.remove("hidden"); }
+      setTimerMode("reps");
+    } else {
+      setTimerMode("time");
+      const durUnit = v ? (v.durationUnit || "min") : "min", durVal = v && v.duration != null ? v.duration : 1;
+      tmSeconds = Math.max(1, valueToSeconds(durVal, durUnit));
+      updateTrainingModeTimerDisplay();
+      startTrainingModeTimer();
+    }
+    return;
+  }
+
+  const lib = row.isText ? null : videos[row.videoId];
+  const part = getPart(row.part);
+  document.getElementById("tmPartLabel").textContent = (part ? part.label : "").toUpperCase();
+  setPartTag(document.getElementById("tmPartLabel"), part ? part.color : null);
+  updateProgressBar(part ? part.color : null);
+  setScaledText(document.getElementById("tmTitle"), row.isText ? (row.title || "(bez názvu)") : (lib ? lib.title : "(video smazáno z knihovny)"));
+  setScaledText(document.getElementById("tmDesc"), row.isText ? (row.shortDesc || "") : (lib && lib.shortDesc ? lib.shortDesc : ""));
+  document.getElementById("tmCue").innerHTML = row.cue ? `<i class="fa-solid fa-comment"></i> ${esc(row.cue)}` : "";
+  document.getElementById("tmNote").innerHTML = richValueToHtml(row.poznamka || "");
+  renderComments(lib);
+  showTrainingModeVideo(lib, row.isText ? row : null);
+  if ((row.mode || "time") === "reps") {
+    if (row.reps) { repsDisplay.textContent = row.reps; repsDisplay.classList.remove("hidden"); }
+    setTimerMode("reps");
+  } else {
+    setTimerMode("time");
+    tmSeconds = Math.max(1, valueToSeconds(row.duration || 1, row.durationUnit || "min"));
+    updateTrainingModeTimerDisplay();
+    startTrainingModeTimer();
+  }
+}
+function advanceTrainingMode() {
+  if (tmFinished) { showState("fa-circle-check", "Trénink dokončen", "Tuhle stránku teď můžeš zavřít."); return; }
+  const row = tmItems[tmIndex];
+  if (tmInSeriesPause) { tmInSeriesPause = false; renderTrainingModeItem(); return; }
+  if (row.isGroup && !(row.part === "prestavka")) {
+    if (tmGroupVideoIndex < row.videos.length - 1) { tmGroupVideoIndex++; renderTrainingModeItem(); return; }
+    if (tmSeriesNum < (row.seriesCount || 1)) { tmSeriesNum++; tmGroupVideoIndex = 0; tmInSeriesPause = true; renderTrainingModeItem(); return; }
+  } else if (row.part !== "prestavka") {
+    if (tmSeriesNum < (row.seriesCount || 1)) { tmSeriesNum++; tmInSeriesPause = true; renderTrainingModeItem(); return; }
+  }
+  if (tmIndex < tmItems.length - 1) { tmIndex++; tmGroupVideoIndex = 0; tmSeriesNum = 1; renderTrainingModeItem(); }
+  else { tmFinished = true; renderTrainingModeItem(); }
+}
+function retreatTrainingMode() {
+  if (tmInSeriesPause) { tmInSeriesPause = false; tmSeriesNum--; renderTrainingModeItem(); return; }
+  const row = tmItems[tmIndex];
+  if (row.isGroup && tmGroupVideoIndex > 0) { tmGroupVideoIndex--; renderTrainingModeItem(); return; }
+  if (tmIndex > 0) {
+    tmIndex--;
+    const prevRow = tmItems[tmIndex];
+    tmGroupVideoIndex = prevRow.isGroup ? prevRow.videos.length - 1 : 0;
+    tmSeriesNum = 1;
+    renderTrainingModeItem();
+  }
+}
+document.getElementById("tmNextBtn").addEventListener("click", advanceTrainingMode);
+document.getElementById("tmPrevBtn").addEventListener("click", retreatTrainingMode);
+document.getElementById("tmInfoBtn").addEventListener("click", openExerciseInfoModal);
+document.getElementById("closeExerciseInfoModalBtn").addEventListener("click", closeExerciseInfoModal);
+
+function shouldForceTrainingLandscape() { return window.innerWidth < 860 && window.innerHeight > window.innerWidth; }
+let tmLandscapeForced = false;
+/** Jen zamkne orientaci na šířku (na úzkých telefonech na výšku) — o samotné vstoupení do
+    fullscreenu se stará startSharedTrainingMode(), protože to musí proběhnout přímo v reakci na
+    klik na úvodní obrazovce (viz níž), jinak by to prohlížeč potichu odmítl. */
+async function enterTrainingLandscape() {
+  const el = document.getElementById("trainingModeView");
+  let locked = false;
+  try { if (screen.orientation && screen.orientation.lock) { await screen.orientation.lock("landscape"); locked = true; } } catch (e) {}
+  tmLandscapeForced = true;
+  if (!locked) el.classList.add("tm-forced-landscape");
+  showTrainingModeVideo(currentTrainingModeLib(), currentTrainingModeTextItem());
+}
+// Sdílená prezentace nemá (na rozdíl od appky) žádné tlačítko "zavřít trénink" — jde se jen
+// dopředu/dozadu až do konce. Fullscreen ale umí zmizet i bez úmyslu (gesto zpět, stažení
+// oznámení, přepnutí appky), a to spustí fullscreenchange stejně jako schválné opuštění.
+// Dřív se to bralo jako "uživatel už nechce na šířku" a vynucení natrvalo zrušilo — a protože
+// spolu s fullscreenem obvykle zmizí i zámek orientace (ten na něm často závisí), telefon se
+// pak sám otočil zpátky na výšku a nic ho už nevrátilo — trénink zůstal nakřivo napořád.
+// Teď se místo rušení naopak vždycky (znovu) natvrdo vynutí natočení přes CSS transform —
+// to na fullscreenu ani na zámku orientace nezávisí, takže vydrží, ať se s nimi stane cokoli.
+document.addEventListener("fullscreenchange", () => {
+  if (!document.fullscreenElement && tmLandscapeForced && shouldForceTrainingLandscape()) {
+    const tmView = document.getElementById("trainingModeView");
+    const wasForced = tmView.classList.contains("tm-forced-landscape");
+    tmView.classList.add("tm-forced-landscape");
+    if (!wasForced) showTrainingModeVideo(currentTrainingModeLib(), currentTrainingModeTextItem());
+    // Zkusí se i znovu požádat o fullscreen — bez přímé reakce na klik to prohlížeč běžně
+    // odmítne, ale je to zadarmo a někdy to i tak vyjde.
+    try {
+      const p = tmView.requestFullscreen ? tmView.requestFullscreen() : (tmView.webkitRequestFullscreen && tmView.webkitRequestFullscreen());
+      if (p && p.catch) p.catch(() => {});
+    } catch (e) {}
+  }
+});
+
+function flattenItemsFromTraining(training) {
+  return (training.items || []).map(row => row);
+}
+
+async function init() {
+  const params = new URLSearchParams(location.search);
+  const ownerUid = params.get("u");
+  const id = params.get("id");
+  if (!ownerUid || !id) { showState("fa-triangle-exclamation", "Chybí odkaz na trénink", "Zkontroluj, jestli je celá adresa zkopírovaná správně."); return; }
+  let snap;
+  try {
+    snap = await getDoc(doc(db, "users", ownerUid, "trainings", id));
+  } catch (e) {
+    console.error("[t.html] Nepodařilo se načíst trénink:", e);
+    showState("fa-triangle-exclamation", "Nepodařilo se načíst", `Zkontroluj připojení k internetu a zkus to znovu. (${e && (e.code || e.message) || "neznámá chyba"})`);
+    return;
+  }
+  if (!snap.exists()) { showState("fa-link-slash", "Odkaz už není platný", "Trénink byl buď smazán, nebo sdílení skončilo."); return; }
+  t = snap.data();
+  if (!t.share || !t.share.expiresAt || t.share.expiresAt < Date.now()) {
+    showState("fa-link-slash", "Odkaz už není platný", "Platnost sdíleného odkazu vypršela.");
+    return;
+  }
+  videos = (t.shareSnapshot && t.shareSnapshot.videos) || {};
+  parts = (t.shareSnapshot && t.shareSnapshot.parts) || {};
+  window.__driveApiKey = (t.shareSnapshot && t.shareSnapshot.driveApiKey) || "";
+  tmItems = flattenItemsFromTraining(t);
+  if (!tmItems.length) { showState("fa-inbox", "Trénink je prázdný", "Tenhle trénink zatím nemá žádné cviky."); return; }
+
+  // Nestačí jen vyprázdnit obsah — #stateView má height:100vh (kvůli vystředění chybové hlášky),
+  // takže by i prázdný zůstal zabírat celou výšku obrazovky nad úvodní obrazovkou. Přesně tohle
+  // způsobovalo tu "musím scrollovat/zvětšit okno, aby se něco ukázalo" hlášku.
+  document.getElementById("stateView").innerHTML = "";
+  document.getElementById("stateView").classList.add("hidden");
+  document.getElementById("introTitle").textContent = t.name || "Trénink";
+  document.getElementById("introSub").textContent =
+    `${tmItems.length} cvičení · pro nerušený trénink doporučujeme spustit na celou obrazovku.`;
+  document.getElementById("introView").classList.remove("hidden");
+}
+/** Spustí se přímo z kliknutí na úvodní obrazovce (viz #introStartBtn níž) — fullscreen se MUSÍ
+    vyžádat tady, v přímé reakci na klik, jinak by ho prohlížeč (bez uživatelského gesta) potichu
+    odmítl, což byl přesně důvod, proč fullscreen dřív fakticky nikdy nenaskočil. */
+async function startSharedTrainingMode() {
+  document.getElementById("introView").classList.add("hidden");
+  const tmView = document.getElementById("trainingModeView");
+  tmView.classList.remove("hidden");
+  try {
+    if (tmView.requestFullscreen) await tmView.requestFullscreen();
+    else if (tmView.webkitRequestFullscreen) tmView.webkitRequestFullscreen();
+  } catch (e) {}
+  renderTrainingModeItem();
+  if (shouldForceTrainingLandscape()) enterTrainingLandscape();
+}
+document.getElementById("introStartBtn").addEventListener("click", startSharedTrainingMode);
+init();
+</script>
+</body>
+</html>
