@@ -631,6 +631,9 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 /* Karta videa z Knihovny teď jde otevřít i z Fáze cvičení (klik na náhled) — bez tohohle
    by se v Tréninkovém režimu (z-index 200) otevřela schovaná za ním. */
 #detailModalBackdrop{z-index:210;}
+/* Výběr tréninku se dá otevřít i z karty videa (tlačítko "Přidat do tréninku"), takže musí
+   vyjet NAD ní — karta má 210, výchozí modal jen 50 a schoval by se pod ni. */
+#addToTrainingModalBackdrop{z-index:220;}
 /* Otevřená z Fáze cvičení se karta na tu dobu přestěhuje dovnitř #trainingModeView (viz
    fazeOpenLibraryCard) a dostane tuhle podobu: panel vyjede zespodu uprostřed, trénink za ním
    zůstane vidět rozostřený a schová se všechno, co trenér uprostřed tréninku nepotřebuje
@@ -1840,6 +1843,9 @@ body.popout-mode .popout-btn{display:none !important;}
     <div class="modal-actions">
       <button class="btn btn-primary" id="editFromDetailBtn"><i class="fa-solid fa-pen"></i> Upravit</button>
     </div>
+    <div class="modal-actions" style="margin-top:8px;">
+      <button class="btn" id="addToTrainingFromDetailBtn"><i class="fa-solid fa-list-check"></i> Přidat do tréninku</button>
+    </div>
     <div class="comments-card" id="detailCommentsSection">
       <div class="comments-card-head">
         <i class="fa-regular fa-comments"></i>
@@ -2674,7 +2680,7 @@ async function ensureMessaging() {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-09-14 18:40";
+const APP_VERSION = "2026-09-14 19:35";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -6287,6 +6293,13 @@ function openDetailModal(id) {
 document.getElementById("editFromDetailBtn").addEventListener("click", () => {
   closeDetailModal();
   openLinkModal(currentDetailId);
+});
+/** Totéž, co "Přidat do tréninku" v kebabovém menu u karty v Knihovně — jen dostupné rovnou
+    z otevřené karty videa. Karta schválně zůstane otevřená pod výběrem tréninku: po přidání
+    se výběr zavře a trenér je zpátky u videa, ze kterého vyšel. V tréninkovém režimu se celý
+    řádek s akcemi schovává (viz .tmf-sheet v CSS), takže tam tlačítko není. */
+document.getElementById("addToTrainingFromDetailBtn").addEventListener("click", () => {
+  if (currentDetailId) openAddToTrainingModal(currentDetailId);
 });
 
 /* =========================================================
@@ -12371,7 +12384,7 @@ const HELP_DATA = [
   { group: "Tréninky", blocks: [
     { title: "Vytváření tréninku", icon: "fa-solid fa-clipboard-list", qa: [
       { q: "Jak založím nový trénink?", a: "Na záložce Tréninky klikni na tlačítko pro založení nového a pojmenuj ho — otevře se editor, kde skládáš jeho obsah." },
-      { q: "Jak do tréninku přidám video nebo cvičení z knihovny?", a: "V editoru tréninku klikni na tlačítko pro přidání položky a vyber video z knihovny — jde filtrovat stejně jako v Knihovně (podle složky, štítku, oblíbených)." },
+      { q: "Jak do tréninku přidám video nebo cvičení z knihovny?", a: "Dvěma způsoby. Buď v editoru tréninku klikni na tlačítko pro přidání položky a vyber video z knihovny (jde filtrovat stejně jako v Knihovně — podle složky, štítku, oblíbených), nebo naopak z Knihovny: otevři kartu videa a dole je „Přidat do tréninku“, kde si vybereš, do kterého tréninku má přibýt. To samé je i v nabídce pod třemi tečkami u karty v Knihovně.", kw: "pridat video do treninku karta kebab" },
       { q: "Jak přidám přestávku?", a: "Přestávka se přidává stejně jako video — jen jako zvláštní typ položky bez videa, jen s délkou trvání." },
       { q: "Co je „skupina“ cvičení a k čemu je dobrá?", a: "Skupina spojuje víc cvičení dohromady tak, aby se v Tréninkovém režimu střídala v jednom bloku (třeba tři varianty přihrávky za sebou) — vybereš víc položek a použiješ „Seskupit“." }
     ]},
