@@ -967,10 +967,12 @@ body.popout-mode .popout-btn{display:none !important;}
 .clock-badge{position:absolute;bottom:7px;right:7px;display:none;align-items:center;gap:3px;font-size:10px;font-weight:700;color:var(--ink-soft);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:3px 7px;white-space:nowrap;z-index:2;}
 .clock-badge i{font-size:8.5px;}
 .clock-badge.shown{display:inline-flex;}
-.seq-item.is-group .clock-badge{bottom:10px;right:11px;}
+/* Ve SKUPINĚ nesedí pilulka s časem v rohu karty — tam přes ni leze tlačítko "Přidat pauzu
+   do skupiny". Místo toho jede v řádku s dávkováním, kde je stejně prázdno napravo od
+   "Čas | Opakování | Sérií": nezabere řádek navíc a nic nepřekrývá. */
+.seq-item.is-group .clock-badge{position:static;margin-left:auto;}
 @media(max-width:640px){
   .clock-badge{font-size:9px;padding:2px 5px;bottom:6px;right:6px;}
-  .seq-item.is-group .clock-badge{bottom:9px;right:9px;}
 }
 .editor-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;}
 @media(min-width:860px){.editor-layout{grid-template-columns:280px minmax(0,1fr);align-items:start;}}
@@ -2667,7 +2669,7 @@ async function ensureMessaging() {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-09-14 11:15";
+const APP_VERSION = "2026-09-14 13:20";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -8624,7 +8626,12 @@ function ovGearStripHtml(items, from) {
     ovItemEquipment(items[i]).forEach(e => { if (gear.indexOf(e) === -1) gear.push(e); });
   }
   if (!gear.length) return "";
-  return `<div class="ov-gear"><b>${esc((getPart(part).label || part).toUpperCase())} &middot; PŘIPRAV</b>${gear.map(g => `<span>${esc(g)}</span>`).join("")}</div>`;
+  // POZOR: skupina vytvořená z panelu Knihovny nemá pole `part` VŮBEC (viz vznik skupiny
+  // v editoru — jedna cesta ho nastavuje, druhá ne), takže tu název části může chybět.
+  // Dřív na tom `undefined.toUpperCase()` spadlo a s ním celý seznam — viz renderOverview.
+  const label = getPart(part).label || part;
+  const prefix = label ? `${esc(String(label).toUpperCase())} &middot; ` : "";
+  return `<div class="ov-gear"><b>${prefix}PŘIPRAV</b>${gear.map(g => `<span>${esc(g)}</span>`).join("")}</div>`;
 }
 /** Ryska na časové pásce. Čas je HRANICE mezi cviky, takže konec jednoho a začátek dalšího je
     jedno číslo. Pod ryskou je plánovaná délka bloku, který za ní začíná. Bez zadaného začátku
@@ -8642,26 +8649,41 @@ function renderOverview() {
   if (!t) return;
   document.getElementById("ovName").textContent = t.name || "Trénink";
   const items = t.items || [];
-  const total = items.reduce((sum, row) => sum + fazeItemTotalSeconds(row), 0);
+  let html = "", lastPart = null, acc = 0;
+  items.forEach((row, i) => {
+    // Každá položka zvlášť v try/catch. Dřív stačila jedna vadná a výjimka vyhodila celé
+    // renderOverview PŘED zápisem do #ovList — v seznamu pak zůstal viset obsah PŘEDCHOZÍHO
+    // otevřeného tréninku, zatímco hlavička už patřila tomu novému. Vypadalo to, jako by se
+    // přehled nepřepnul. Teď vypadne nanejvýš jedna karta a do 🐞 se napíše která a proč.
+    try {
+      if (row.part !== "prestavka" && row.part !== lastPart) {
+        const strip = ovGearStripHtml(items, i);
+        if (strip) html += `<div class="ov-strip">${strip}</div>`;
+        lastPart = row.part;
+      }
+      const seconds = fazeItemTotalSeconds(row);
+      html += ovTickHtml(acc, seconds) + ovCardHtml(row);
+      acc += seconds;
+    } catch (e) {
+      logDebug("[přehled] položka se nevykreslila:", (row && row.itemId) || "?", (e && e.message) || e);
+      html += ovTickHtml(acc, null) +
+        `<div class="ov-card" style="border-left-color:var(--danger)"><div class="ov-top">` +
+        `<span class="ov-title">Tuhle položku se nepodařilo zobrazit</span></div></div>`;
+    }
+  });
+  if (items.length) html += ovTickHtml(acc, null) + `<div class="ov-endrow">konec tréninku</div>`;
+  // Seznam se zapisuje VŽDYCKY a jako první — ať se sem dostane cokoliv, nikdy tu nezůstane
+  // viset předchozí trénink.
+  document.getElementById("ovList").innerHTML = html;
+  // Hlavička se počítá až teď, a to ze STEJNÉHO součtu (acc), jakým se kreslila páska. Dřív
+  // měla vlastní průchod přes fazeItemTotalSeconds a uměla se s páskou rozejít — Mek viděl
+  // "končíme 06:58" nad páskou, která končila v 07:20.
   document.getElementById("ovStartBtn").textContent = ovStartSeconds == null
     ? "zadat začátek"
     : `od ${pdfFmtClock(ovStartSeconds)}`;
   const endEl = document.getElementById("ovEnd");
   endEl.classList.toggle("hidden", ovStartSeconds == null);
-  if (ovStartSeconds != null) endEl.textContent = `končíme ${pdfFmtClock((ovStartSeconds + total) % 86400)}`;
-  let html = "", lastPart = null, acc = 0;
-  items.forEach((row, i) => {
-    if (row.part !== "prestavka" && row.part !== lastPart) {
-      const strip = ovGearStripHtml(items, i);
-      if (strip) html += `<div class="ov-strip">${strip}</div>`;
-      lastPart = row.part;
-    }
-    const seconds = fazeItemTotalSeconds(row);
-    html += ovTickHtml(acc, seconds) + ovCardHtml(row);
-    acc += seconds;
-  });
-  if (items.length) html += ovTickHtml(acc, null) + `<div class="ov-endrow">konec tréninku</div>`;
-  document.getElementById("ovList").innerHTML = `<div class="ov-rows">${html}</div>`;
+  if (ovStartSeconds != null) endEl.textContent = `končíme ${pdfFmtClock((ovStartSeconds + acc) % 86400)}`;
 }
 function openOverview() {
   const t = state.trainings[currentTrainingId];
@@ -9922,7 +9944,12 @@ function updateClockBadges() {
   const clockTimes = showClock ? computeRowClockTimes(t, timeInputToSeconds(state.profile.trainingStartTime)) : null;
   document.querySelectorAll("#sequenceList .seq-item[data-itemid]").forEach(el => {
     const itemId = el.dataset.itemid;
-    const existing = el.querySelector(":scope > .clock-badge");
+    // Skupina má pilulku uvnitř řádku s dávkováním, ostatní karty absolutně v rohu — hledat
+    // i zakládat se musí na tom samém místě, jinak by tu vznikla druhá pilulka navíc.
+    const host = el.classList.contains("is-group")
+      ? (el.querySelector(":scope > .seq-dosage-row") || el)
+      : el;
+    const existing = host.querySelector(":scope > .clock-badge");
     const seconds = clockTimes ? clockTimes[itemId] : null;
     if (seconds == null) {
       if (existing) existing.remove();
@@ -9935,7 +9962,7 @@ function updateClockBadges() {
       const div = document.createElement("div");
       div.className = "clock-badge shown";
       div.innerHTML = html;
-      el.appendChild(div);
+      host.appendChild(div);
     }
   });
 }
@@ -9971,7 +9998,8 @@ function renderEstimateInput(itemId, memberId, value, unit, dis) {
     ${renderTimeUnitSelect(null, null, unit, "min", dis, unitAttrs)}
   </span>`;
 }
-function renderModeSeriesControls(row, dis) {
+/** `extraHtml` se vloží na konec řádku s dávkováním — používá to skupina pro pilulku s časem. */
+function renderModeSeriesControls(row, dis, extraHtml) {
   const mode = row.mode || "time";
   const seriesCount = row.seriesCount || 1;
   return `
@@ -9994,6 +10022,7 @@ function renderModeSeriesControls(row, dis) {
         <label>Pauza <input type="number" min="0" value="${row.seriesPause != null ? row.seriesPause : 30}" data-field="seriesPause" data-itemid="${esc(row.itemId)}" style="width:56px;" ${dis}></label>
         ${renderTimeUnitSelect("seriesPauseUnit", row.itemId, row.seriesPauseUnit, "s", dis)}
       </div>` : ""}
+      ${extraHtml || ""}
     </div>`;
 }
 /** Starším skupinám (uloženým ještě před zavedením memberId) doplní každému členovi vlastní
@@ -10105,7 +10134,7 @@ function renderSequence() {
             </select>
           </div>
         </div>
-        ${renderModeSeriesControls(row, dis)}
+        ${renderModeSeriesControls(row, dis, clockBadgeHtml(row.itemId))}
         <button type="button" class="seq-notes-toggle${(row.cue || richHasContent(row.poznamka)) ? " has-content" : ""}" data-notes-toggle="${esc(row.itemId)}"><i class="fa-solid fa-chevron-down"></i> Cue a poznámka</button>
         <div class="seq-item-fields" data-notes-panel="${esc(row.itemId)}">
           <input type="text" placeholder="Cue (co říct nahlas)" value="${esc(row.cue)}" data-field="cue" data-itemid="${esc(row.itemId)}" ${dis}>
@@ -10183,7 +10212,6 @@ function renderSequence() {
           }).join("")}
         </div>
         ${ro ? "" : `<button type="button" class="seq-group-add-break-btn" data-groupaddbreak="${esc(row.itemId)}"><i class="fa-solid fa-mug-hot"></i> Přidat pauzu do skupiny</button>`}
-        ${clockBadgeHtml(row.itemId)}
       </div>`;
     }
     if (row.isText) {
