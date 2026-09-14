@@ -964,8 +964,10 @@ body.popout-mode .popout-btn{display:none !important;}
 .clock-toggle-btn{border:1px solid var(--line);background:var(--card);color:var(--ink-soft);width:36px;height:36px;border-radius:var(--radius-sm);display:inline-flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;flex-shrink:0;}
 .clock-toggle-btn:hover{background:var(--paper);}
 .clock-toggle-btn.active{background:var(--chalk);border-color:var(--chalk);color:#fff;}
-.start-time-chip{display:none;align-items:center;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:5px 6px 5px 12px;font-size:12.5px;font-weight:600;color:var(--ink-soft);white-space:nowrap;}
-.start-time-chip.shown{display:inline-flex;}
+.start-time-chip{display:inline-flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:5px 6px 5px 12px;font-size:12.5px;font-weight:600;color:var(--ink-soft);white-space:nowrap;}
+.start-time-clear{background:none;border:none;color:var(--ink-faint);font-size:12px;padding:2px 4px;line-height:1;}
+.vis-sep{color:var(--ink-faint);margin:0 2px;}
+.vis-act{color:var(--court-dark);font-weight:700;}
 .start-time-chip input[type=time]{border:none;background:var(--paper);border-radius:6px;padding:4px 6px;font-size:12.5px;font-family:var(--font-body);color:var(--ink);width:78px;}
 .clock-badge{position:absolute;bottom:7px;right:7px;display:none;align-items:center;gap:3px;font-size:10px;font-weight:700;color:var(--ink-soft);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:3px 7px;white-space:nowrap;z-index:2;}
 .clock-badge i{font-size:8.5px;}
@@ -1151,8 +1153,6 @@ body.popout-mode .popout-btn{display:none !important;}
   .copy-bulk-copy-full{display:none;}
   .copy-bulk-copy-short{display:inline;}
 }
-.part-legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;font-size:11px;color:var(--ink-soft);}
-.part-legend span{display:inline-flex;align-items:center;gap:4px;}
 .part-swatch{width:10px;height:10px;border-radius:3px;display:inline-block;}
 .add-break-btn{margin-bottom:8px;}
 .seq-item.is-group{background:var(--card);border:2px dashed var(--court);}
@@ -1600,8 +1600,7 @@ body.popout-mode .popout-btn{display:none !important;}
       <div class="editor-head">
         <input type="text" id="trainingNameInput" placeholder="Název tréninku">
         <div class="total-badge" id="totalTimeBadge">0 min</div>
-        <button type="button" class="clock-toggle-btn" id="showClockTimesBtn" aria-label="Zobrazit přesné časy na kartách" title="Zobrazit přesné časy na kartách"><i class="fa-regular fa-clock"></i></button>
-        <div class="start-time-chip" id="startTimeChip"><span>od</span><input type="time" id="trainingStartTimeInput" value="09:00"></div>
+        <div class="start-time-chip" id="startTimeChip"><span>od</span><input type="time" id="trainingStartTimeInput" value=""><button type="button" class="start-time-clear hidden" id="clearStartTimeBtn" aria-label="Zrušit začátek tréninku" title="Zrušit začátek tréninku"><i class="fa-solid fa-xmark"></i></button></div>
       </div>
       <div id="trainingEquipmentSummary" class="hidden" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:-4px 0 12px;"></div>
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
@@ -1614,7 +1613,6 @@ body.popout-mode .popout-btn{display:none !important;}
         <span><i class="fa-solid fa-eye"></i> <span id="readOnlyBannerText"></span></span>
         <button class="btn btn-sm btn-accent" id="cloneFromReadOnlyBtn"><i class="fa-regular fa-copy"></i> Naklonovat do mých</button>
       </div>
-      <div class="part-legend" id="partLegend"></div>
       <div class="editor-layout" id="editorLayout">
         <div class="picker-panel">
           <h3>Přidat z knihovny</h3>
@@ -2593,7 +2591,7 @@ storage.maxOperationRetryTime = 20000;
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-09-14 21:10";
+const APP_VERSION = "2026-09-14 22:40";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -4203,10 +4201,11 @@ async function loadUserData() {
     darkMode: !!legacy.darkMode,
     // (notifikace z appky vypadly nadobro, viz claude/trener-refaktoring.md)
     // preference a fungující token(y), samotné odesílání dělá Cloud Function na serveru.
-    // Volitelné zobrazení přesných časů na kartách v editoru (viz #showClockTimesBtn) — appka
-    // si pamatuje jak zapnutí/vypnutí, tak naposledy zadaný čas začátku, stejně jako u tmavého režimu.
-    showClockTimes: !!legacy.showClockTimes,
-    trainingStartTime: legacy.trainingStartTime || "09:00"
+    // Přesné časy na kartách v editoru: samostatný přepínač 14. 9. zmizel — hodiny se prostě
+    // ukážou, když je zadaný začátek tréninku (stejné pravidlo jako v Přehledu tréninku).
+    // Jednorázový převod: kdo měl přepínač VYPNUTÝ, tomu se začátek vyprázdní, ať mu hodiny
+    // nenaskočí bez ptaní. Kdo ho měl zapnutý, ponechá si svůj čas.
+    trainingStartTime: legacy.showClockTimes ? (legacy.trainingStartTime || "09:00") : ""
   };
   applyColorScheme();
   // Práh pro odznaky "nové od posledního přihlášení" — aplikace si čas uloží zvlášť (ne jako
@@ -9180,34 +9179,34 @@ function openEditor(id) {
   copySelectedIds.clear();
   renderFolderOptions();
   renderPartSelectOptions();
-  renderPartLegend();
   renderPickerList();
   applyClockTimesUI();
   renderSequence();
 }
-/** Nastaví přepínač "Zobrazit časy" + čip se startovním časem podle uloženého profilu — volá
-    se při vstupu do editoru (viz openEditor) a taky po každém kliknutí na přepínač samotný. */
+/** Čip se začátkem tréninku v hlavičce editoru. Samostatný přepínač "zobrazit časy" je pryč —
+    hodiny na kartách se ukazují právě tehdy, když je začátek zadaný, a prázdný začátek je
+    platný stav (křížek vedle pole). Je to to samé pravidlo, které zná trenér z Přehledu. */
 function applyClockTimesUI() {
-  const on = !!(state.profile && state.profile.showClockTimes);
-  document.getElementById("showClockTimesBtn").classList.toggle("active", on);
-  document.getElementById("startTimeChip").classList.toggle("shown", on);
-  document.getElementById("trainingStartTimeInput").value = (state.profile && state.profile.trainingStartTime) || "09:00";
+  const val = (state.profile && state.profile.trainingStartTime) || "";
+  document.getElementById("trainingStartTimeInput").value = val;
+  document.getElementById("clearStartTimeBtn").classList.toggle("hidden", !val);
 }
-document.getElementById("showClockTimesBtn").addEventListener("click", async () => {
-  const on = !(state.profile && state.profile.showClockTimes);
-  state.profile = Object.assign({}, state.profile, { showClockTimes: on });
+async function setTrainingStartTime(val) {
+  state.profile = Object.assign({}, state.profile, { trainingStartTime: val });
   applyClockTimesUI();
   renderSequence();
   try {
-    await setDoc(doc(db, "users", uidCurrent), { showClockTimes: on }, { merge: true });
+    await setDoc(doc(db, "users", uidCurrent), { trainingStartTime: val }, { merge: true });
   } catch (err) {
     console.error(err);
-    toast("Uložení nastavení časů selhalo, zkontroluj připojení.", 2200, "err");
+    toast("Uložení startovního času selhalo, zkontroluj připojení.", 2200, "err");
   }
-});
+}
+document.getElementById("clearStartTimeBtn").addEventListener("click", () => setTrainingStartTime(""));
 document.getElementById("trainingStartTimeInput").addEventListener("change", async (e) => {
-  const val = e.target.value || "09:00";
+  const val = e.target.value || "";
   state.profile = Object.assign({}, state.profile, { trainingStartTime: val });
+  applyClockTimesUI();
   renderSequence();
   try {
     await setDoc(doc(db, "users", uidCurrent), { trainingStartTime: val }, { merge: true });
@@ -9233,11 +9232,6 @@ document.getElementById("trainingNameInput").addEventListener("input", (e) => {
   scheduleSave();
 });
 
-function renderPartLegend() {
-  document.getElementById("partLegend").innerHTML = state.parts.map(p =>
-    `<span><span class="part-swatch" style="background:${esc(p.color)}"></span>${esc(p.label)}</span>`
-  ).join("") + `<span><span class="part-swatch" style="background:var(--part-prestavka)"></span>Přestávka</span>`;
-}
 
 ["pickerSearch", "pickerFolderFilter", "pickerPartFilter"].forEach(id => {
   document.getElementById(id).addEventListener("input", renderPickerList);
@@ -9711,7 +9705,7 @@ function updateTotalBadge() {
   const badge = document.getElementById("totalTimeBadge");
   if (!t) { badge.textContent = "0 min"; badge.removeAttribute("title"); return; }
   const { totalSeconds, hasReps } = calculateTrainingTotalSeconds(t);
-  const showClock = !!(state.profile && state.profile.showClockTimes);
+  const showClock = !!(state.profile && state.profile.trainingStartTime);
   if (hasReps) {
     if (totalSeconds > 0) {
       badge.innerHTML = `<i class="fa-solid fa-stopwatch"></i> ~${Math.round(totalSeconds / 60)} min`;
@@ -9749,7 +9743,7 @@ function updateClockBadges() {
   updateTotalBadge();
   const t = state.trainings[currentTrainingId];
   if (!t) return;
-  const showClock = !!(state.profile && state.profile.showClockTimes);
+  const showClock = !!(state.profile && state.profile.trainingStartTime);
   const clockTimes = showClock ? computeRowClockTimes(t, timeInputToSeconds(state.profile.trainingStartTime)) : null;
   document.querySelectorAll("#sequenceList .seq-item[data-itemid]").forEach(el => {
     const itemId = el.dataset.itemid;
@@ -9857,9 +9851,9 @@ function renderSequence() {
   renderTrainingEquipmentSummary(t);
   const ro = editorReadOnly;
   const dis = ro ? "disabled" : "";
-  // Volitelné časy na kartách (viz #showClockTimesBtn) — spočítá se jednou za celý render,
-  // pak se jen čte podle itemId u každé karty zvlášť (viz clockBadgeHtml).
-  const showClockTimes = !!(state.profile && state.profile.showClockTimes);
+  // Časy na kartách — ukazují se, když je v hlavičce zadaný začátek tréninku. Spočítá se
+  // jednou za celý render, pak se jen čte podle itemId u každé karty (viz clockBadgeHtml).
+  const showClockTimes = !!(state.profile && state.profile.trainingStartTime);
   const clockTimes = showClockTimes ? computeRowClockTimes(t, timeInputToSeconds(state.profile.trainingStartTime)) : null;
   function clockBadgeHtml(itemId) {
     if (!clockTimes) return "";
@@ -10672,14 +10666,28 @@ function renderTrainingVisibilityBtn() {
   const t = state.trainings[currentTrainingId];
   const btn = document.getElementById("trainingVisibilityBtn");
   if (!t) return;
+  // Vlevo STAV, vpravo zeleně to, co se stane po kliknutí — ať jde obojí přečíst naráz.
   btn.innerHTML = t.public
-    ? '<i class="fa-solid fa-globe"></i> Na Tržišti — klikni pro soukromé'
-    : '<i class="fa-solid fa-lock"></i> Soukromé — klikni pro Tržiště';
+    ? '<i class="fa-solid fa-globe"></i> Na Tržišti <span class="vis-sep">·</span> <span class="vis-act">Skrýt</span>'
+    : '<i class="fa-solid fa-lock"></i> Soukromé <span class="vis-sep">·</span> <span class="vis-act">Sdílet na Tržiště</span>';
 }
-document.getElementById("trainingVisibilityBtn").addEventListener("click", () => {
+/** Mekovo zadání: ptát se před obojím směrem. Tlačítko je v hlavičce editoru hned vedle
+    ostatních akcí a přehmátnout se dá snadno — zveřejnění cizím lidem ani stažení tréninku,
+    na který se někdo dívá, by se nemělo stát jedním omylným ťuknutím. */
+document.getElementById("trainingVisibilityBtn").addEventListener("click", async () => {
   const t = state.trainings[currentTrainingId];
   if (!t) return;
-  t.public = !t.public;
+  const naTrziste = !t.public;
+  const ok = await confirmDialog(
+    naTrziste
+      ? "Trénink uvidí všichni trenéři v klubu a budou si ho moct zkopírovat k sobě. Kdykoli ho můžeš zase skrýt."
+      : "Trénink ostatním z Tržiště zmizí. Kopie, které si už někdo udělal, mu zůstanou — ty se tímhle neruší.",
+    naTrziste
+      ? { title: "Sdílet na Tržiště?", confirmLabel: "Sdílet", cancelLabel: "Zatím ne" }
+      : { title: "Skrýt z Tržiště?", confirmLabel: "Skrýt", cancelLabel: "Nechat" }
+  );
+  if (!ok) return;
+  t.public = naTrziste;
   t.visibilityDecided = true;
   t.dateModified = Date.now();
   scheduleSave();
@@ -11608,7 +11616,7 @@ function renderPartsManageList() {
   wrap.querySelectorAll("input").forEach(inp => {
     inp.addEventListener("change", () => {
       const p = state.parts.find(x => x.key === inp.dataset.key);
-      if (p && inp.value.trim()) { p.label = inp.value.trim(); scheduleSave(); renderPartLegend(); renderPickerList(); if (currentView === "editor") renderSequence(); toast("Uloženo."); }
+      if (p && inp.value.trim()) { p.label = inp.value.trim(); scheduleSave(); renderPickerList(); if (currentView === "editor") renderSequence(); toast("Uloženo."); }
     });
   });
 }
@@ -11618,7 +11626,6 @@ document.getElementById("addPartBtn").addEventListener("click", async () => {
   state.parts.push({ key: uid(), label: label.trim(), color: nextPartColor() });
   scheduleSave();
   renderPartsManageList();
-  renderPartLegend();
   renderPartSelectOptions();
   renderPickerList();
   toast("Přidáno.");
@@ -12022,7 +12029,7 @@ const HELP_DATA = [
     ]},
     { title: "Sdílení a Tržiště tréninků", icon: "fa-solid fa-store", qa: [
       { q: "Jak sdílím trénink s konkrétním kolegou?", a: "V přehledu tréninků otevři nabídku u tréninku (⋮) a vyber „Sdílet odkazem“ — vygeneruje se odkaz, který jde poslat komukoli, i bez přístupu do aplikace." },
-      { q: "Co je Tržiště a jak tam trénink zveřejním?", a: "Tržiště je záložka, kde vidíš tréninky ostatních trenérů, které se rozhodli zveřejnit. Vlastní trénink tam dáš tlačítkem „Na Tržiště“ při ukládání — dokud to neuděláš, trénink je jen tvůj a nikdo jiný ho neuvidí." },
+      { q: "Co je Tržiště a jak tam trénink zveřejním?", a: "Tržiště je záložka, kde vidíš tréninky ostatních trenérů, které se rozhodli zveřejnit. Vlastní trénink tam dáš tlačítkem v hlavičce editoru — píše se na něm, jak na tom trénink teď je („Soukromé“ nebo „Na Tržišti“) a vedle toho, co se stane po kliknutí. Aplikace se ještě jednou zeptá, než ho zveřejní nebo zase skryje. Dokud to neuděláš, trénink je jen tvůj a nikdo jiný ho neuvidí.", kw: "trziste zverejnit sdilet soukrome" },
       { q: "Jaký je rozdíl mezi veřejným a soukromým tréninkem?", a: "Soukromý vidíš jen ty — hodí se i na rozpracované nápady, co ještě nejsou hotové k ukázání. Veřejný (na Tržišti) vidí a může si zkopírovat kdokoli z ostatních trenérů. Rozhodnutí jde kdykoli změnit oběma směry." },
       { q: "Co se stane, když si někdo můj trénink z Tržiště zkopíruje?", a: "Vytvoří se mu vlastní kopie (s dovětkem „(kopie)“ v názvu), kterou může dál upravovat nezávisle na tvém originálu — nová kopie je vždy nejdřív soukromá, i když byl originál veřejný." },
       { q: "Jak trénink zkopíruju/naklonuju sám sobě?", a: "V nabídce u tréninku (⋮) je tlačítko „Klonovat“ — funguje stejně u vlastních i cizích tréninků z Tržiště." },
