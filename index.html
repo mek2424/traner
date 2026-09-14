@@ -658,6 +658,17 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 #detailModalBackdrop.tmf-sheet #detailShortDescRow .detail-label{display:none;}
 /* Když po skrytí štítků nezbude žádné nářadí, ať po prázdném řádku nezůstane mezera. */
 #detailModalBackdrop.tmf-sheet #detailChips:not(:has(.chip-equip)){display:none;}
+/* Strop výšky videa. Mek: video zabralo skoro celou výšku panelu a na název s popisem se
+   muselo odscrollovat. Platí JEN pro kartu v tréninkovém režimu a v Přehledu (.tmf-sheet) —
+   v Knihovně se nemění nic. --ov-vidcap drží obě omezení pohromadě, ať se nerozbije poměr
+   stran: max-height platí pro všechna videa, max-width jen pro videa na výšku (9/16) a
+   dopočítává se ze stejné hodnoty. V prezentaci je min(vw,vh) schválně — v záložním CSS
+   otočení míří vh na fyzicky neotočenou obrazovku, takže menší z obou je jediná bezpečná. */
+#trainingModeView #detailModalBackdrop.tmf-sheet{--ov-vidcap:min(52vw,52vh);}
+#overviewView #detailModalBackdrop.tmf-sheet{--ov-vidcap:38vh;}
+#detailModalBackdrop.tmf-sheet .embed-wrap{max-height:var(--ov-vidcap);}
+#detailModalBackdrop.tmf-sheet .embed-wrap[style*="9 / 16"],
+#detailModalBackdrop.tmf-sheet .embed-wrap[style*="9/16"]{max-width:min(100%,calc(var(--ov-vidcap) * 0.5625));}
 .coach-activity-card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--card);}
 .coach-activity-card.is-me{border-color:var(--court);}
 .coach-activity-head{display:flex;align-items:center;gap:14px;margin-bottom:12px;}
@@ -1364,7 +1375,6 @@ body.popout-mode .popout-btn{display:none !important;}
 .ov-card{position:relative;background:var(--card);border:1px solid var(--line);border-left:6px solid var(--line);border-radius:12px;padding:10px 11px;box-shadow:0 1px 4px rgba(0,0,0,.05);cursor:pointer;}
 .ov-card.ov-break{background:repeating-linear-gradient(135deg,var(--part-prestavka),var(--part-prestavka) 8px,var(--break-stripe) 8px,var(--break-stripe) 16px);border-left-color:var(--part-prestavka);cursor:default;}
 .ov-card.ov-group{border:2px dashed var(--court);border-left:2px dashed var(--court);cursor:default;}
-.ov-card.ov-now{box-shadow:0 0 0 3px var(--chalk),0 4px 12px rgba(232,98,44,.28);}
 .ov-top{display:flex;align-items:center;gap:9px;}
 .ov-thumb{width:64px;height:42px;border-radius:6px;flex-shrink:0;background:#2b2f36 center/cover no-repeat;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.82);font-size:15px;}
 .ov-title{font-size:15px;font-weight:700;line-height:1.25;flex:1;min-width:0;color:var(--ink);overflow-wrap:anywhere;}
@@ -1385,6 +1395,24 @@ body.popout-mode .popout-btn{display:none !important;}
 .ov-gear{display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:5px 9px;border-radius:8px;background:var(--paper);border:1px dashed var(--line);}
 .ov-gear b{font-family:var(--font-display);font-size:12px;letter-spacing:.06em;color:var(--ink-faint);font-weight:400;}
 .ov-gear span{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:1px 9px;color:var(--ink-soft);background:var(--card);}
+/* Časová páska: čas je HRANICE mezi cviky — konec jednoho je začátek dalšího, takže stačí
+   jedno číslo místo dvou. Délka se tím přestěhovala z karty pod rysku a karta se pročistila. */
+.ov-rows{display:grid;grid-template-columns:58px 1fr;gap:7px;align-items:start;position:relative;}
+.ov-rows::before{content:"";position:absolute;left:50px;top:10px;bottom:20px;width:2px;background:var(--ink-faint);opacity:.3;border-radius:2px;}
+.ov-tick{position:relative;text-align:right;padding:2px 18px 0 0;}
+.ov-tick i{position:absolute;left:46px;top:5px;width:10px;height:10px;border-radius:50%;background:var(--card);border:2px solid var(--court);box-sizing:border-box;}
+.ov-tick b{display:block;font-family:var(--font-display);font-weight:400;font-size:15px;letter-spacing:.03em;color:var(--ink);font-variant-numeric:tabular-nums;}
+.ov-tick small{display:block;font-size:10.5px;color:var(--ink-faint);}
+.ov-full{grid-column:1 / -1;}
+.ov-endrow{font-family:var(--font-display);font-size:13px;letter-spacing:.06em;color:var(--ink-faint);padding-top:4px;}
+/* Cue zůstává rozbalené, poznámka se schová pod značku a rozbalí ťuknutím (Mekovo zadání). */
+.ov-notebtn{display:inline-flex;align-items:center;gap:5px;margin-top:6px;padding:2px 10px 2px 8px;font-family:var(--font-body);font-size:11.5px;color:var(--ink-soft);background:var(--paper);border:1px solid var(--line);border-radius:999px;}
+.ov-notebtn i{font-size:9px;color:var(--chalk-dark);transition:transform .16s;}
+.ov-notebtn.open i{transform:rotate(90deg);}
+.ov-mwrap{display:flex;flex-direction:column;}
+.ov-mcue{margin-top:3px;margin-left:52px;font-size:12px;}
+.ov-mnotebtn{align-self:flex-start;margin-left:52px;}
+.ov-mnote{margin-left:52px;}
 .ov-foot{flex-shrink:0;background:var(--card);border-top:1px solid var(--line);padding:10px 12px calc(12px + env(safe-area-inset-bottom));}
 .ov-go{width:100%;background:var(--court);color:#fff;border:none;border-radius:11px;padding:11px 0;font-family:var(--font-display);font-size:19px;letter-spacing:.05em;line-height:1.15;}
 .ov-go small{display:block;font-size:11.5px;letter-spacing:.03em;opacity:.85;font-family:var(--font-body);font-weight:400;}
@@ -2458,7 +2486,7 @@ body.popout-mode .popout-btn{display:none !important;}
 <div id="ovAskBackdrop" class="modal-backdrop hidden">
   <div class="modal" style="max-width:360px;">
     <div class="modal-head"><h2 style="font-size:22px;">Kdy trénink začíná?</h2></div>
-    <p style="font-size:13.5px;color:var(--ink-soft);margin:-8px 0 14px;">Podle toho přehled pozná, u kterého cviku bys teď měl být. Bez času se ukáže jen plán.</p>
+    <p style="font-size:13.5px;color:var(--ink-soft);margin:-8px 0 14px;">Podle toho přehled dopočítá, kdy které cvičení začíná a končí. Bez času se ukážou jen délky.</p>
     <input type="time" id="ovAskTime" class="ov-timeinput" value="09:00">
     <div class="modal-actions">
       <button type="button" class="btn btn-primary" id="ovAskOkBtn">Pokračovat</button>
@@ -2639,7 +2667,7 @@ async function ensureMessaging() {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-09-13 20:05";
+const APP_VERSION = "2026-09-14 09:40";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -7941,6 +7969,12 @@ const FAZE_VIBRATE_PATTERN = [300, 150, 300, 150, 600];
 /** Celková délka JEDNÉ položky tréninku (řádek v t.items) ve vteřinách — počítá se stejně
     jako v calculateTrainingTotalSeconds/buildPdfEntries výš, jen vrací součet PER ŘÁDEK
     (skupina = jeden součet za celou kartu), ať se dá postavit osa tréninku po blocích. */
+/* Cvik na opakování bez vyplněného odhadu nemá jak dlouho trvat. Dřív se počítal jako nula,
+   takže na ose zabral minimum a v Přehledu na něm časová páska stála nula minut. Mek:
+   takový cvik normálně ukázat a počítat mu náhradní odhad — nikde to nepsat, stává se to
+   zřídka. Změna se propíše na osu v prezentaci, do Přehledu i do Shrnutí; editor (jeho
+   "~ min" a "?") zůstává beze změny schválně. */
+const REPS_FALLBACK_SECONDS = 5 * 60;
 function fazeItemTotalSeconds(row) {
   if (!row) return 0;
   if (row.part === "prestavka") return valueToSeconds(row.duration != null ? row.duration : 1, row.durationUnit || "min");
@@ -7952,15 +7986,27 @@ function fazeItemTotalSeconds(row) {
     (row.videos || []).forEach(v => {
       if (v.isBreak) { sum += valueToSeconds(v.duration != null ? v.duration : 1, v.durationUnit || "min"); return; }
       sum += isReps
-        ? (v.estimate != null && v.estimate > 0 ? valueToSeconds(v.estimate, v.estimateUnit || "min") : 0)
+        ? (v.estimate != null && v.estimate > 0 ? valueToSeconds(v.estimate, v.estimateUnit || "min") : REPS_FALLBACK_SECONDS)
         : valueToSeconds(v.duration != null ? v.duration : 1, v.durationUnit || "min");
     });
     return sum * seriesCount + (seriesCount > 1 ? (seriesCount - 1) * pauseSeconds : 0);
   }
   const base = isReps
-    ? (row.estimate != null && row.estimate > 0 ? valueToSeconds(row.estimate, row.estimateUnit || "min") : 0)
+    ? (row.estimate != null && row.estimate > 0 ? valueToSeconds(row.estimate, row.estimateUnit || "min") : REPS_FALLBACK_SECONDS)
     : valueToSeconds(row.duration != null ? row.duration : 1, row.durationUnit || "min");
   return base * seriesCount + (seriesCount > 1 ? (seriesCount - 1) * pauseSeconds : 0);
+}
+/** Má položka doopravdy ZADANOU délku? Cvik na opakování bez odhadu dostane pro všechny
+    výpočty náhradní délku (REPS_FALLBACK_SECONDS), aby nikde nevypadl a nešel přeskočit —
+    ale přesah času se u něj na ose ukazovat nesmí, protože by se počítal z vymyšleného čísla.
+    Přesně tohle Mek zadal ve dřívějším kole: "kdyby to nemělo vyplněný ten čas, tak se to
+    neukáže". Náhradní odhad tedy řeší rozvržení a časy, ne tvrzení o přetažení. */
+function fazeItemHasPlannedTime(row) {
+  if (!row) return false;
+  if (row.part === "prestavka") return true;
+  if ((row.mode || "time") !== "reps") return true;
+  if (row.isGroup) return (row.videos || []).every(v => v.isBreak || (v.estimate != null && v.estimate > 0));
+  return row.estimate != null && row.estimate > 0;
 }
 /** Cvik na počet opakování žádný odpočet nemá — starý vzhled u něj schová celou lištu
     s časovačem (setTimerMode("reps") výš) a renderTrainingModeItemClassic ho ani nespustí,
@@ -8102,9 +8148,10 @@ function fazeBuildAxisHtml() {
       cls = "tmf-now";
       const blockTotal = seconds || 1;
       fillPct = Math.min(100, Math.max(0, (1 - Math.max(0, trainingModeSeconds) / blockTotal) * 100));
-      // Přesah se ukáže JEN u cviku s vyplněnou délkou — bez ní by appka neměla z čeho počítat
-      // a radši neukáže nic. Proužek je zastropovaný délkou samotného bloku, ať osa nezdivočí.
-      if (seconds > 0 && trainingModeSeconds < 0) {
+      // Přesah se ukáže JEN u cviku se SKUTEČNĚ vyplněnou délkou — u cviku na opakování bez
+      // odhadu by se počítal z náhradního čísla, a to by bylo tvrzení, které appka nemá čím
+      // podložit. Proužek je zastropovaný délkou samotného bloku, ať osa nezdivočí.
+      if (fazeItemHasPlannedTime(row) && trainingModeSeconds < 0) {
         cls += " tmf-over";
         overSeconds = Math.min(-trainingModeSeconds, seconds);
       }
@@ -8477,18 +8524,10 @@ document.getElementById("tmfTimerToggle").addEventListener("click", () => {
    ========================================================= */
 let ovStartSeconds = null; // začátek tréninku v sekundách od půlnoci; null = nezadáno
 let ovAskedForId = null;   // na který trénink už se appka ptala (ptá se jednou, ne při každém otevření)
-let ovTick = null;
 
-function ovNowSeconds() {
-  const d = new Date();
-  return d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds();
-}
 function ovMinText(sec) {
   if (sec >= 60) return `${Math.round(sec / 60)} min`;
   return `${Math.max(1, Math.round(sec))} s`;
-}
-function ovRowSeconds(row) {
-  return valueToSeconds(row.duration != null ? row.duration : 1, row.durationUnit || "min");
 }
 /** Nářadí jedné položky — sjednocení knihovny a ručních příloh, u skupiny přes všechny členy. */
 function ovItemEquipment(row) {
@@ -8514,25 +8553,42 @@ function ovThumbHtml(lib, isText) {
   const url = lib ? resolveThumbnailUrl(lib) : "";
   return `<span class="ov-thumb"${url ? ` style="background-image:url('${esc(url)}')"` : ""}></span>`;
 }
+/** Poznámka se v Přehledu neukazuje rovnou — je pod značkou a rozbalí se ťuknutím.
+    Mekovo zadání: cue rozbalené, poznámka na rozklik, ale ať je vidět, že tam je. */
+function ovNoteHtml(value, isMember) {
+  if (!richHasContent(value)) return "";
+  return `<button type="button" class="ov-notebtn${isMember ? " ov-mnotebtn" : ""}"><i class="fa-solid fa-chevron-right"></i>poznámka</button>
+    <div class="ov-note${isMember ? " ov-mnote" : ""} hidden">${richValueToHtml(value)}</div>`;
+}
+/** Člen skupiny ukazuje SVOJE cue a poznámku, ne zděděné skupinové (Mekova varianta B) —
+    skupinové zůstává jednou dole pod členy, stejně jako to vypadá v editoru. Pozor: prezentace
+    se řídí pravidlem `v.cue || row.cue`, takže člen bez vlastního cue tam uslyší skupinové;
+    tady se schválně neopisuje pod každého člena. */
 function ovMemberHtml(row, v) {
   if (v.isBreak) {
-    return `<div class="ov-member ov-mbreak"><span class="ov-mtitle">${esc(v.label || "Přestávka")}</span>
-      <span class="ov-dur">${ovMinText(valueToSeconds(v.duration != null ? v.duration : 1, v.durationUnit || "min"))}</span></div>`;
+    return `<div class="ov-mwrap"><div class="ov-member ov-mbreak"><span class="ov-mtitle">${esc(v.label || "Přestávka")}</span>
+      <span class="ov-dur">${ovMinText(valueToSeconds(v.duration != null ? v.duration : 1, v.durationUnit || "min"))}</span></div></div>`;
   }
   const isReps = (row.mode || "time") === "reps";
   const lib = v.isText ? null : state.library[v.videoId];
   const title = v.isText ? (v.title || "(bez názvu)") : (lib ? lib.title : "(video smazáno)");
   const dur = isReps ? (v.reps || "opakování") : ovMinText(valueToSeconds(v.duration != null ? v.duration : 1, v.durationUnit || "min"));
-  return `<div class="ov-member" data-vid="${esc(v.videoId || "")}" data-text="${v.isText ? "1" : ""}" data-mid="${esc(v.memberId || "")}">
-    ${ovThumbHtml(lib, v.isText)}<span class="ov-mtitle">${esc(title)}</span>
-    <span class="ov-dur${isReps ? " ov-reps" : ""}">${esc(dur)}</span></div>`;
+  return `<div class="ov-mwrap">
+    <div class="ov-member" data-itemid="${esc(row.itemId)}" data-vid="${esc(v.videoId || "")}" data-text="${v.isText ? "1" : ""}" data-mid="${esc(v.memberId || "")}">
+      ${ovThumbHtml(lib, v.isText)}<span class="ov-mtitle">${esc(title)}</span>
+      <span class="ov-dur${isReps ? " ov-reps" : ""}">${esc(dur)}</span>
+    </div>
+    ${v.cue ? `<div class="ov-cue ov-mcue"><i class="fa-solid fa-comment"></i>${esc(v.cue)}</div>` : ""}
+    ${ovNoteHtml(v.note, true)}
+  </div>`;
 }
+/** Délka se na kartě nepíše — nese ji ryska na pásce vlevo. Výjimka je cvik na opakování:
+    tam je "3×10" dávka, ne doba trvání, a ta na kartu patří. */
 function ovCardHtml(row) {
   const isReps = (row.mode || "time") === "reps";
   if (row.part === "prestavka") {
     return `<div class="ov-card ov-break" data-itemid="${esc(row.itemId)}" style="border-left-color:var(--part-prestavka)">
-      <div class="ov-top"><span class="ov-title">${esc(row.label || "Přestávka")}</span>
-      <span class="ov-dur">${ovMinText(ovRowSeconds(row))}</span></div></div>`;
+      <div class="ov-top"><span class="ov-title">${esc(row.label || "Přestávka")}</span></div></div>`;
   }
   const color = getPart(row.part).color || "var(--court)";
   if (row.isGroup) {
@@ -8544,20 +8600,19 @@ function ovCardHtml(row) {
       </div>
       <div class="ov-members">${(row.videos || []).map(v => ovMemberHtml(row, v)).join("")}</div>
       ${row.cue ? `<div class="ov-cue"><i class="fa-solid fa-comment"></i>${esc(row.cue)}</div>` : ""}
-      ${richHasContent(row.poznamka) ? `<div class="ov-note">${richValueToHtml(row.poznamka)}</div>` : ""}
+      ${ovNoteHtml(row.poznamka)}
     </div>`;
   }
   const lib = row.isText ? null : state.library[row.videoId];
   const title = row.isText ? (row.title || "(bez názvu)") : (lib ? lib.title : "(video smazáno z knihovny)");
-  const dur = isReps ? (row.reps || "opakování") : ovMinText(ovRowSeconds(row));
   return `<div class="ov-card" data-itemid="${esc(row.itemId)}" data-vid="${esc(row.videoId || "")}" data-text="${row.isText ? "1" : ""}" style="border-left-color:${esc(color)}">
     <div class="ov-top">
       ${ovThumbHtml(lib, row.isText)}
       <span class="ov-title">${esc(title)}</span>
-      <span class="ov-dur${isReps ? " ov-reps" : ""}">${esc(dur)}</span>
+      ${isReps ? `<span class="ov-dur ov-reps">${esc(row.reps || "opakování")}</span>` : ""}
     </div>
     ${row.cue ? `<div class="ov-cue"><i class="fa-solid fa-comment"></i>${esc(row.cue)}</div>` : ""}
-    ${richHasContent(row.poznamka) ? `<div class="ov-note">${richValueToHtml(row.poznamka)}</div>` : ""}
+    ${ovNoteHtml(row.poznamka)}
   </div>`;
 }
 /** Proužek "připrav" se vloží vždycky, když se mění část tréninku — shrne nářadí všech
@@ -8571,71 +8626,42 @@ function ovGearStripHtml(items, from) {
   if (!gear.length) return "";
   return `<div class="ov-gear"><b>${esc((getPart(part).label || part).toUpperCase())} &middot; PŘIPRAV</b>${gear.map(g => `<span>${esc(g)}</span>`).join("")}</div>`;
 }
-/** Plánovaný začátek každé položky od začátku tréninku. Schválně přes fazeItemTotalSeconds,
-    tedy přes stejný výpočet, jakým se kreslí osa v prezentaci — ne přes computeRowClockTimes,
-    které od první položky s neznámou délkou (cvik na opakování bez vyplněného odhadu) označí
-    všechno další za neznámé. Tady by to znamenalo, že se rámeček po prvním takovém cviku
-    navždy zastaví, což je horší než to, že takový cvik počítáme jako nulový a rámeček pak jde
-    kousek napřed. Kdo chce mít rámeček přesný, vyplní u opakovacích cviků odhad. */
-function ovRowStartTimes(t) {
-  const out = {};
-  let acc = 0;
-  (t.items || []).forEach(row => { out[row.itemId] = acc; acc += fazeItemTotalSeconds(row); });
-  return out;
+/** Ryska na časové pásce. Čas je HRANICE mezi cviky, takže konec jednoho a začátek dalšího je
+    jedno číslo. Pod ryskou je plánovaná délka bloku, který za ní začíná. Bez zadaného začátku
+    tréninku se hodina nepíše a zůstanou jen délky — páska dál nese pořadí a trvání. */
+function ovTickHtml(offsetSeconds, blockSeconds) {
+  const time = ovStartSeconds == null ? "" : pdfFmtClock((ovStartSeconds + offsetSeconds) % 86400);
+  return `<div class="ov-tick"><i></i>${time ? `<b>${esc(time)}</b>` : ""}${blockSeconds != null ? `<small>${esc(ovMinText(blockSeconds))}</small>` : ""}</div>`;
 }
-function ovNowItemId(t) {
-  if (ovStartSeconds == null) return null;
-  const times = ovRowStartTimes(t);
-  const elapsed = ovNowSeconds() - ovStartSeconds;
-  if (elapsed < 0) return null;
-  let found = null;
-  (t.items || []).forEach(row => { if (times[row.itemId] <= elapsed) found = row.itemId; });
-  return found;
-}
-function ovRefreshNow() {
-  const t = state.trainings[currentTrainingId];
-  if (!t) return;
-  const id = ovNowItemId(t);
-  let nowTitle = "";
-  document.querySelectorAll("#ovList .ov-card").forEach(el => {
-    const on = el.dataset.itemid === id;
-    el.classList.toggle("ov-now", on);
-    if (on) {
-      const tEl = el.querySelector(".ov-title, .ov-gname");
-      nowTitle = tEl ? tEl.textContent : "";
-    }
-  });
-  const btn = document.getElementById("ovStartPresBtn");
-  btn.innerHTML = nowTitle
-    ? `Spustit prezentaci<small>od „${esc(nowTitle)}"</small>`
-    : "Spustit prezentaci<small>od začátku</small>";
-}
+/** Časy jdou schválně přes fazeItemTotalSeconds — přes stejný výpočet, jakým se kreslí osa
+    v prezentaci, aby obě zobrazení říkala to samé. NE přes computeRowClockTimes: to od první
+    položky s neznámou délkou označí všechno další za neznámé, takže by od prvního cviku na
+    opakování bez odhadu nebyl čas nikde. Chybějící odhad řeší REPS_FALLBACK_SECONDS. */
 function renderOverview() {
   const t = state.trainings[currentTrainingId];
   if (!t) return;
   document.getElementById("ovName").textContent = t.name || "Trénink";
-  const startBtn = document.getElementById("ovStartBtn");
-  const endEl = document.getElementById("ovEnd");
-  if (ovStartSeconds == null) {
-    startBtn.textContent = "zadat začátek";
-    endEl.classList.add("hidden");
-  } else {
-    startBtn.textContent = `od ${pdfFmtClock(ovStartSeconds)}`;
-    const { totalSeconds, hasReps } = calculateTrainingTotalSeconds(t);
-    endEl.classList.toggle("hidden", hasReps);
-    if (!hasReps) endEl.textContent = `končíme ${pdfFmtClock((ovStartSeconds + totalSeconds) % 86400)}`;
-  }
   const items = t.items || [];
-  let html = "", lastPart = null;
+  const total = items.reduce((sum, row) => sum + fazeItemTotalSeconds(row), 0);
+  document.getElementById("ovStartBtn").textContent = ovStartSeconds == null
+    ? "zadat začátek"
+    : `od ${pdfFmtClock(ovStartSeconds)}`;
+  const endEl = document.getElementById("ovEnd");
+  endEl.classList.toggle("hidden", ovStartSeconds == null);
+  if (ovStartSeconds != null) endEl.textContent = `končíme ${pdfFmtClock((ovStartSeconds + total) % 86400)}`;
+  let html = "", lastPart = null, acc = 0;
   items.forEach((row, i) => {
     if (row.part !== "prestavka" && row.part !== lastPart) {
-      html += ovGearStripHtml(items, i);
+      const strip = ovGearStripHtml(items, i);
+      if (strip) html += `<div class="ov-full">${strip}</div>`;
       lastPart = row.part;
     }
-    html += ovCardHtml(row);
+    const seconds = fazeItemTotalSeconds(row);
+    html += ovTickHtml(acc, seconds) + ovCardHtml(row);
+    acc += seconds;
   });
-  document.getElementById("ovList").innerHTML = html;
-  ovRefreshNow();
+  if (items.length) html += ovTickHtml(acc, null) + `<div class="ov-endrow">konec tréninku</div>`;
+  document.getElementById("ovList").innerHTML = `<div class="ov-rows">${html}</div>`;
 }
 function openOverview() {
   const t = state.trainings[currentTrainingId];
@@ -8647,11 +8673,8 @@ function openOverview() {
     document.getElementById("ovAskBackdrop").classList.remove("hidden");
   }
   renderOverview();
-  if (ovTick) clearInterval(ovTick);
-  ovTick = setInterval(ovRefreshNow, 30000);
 }
 function closeOverview() {
-  if (ovTick) { clearInterval(ovTick); ovTick = null; }
   document.getElementById("ovAskBackdrop").classList.add("hidden");
   document.getElementById("overviewView").classList.add("hidden");
 }
@@ -8677,6 +8700,12 @@ document.getElementById("ovAskSkipBtn").addEventListener("click", () => {
 /** Ťuknutí na kartu otevře u videa tu samou ořezanou kartu jako v prezentaci, u textového
     cvičení okno s popisem. Přestávky a hlavička skupiny se neotvírají — není co ukázat. */
 document.getElementById("ovList").addEventListener("click", (e) => {
+  const noteBtn = e.target.closest(".ov-notebtn");
+  if (noteBtn) {
+    noteBtn.classList.toggle("open");
+    noteBtn.nextElementSibling.classList.toggle("hidden");
+    return;
+  }
   const member = e.target.closest(".ov-member");
   const card = e.target.closest(".ov-card");
   const src = member && !member.classList.contains("ov-mbreak") ? member : card;
@@ -8705,16 +8734,13 @@ function ovOpenTextInfo(itemId, memberId) {
   obs.observe(backdrop, { attributes: true, attributeFilter: ["class"] });
   openExerciseInfoModal();
 }
-/** Prezentace se spouští od cviku, u kterého rámeček stojí — a tlačítko to má napsané, takže
-    se nikdy nic nepřeskočí potichu. */
+/** Rámeček "kde bys podle času měl být" je pryč (Mek: nikdy to nebude přesné), takže appka
+    nemá odkud poznat, kde v tréninku trenér doopravdy je — prezentace proto startuje od
+    začátku. Potichu přeskočit neodtrénovaný cvik by bylo horší než ho projet. */
 document.getElementById("ovStartPresBtn").addEventListener("click", () => {
-  const t = state.trainings[currentTrainingId];
-  if (!t) return;
-  const id = ovNowItemId(t);
-  const idx = Math.max(0, (t.items || []).findIndex(r => r.itemId === id));
+  if (!state.trainings[currentTrainingId]) return;
   closeOverview();
   startTrainingMode(currentTrainingId, "faze");
-  if (idx > 0) { trainingModeIndex = idx; renderTrainingModeItem(); }
 });
 
 /* =========================================================
