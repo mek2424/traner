@@ -964,10 +964,8 @@ body.popout-mode .popout-btn{display:none !important;}
 .clock-toggle-btn{border:1px solid var(--line);background:var(--card);color:var(--ink-soft);width:36px;height:36px;border-radius:var(--radius-sm);display:inline-flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;flex-shrink:0;}
 .clock-toggle-btn:hover{background:var(--paper);}
 .clock-toggle-btn.active{background:var(--chalk);border-color:var(--chalk);color:#fff;}
-.start-time-chip{display:inline-flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:5px 6px 5px 12px;font-size:12.5px;font-weight:600;color:var(--ink-soft);white-space:nowrap;}
-.start-time-clear{background:none;border:none;color:var(--ink-faint);font-size:12px;padding:2px 4px;line-height:1;}
-.vis-sep{color:var(--ink-faint);margin:0 2px;}
-.vis-act{color:var(--court-dark);font-weight:700;}
+.start-time-chip{display:none;align-items:center;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:5px 6px 5px 12px;font-size:12.5px;font-weight:600;color:var(--ink-soft);white-space:nowrap;}
+.start-time-chip.shown{display:inline-flex;}
 .start-time-chip input[type=time]{border:none;background:var(--paper);border-radius:6px;padding:4px 6px;font-size:12.5px;font-family:var(--font-body);color:var(--ink);width:78px;}
 .clock-badge{position:absolute;bottom:7px;right:7px;display:none;align-items:center;gap:3px;font-size:10px;font-weight:700;color:var(--ink-soft);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:3px 7px;white-space:nowrap;z-index:2;}
 .clock-badge i{font-size:8.5px;}
@@ -1153,6 +1151,8 @@ body.popout-mode .popout-btn{display:none !important;}
   .copy-bulk-copy-full{display:none;}
   .copy-bulk-copy-short{display:inline;}
 }
+.part-legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;font-size:11px;color:var(--ink-soft);}
+.part-legend span{display:inline-flex;align-items:center;gap:4px;}
 .part-swatch{width:10px;height:10px;border-radius:3px;display:inline-block;}
 .add-break-btn{margin-bottom:8px;}
 .seq-item.is-group{background:var(--card);border:2px dashed var(--court);}
@@ -1600,7 +1600,8 @@ body.popout-mode .popout-btn{display:none !important;}
       <div class="editor-head">
         <input type="text" id="trainingNameInput" placeholder="Název tréninku">
         <div class="total-badge" id="totalTimeBadge">0 min</div>
-        <div class="start-time-chip" id="startTimeChip"><span>od</span><input type="time" id="trainingStartTimeInput" value=""><button type="button" class="start-time-clear hidden" id="clearStartTimeBtn" aria-label="Zrušit začátek tréninku" title="Zrušit začátek tréninku"><i class="fa-solid fa-xmark"></i></button></div>
+        <button type="button" class="clock-toggle-btn" id="showClockTimesBtn" aria-label="Zobrazit přesné časy na kartách" title="Zobrazit přesné časy na kartách"><i class="fa-regular fa-clock"></i></button>
+        <div class="start-time-chip" id="startTimeChip"><span>od</span><input type="time" id="trainingStartTimeInput" value="09:00"></div>
       </div>
       <div id="trainingEquipmentSummary" class="hidden" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:-4px 0 12px;"></div>
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
@@ -1613,6 +1614,7 @@ body.popout-mode .popout-btn{display:none !important;}
         <span><i class="fa-solid fa-eye"></i> <span id="readOnlyBannerText"></span></span>
         <button class="btn btn-sm btn-accent" id="cloneFromReadOnlyBtn"><i class="fa-regular fa-copy"></i> Naklonovat do mých</button>
       </div>
+      <div class="part-legend" id="partLegend"></div>
       <div class="editor-layout" id="editorLayout">
         <div class="picker-panel">
           <h3>Přidat z knihovny</h3>
@@ -2346,6 +2348,30 @@ body.popout-mode .popout-btn{display:none !important;}
       <button type="button" class="btn btn-primary btn-sm" id="saveDriveApiKeyBtn">Uložit klíč</button>
       <p style="font-size:11.5px;color:var(--ink-faint);margin:6px 0 0;">Používá se pro přímé přehrávání videí z Disku. Vidíš jen ty jako admin.</p>
     </div>
+    <div id="adminNotifySection" class="hidden" style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line);">
+      <h3 style="font-size:14px;font-family:var(--font-body);font-weight:700;color:var(--ink-soft);margin:0 0 8px;">Push notifikace (jen pro tebe)</h3>
+      <div class="field" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <label style="margin:0;text-transform:none;font-size:13px;letter-spacing:0;font-weight:500;">Zapnuto na tomhle zařízení</label>
+        <button type="button" class="theme-toggle" id="notifyEnableToggle" role="switch" aria-checked="false" aria-label="Zapnout push notifikace">
+          <span class="theme-toggle-knob"><i class="fa-solid fa-bell-slash"></i><i class="fa-solid fa-bell"></i></span>
+        </button>
+      </div>
+      <div class="field" style="margin-top:12px;">
+        <label style="font-size:11.5px;color:var(--ink-faint);text-transform:none;letter-spacing:0;display:block;margin-bottom:4px;">Upozornit na změny ve sdílené knihovně</label>
+        <select id="notifyScopeSelect">
+          <option value="major">Jen větší akce (přidání/smazání videa, složky, štítku…)</option>
+          <option value="all">Úplně každou uloženou změnu</option>
+        </select>
+      </div>
+      <div class="field" style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px;">
+        <label style="margin:0;text-transform:none;font-size:13px;letter-spacing:0;font-weight:500;">Upozornit, když někdo přijde online</label>
+        <button type="button" class="theme-toggle" id="notifyOnlineToggle" role="switch" aria-checked="false" aria-label="Upozornit na příchod online">
+          <span class="theme-toggle-knob"><i class="fa-solid fa-circle"></i><i class="fa-solid fa-circle-check"></i></span>
+        </button>
+      </div>
+      <p id="notifyStatusText" style="font-size:11.5px;color:var(--ink-faint);margin:10px 0 0;"></p>
+      <button type="button" class="btn btn-ghost btn-sm" id="sendTestNotifyBtn" style="margin-top:10px;"><i class="fa-solid fa-paper-plane"></i> Poslat zkušební notifikaci</button>
+    </div>
     <div style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line);">
       <button type="button" class="btn btn-danger btn-block" id="deleteAccountBtn"><i class="fa-solid fa-user-xmark"></i> Smazat účet natrvalo</button>
       <p style="font-size:11.5px;color:var(--ink-faint);margin:6px 0 0;">Smaže tvůj profil, tréninky a tvoje hodnocení/poznámky ve sdílené knihovně. Nevratné.</p>
@@ -2358,6 +2384,7 @@ body.popout-mode .popout-btn{display:none !important;}
   <div class="tm-header">
     <div style="display:flex;align-items:center;gap:8px;">
       <button type="button" class="tm-exit" id="tmExitBtn" aria-label="Zavřít"><i class="fa-solid fa-xmark"></i></button>
+      <button type="button" class="tm-exit popout-btn" id="popoutTrainingModeBtn" aria-label="Otevřít v novém okně" title="Otevřít v novém okně"><i class="fa-solid fa-up-right-from-square"></i></button>
     </div>
     <div class="tm-progress" id="tmProgress">1 / 1</div>
   </div>
@@ -2490,6 +2517,10 @@ body.popout-mode .popout-btn{display:none !important;}
   <button type="button" id="copyDebugLogBtn" style="position:sticky;top:0;float:right;background:#2B6CB0;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;">Kopírovat záznam</button>
   <button type="button" id="disableDevModeBtn" style="position:sticky;top:0;float:right;background:#5B2B2B;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;">Vypnout vývojářský režim</button>
   <button type="button" id="shrinkOversizedBtn" class="hidden" style="position:sticky;top:0;float:right;background:#C99A2E;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Přestěhovat staré náhledy</button>
+  <button type="button" id="thumbsTestOneBtn" class="hidden" style="position:sticky;top:0;float:right;background:#7A5AA8;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Storage: test 1 fotky</button>
+  <button type="button" id="thumbsToStorageDryBtn" class="hidden" style="position:sticky;top:0;float:right;background:#3C6E8F;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Storage: nanečisto</button>
+  <button type="button" id="thumbsToStorageRunBtn" class="hidden" style="position:sticky;top:0;float:right;background:#2F7A4F;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Storage: přestěhovat</button>
+  <button type="button" id="thumbsCleanupBtn" class="hidden" style="position:sticky;top:0;float:right;background:#8A3A3A;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Storage: uklidit Firestore</button>
   <button type="button" id="checkLibrarySizeBtn" class="hidden" style="position:sticky;top:0;float:right;background:#2B6CB0;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Změřit velikost knihovny</button>
   <button type="button" id="adoptDriveThumbsBtn" class="hidden" style="position:sticky;top:0;float:right;background:#2F7A4F;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Uložit Disk náhledy natrvalo</button>
   <button type="button" id="refreshDriveThumbsBtn" class="hidden" style="position:sticky;top:0;float:right;background:#5B8DD9;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Obnovit Disk náhledy</button>
@@ -2554,7 +2585,19 @@ import {
   doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, collection, collectionGroup, getDocs, onSnapshot,
   arrayUnion, addDoc, query, orderBy, limit
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+import { getMessaging, isSupported as isMessagingSupported, getToken as getFcmToken, onMessage as onFcmMessage } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-messaging.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-functions.js";
+import {
+  getStorage, ref as storageRef, uploadString, getDownloadURL, deleteObject
+} from "https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js";
 
+/* =========================================================
+   PUSH NOTIFIKACE — VAPID klíč se generuje ve Firebase Console:
+   Project settings → Cloud Messaging → Web configuration →
+   "Generate key pair". Bez vyplnění klíče push notifikace
+   nepůjdou zapnout (appka na to upozorní hláškou).
+   ========================================================= */
+const FCM_VAPID_KEY = "BFJDFR1z5K7bY_fyuU76a0yNhY3mnDrg8adh0LIrIRPawSwtnWaAin08iDqHh199Bos-zIhu7WPx63NvYRvkE7M";
 
 /* =========================================================
    FIREBASE CONFIG — sem vlož konfiguraci ze svého Firebase
@@ -2579,19 +2622,65 @@ try {
   console.warn("Offline cache se nepodařilo zapnout, aplikace poběží jen online:", e);
   db = initializeFirestore(fbApp, {});
 }
+/* Náhledy videí nově nebydlí ve Firestore, ale ve Firebase Storage — viz saveThumbnail() níž. */
+const storage = getStorage(fbApp);
 /* Výchozí chování SDK je zkoušet nahrání dokola celé DVĚ MINUTY, než to vzdá a ohlásí chybu.
    Při 287 fotkách po čtyřech naráz to znamená, že když je něco špatně, appka mlčí desítky minut
    a člověk netuší, jestli pracuje, nebo visí. Zkrátíme to, ať se případná chyba ukáže hned. */
 storage.maxUploadRetryTime = 20000;
 storage.maxOperationRetryTime = 20000;
 
+/* =========================================================
+   PUSH NOTIFIKACE — pomocná vrstva nad Firebase Cloud Messaging.
+   Skutečné odesílání notifikací (při změně knihovny / příchodu
+   online) dělá Cloud Function na serveru — tohle tady jen
+   zařizuje, aby si tohle konkrétní zařízení řeklo o token a
+   uložilo si ho + preference do users/{ADMIN_UID}.
+   ========================================================= */
+let messagingInstance = null;
+let messagingInitTried = false;
+async function ensureMessaging() {
+  if (messagingInstance) return messagingInstance;
+  if (messagingInitTried) return null;
+  messagingInitTried = true;
+  try {
+    if (!(await isMessagingSupported())) return null;
+    messagingInstance = getMessaging(fbApp);
+    // Firebase Messaging schválně NEukáže systémovou notifikaci sám, když je appka
+    // zrovna otevřená na obrazovce (tzv. foreground) — to dělá jen service worker na
+    // pozadí (viz onBackgroundMessage v sw.js). Chceme ale, ať notifikace vypadá a
+    // chová se úplně stejně (lišta, vibrace) ať appku máš otevřenou nebo ne, takže si
+    // ji tady ukážeme ručně přes stejný service worker.
+    onFcmMessage(messagingInstance, async (payload) => {
+      const title = (payload.notification && payload.notification.title) || "Trenér";
+      const body = (payload.notification && payload.notification.body) || "";
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        await reg.showNotification(title, {
+          body,
+          icon: "./icon-192.png",
+          badge: "./icon-192.png",
+          vibrate: [80, 40, 80],
+          data: payload.data || {}
+        });
+      } catch (e) {
+        // Když by systémová notifikace z nějakého důvodu nešla, radši aspoň toast, než nic.
+        toast(`${title}${body ? " — " + body : ""}`, 6000, "info");
+      }
+    });
+    return messagingInstance;
+  } catch (e) {
+    console.warn("Push notifikace se nepodařilo inicializovat:", e);
+    return null;
+  }
+}
 
 /* =========================================================
    STATE
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-09-14 22:40";
+const APP_VERSION = "2026-09-14 19:35";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -2710,6 +2799,8 @@ function logDebug(...args) {
 document.getElementById("debugLogBtn").addEventListener("click", () => {
   document.getElementById("debugLogContent").textContent = debugLog.length ? debugLog.join("\n") : "(zatím žádné záznamy — proveď akci, co chceš prověřit, a pak se sem vrať)";
   document.getElementById("shrinkOversizedBtn").classList.toggle("hidden", uidCurrent !== ADMIN_UID);
+  ["thumbsTestOneBtn", "thumbsToStorageDryBtn", "thumbsToStorageRunBtn", "thumbsCleanupBtn"]
+    .forEach(bid => document.getElementById(bid).classList.toggle("hidden", uidCurrent !== ADMIN_UID));
   document.getElementById("checkLibrarySizeBtn").classList.toggle("hidden", uidCurrent !== ADMIN_UID);
   document.getElementById("adoptDriveThumbsBtn").classList.toggle("hidden", !isEditor());
   document.getElementById("refreshDriveThumbsBtn").classList.toggle("hidden", !isEditor());
@@ -2789,9 +2880,9 @@ document.getElementById("shrinkOversizedBtn").addEventListener("click", async ()
     if (!item.thumbnail || !item.thumbnail.startsWith("data:")) continue; // odkazy (URL) aplikaci nezajímají, jen staré vlastní nahrané fotky
     const beforeLen = item.thumbnail.length;
     try {
-      item.thumbnail = await saveThumbnailToFirestore(id, item.thumbnail);
+      item.thumbnail = await saveThumbnail(id, item.thumbnail, "");
       fixedCount++;
-      logDebug(`[stěhování] „${item.title}" přestěhováno (${Math.round(beforeLen * 0.75 / 1024)} KB z hlavního dokumentu → samostatná kolekce)`);
+      logDebug(`[stěhování] „${item.title}" přestěhováno (${Math.round(beforeLen * 0.75 / 1024)} KB z hlavního dokumentu → Storage)`);
     } catch (err) {
       logDebug(`[stěhování] „${item.title}" selhalo:`, err.message || err);
     }
@@ -2842,6 +2933,120 @@ function listThumbsToMigrate() {
     .filter(it => it.thumbnail && it.thumbnail.startsWith(LOCAL_THUMB_PREFIX))
     .map(it => ({ item: it, dataUrl: state.thumbnails[it.id] || "" }));
 }
+document.getElementById("thumbsToStorageDryBtn").addEventListener("click", () => {
+  if (uidCurrent !== ADMIN_UID) return;
+  const all = listThumbsToMigrate();
+  const withData = all.filter(t => t.dataUrl);
+  const orphans = all.filter(t => !t.dataUrl);
+  const bytes = withData.reduce((sum, t) => sum + t.dataUrl.length * 0.75, 0);
+  const alreadyInStorage = Object.values(state.library).filter(it => isStorageThumbUrl(it.thumbnail)).length;
+  logDebug("[storage] === NANEČISTO, nic se nemění ===");
+  logDebug(`[storage] videí v knihovně celkem: ${Object.keys(state.library).length}`);
+  logDebug(`[storage] náhledů k přestěhování: ${withData.length} (~${Math.round(bytes / 1024)} KB)`);
+  logDebug(`[storage] už ve Storage: ${alreadyInStorage}`);
+  logDebug(`[storage] odkazů "local:" BEZ fotky (osiřelé, jen se vyčistí): ${orphans.length}`);
+  orphans.slice(0, 10).forEach(t => logDebug(`[storage]   osiřelé: „${t.item.title}"`));
+  logDebug(`[storage] hlavní dokument se stěhováním zvětší asi o ${Math.round(withData.length * 0.1)} KB (adresy jsou delší než "local:ID")`);
+  logDebug("[storage] kvalita: fotky se přenesou tak, jak jsou — už jednou zmenšené na 20 kB se");
+  logDebug("[storage] tímhle neopraví. Ostré budou až nově nahrané náhledy.");
+  toast(`Nanečisto: k přestěhování ${withData.length} náhledů, ${orphans.length} osiřelých. Detaily v 🐞.`, 9000, "info");
+});
+/** Nahraje JEDNU maličkou testovací fotku a hlasitě vypíše, co se stalo. Smyslem je oddělit
+    "je špatně nastavení/pravidla" od "je špatně stěhovací smyčka" — místo čekání, jestli se
+    z 287 fotek něco pohne, to je odpověď za pár sekund. */
+document.getElementById("thumbsTestOneBtn").addEventListener("click", async () => {
+  if (uidCurrent !== ADMIN_UID) return;
+  const TINY_JPEG = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q==";
+  logDebug("[test] === TEST JEDNÉ FOTKY ===");
+  logDebug(`[test] bucket z konfigurace: ${firebaseConfig.storageBucket}`);
+  logDebug(`[test] přihlášen jako: ${uidCurrent}`);
+  const t0 = Date.now();
+  try {
+    logDebug("[test] 1/3 nahrávám…");
+    const r = storageRef(storage, `${STORAGE_THUMB_DIR}/_test/${Date.now()}.jpg`);
+    await withTimeout(uploadString(r, TINY_JPEG, "data_url", { contentType: "image/jpeg" }), 25000, "nahrání");
+    logDebug(`[test] 2/3 nahráno za ${Date.now() - t0} ms, zjišťuji adresu…`);
+    const url = await withTimeout(getDownloadURL(r), 20000, "získání adresy");
+    logDebug(`[test] 3/3 HOTOVO za ${Date.now() - t0} ms`);
+    logDebug(`[test] adresa: ${url.slice(0, 110)}…`);
+    logDebug("[test] ✓ Storage funguje. Problém je jinde než v nastavení.");
+    toast("Test prošel — Storage funguje.", 6000);
+  } catch (e) {
+    logDebug(`[test] ✗ SELHALO po ${Date.now() - t0} ms`);
+    logDebug(`[test] kód: ${(e && e.code) || "(žádný)"}`);
+    logDebug(`[test] zpráva: ${(e && e.message) || e}`);
+    if (e && e.code === "storage/unauthorized") logDebug("[test] → pravidla Storage zápis nepovolují.");
+    if (e && e.code === "storage/unknown") logDebug("[test] → nejspíš není zapnuté Storage, nebo nesedí jméno bucketu.");
+    if (e && /nenalez|not found|404/i.test(String(e.message))) logDebug("[test] → bucket s tímhle jménem neexistuje.");
+    if (e && /časový limit/.test(String(e.message))) logDebug("[test] → požadavek vůbec nedoběhl. Nejspíš se appka k bucketu nedovolá.");
+    toast("Test selhal — detaily v 🐞.", 8000, "err");
+  }
+});
+document.getElementById("thumbsToStorageRunBtn").addEventListener("click", async () => {
+  if (uidCurrent !== ADMIN_UID) return;
+  const targets = listThumbsToMigrate().filter(t => t.dataUrl);
+  if (!targets.length) { toast("Není co stěhovat — buď je hotovo, nebo nejdřív zkus „nanečisto\".", 5000, "warn"); return; }
+  if (!(await confirmDialog(`Přestěhovat ${targets.length} náhledů do Firebase Storage? Stará kolekce ve Firestore zůstane nedotčená, uklidí se až samostatným tlačítkem. Během stěhování prosím neupravuj knihovnu jinde.`))) return;
+
+  logDebug(`[storage] === STĚHUJI ${targets.length} náhledů ===`);
+  logDebug(`[storage] bucket: ${firebaseConfig.storageBucket}`);
+  let ok = 0, failed = 0, sinceSave = 0, abort = false;
+  const saveChunk = async () => {
+    const saved = await saveUserData();
+    logDebug(`[storage] průběžné uložení knihovny: ${saved ? "OK" : "SELHALO — uložení se zopakuje v dalším kole"}`);
+    sinceSave = 0;
+  };
+  // Prvních pět kusů se vypisuje jednotlivě i při úspěchu. Bez toho appka po spuštění mlčela
+  // až do dvacáté hotové fotky a nebylo poznat, jestli pracuje, nebo visí.
+  await runWithConcurrency(targets, 4, async ({ item, dataUrl }, i) => {
+    const t0 = Date.now();
+    try {
+      item.thumbnail = await saveThumbnail(item.id, dataUrl, "");
+      ok++;
+      if (i < 5) logDebug(`[storage] #${i + 1} „${item.title}" OK (${Date.now() - t0} ms)`);
+    } catch (err) {
+      failed++;
+      logDebug(`[storage] #${i + 1} „${item.title}" SELHALO po ${Date.now() - t0} ms: ${(err && err.code) || ""} ${(err && err.message) || err}`);
+      // Když padá hned prvních pár kusů, nemá smysl mlátit hlavou do zdi dalších 280×.
+      if (failed === 5 && ok === 0) {
+        logDebug("[storage] ✗ Prvních pět selhalo a nic neprošlo — zastavuji. Spusť „Storage: test 1 fotky\".");
+        abort = true;
+      }
+    }
+  }, async (done, total) => {
+    sinceSave++;
+    if (done % 20 === 0) logDebug(`[storage] hotovo ${done}/${total}…`);
+    if (sinceSave >= 25) await saveChunk();
+  }, () => abort);
+  await saveChunk();
+
+  const left = listThumbsToMigrate().length;
+  logDebug(`[storage] === HOTOVO: přeneseno ${ok}, selhalo ${failed}, v knihovně zbývá "local:" odkazů: ${left} ===`);
+  renderLibrary();
+  if (failed || left) {
+    toast(`Přeneseno ${ok}, selhalo ${failed}, zbývá ${left}. Spusť tlačítko ještě jednou, zbytek dojede. Detaily v 🐞.`, 12000, "warn");
+  } else {
+    toast(`Hotovo — ${ok} náhledů je ve Storage. Zkontroluj, že se v knihovně všechny zobrazují, a teprve pak spusť úklid.`, 12000);
+  }
+});
+document.getElementById("thumbsCleanupBtn").addEventListener("click", async () => {
+  if (uidCurrent !== ADMIN_UID) return;
+  const stillLocal = listThumbsToMigrate().length;
+  if (stillLocal) {
+    toast(`Úklid zatím ne — ${stillLocal} videí má pořád odkaz "local:". Nejdřív dokonči stěhování.`, 9000, "err");
+    return;
+  }
+  const ids = Object.keys(state.thumbnails);
+  if (!ids.length) { toast("Ve Firestore už žádné staré náhledy nejsou.", 5000, "warn"); return; }
+  if (!(await confirmDialog(`Nenávratně smazat ${ids.length} starých náhledů z Firestore? Dělej to až potom, co sis v knihovně ověřil, že se všechny fotky normálně zobrazují — zpátky to nepůjde.`))) return;
+  let deleted = 0, failed = 0;
+  await runWithConcurrency(ids, 6, async (id) => {
+    try { await deleteDoc(doc(db, "sharedThumbnails", id)); deleted++; }
+    catch (e) { failed++; logDebug(`[storage] úklid ${id} selhal: ${e && (e.code || e.message)}`); }
+  });
+  logDebug(`[storage] === ÚKLID: smazáno ${deleted}, selhalo ${failed} ===`);
+  toast(`Uklizeno ${deleted} starých náhledů z Firestore.${failed ? ` ${failed} se nepovedlo.` : ""}`, 9000);
+});
 
 /** Ruční spuštění migrace "Nepřiřazeno" (jinak se zkouší potichu sama při každém přihlášení,
     viz loadUserData) — tohle tlačítko dělá přesně to samé, jen na vyžádání a s reportem, ať
@@ -3123,6 +3328,7 @@ function hardDeleteLibraryItem(id) {
   delete state.library[id];
   delete state.thumbnails[id];
   pendingLibraryDeletions.add(id);
+  deleteThumbObject(oldThumb);                                // fotka ve Storage (nová cesta)
   deleteDoc(doc(db, "sharedThumbnails", id)).catch(() => {}); // starý náhled ve Firestore, dokud existuje
 }
 let favOnlyFilter = false;
@@ -3525,10 +3731,17 @@ async function saveThumbnailToFirestore(id, dataUrl) {
    ========================================================= */
 const STORAGE_THUMB_MAX_PX = 640;   // šířka náhledu — karta v mřížce má max ~300 px, tohle stačí i na Retinu
 const STORAGE_THUMB_QUALITY = 0.82;
+const STORAGE_THUMB_DIR = "thumbs";
 
+/** Pozná, jestli je uložená hodnota adresa fotky v našem Storage (a jde ji tedy smazat). */
+function isStorageThumbUrl(value) {
+  return typeof value === "string"
+    && /^https:\/\/(firebasestorage\.googleapis\.com|[a-z0-9.-]*\.firebasestorage\.app)\//.test(value)
+    && value.includes(encodeURIComponent(STORAGE_THUMB_DIR + "/"));
+}
 
-/** Zmenší fotku na rozumnou šířku pro náhled — na rozdíl od enforceThumbSizeBudget() necílí
-    na počet bajtů, ale na rozměr. Používá se u snímků zachycených z videa. */
+/** Zmenší fotku na rozumnou šířku pro náhled. Na rozdíl od enforceThumbSizeBudget() necílí na
+    počet bajtů (ten už nás ve Storage netrápí), ale na rozměr — kvalita zůstane. */
 function resizeDataUrlToMaxWidth(dataUrl, maxPx = STORAGE_THUMB_MAX_PX, quality = STORAGE_THUMB_QUALITY) {
   return new Promise((resolve) => {
     const img = new Image();
@@ -3546,6 +3759,13 @@ function resizeDataUrlToMaxWidth(dataUrl, maxPx = STORAGE_THUMB_MAX_PX, quality 
   });
 }
 
+/** Úklid předchozí fotky. Schválně "best effort" — když se nepovede, nevadí, jen v úložišti
+    zůstane osiřelý soubor. Nikdy nesmí shodit ukládání videa. */
+async function deleteThumbObject(value) {
+  if (!isStorageThumbUrl(value)) return;
+  try { await deleteObject(storageRef(storage, value)); }
+  catch (e) { logDebug("[náhled] starou fotku se nepovedlo smazat (nevadí):", e && (e.code || e.message)); }
+}
 
 /** Nahraje fotku do Storage a vrátí adresu, která patří do item.thumbnail.
     @param id        ID videa — jen kvůli přehlednému uspořádání v úložišti
@@ -3559,6 +3779,19 @@ function withTimeout(promise, ms, label) {
     promise.finally(() => clearTimeout(t)),
     new Promise((_, reject) => { t = setTimeout(() => reject(new Error(`${label} — vypršel časový limit ${ms / 1000}s`)), ms); })
   ]);
+}
+async function saveThumbnail(id, dataUrl, oldValue) {
+  const prepared = await withTimeout(resizeDataUrlToMaxWidth(dataUrl), 15000, "zmenšení fotky");
+  const path = `${STORAGE_THUMB_DIR}/${id}/${Date.now()}.jpg`;
+  const r = storageRef(storage, path);
+  await withTimeout(uploadString(r, prepared, "data_url", {
+    contentType: "image/jpeg",
+    // Adresa je díky časovému razítku jedinečná, takže se smí cachovat, jak dlouho chce.
+    cacheControl: "public, max-age=31536000, immutable"
+  }), 30000, "nahrání do Storage");
+  const url = await withTimeout(getDownloadURL(r), 20000, "získání adresy");
+  deleteThumbObject(oldValue); // schválně bez await — úklid nemá zdržovat uložení
+  return url;
 }
 async function enforceThumbSizeBudget(dataUrl, mimeType = "image/jpeg", quality = 0.82) {
   let guard = 0;
@@ -4199,13 +4432,16 @@ async function loadUserData() {
     colorPrimary: legacy.colorPrimary || DEFAULT_COLORS.primary,
     colorAccent: legacy.colorAccent || DEFAULT_COLORS.accent,
     darkMode: !!legacy.darkMode,
-    // (notifikace z appky vypadly nadobro, viz claude/trener-refaktoring.md)
+    // Push notifikace (jen pro admina — viz #adminNotifySection) — appka si tu jen pamatuje
     // preference a fungující token(y), samotné odesílání dělá Cloud Function na serveru.
-    // Přesné časy na kartách v editoru: samostatný přepínač 14. 9. zmizel — hodiny se prostě
-    // ukážou, když je zadaný začátek tréninku (stejné pravidlo jako v Přehledu tréninku).
-    // Jednorázový převod: kdo měl přepínač VYPNUTÝ, tomu se začátek vyprázdní, ať mu hodiny
-    // nenaskočí bez ptaní. Kdo ho měl zapnutý, ponechá si svůj čas.
-    trainingStartTime: legacy.showClockTimes ? (legacy.trainingStartTime || "09:00") : ""
+    notifyPushEnabled: !!legacy.notifyPushEnabled,
+    notifyPref: legacy.notifyPref || "major",
+    notifyOnline: legacy.notifyOnline !== false,
+    fcmTokens: legacy.fcmTokens || [],
+    // Volitelné zobrazení přesných časů na kartách v editoru (viz #showClockTimesBtn) — appka
+    // si pamatuje jak zapnutí/vypnutí, tak naposledy zadaný čas začátku, stejně jako u tmavého režimu.
+    showClockTimes: !!legacy.showClockTimes,
+    trainingStartTime: legacy.trainingStartTime || "09:00"
   };
   applyColorScheme();
   // Práh pro odznaky "nové od posledního přihlášení" — aplikace si čas uloží zvlášť (ne jako
@@ -4645,6 +4881,7 @@ function handlePopoutDeepLink() {
     if (type === "video") openDetailModal(id);
     else if (type === "editVideo") openLinkModal(id);
     else if (type === "trainingEditor") { switchView("trainings"); openEditor(id); }
+    else if (type === "trainingMode") { switchView("trainings"); currentTrainingId = id; openOverview(); }
     else if (type === "help") openHelpModal();
   } catch (e) { console.error("Otevření z popoutu selhalo:", e); }
 }
@@ -4652,6 +4889,7 @@ document.getElementById("popoutDetailBtn").addEventListener("click", () => popou
 document.getElementById("popoutLinkBtn").addEventListener("click", () => popoutWindow("editVideo", editingLinkId));
 document.getElementById("popoutHelpBtn").addEventListener("click", () => popoutWindow("help"));
 document.getElementById("popoutEditorBtn").addEventListener("click", () => popoutWindow("trainingEditor", currentTrainingId));
+document.getElementById("popoutTrainingModeBtn").addEventListener("click", () => popoutWindow("trainingMode", currentTrainingId));
 
 document.querySelectorAll("nav.tabs button").forEach(btn => {
   btn.addEventListener("click", () => {
@@ -6528,6 +6766,9 @@ async function buildShareSnapshot(t) {
       thumbnail: resolveThumbnailUrl(item) || ""
     };
   });
+  const videoIds = Object.keys(videos);
+  const commentsByVideo = await Promise.all(videoIds.map(fetchCommentsSnapshot));
+  videoIds.forEach((id, i) => { videos[id].comments = commentsByVideo[i]; });
   const parts = {};
   getTrainingPartKeys(t).forEach(key => {
     const p = getPart(key);
@@ -9179,34 +9420,34 @@ function openEditor(id) {
   copySelectedIds.clear();
   renderFolderOptions();
   renderPartSelectOptions();
+  renderPartLegend();
   renderPickerList();
   applyClockTimesUI();
   renderSequence();
 }
-/** Čip se začátkem tréninku v hlavičce editoru. Samostatný přepínač "zobrazit časy" je pryč —
-    hodiny na kartách se ukazují právě tehdy, když je začátek zadaný, a prázdný začátek je
-    platný stav (křížek vedle pole). Je to to samé pravidlo, které zná trenér z Přehledu. */
+/** Nastaví přepínač "Zobrazit časy" + čip se startovním časem podle uloženého profilu — volá
+    se při vstupu do editoru (viz openEditor) a taky po každém kliknutí na přepínač samotný. */
 function applyClockTimesUI() {
-  const val = (state.profile && state.profile.trainingStartTime) || "";
-  document.getElementById("trainingStartTimeInput").value = val;
-  document.getElementById("clearStartTimeBtn").classList.toggle("hidden", !val);
+  const on = !!(state.profile && state.profile.showClockTimes);
+  document.getElementById("showClockTimesBtn").classList.toggle("active", on);
+  document.getElementById("startTimeChip").classList.toggle("shown", on);
+  document.getElementById("trainingStartTimeInput").value = (state.profile && state.profile.trainingStartTime) || "09:00";
 }
-async function setTrainingStartTime(val) {
-  state.profile = Object.assign({}, state.profile, { trainingStartTime: val });
+document.getElementById("showClockTimesBtn").addEventListener("click", async () => {
+  const on = !(state.profile && state.profile.showClockTimes);
+  state.profile = Object.assign({}, state.profile, { showClockTimes: on });
   applyClockTimesUI();
   renderSequence();
   try {
-    await setDoc(doc(db, "users", uidCurrent), { trainingStartTime: val }, { merge: true });
+    await setDoc(doc(db, "users", uidCurrent), { showClockTimes: on }, { merge: true });
   } catch (err) {
     console.error(err);
-    toast("Uložení startovního času selhalo, zkontroluj připojení.", 2200, "err");
+    toast("Uložení nastavení časů selhalo, zkontroluj připojení.", 2200, "err");
   }
-}
-document.getElementById("clearStartTimeBtn").addEventListener("click", () => setTrainingStartTime(""));
+});
 document.getElementById("trainingStartTimeInput").addEventListener("change", async (e) => {
-  const val = e.target.value || "";
+  const val = e.target.value || "09:00";
   state.profile = Object.assign({}, state.profile, { trainingStartTime: val });
-  applyClockTimesUI();
   renderSequence();
   try {
     await setDoc(doc(db, "users", uidCurrent), { trainingStartTime: val }, { merge: true });
@@ -9232,6 +9473,11 @@ document.getElementById("trainingNameInput").addEventListener("input", (e) => {
   scheduleSave();
 });
 
+function renderPartLegend() {
+  document.getElementById("partLegend").innerHTML = state.parts.map(p =>
+    `<span><span class="part-swatch" style="background:${esc(p.color)}"></span>${esc(p.label)}</span>`
+  ).join("") + `<span><span class="part-swatch" style="background:var(--part-prestavka)"></span>Přestávka</span>`;
+}
 
 ["pickerSearch", "pickerFolderFilter", "pickerPartFilter"].forEach(id => {
   document.getElementById(id).addEventListener("input", renderPickerList);
@@ -9705,7 +9951,7 @@ function updateTotalBadge() {
   const badge = document.getElementById("totalTimeBadge");
   if (!t) { badge.textContent = "0 min"; badge.removeAttribute("title"); return; }
   const { totalSeconds, hasReps } = calculateTrainingTotalSeconds(t);
-  const showClock = !!(state.profile && state.profile.trainingStartTime);
+  const showClock = !!(state.profile && state.profile.showClockTimes);
   if (hasReps) {
     if (totalSeconds > 0) {
       badge.innerHTML = `<i class="fa-solid fa-stopwatch"></i> ~${Math.round(totalSeconds / 60)} min`;
@@ -9743,7 +9989,7 @@ function updateClockBadges() {
   updateTotalBadge();
   const t = state.trainings[currentTrainingId];
   if (!t) return;
-  const showClock = !!(state.profile && state.profile.trainingStartTime);
+  const showClock = !!(state.profile && state.profile.showClockTimes);
   const clockTimes = showClock ? computeRowClockTimes(t, timeInputToSeconds(state.profile.trainingStartTime)) : null;
   document.querySelectorAll("#sequenceList .seq-item[data-itemid]").forEach(el => {
     const itemId = el.dataset.itemid;
@@ -9851,9 +10097,9 @@ function renderSequence() {
   renderTrainingEquipmentSummary(t);
   const ro = editorReadOnly;
   const dis = ro ? "disabled" : "";
-  // Časy na kartách — ukazují se, když je v hlavičce zadaný začátek tréninku. Spočítá se
-  // jednou za celý render, pak se jen čte podle itemId u každé karty (viz clockBadgeHtml).
-  const showClockTimes = !!(state.profile && state.profile.trainingStartTime);
+  // Volitelné časy na kartách (viz #showClockTimesBtn) — spočítá se jednou za celý render,
+  // pak se jen čte podle itemId u každé karty zvlášť (viz clockBadgeHtml).
+  const showClockTimes = !!(state.profile && state.profile.showClockTimes);
   const clockTimes = showClockTimes ? computeRowClockTimes(t, timeInputToSeconds(state.profile.trainingStartTime)) : null;
   function clockBadgeHtml(itemId) {
     if (!clockTimes) return "";
@@ -10666,28 +10912,14 @@ function renderTrainingVisibilityBtn() {
   const t = state.trainings[currentTrainingId];
   const btn = document.getElementById("trainingVisibilityBtn");
   if (!t) return;
-  // Vlevo STAV, vpravo zeleně to, co se stane po kliknutí — ať jde obojí přečíst naráz.
   btn.innerHTML = t.public
-    ? '<i class="fa-solid fa-globe"></i> Na Tržišti <span class="vis-sep">·</span> <span class="vis-act">Skrýt</span>'
-    : '<i class="fa-solid fa-lock"></i> Soukromé <span class="vis-sep">·</span> <span class="vis-act">Sdílet na Tržiště</span>';
+    ? '<i class="fa-solid fa-globe"></i> Na Tržišti — klikni pro soukromé'
+    : '<i class="fa-solid fa-lock"></i> Soukromé — klikni pro Tržiště';
 }
-/** Mekovo zadání: ptát se před obojím směrem. Tlačítko je v hlavičce editoru hned vedle
-    ostatních akcí a přehmátnout se dá snadno — zveřejnění cizím lidem ani stažení tréninku,
-    na který se někdo dívá, by se nemělo stát jedním omylným ťuknutím. */
-document.getElementById("trainingVisibilityBtn").addEventListener("click", async () => {
+document.getElementById("trainingVisibilityBtn").addEventListener("click", () => {
   const t = state.trainings[currentTrainingId];
   if (!t) return;
-  const naTrziste = !t.public;
-  const ok = await confirmDialog(
-    naTrziste
-      ? "Trénink uvidí všichni trenéři v klubu a budou si ho moct zkopírovat k sobě. Kdykoli ho můžeš zase skrýt."
-      : "Trénink ostatním z Tržiště zmizí. Kopie, které si už někdo udělal, mu zůstanou — ty se tímhle neruší.",
-    naTrziste
-      ? { title: "Sdílet na Tržiště?", confirmLabel: "Sdílet", cancelLabel: "Zatím ne" }
-      : { title: "Skrýt z Tržiště?", confirmLabel: "Skrýt", cancelLabel: "Nechat" }
-  );
-  if (!ok) return;
-  t.public = naTrziste;
+  t.public = !t.public;
   t.visibilityDecided = true;
   t.dateModified = Date.now();
   scheduleSave();
@@ -10858,10 +11090,26 @@ function openProfileModal() {
   document.getElementById("adminPartsSection").classList.toggle("hidden", !isAdmin);
   document.getElementById("adminDriveKeySection").classList.toggle("hidden", !isAdmin);
   document.getElementById("bulkImportSection").classList.toggle("hidden", !isAdmin);
+  document.getElementById("adminNotifySection").classList.toggle("hidden", !isAdmin);
   document.getElementById("driveApiKeyInput").value = state.driveApiKey || "";
   if (isAdmin) {
     renderPendingApprovals();
     renderMembersRoleList();
+    document.getElementById("notifyEnableToggle").classList.toggle("active", !!p.notifyPushEnabled);
+    document.getElementById("notifyEnableToggle").setAttribute("aria-checked", !!p.notifyPushEnabled);
+    document.getElementById("notifyScopeSelect").value = p.notifyPref || "major";
+    document.getElementById("notifyOnlineToggle").classList.toggle("active", p.notifyOnline !== false);
+    document.getElementById("notifyOnlineToggle").setAttribute("aria-checked", p.notifyOnline !== false);
+    const statusEl = document.getElementById("notifyStatusText");
+    if (!FCM_VAPID_KEY) {
+      statusEl.textContent = "Push zatím není nastavený na serveru (chybí VAPID klíč) — notifikace nepůjde zapnout.";
+    } else if (typeof Notification === "undefined") {
+      statusEl.textContent = "Tenhle prohlížeč notifikace nepodporuje.";
+    } else if (Notification.permission === "denied") {
+      statusEl.textContent = "Notifikace jsou v prohlížeči zakázané — povol je v nastavení webu.";
+    } else {
+      statusEl.textContent = p.notifyPushEnabled ? "Zapnuto na tomhle zařízení." : "Zatím vypnuto na tomhle zařízení.";
+    }
   }
   renderCommentActivityPanel();
   markCommentsSeen();
@@ -10881,6 +11129,141 @@ document.getElementById("saveDriveApiKeyBtn").addEventListener("click", async ()
   } catch (e) { console.error(e); toast("Uložení klíče selhalo.", 2200, "err"); }
 });
 
+async function saveNotifyPrefs(patch) {
+  state.profile = Object.assign({}, state.profile, patch);
+  try {
+    await setDoc(doc(db, "users", uidCurrent), patch, { merge: true });
+    return true;
+  } catch (e) {
+    console.error("Uložení notifikačních preferencí selhalo:", e);
+    toast("Uložení se nepovedlo, zkus to prosím znovu.", 2200, "err");
+    return false;
+  }
+}
+document.getElementById("notifyEnableToggle").addEventListener("click", async () => {
+  const btn = document.getElementById("notifyEnableToggle");
+  const statusEl = document.getElementById("notifyStatusText");
+  const turningOn = !btn.classList.contains("active");
+  if (!turningOn) {
+    btn.classList.remove("active");
+    btn.setAttribute("aria-checked", "false");
+    // Vypnutí schválně smaže VŠECHNY uložené tokeny, ne jen appku tiše "utlumí" —
+    // jinak by při každém znovu-zapnutí (např. po obnově service workeru, která umí
+    // vydat nový token pro stejné zařízení) přibýval do fcmTokens další záznam vedle
+    // starého, a jedna notifikace by pak dorazila na totéž zařízení víckrát najednou
+    // (přesně tohle se stalo). Zapnutím se pak zaregistruje přesně jeden čerstvý token.
+    await saveNotifyPrefs({ notifyPushEnabled: false, fcmTokens: [] });
+    statusEl.textContent = "Zatím vypnuto na tomhle zařízení.";
+    return;
+  }
+  if (!FCM_VAPID_KEY) {
+    toast("Push notifikace ještě nejsou na serveru nastavené (chybí VAPID klíč).", 4000, "err");
+    return;
+  }
+  if (typeof Notification === "undefined") {
+    toast("Tenhle prohlížeč notifikace nepodporuje.", 3000, "err");
+    return;
+  }
+  statusEl.textContent = "Zapínám…";
+  // Žádost o povolení notifikací musí jít hned, ještě než appka dělá cokoliv dalšího (byť jen
+  // čekání na jinou Promise) — prohlížeče berou "povolení uživatele kliknout" jako platné jen
+  // krátkou chvíli po skutečném kliknutí, a i jediný await před requestPermission() to někdy stačí
+  // zdusit (prohlížeč pak žádost potichu ignoruje/zamítne, místo aby se cokoliv vůbec zeptalo).
+  logDebug("[push] zapínám — žádám o povolení notifikací");
+  let permission;
+  try {
+    permission = await Notification.requestPermission();
+  } catch (e) {
+    logDebug("[push] requestPermission selhal:", e && e.message);
+    toast("Žádost o povolení notifikací selhala.", 4000, "err");
+    statusEl.textContent = "";
+    return;
+  }
+  logDebug("[push] výsledek žádosti o povolení:", permission);
+  if (permission !== "granted") {
+    toast(permission === "denied" ? "Notifikace jsi zakázal/a v prohlížeči — povol je v nastavení webu a zkus to znovu." : "Bez povolení notifikací to nepůjde zapnout.", 4500, "err");
+    statusEl.textContent = permission === "denied" ? "Notifikace jsou v prohlížeči zakázané — povol je v nastavení webu." : "";
+    return;
+  }
+  // Pojistka: kdyby cokoliv níž (SW, síť k FCM…) viselo, appka to po 20s vzdá s hláškou,
+  // místo aby tlačítko navěky zůstalo na "Zapínám…" beze slova vysvětlení.
+  const withTimeout = (promise, ms, label) => Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} — vypršel časový limit (${ms / 1000}s)`)), ms))
+  ]);
+  try {
+    logDebug("[push] inicializuju Firebase Messaging…");
+    const messaging = await withTimeout(ensureMessaging(), 8000, "Inicializace Messaging");
+    if (!messaging) { toast("Tenhle prohlížeč push notifikace nepodporuje.", 3500, "err"); statusEl.textContent = ""; return; }
+    logDebug("[push] čekám na aktivní service worker…");
+    // Bez explicitního swReg by si getFcmToken zkusil sám zaregistrovat vlastní
+    // "firebase-messaging-sw.js" (soubor, co appka nemá) a spadl by na 404 — chceme, ať použije
+    // náš už zaregistrovaný sw.js, který background zprávy umí obsloužit sám.
+    const swReg = await withTimeout(navigator.serviceWorker.ready, 10000, "Čekání na service worker");
+    logDebug("[push] service worker aktivní, žádám FCM o token…");
+    const token = await withTimeout(getFcmToken(messaging, { vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: swReg }), 15000, "Získání FCM tokenu");
+    if (!token) throw new Error("Nepodařilo se získat token.");
+    logDebug("[push] token získán, ukládám do profilu…");
+    await setDoc(doc(db, "users", uidCurrent), { notifyPushEnabled: true, fcmTokens: arrayUnion(token) }, { merge: true });
+    state.profile = Object.assign({}, state.profile, { notifyPushEnabled: true, fcmTokens: [...(state.profile.fcmTokens || []), token] });
+    btn.classList.add("active");
+    btn.setAttribute("aria-checked", "true");
+    statusEl.textContent = "Zapnuto na tomhle zařízení.";
+    toast("Push notifikace zapnuty.");
+    logDebug("[push] hotovo, posílám uvítací testovací notifikaci…");
+    // Testovací "vítací" notifikace — jde přes Cloud Function (jen appka sama poslat push
+    // neumí, na to je potřeba server s admin právy). Když funkce ještě není nasazená, tenhle
+    // krok jen tiše/viditelně selže, ale zapnutí samotné to nijak nekazí (token je uložený).
+    try {
+      const fn = getFunctions(fbApp, "europe-west1");
+      const sendWelcome = httpsCallable(fn, "sendWelcomeNotification");
+      await withTimeout(sendWelcome({ token }), 12000, "Uvítací notifikace");
+      logDebug("[push] uvítací notifikace odeslána");
+    } catch (weErr) {
+      logDebug("[push] uvítací notifikace se nepovedla (funkce možná ještě není nasazená):", weErr && weErr.message);
+      toast("Token uložen, ale zkušební notifikace nedorazila — nejspíš ještě nemáš nasazené Cloud Functions (viz návod).", 6000, "warn");
+    }
+  } catch (e) {
+    console.error("Zapnutí push notifikací selhalo:", e);
+    logDebug("[push] zapnutí selhalo:", e && e.message);
+    toast(`Zapnutí se nepovedlo (${e.message || e.code || "neznámá chyba"}).`, 5500, "err");
+    statusEl.textContent = "";
+  }
+});
+document.getElementById("notifyScopeSelect").addEventListener("change", (e) => {
+  saveNotifyPrefs({ notifyPref: e.target.value });
+});
+document.getElementById("notifyOnlineToggle").addEventListener("click", async () => {
+  const btn = document.getElementById("notifyOnlineToggle");
+  const on = !btn.classList.contains("active");
+  btn.classList.toggle("active", on);
+  btn.setAttribute("aria-checked", String(on));
+  await saveNotifyPrefs({ notifyOnline: on });
+});
+document.getElementById("sendTestNotifyBtn").addEventListener("click", async () => {
+  const btn = document.getElementById("sendTestNotifyBtn");
+  if (!(state.profile && state.profile.fcmTokens && state.profile.fcmTokens.length)) {
+    toast("Nejdřív zapni přepínač nahoře — bez uloženého tokenu nemá aplikace kam poslat.", 4000, "err");
+    return;
+  }
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Posílám…';
+  try {
+    const fn = getFunctions(fbApp, "europe-west1");
+    const sendWelcome = httpsCallable(fn, "sendWelcomeNotification");
+    // Bez token v datech pošle Cloud Function na VŠECHNY uložené tokeny admina
+    // (tj. na všechna zařízení, kde je zapnuto), ne jen na tohle jedno.
+    await sendWelcome({});
+    toast("Zkušební notifikace odeslána — měla by dorazit během chvilky.");
+  } catch (e) {
+    console.error("Odeslání zkušební notifikace selhalo:", e);
+    toast(`Odeslání se nepovedlo (${e.message || e.code || "neznámá chyba"}).`, 5000, "err");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = original;
+  }
+});
 
 async function renderPendingApprovals() {
   const wrap = document.getElementById("pendingApprovalsList");
@@ -11616,7 +11999,7 @@ function renderPartsManageList() {
   wrap.querySelectorAll("input").forEach(inp => {
     inp.addEventListener("change", () => {
       const p = state.parts.find(x => x.key === inp.dataset.key);
-      if (p && inp.value.trim()) { p.label = inp.value.trim(); scheduleSave(); renderPickerList(); if (currentView === "editor") renderSequence(); toast("Uloženo."); }
+      if (p && inp.value.trim()) { p.label = inp.value.trim(); scheduleSave(); renderPartLegend(); renderPickerList(); if (currentView === "editor") renderSequence(); toast("Uloženo."); }
     });
   });
 }
@@ -11626,6 +12009,7 @@ document.getElementById("addPartBtn").addEventListener("click", async () => {
   state.parts.push({ key: uid(), label: label.trim(), color: nextPartColor() });
   scheduleSave();
   renderPartsManageList();
+  renderPartLegend();
   renderPartSelectOptions();
   renderPickerList();
   toast("Přidáno.");
@@ -12029,7 +12413,7 @@ const HELP_DATA = [
     ]},
     { title: "Sdílení a Tržiště tréninků", icon: "fa-solid fa-store", qa: [
       { q: "Jak sdílím trénink s konkrétním kolegou?", a: "V přehledu tréninků otevři nabídku u tréninku (⋮) a vyber „Sdílet odkazem“ — vygeneruje se odkaz, který jde poslat komukoli, i bez přístupu do aplikace." },
-      { q: "Co je Tržiště a jak tam trénink zveřejním?", a: "Tržiště je záložka, kde vidíš tréninky ostatních trenérů, které se rozhodli zveřejnit. Vlastní trénink tam dáš tlačítkem v hlavičce editoru — píše se na něm, jak na tom trénink teď je („Soukromé“ nebo „Na Tržišti“) a vedle toho, co se stane po kliknutí. Aplikace se ještě jednou zeptá, než ho zveřejní nebo zase skryje. Dokud to neuděláš, trénink je jen tvůj a nikdo jiný ho neuvidí.", kw: "trziste zverejnit sdilet soukrome" },
+      { q: "Co je Tržiště a jak tam trénink zveřejním?", a: "Tržiště je záložka, kde vidíš tréninky ostatních trenérů, které se rozhodli zveřejnit. Vlastní trénink tam dáš tlačítkem „Na Tržiště“ při ukládání — dokud to neuděláš, trénink je jen tvůj a nikdo jiný ho neuvidí." },
       { q: "Jaký je rozdíl mezi veřejným a soukromým tréninkem?", a: "Soukromý vidíš jen ty — hodí se i na rozpracované nápady, co ještě nejsou hotové k ukázání. Veřejný (na Tržišti) vidí a může si zkopírovat kdokoli z ostatních trenérů. Rozhodnutí jde kdykoli změnit oběma směry." },
       { q: "Co se stane, když si někdo můj trénink z Tržiště zkopíruje?", a: "Vytvoří se mu vlastní kopie (s dovětkem „(kopie)“ v názvu), kterou může dál upravovat nezávisle na tvém originálu — nová kopie je vždy nejdřív soukromá, i když byl originál veřejný." },
       { q: "Jak trénink zkopíruju/naklonuju sám sobě?", a: "V nabídce u tréninku (⋮) je tlačítko „Klonovat“ — funguje stejně u vlastních i cizích tréninků z Tržiště." },
