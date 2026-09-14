@@ -2667,7 +2667,7 @@ async function ensureMessaging() {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-09-14 10:25";
+const APP_VERSION = "2026-09-14 11:15";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -8666,9 +8666,16 @@ function renderOverview() {
 function openOverview() {
   const t = state.trainings[currentTrainingId];
   if (!t || !t.items.length) { toast("Trénink je prázdný, není co ukazovat.", 2200, "warn"); return; }
+  // Do diagnostického záznamu (🐞), ať jde dohledat, který trénink se doopravdy vykreslil —
+  // Mek hlásil, že u druhého otevřeného tréninku viděl obsah toho prvního.
+  logDebug("[přehled] otevírám", currentTrainingId, JSON.stringify({ nazev: t.name, polozek: t.items.length }));
   document.getElementById("overviewView").classList.remove("hidden");
   if (ovAskedForId !== currentTrainingId) {
+    // Jiný trénink než posledně: zadaný začátek se zahazuje. Čas z úterního tréninku nemá
+    // co dělat ve čtvrtečním — dřív se stará hodnota stihla vykreslit na pásku ještě
+    // předtím, než trenér stačil odpovědět na otázku.
     ovAskedForId = currentTrainingId;
+    ovStartSeconds = null;
     document.getElementById("ovAskTime").value = (state.profile && state.profile.trainingStartTime) || "09:00";
     document.getElementById("ovAskBackdrop").classList.remove("hidden");
   }
