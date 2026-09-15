@@ -592,16 +592,10 @@ function computeTrainingEquipment(t) {
   });
   return all;
 }
-/** Potřebuje to jen závěrečné shrnutí prezentace; sdílený trénink se needituje, takže stačí
-    součet přes stejnou funkci, jakou kreslí osa. */
-function calculateTrainingTotalSeconds(t) {
-  let totalSeconds = 0, hasReps = false;
-  ((t && t.items) || []).forEach(row => {
-    if ((row.mode || "time") === "reps" && row.part !== "prestavka") hasReps = true;
-    totalSeconds += fazeItemTotalSeconds(row);
-  });
-  return { totalSeconds, hasReps };
-}
+/* calculateTrainingTotalSeconds() tady BÝVAL — závěrečné shrnutí prezentace si přes něj
+   počítalo minuty, a schválně jinak než appka, takže stejný trénink ukazoval přes sdílený
+   odkaz jiné číslo. Od 15. 9. si computeFazeSummaryStats() sčítá rowDuration().seconds sám,
+   takže tenhle můstek není potřeba a obě stránky počítají doslova stejným kódem. */
 function resetModalScroll(backdrop) {
   const m = backdrop && backdrop.querySelector(".modal");
   if (m) m.scrollTop = 0;
@@ -1594,47 +1588,63 @@ document.addEventListener("fullscreenchange", () => {
 const FAZE_BELL_SRC = "Boxing%20Bell%20Sound%20Effect.mp3"; // = "Boxing Bell Sound Effect.mp3" (mezery v názvu)
 const FAZE_VIBRATE_PATTERN = [300, 150, 300, 150, 600];
 
-/** Celková délka JEDNÉ položky tréninku (řádek v t.items) ve vteřinách — počítá se stejně
-    jako v calculateTrainingTotalSeconds/buildPdfEntries výš, jen vrací součet PER ŘÁDEK
-    (skupina = jeden součet za celou kartu), ať se dá postavit osa tréninku po blocích. */
+/* =========================================================
+   DÉLKA JEDNOHO ŘÁDKU TRÉNINKU — JEDINÉ MÍSTO, KDE SE TO POČÍTÁ
+   ========================================================= */
 /* Cvik na opakování bez vyplněného odhadu nemá jak dlouho trvat. Dřív se počítal jako nula,
    takže na ose zabral minimum a v Přehledu na něm časová páska stála nula minut. Mek:
    takový cvik normálně ukázat a počítat mu náhradní odhad — nikde to nepsat, stává se to
-   zřídka. Změna se propíše na osu v prezentaci, do Přehledu i do Shrnutí; editor (jeho
-   "~ min" a "?") zůstává beze změny schválně. */
+   zřídka. */
 const REPS_FALLBACK_SECONDS = 5 * 60;
-function fazeItemTotalSeconds(row) {
-  if (!row) return 0;
-  if (row.part === "prestavka") return valueToSeconds(row.duration != null ? row.duration : 1, row.durationUnit || "min");
-  const isReps = (row.mode || "time") === "reps";
-  const seriesCount = row.seriesCount || 1;
-  const pauseSeconds = getSeriesPauseSeconds(row);
-  if (row.isGroup) {
-    let sum = 0;
-    (row.videos || []).forEach(v => {
-      if (v.isBreak) { sum += valueToSeconds(v.duration != null ? v.duration : 1, v.durationUnit || "min"); return; }
-      sum += isReps
-        ? (v.estimate != null && v.estimate > 0 ? valueToSeconds(v.estimate, v.estimateUnit || "min") : REPS_FALLBACK_SECONDS)
-        : valueToSeconds(v.duration != null ? v.duration : 1, v.durationUnit || "min");
-    });
-    return sum * seriesCount + (seriesCount > 1 ? (seriesCount - 1) * pauseSeconds : 0);
+
+/** Délka JEDNOHO řádku tréninku ve vteřinách (skupina = jeden součet za celou kartu),
+    včetně jednotek, sérií a pauz mezi nimi. Vrací dvě věci:
+
+      seconds — VŽDYCKY číslo. Cviku na opakování bez odhadu se dosadí REPS_FALLBACK_SECONDS.
+      known   — false právě tehdy, když se ta náhrada musela použít. Tedy: "tohle číslo je
+                dopočítané, ne zadané."
+
+    JEDNO VÝSLOVNÉ PRAVIDLO pro neodhadnuté cviky na opakování je tady a nikde jinde.
+    Každé místo v aplikaci si pak samo řekne, co s tím:
+      - kdo potřebuje jen rozvrhnout čas (osa v prezentaci, Přehled, Shrnutí) → bere seconds
+        a known ignoruje, aby cvik nikde nevypadl a nešel přeskočit,
+      - kdo nesmí tvrdit přesný čas (součet v hlavičce editoru, hodiny u karet, proužek
+        přesahu na ose) → podívá se na known a číslo nepoužije.
+
+    Dřív bylo tohle počítání rozepsané na čtyřech místech a každé se v detailech trochu lišilo.
+    PDF (buildPdfEntries) zůstává schválně vlastní — potřebuje čas i po jednotlivých členech
+    skupiny, ne jen jeden součet za kartu. */
+function rowDuration(row) {
+  if (!row) return { seconds: 0, known: false };
+  if (row.part === "prestavka") {
+    return { seconds: valueToSeconds(row.duration != null ? row.duration : 1, row.durationUnit || "min"), known: true };
   }
-  const base = isReps
-    ? (row.estimate != null && row.estimate > 0 ? valueToSeconds(row.estimate, row.estimateUnit || "min") : REPS_FALLBACK_SECONDS)
-    : valueToSeconds(row.duration != null ? row.duration : 1, row.durationUnit || "min");
-  return base * seriesCount + (seriesCount > 1 ? (seriesCount - 1) * pauseSeconds : 0);
-}
-/** Má položka doopravdy ZADANOU délku? Cvik na opakování bez odhadu dostane pro všechny
-    výpočty náhradní délku (REPS_FALLBACK_SECONDS), aby nikde nevypadl a nešel přeskočit —
-    ale přesah času se u něj na ose ukazovat nesmí, protože by se počítal z vymyšleného čísla.
-    Přesně tohle Mek zadal ve dřívějším kole: "kdyby to nemělo vyplněný ten čas, tak se to
-    neukáže". Náhradní odhad tedy řeší rozvržení a časy, ne tvrzení o přetažení. */
-function fazeItemHasPlannedTime(row) {
-  if (!row) return false;
-  if (row.part === "prestavka") return true;
-  if ((row.mode || "time") !== "reps") return true;
-  if (row.isGroup) return (row.videos || []).every(v => v.isBreak || (v.estimate != null && v.estimate > 0));
-  return row.estimate != null && row.estimate > 0;
+  const isReps = (row.mode || "time") === "reps";
+  let perSeries = 0;
+  let known = true;
+  if (row.isGroup) {
+    (row.videos || []).forEach(v => {
+      if (v.isBreak || !isReps) {
+        perSeries += valueToSeconds(v.duration != null ? v.duration : 1, v.durationUnit || "min");
+      } else if (v.estimate != null && v.estimate > 0) {
+        perSeries += valueToSeconds(v.estimate, v.estimateUnit || "min");
+      } else {
+        perSeries += REPS_FALLBACK_SECONDS;
+        known = false;
+      }
+    });
+  } else if (!isReps) {
+    perSeries = valueToSeconds(row.duration != null ? row.duration : 1, row.durationUnit || "min");
+  } else if (row.estimate != null && row.estimate > 0) {
+    perSeries = valueToSeconds(row.estimate, row.estimateUnit || "min");
+  } else {
+    perSeries = REPS_FALLBACK_SECONDS;
+    known = false;
+  }
+  const seriesCount = row.seriesCount || 1;
+  const seconds = perSeries * seriesCount
+    + (seriesCount > 1 ? (seriesCount - 1) * getSeriesPauseSeconds(row) : 0);
+  return { seconds, known };
 }
 /** Cvik na počet opakování žádný odpočet nemá — starý vzhled u něj schová celou lištu
     s časovačem (setTimerMode("reps") výš) a renderTrainingModeItemClassic ho ani nespustí,
@@ -1735,25 +1745,23 @@ function getFazeUpNextEntry() {
     equipment: next.isText ? (next.equipment || []) : [...new Set([...((lib && lib.equipment) || []), ...(next.extraEquipment || [])])]
   };
 }
-/** Souhrn pro "Shrnutí" (poslední cvičení tréninku) — počet cvičení (bez přestávek), celková
-    délka a část, které v tréninku připadlo nejvíc času. Skutečná data, ne placeholder z
-    mockupu — viz claude/trener-treninkovy-rezim.md. */
+/** Souhrn pro "Shrnutí" (poslední obrazovka prezentace) — počet cvičení bez přestávek
+    a celková délka. "Nejvíc času: <část>" tu bývalo taky, Mek ho 15. 9. nechal zrušit.
+
+    Délka se sčítá z rowDuration().seconds, tedy PŘESNĚ TAK, JAK PREZENTACE DOOPRAVDY BĚŽELA —
+    včetně cviků na opakování bez odhadu, kterým se dosadí náhradní čas. Dřív se tenhle
+    jeden údaj bral z calculateTrainingTotalSeconds(), což je pravidlo pro EDITOR (neodhadnuté
+    cviky vynechává a hlásí to jako "~X min"). V prezentaci to znamenalo, že Shrnutí ukázalo
+    míň minut, než kolik trvala osa nad ním — a než co ukazoval stejný trénink přes sdílený
+    odkaz, protože t.html počítal po svém. Teď mluví všechna tři místa stejně. */
 function computeFazeSummaryStats(t) {
-  if (!t) return { count: 0, totalMin: 0, topPart: "" };
+  if (!t) return { count: 0, totalMin: 0 };
   const items = t.items || [];
-  const { totalSeconds } = calculateTrainingTotalSeconds(t);
-  const partSeconds = {};
-  items.forEach(row => {
-    if (row.part === "prestavka") return;
-    const key = row.part || "";
-    partSeconds[key] = (partSeconds[key] || 0) + fazeItemTotalSeconds(row);
-  });
-  let topKey = "", topVal = -1;
-  Object.keys(partSeconds).forEach(k => { if (partSeconds[k] > topVal) { topVal = partSeconds[k]; topKey = k; } });
+  let totalSeconds = 0;
+  items.forEach(row => { totalSeconds += rowDuration(row).seconds; });
   return {
     count: items.filter(r => r.part !== "prestavka").length,
-    totalMin: Math.round(totalSeconds / 60),
-    topPart: topKey ? (getPart(topKey).label || topKey) : ""
+    totalMin: Math.round(totalSeconds / 60)
   };
 }
 /** Osa tréninku nahoře — jeden segment za každou položku t.items (skupina = jeden segment za
@@ -1769,7 +1777,7 @@ function fazeBuildAxisHtml() {
     const bg = isBreak
       ? "repeating-linear-gradient(135deg,var(--part-prestavka),var(--part-prestavka) 4px,var(--break-stripe) 4px,var(--break-stripe) 8px)"
       : (getPart(row.part).color || "#339933");
-    const seconds = fazeItemTotalSeconds(row);
+    const { seconds, known } = rowDuration(row);
     let cls = "", fillPct = null, overSeconds = 0;
     if (i < trainingModeIndex) cls = "tmf-done";
     else if (i === trainingModeIndex) {
@@ -1779,7 +1787,7 @@ function fazeBuildAxisHtml() {
       // Přesah se ukáže JEN u cviku se SKUTEČNĚ vyplněnou délkou — u cviku na opakování bez
       // odhadu by se počítal z náhradního čísla, a to by bylo tvrzení, které appka nemá čím
       // podložit. Proužek je zastropovaný délkou samotného bloku, ať osa nezdivočí.
-      if (fazeItemHasPlannedTime(row) && trainingModeSeconds < 0) {
+      if (known && trainingModeSeconds < 0) {
         cls += " tmf-over";
         overSeconds = Math.min(-trainingModeSeconds, seconds);
       }
@@ -1974,7 +1982,6 @@ function renderFazeWrap(main, entry) {
       <div class="tmf-nextcard tmf-good">
         <div class="tmf-lbl">Trénink hotový</div>
         <div class="tmf-nexttitle" style="font-size:clamp(18px,3.6vw,26px);"><span class="tmf-nowrap">${stats.count} cvičení</span> · <span class="tmf-nowrap">${stats.totalMin} min</span></div>
-        ${stats.topPart ? `<div class="tmf-gear">Nejvíc času: <b>${esc(stats.topPart)}</b></div>` : ""}
       </div>`;
   } else {
     nextHtml = fazeNextCardHtml();
@@ -2074,7 +2081,6 @@ function renderFazeFinished() {
       <div class="tmf-nextcard tmf-good">
         <div class="tmf-lbl">Trénink hotový</div>
         <div class="tmf-nexttitle" style="font-size:clamp(18px,3.6vw,26px);"><span class="tmf-nowrap">${stats.count} cvičení</span> · <span class="tmf-nowrap">${stats.totalMin} min</span></div>
-        ${stats.topPart ? `<div class="tmf-gear">Nejvíc času: <b>${esc(stats.topPart)}</b></div>` : ""}
       </div>
     </div>`;
 }
@@ -2266,10 +2272,11 @@ function ovTickHtml(offsetSeconds, blockSeconds) {
   const time = ovStartSeconds == null ? "" : pdfFmtClock((ovStartSeconds + offsetSeconds) % 86400);
   return `<div class="ov-tick"><i></i>${time ? `<b>${esc(time)}</b>` : ""}${blockSeconds != null ? `<small>${esc(ovMinText(blockSeconds))}</small>` : ""}</div>`;
 }
-/** Časy jdou schválně přes fazeItemTotalSeconds — přes stejný výpočet, jakým se kreslí osa
-    v prezentaci, aby obě zobrazení říkala to samé. NE přes computeRowClockTimes: to od první
-    položky s neznámou délkou označí všechno další za neznámé, takže by od prvního cviku na
-    opakování bez odhadu nebyl čas nikde. Chybějící odhad řeší REPS_FALLBACK_SECONDS. */
+/** Časy se schválně sčítají z rowDuration().seconds — stejně, jako se kreslí osa v prezentaci,
+    aby obě zobrazení říkala to samé. NE přes computeRowClockTimes: to od první položky
+    s neznámou délkou označí všechno další za neznámé, takže by od prvního cviku na opakování
+    bez odhadu nebyl čas nikde. Tady se známost schválně ignoruje (known se nečte) a chybějící
+    odhad řeší náhradní číslo. */
 function renderOverview() {
   const t = state.trainings[currentTrainingId];
   if (!t) return;
@@ -2293,7 +2300,7 @@ function renderOverview() {
         if (strip) html += `<div class="ov-strip">${strip}</div>`;
         lastPart = row.part;
       }
-      const seconds = fazeItemTotalSeconds(row);
+      const seconds = rowDuration(row).seconds;
       html += ovTickHtml(acc, seconds) + ovCardHtml(row);
       acc += seconds;
     } catch (e) {
@@ -2309,7 +2316,7 @@ function renderOverview() {
   // Bez něj se rysky i karty roztáhnou přes celou šířku a osa se rozsype.
   document.getElementById("ovList").innerHTML = `<div class="ov-rows">${html}</div>`;
   // Hlavička se počítá až teď, a to ze STEJNÉHO součtu (acc), jakým se kreslila páska. Dřív
-  // měla vlastní průchod přes fazeItemTotalSeconds a uměla se s páskou rozejít — Mek viděl
+  // měla vlastní průchod přes délky položek a uměla se s páskou rozejít — Mek viděl
   // "končíme 06:58" nad páskou, která končila v 07:20.
   document.getElementById("ovStartBtn").textContent = ovStartSeconds == null
     ? "zadat začátek"

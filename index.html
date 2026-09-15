@@ -2586,7 +2586,19 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
-const APP_VERSION = "2026-09-14 23:20";
+/* OTISKY TRÉNINKŮ — aby se při ukládání neposílaly dokola i tréninky, se kterými se nic nestalo.
+   Klíč je id tréninku, hodnota je jeho obsah přepsaný do textu v té podobě, v jaké naposledy
+   doopravdy doputoval na server. Při dalším uložení se porovná a pošlou se jen ty, co se liší.
+
+   Schválně se NEPOROVNÁVÁ dateModified: kdyby ho některá cesta v aplikaci zapomněla přepsat,
+   změna by se tiše ztratila a člověk by se o tom nedozvěděl. Porovnává se celý obsah, takže
+   nejhorší, co se může stát, je jeden zbytečný zápis navíc — nikdy ne ztracená změna. */
+const savedTrainingFingerprints = new Map();
+/** Obsah tréninku jako text. Vrací null, když to nejde (pak se trénink radši uloží vždycky). */
+function trainingFingerprint(t) {
+  try { return JSON.stringify(t); } catch (e) { return null; }
+}
+const APP_VERSION = "2026-09-15 11:10";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -4072,6 +4084,9 @@ onAuthStateChanged(auth, async (user) => {
   } else {
     uidCurrent = null;
     authInitializedForUid = null;
+    // Otisky patří odhlášenému člověku. Kdyby se na stejné stránce přihlásil někdo jiný,
+    // nesmí zdědit informaci "tenhle trénink je už uložený".
+    savedTrainingFingerprints.clear();
     unsubscribeFromSharedData();
     unsubscribeFromSharedThumbnails();
     unsubscribeFromOwnMembership();
@@ -4272,7 +4287,14 @@ async function loadUserData() {
     // ensureOthersTrainingsLoaded(). Dřív se tady čekalo na stažení tréninků všech trenérů,
     // i když Tržiště nikdo neotevřel, a drželo to přihlášení.
     state.trainings = {};
-    mySnap.forEach(d => { state.trainings[d.id] = d.data(); });
+    savedTrainingFingerprints.clear();
+    mySnap.forEach(d => {
+      const data = d.data();
+      state.trainings[d.id] = data;
+      // Otisk se bere z dat přesně tak, jak přišla ze serveru — ještě před migracemi níž.
+      // Kdyby migrace něco změnila, otisk se rozejde a trénink se při nejbližším uložení pošle.
+      savedTrainingFingerprints.set(d.id, trainingFingerprint(data));
+    });
 
     const legacyPartMap = { protazeni: "zaver", posilovani: "zaver", kompenzace: "zaver" };
     let migratedTrainings = false;
@@ -4564,7 +4586,28 @@ async function saveUserData() {
     // s náhledy jde o stovky kB na trénink. Jakmile odkaz vyprší, kopie letí pryč; nové
     // sdílení si postaví čerstvou. Pole share zůstává, nese jen datum a je drobné.
     mine.forEach(t => { if (t.shareSnapshot && !isShareActive(t)) t.shareSnapshot = null; });
-    await Promise.all(mine.map(t => setDoc(doc(db, "users", uidCurrent, "trainings", t.id), t)));
+    // POSÍLÁ SE JEN TO, CO SE DOOPRAVDY ZMĚNILO. Dřív tenhle jeden řádek přepsal při každém
+    // uložení všechny tréninky uživatele — u dvaceti tréninků dvacet zápisů místo jednoho,
+    // a to po každé drobnosti, protože autosave běží po každé změně. Viz savedTrainingFingerprints
+    // nahoře: porovnává se celý obsah, ne dateModified.
+    //
+    // Otisk se pro každý trénink spočítá JEDNOU, tady, ještě před zápisem — a uloží se až po něm.
+    // Kdyby se počítal podruhé až po zápisu a člověk mezitím stihl něco upravit, zapsala by se
+    // na server stará verze, ale otisk by odpovídal té nové, a ta úprava by se tiše ztratila.
+    const changedTrainings = [];
+    mine.forEach(t => {
+      const fp = trainingFingerprint(t);
+      if (fp === null || fp !== savedTrainingFingerprints.get(t.id)) changedTrainings.push({ t, fp });
+    });
+    await Promise.all(changedTrainings.map(({ t }) => setDoc(doc(db, "users", uidCurrent, "trainings", t.id), t)));
+    // Až teď, po úspěšném zápisu. Když zápis spadne, vyletíme rovnou do catch a otisky zůstanou
+    // staré — takže se stejný trénink při dalším pokusu pošle znovu.
+    changedTrainings.forEach(({ t, fp }) => {
+      if (fp === null) savedTrainingFingerprints.delete(t.id);
+      else savedTrainingFingerprints.set(t.id, fp);
+    });
+    logDebug("[save] tréninky: zapsáno", changedTrainings.length, "z", mine.length,
+      changedTrainings.length ? "— " + changedTrainings.map(({ t }) => t.name).join(", ") : "(nic se nezměnilo)");
     return true;
   } catch (e) {
     console.error("Nepodařilo se uložit data:", e);
@@ -4580,6 +4623,9 @@ async function saveUserData() {
 async function deleteTrainingRemote(trainingId) {
   try { await deleteDoc(doc(db, "users", uidCurrent, "trainings", trainingId)); }
   catch (e) { console.error("Smazání tréninku selhalo:", e); toast("Smazání na serveru selhalo, zkontroluj připojení.", 2200, "err"); }
+  // Otisk pryč v obou případech. Trénink už v aplikaci není, takže je otisk stejně k ničemu —
+  // a kdyby se stejné id někdy objevilo znovu, musí se uložit jako úplná novinka.
+  savedTrainingFingerprints.delete(trainingId);
 }
 
 /* =========================================================
@@ -7767,47 +7813,63 @@ document.getElementById("exportTrainingBtn").addEventListener("click", () => {
 const FAZE_BELL_SRC = "Boxing%20Bell%20Sound%20Effect.mp3"; // = "Boxing Bell Sound Effect.mp3" (mezery v názvu)
 const FAZE_VIBRATE_PATTERN = [300, 150, 300, 150, 600];
 
-/** Celková délka JEDNÉ položky tréninku (řádek v t.items) ve vteřinách — počítá se stejně
-    jako v calculateTrainingTotalSeconds/buildPdfEntries výš, jen vrací součet PER ŘÁDEK
-    (skupina = jeden součet za celou kartu), ať se dá postavit osa tréninku po blocích. */
+/* =========================================================
+   DÉLKA JEDNOHO ŘÁDKU TRÉNINKU — JEDINÉ MÍSTO, KDE SE TO POČÍTÁ
+   ========================================================= */
 /* Cvik na opakování bez vyplněného odhadu nemá jak dlouho trvat. Dřív se počítal jako nula,
    takže na ose zabral minimum a v Přehledu na něm časová páska stála nula minut. Mek:
    takový cvik normálně ukázat a počítat mu náhradní odhad — nikde to nepsat, stává se to
-   zřídka. Změna se propíše na osu v prezentaci, do Přehledu i do Shrnutí; editor (jeho
-   "~ min" a "?") zůstává beze změny schválně. */
+   zřídka. */
 const REPS_FALLBACK_SECONDS = 5 * 60;
-function fazeItemTotalSeconds(row) {
-  if (!row) return 0;
-  if (row.part === "prestavka") return valueToSeconds(row.duration != null ? row.duration : 1, row.durationUnit || "min");
-  const isReps = (row.mode || "time") === "reps";
-  const seriesCount = row.seriesCount || 1;
-  const pauseSeconds = getSeriesPauseSeconds(row);
-  if (row.isGroup) {
-    let sum = 0;
-    (row.videos || []).forEach(v => {
-      if (v.isBreak) { sum += valueToSeconds(v.duration != null ? v.duration : 1, v.durationUnit || "min"); return; }
-      sum += isReps
-        ? (v.estimate != null && v.estimate > 0 ? valueToSeconds(v.estimate, v.estimateUnit || "min") : REPS_FALLBACK_SECONDS)
-        : valueToSeconds(v.duration != null ? v.duration : 1, v.durationUnit || "min");
-    });
-    return sum * seriesCount + (seriesCount > 1 ? (seriesCount - 1) * pauseSeconds : 0);
+
+/** Délka JEDNOHO řádku tréninku ve vteřinách (skupina = jeden součet za celou kartu),
+    včetně jednotek, sérií a pauz mezi nimi. Vrací dvě věci:
+
+      seconds — VŽDYCKY číslo. Cviku na opakování bez odhadu se dosadí REPS_FALLBACK_SECONDS.
+      known   — false právě tehdy, když se ta náhrada musela použít. Tedy: "tohle číslo je
+                dopočítané, ne zadané."
+
+    JEDNO VÝSLOVNÉ PRAVIDLO pro neodhadnuté cviky na opakování je tady a nikde jinde.
+    Každé místo v aplikaci si pak samo řekne, co s tím:
+      - kdo potřebuje jen rozvrhnout čas (osa v prezentaci, Přehled, Shrnutí) → bere seconds
+        a known ignoruje, aby cvik nikde nevypadl a nešel přeskočit,
+      - kdo nesmí tvrdit přesný čas (součet v hlavičce editoru, hodiny u karet, proužek
+        přesahu na ose) → podívá se na known a číslo nepoužije.
+
+    Dřív bylo tohle počítání rozepsané na čtyřech místech a každé se v detailech trochu lišilo.
+    PDF (buildPdfEntries) zůstává schválně vlastní — potřebuje čas i po jednotlivých členech
+    skupiny, ne jen jeden součet za kartu. */
+function rowDuration(row) {
+  if (!row) return { seconds: 0, known: false };
+  if (row.part === "prestavka") {
+    return { seconds: valueToSeconds(row.duration != null ? row.duration : 1, row.durationUnit || "min"), known: true };
   }
-  const base = isReps
-    ? (row.estimate != null && row.estimate > 0 ? valueToSeconds(row.estimate, row.estimateUnit || "min") : REPS_FALLBACK_SECONDS)
-    : valueToSeconds(row.duration != null ? row.duration : 1, row.durationUnit || "min");
-  return base * seriesCount + (seriesCount > 1 ? (seriesCount - 1) * pauseSeconds : 0);
-}
-/** Má položka doopravdy ZADANOU délku? Cvik na opakování bez odhadu dostane pro všechny
-    výpočty náhradní délku (REPS_FALLBACK_SECONDS), aby nikde nevypadl a nešel přeskočit —
-    ale přesah času se u něj na ose ukazovat nesmí, protože by se počítal z vymyšleného čísla.
-    Přesně tohle Mek zadal ve dřívějším kole: "kdyby to nemělo vyplněný ten čas, tak se to
-    neukáže". Náhradní odhad tedy řeší rozvržení a časy, ne tvrzení o přetažení. */
-function fazeItemHasPlannedTime(row) {
-  if (!row) return false;
-  if (row.part === "prestavka") return true;
-  if ((row.mode || "time") !== "reps") return true;
-  if (row.isGroup) return (row.videos || []).every(v => v.isBreak || (v.estimate != null && v.estimate > 0));
-  return row.estimate != null && row.estimate > 0;
+  const isReps = (row.mode || "time") === "reps";
+  let perSeries = 0;
+  let known = true;
+  if (row.isGroup) {
+    (row.videos || []).forEach(v => {
+      if (v.isBreak || !isReps) {
+        perSeries += valueToSeconds(v.duration != null ? v.duration : 1, v.durationUnit || "min");
+      } else if (v.estimate != null && v.estimate > 0) {
+        perSeries += valueToSeconds(v.estimate, v.estimateUnit || "min");
+      } else {
+        perSeries += REPS_FALLBACK_SECONDS;
+        known = false;
+      }
+    });
+  } else if (!isReps) {
+    perSeries = valueToSeconds(row.duration != null ? row.duration : 1, row.durationUnit || "min");
+  } else if (row.estimate != null && row.estimate > 0) {
+    perSeries = valueToSeconds(row.estimate, row.estimateUnit || "min");
+  } else {
+    perSeries = REPS_FALLBACK_SECONDS;
+    known = false;
+  }
+  const seriesCount = row.seriesCount || 1;
+  const seconds = perSeries * seriesCount
+    + (seriesCount > 1 ? (seriesCount - 1) * getSeriesPauseSeconds(row) : 0);
+  return { seconds, known };
 }
 /** Cvik na počet opakování žádný odpočet nemá — starý vzhled u něj schová celou lištu
     s časovačem (setTimerMode("reps") výš) a renderTrainingModeItemClassic ho ani nespustí,
@@ -7908,25 +7970,23 @@ function getFazeUpNextEntry() {
     equipment: next.isText ? (next.equipment || []) : [...new Set([...((lib && lib.equipment) || []), ...(next.extraEquipment || [])])]
   };
 }
-/** Souhrn pro "Shrnutí" (poslední cvičení tréninku) — počet cvičení (bez přestávek), celková
-    délka a část, které v tréninku připadlo nejvíc času. Skutečná data, ne placeholder z
-    mockupu — viz claude/trener-treninkovy-rezim.md. */
+/** Souhrn pro "Shrnutí" (poslední obrazovka prezentace) — počet cvičení bez přestávek
+    a celková délka. "Nejvíc času: <část>" tu bývalo taky, Mek ho 15. 9. nechal zrušit.
+
+    Délka se sčítá z rowDuration().seconds, tedy PŘESNĚ TAK, JAK PREZENTACE DOOPRAVDY BĚŽELA —
+    včetně cviků na opakování bez odhadu, kterým se dosadí náhradní čas. Dřív se tenhle
+    jeden údaj bral z calculateTrainingTotalSeconds(), což je pravidlo pro EDITOR (neodhadnuté
+    cviky vynechává a hlásí to jako "~X min"). V prezentaci to znamenalo, že Shrnutí ukázalo
+    míň minut, než kolik trvala osa nad ním — a než co ukazoval stejný trénink přes sdílený
+    odkaz, protože t.html počítal po svém. Teď mluví všechna tři místa stejně. */
 function computeFazeSummaryStats(t) {
-  if (!t) return { count: 0, totalMin: 0, topPart: "" };
+  if (!t) return { count: 0, totalMin: 0 };
   const items = t.items || [];
-  const { totalSeconds } = calculateTrainingTotalSeconds(t);
-  const partSeconds = {};
-  items.forEach(row => {
-    if (row.part === "prestavka") return;
-    const key = row.part || "";
-    partSeconds[key] = (partSeconds[key] || 0) + fazeItemTotalSeconds(row);
-  });
-  let topKey = "", topVal = -1;
-  Object.keys(partSeconds).forEach(k => { if (partSeconds[k] > topVal) { topVal = partSeconds[k]; topKey = k; } });
+  let totalSeconds = 0;
+  items.forEach(row => { totalSeconds += rowDuration(row).seconds; });
   return {
     count: items.filter(r => r.part !== "prestavka").length,
-    totalMin: Math.round(totalSeconds / 60),
-    topPart: topKey ? (getPart(topKey).label || topKey) : ""
+    totalMin: Math.round(totalSeconds / 60)
   };
 }
 /** Osa tréninku nahoře — jeden segment za každou položku t.items (skupina = jeden segment za
@@ -7942,7 +8002,7 @@ function fazeBuildAxisHtml() {
     const bg = isBreak
       ? "repeating-linear-gradient(135deg,var(--part-prestavka),var(--part-prestavka) 4px,var(--break-stripe) 4px,var(--break-stripe) 8px)"
       : (getPart(row.part).color || "#339933");
-    const seconds = fazeItemTotalSeconds(row);
+    const { seconds, known } = rowDuration(row);
     let cls = "", fillPct = null, overSeconds = 0;
     if (i < trainingModeIndex) cls = "tmf-done";
     else if (i === trainingModeIndex) {
@@ -7952,7 +8012,7 @@ function fazeBuildAxisHtml() {
       // Přesah se ukáže JEN u cviku se SKUTEČNĚ vyplněnou délkou — u cviku na opakování bez
       // odhadu by se počítal z náhradního čísla, a to by bylo tvrzení, které appka nemá čím
       // podložit. Proužek je zastropovaný délkou samotného bloku, ať osa nezdivočí.
-      if (fazeItemHasPlannedTime(row) && trainingModeSeconds < 0) {
+      if (known && trainingModeSeconds < 0) {
         cls += " tmf-over";
         overSeconds = Math.min(-trainingModeSeconds, seconds);
       }
@@ -8147,7 +8207,6 @@ function renderFazeWrap(main, entry) {
       <div class="tmf-nextcard tmf-good">
         <div class="tmf-lbl">Trénink hotový</div>
         <div class="tmf-nexttitle" style="font-size:clamp(18px,3.6vw,26px);"><span class="tmf-nowrap">${stats.count} cvičení</span> · <span class="tmf-nowrap">${stats.totalMin} min</span></div>
-        ${stats.topPart ? `<div class="tmf-gear">Nejvíc času: <b>${esc(stats.topPart)}</b></div>` : ""}
       </div>`;
   } else {
     nextHtml = fazeNextCardHtml();
@@ -8247,7 +8306,6 @@ function renderFazeFinished() {
       <div class="tmf-nextcard tmf-good">
         <div class="tmf-lbl">Trénink hotový</div>
         <div class="tmf-nexttitle" style="font-size:clamp(18px,3.6vw,26px);"><span class="tmf-nowrap">${stats.count} cvičení</span> · <span class="tmf-nowrap">${stats.totalMin} min</span></div>
-        ${stats.topPart ? `<div class="tmf-gear">Nejvíc času: <b>${esc(stats.topPart)}</b></div>` : ""}
       </div>
     </div>`;
 }
@@ -8439,10 +8497,11 @@ function ovTickHtml(offsetSeconds, blockSeconds) {
   const time = ovStartSeconds == null ? "" : pdfFmtClock((ovStartSeconds + offsetSeconds) % 86400);
   return `<div class="ov-tick"><i></i>${time ? `<b>${esc(time)}</b>` : ""}${blockSeconds != null ? `<small>${esc(ovMinText(blockSeconds))}</small>` : ""}</div>`;
 }
-/** Časy jdou schválně přes fazeItemTotalSeconds — přes stejný výpočet, jakým se kreslí osa
-    v prezentaci, aby obě zobrazení říkala to samé. NE přes computeRowClockTimes: to od první
-    položky s neznámou délkou označí všechno další za neznámé, takže by od prvního cviku na
-    opakování bez odhadu nebyl čas nikde. Chybějící odhad řeší REPS_FALLBACK_SECONDS. */
+/** Časy se schválně sčítají z rowDuration().seconds — stejně, jako se kreslí osa v prezentaci,
+    aby obě zobrazení říkala to samé. NE přes computeRowClockTimes: to od první položky
+    s neznámou délkou označí všechno další za neznámé, takže by od prvního cviku na opakování
+    bez odhadu nebyl čas nikde. Tady se známost schválně ignoruje (known se nečte) a chybějící
+    odhad řeší náhradní číslo. */
 function renderOverview() {
   const t = state.trainings[currentTrainingId];
   if (!t) return;
@@ -8466,7 +8525,7 @@ function renderOverview() {
         if (strip) html += `<div class="ov-strip">${strip}</div>`;
         lastPart = row.part;
       }
-      const seconds = fazeItemTotalSeconds(row);
+      const seconds = rowDuration(row).seconds;
       html += ovTickHtml(acc, seconds) + ovCardHtml(row);
       acc += seconds;
     } catch (e) {
@@ -8482,7 +8541,7 @@ function renderOverview() {
   // Bez něj se rysky i karty roztáhnou přes celou šířku a osa se rozsype.
   document.getElementById("ovList").innerHTML = `<div class="ov-rows">${html}</div>`;
   // Hlavička se počítá až teď, a to ze STEJNÉHO součtu (acc), jakým se kreslila páska. Dřív
-  // měla vlastní průchod přes fazeItemTotalSeconds a uměla se s páskou rozejít — Mek viděl
+  // měla vlastní průchod přes délky položek a uměla se s páskou rozejít — Mek viděl
   // "končíme 06:58" nad páskou, která končila v 07:20.
   document.getElementById("ovStartBtn").textContent = ovStartSeconds == null
     ? "zadat začátek"
@@ -8585,7 +8644,14 @@ document.getElementById("ovStartPresBtn").addEventListener("click", () => {
    pdf_training_mockup.html), jen doplněný o vlastní vložený font (viz níže) —
    jsPDF ve výchozím fontu neumí českou diakritiku s háčky (č,ř,ě,ň,ů,ď,ť,š,ž).
    ========================================================= */
-const { jsPDF } = window.jspdf;
+/* POZOR NA `|| {}` — není to kosmetika. window.jspdf sem dodává knihovna z CDN (viz <script>
+   v hlavičce). Když se nenačte — mizerná síť v hale, blokovaná reklama, offline — bylo tu
+   dřív holé `window.jspdf`, a to vyhodilo chybu NA NEJVYŠŠÍ ÚROVNI SOUBORU. Tím se umlčel
+   celý zbytek: aplikace šla otevřít i přihlásit, ale 91 tlačítek a 23 proměnných za tímhle
+   řádkem se nikdy nenavěsilo, takže půlka appky tiše nedělala nic.
+   Teď se chybějící knihovna projeví až u samotného exportu, kde se dá říct srozumitelně,
+   co se stalo — viz kontrola v downloadTrainingPdf(). */
+const { jsPDF } = window.jspdf || {};
 const PDF_BREAK_COLOR = "#9CA39B";
 function pdfHexToRgb(hex) {
   hex = hex.replace("#", "");
@@ -9071,6 +9137,12 @@ function buildPdfDocAtSize(entries, meta, fs, withClock, startClock) {
     zkusí trénink poskládat na jednu A4 (postupně zmenšuje písmo) a když se to ani tak nevejde,
     nechá uživatele vybrat mezi víc normálně velkými stránkami, nebo vměstnáním na jednu stránku. */
 async function downloadTrainingPdf(t) {
+  // Knihovna na PDF se tahá z internetu. Když se nenačetla, řekneme to rovnou a srozumitelně —
+  // místo aby to o kus dál spadlo na "jsPDF is not a constructor".
+  if (!jsPDF) {
+    toast("PDF teď nejde vytvořit — nenačetla se knihovna pro PDF. Připoj se k internetu, obnov stránku a zkus to znovu. (Zbytek aplikace funguje dál.)", 9000, "err");
+    return;
+  }
   // Font pro PDF (335 kB) se stahuje až tady, při prvním skutečném exportu. Podruhé už je
   // v paměti a načítání se přeskočí.
   try {
@@ -9595,50 +9667,18 @@ document.getElementById("groupSelectedBtn").addEventListener("click", () => {
   toast("Skupina vytvořena — pojmenuj ji a nastav si detaily v sekvenci.");
 });
 
-/** Spočítá celkový čas tréninku v sekundách — správně počítá jednotky (s/min), skupiny (součet
-    videí uvnitř) i série (opakuje se seriesCount×, plus seriesCount-1 pauz mezi nimi, stejně
-    jako se to reálně chová v Tréninkovém režimu). Položky na opakování nemají žádnou dobu
-    trvání, takže se do součtu nepočítají — místo toho se nastaví hasReps, ať se ukáže, že
-    celkový čas nejde spočítat přesně. */
-/** Cviky na opakování nemají čistý čas, ale uživatel k nim může nepovinně zadat odhad (viz
-    pole estimate/estimateUnit) — pak se do součtu započítají stejně jako časové cviky. Když
-    odhad chybí, položka (u skupiny celá skupina, protože sdílí jeden mode) se ze součtu vynechá
-    a nastaví se hasReps, aby šlo UI dát najevo, že součet je jen částečný ("~X min"), ne přesný. */
+/** Celkový čas tréninku ve vteřinách — součet přes rowDuration(), takže jednotky, skupiny,
+    série i pauzy se počítají přesně tak jako všude jinde v aplikaci.
+    Cvik na opakování bez odhadu se sem SCHVÁLNĚ nezapočítá (i když mu rowDuration náhradní
+    číslo dosadí) a místo toho se zvedne hasReps — odznak v hlavičce editoru pak ukáže
+    "~X min" nebo "?", ať netvrdí přesný čas, který aplikace nezná. */
 function calculateTrainingTotalSeconds(t) {
   let totalSeconds = 0;
   let hasReps = false;
   (t.items || []).forEach(row => {
-    if (row.part === "prestavka") {
-      totalSeconds += valueToSeconds(row.duration || 0, row.durationUnit || "min");
-      return;
-    }
-    const isReps = (row.mode || "time") === "reps";
-    let perSeries = 0;
-    if (row.isGroup) {
-      let groupKnown = true;
-      (row.videos || []).forEach(v => {
-        if (v.isBreak) { perSeries += valueToSeconds(v.duration || 0, v.durationUnit || "min"); return; }
-        if (isReps) {
-          if (v.estimate != null && v.estimate > 0) perSeries += valueToSeconds(v.estimate, v.estimateUnit || "min");
-          else groupKnown = false;
-        } else {
-          perSeries += valueToSeconds(v.duration || 0, v.durationUnit || "min");
-        }
-      });
-      if (isReps && !groupKnown) { hasReps = true; return; }
-    } else if (isReps) {
-      if (row.estimate != null && row.estimate > 0) {
-        perSeries = valueToSeconds(row.estimate, row.estimateUnit || "min");
-      } else {
-        hasReps = true;
-        return;
-      }
-    } else {
-      perSeries = valueToSeconds(row.duration || 0, row.durationUnit || "min");
-    }
-    const seriesCount = row.seriesCount || 1;
-    totalSeconds += perSeries * seriesCount;
-    if (seriesCount > 1) totalSeconds += (seriesCount - 1) * getSeriesPauseSeconds(row);
+    const { seconds, known } = rowDuration(row);
+    if (!known) { hasReps = true; return; }
+    totalSeconds += seconds;
   });
   return { totalSeconds, hasReps };
 }
@@ -9648,50 +9688,21 @@ function timeInputToSeconds(str) {
   if (!m) return 9 * 3600;
   return (parseInt(m[1], 10) % 24) * 3600 + parseInt(m[2], 10) * 60;
 }
-/** Stejná logika jako calculateTrainingTotalSeconds/buildPdfEntries (viz PDF export výš), jen
-    místo jednoho součtu vrací POSTUPNÝ čas začátku KAŽDÉ karty (klíč = itemId). U skupiny se
-    počítá jen jeden čas za celou kartu (kdy skupina začíná), ne zvlášť pro každého člena.
-    Jakmile appka narazí na cvik na opakování bez zadaného odhadu, další čas už nejde spočítat
-    přesně — od tam dál appka vrací null (karta pak žádný čas neukáže, ať nelže). */
+/** Postupný čas začátku KAŽDÉ karty v editoru (klíč = itemId), počítaný přes rowDuration().
+    U skupiny je to jeden čas za celou kartu (kdy skupina začíná), ne zvlášť pro každého člena.
+    Jakmile appka narazí na cvik na opakování bez zadaného odhadu, další časy už nejdou
+    spočítat přesně — od tam dál vrací null a karty žádný čas neukážou, ať nelžou. Sám ten
+    cvik svůj čas ještě dostane: kdy začíná, aplikace pořád ví. */
 function computeRowClockTimes(t, startSeconds) {
   const times = {};
   let clock = startSeconds;
   let unknown = false;
   (t.items || []).forEach(row => {
     times[row.itemId] = unknown ? null : clock;
-    if (row.part === "prestavka") {
-      clock += valueToSeconds(row.duration != null ? row.duration : 1, row.durationUnit || "min");
-      return;
-    }
-    const isReps = (row.mode || "time") === "reps";
-    if (row.isGroup) {
-      const seriesCount = row.seriesCount || 1;
-      const pauseSeconds = getSeriesPauseSeconds(row);
-      let membersShownSeconds = 0;
-      let groupKnown = true;
-      (row.videos || []).forEach(v => {
-        if (v.isBreak) { membersShownSeconds += valueToSeconds(v.duration != null ? v.duration : 1, v.durationUnit || "min"); return; }
-        if (isReps) {
-          if (v.estimate != null && v.estimate > 0) membersShownSeconds += valueToSeconds(v.estimate, v.estimateUnit || "min");
-          else groupKnown = false;
-        } else {
-          membersShownSeconds += valueToSeconds(v.duration != null ? v.duration : 1, v.durationUnit || "min");
-        }
-      });
-      if (isReps && !groupKnown) { unknown = true; return; }
-      clock += membersShownSeconds * seriesCount + (seriesCount > 1 ? (seriesCount - 1) * pauseSeconds : 0);
-      return;
-    }
-    let baseSeconds;
-    if (isReps) {
-      if (row.estimate != null && row.estimate > 0) baseSeconds = valueToSeconds(row.estimate, row.estimateUnit || "min");
-      else { unknown = true; return; }
-    } else {
-      baseSeconds = valueToSeconds(row.duration != null ? row.duration : 1, row.durationUnit || "min");
-    }
-    const seriesCount = row.seriesCount || 1;
-    const pauseSeconds = getSeriesPauseSeconds(row);
-    clock += baseSeconds * seriesCount + (seriesCount > 1 ? (seriesCount - 1) * pauseSeconds : 0);
+    if (unknown) return;
+    const { seconds, known } = rowDuration(row);
+    if (!known) { unknown = true; return; }
+    clock += seconds;
   });
   return times;
 }
@@ -10141,7 +10152,12 @@ function renderSequence() {
   if (sortableInstance) { sortableInstance.destroy(); sortableInstance = null; }
   groupSortableInstances.forEach(s => s.destroy());
   groupSortableInstances = [];
-  if (!ro) {
+  // Přetahování pořadí dodává knihovna z internetu, stejně jako PDF. Když se nenačte, editor
+  // se normálně vykreslí a dá se v něm dělat všechno kromě přetahování — dřív by se tady
+  // celé renderSequence() rozbilo o "Sortable is not defined" a sekvence by nebyla vidět vůbec.
+  if (!ro && typeof Sortable === "undefined") {
+    logDebug("[editor] knihovna na přetahování se nenačetla — pořadí půjde měnit jen šipkami v menu karty");
+  } else if (!ro) {
     // "seqGroupTransfer" propojuje hlavní sekvenci a všechny "seq-group-videos" seznamy
     // dohromady, ať jde video/textové cvičení přetáhnout přímo do/ze skupiny (viz
     // handleGroupCrossMove níž) — přestávky a skupiny samotné se přetahovat mezi nimi nedají.
@@ -11541,6 +11557,12 @@ function renderFoldersManageList() {
     });
   });
   if (foldersSortable) { foldersSortable.destroy(); foldersSortable = null; }
+  // Stejná pojistka jako u sekvence: bez knihovny z internetu se správa složek normálně
+  // vykreslí, jen nepůjde měnit jejich pořadí přetažením.
+  if (typeof Sortable === "undefined") {
+    logDebug("[složky] knihovna na přetahování se nenačetla — pořadí složek teď nejde měnit");
+    return;
+  }
   foldersSortable = Sortable.create(wrap, {
     handle: ".drag-handle",
     animation: 150,
@@ -12020,7 +12042,8 @@ const HELP_DATA = [
     { title: "Export a tisk", icon: "fa-solid fa-file-export", qa: [
       { q: "Jak stáhnu trénink jako PDF?", a: "Nejrychleji rovnou z přehledu Tréninků — u tréninku otevři nabídku (⋮) a vyber „Stáhnout PDF“, bez nutnosti trénink otevírat. Stejná volba je i uvnitř editoru tréninku, když ho zrovna máš otevřený." },
       { q: "Co všechno PDF obsahuje?", a: "Kartu tréninku s pořadím cvičení, časy/opakování, sériemi, cue a poznámkami, a souhrn vybavení potřebného na celý trénink nahoře." },
-      { q: "Jak trénink exportuju jako obyčejný text?", a: "Stejně jako PDF — buď z nabídky (⋮) u tréninku přímo v přehledu Tréninků, nebo tlačítkem „Export jako text“ v editoru. Hodí se, když chceš trénink rychle vložit třeba do zprávy nebo e-mailu." }
+      { q: "Jak trénink exportuju jako obyčejný text?", a: "Stejně jako PDF — buď z nabídky (⋮) u tréninku přímo v přehledu Tréninků, nebo tlačítkem „Export jako text“ v editoru. Hodí se, když chceš trénink rychle vložit třeba do zprávy nebo e-mailu." },
+      { q: "Aplikace píše, že se nenačetla knihovna pro PDF. Co s tím?", a: "PDF a přetahování pořadí si aplikace stahuje z internetu při každém otevření. Když je zrovna mizerné připojení nebo je stahování něčím blokované, tyhle dvě věci nefungují — všechno ostatní ano, včetně vedení tréninku. Připoj se a obnov stránku.", kw: "pdf nejde knihovna offline pretahovani poradi" }
     ]},
     { title: "Sdílení a Tržiště tréninků", icon: "fa-solid fa-store", qa: [
       { q: "Jak sdílím trénink s konkrétním kolegou?", a: "V přehledu tréninků otevři nabídku u tréninku (⋮) a vyber „Sdílet odkazem“ — vygeneruje se odkaz, který jde poslat komukoli, i bez přístupu do aplikace." },
