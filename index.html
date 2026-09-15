@@ -2598,7 +2598,33 @@ const savedTrainingFingerprints = new Map();
 function trainingFingerprint(t) {
   try { return JSON.stringify(t); } catch (e) { return null; }
 }
-const APP_VERSION = "2026-09-15 11:10";
+/* Totéž pro SDÍLENÁ data (knihovna, složky, štítky, vybavení, části). Dřív se celá knihovna —
+   u nás 334 videí — přepisovala při každém uložení, i když člověk jen přejmenoval trénink.
+   A protože ukládání běží po každé změně, znamenalo to desítky zbytečných přenosů za minutu
+   a pokaždé posun revize, kvůli kterému si ostatní trenéři museli knihovnu natáhnout znovu.
+
+   PRAVIDLO, KTERÉ MUSÍ PLATIT VŽDYCKY:
+   „Když otisk souhlasí se současným stavem, server tenhle stav SPOLEHLIVĚ má."
+   Opačný směr platit nemusí — když otisk nesouhlasí, nanejvýš se knihovna uloží zbytečně.
+   Ta nesouměrnost je schválně: zápis navíc nikoho nebolí, kdežto otisk, který lže o tom,
+   že je uloženo, znamená TICHOU ZTRÁTU změny v knihovně. To je to nejhorší, co se tady
+   může stát.
+   Proto se otisk nastavuje jen na třech místech: po načtení při přihlášení, po příchodu
+   potvrzené aktualizace ze serveru a po vlastním úspěšném zápisu. Čtvrté nepřidávat — a
+   hlavně ho nenastavovat nikde, kde si nejsme jistí, že server má úplně všechno.
+   (Ukládání klíče k Disku zapisuje do stejného dokumentu, ale otisku se schválně nedotýká.
+   Důsledek je jeden zbytečný zápis knihovny navíc, což je právě ta bezpečná strana.)
+
+   Otisk pokrývá PŘESNĚ ta pole, která zdejší zápis posílá, nic víc. Kdyby v něm bylo pole,
+   které se neposílá (jako driveApiKey), rozešel by se se skutečností pokaždé, když se takové
+   pole změní. */
+let savedSharedFingerprint = null;
+function sharedFingerprint() {
+  try {
+    return JSON.stringify([state.library, state.folders, state.tagPool, state.equipmentPool, state.parts]);
+  } catch (e) { return null; }
+}
+const APP_VERSION = "2026-09-15 14:05";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -4252,6 +4278,7 @@ async function loadUserData() {
     state.equipmentPool = shared.equipmentPool || [];
     state.parts = (shared.parts && shared.parts.length) ? shared.parts : structuredClone(DEFAULT_PARTS);
     state.knownRevision = shared.revision || 0;
+    savedSharedFingerprint = sharedFingerprint();   // 1/3: tohle je přesně to, co má server
     logDebug("[login] po přihlášení: počet videí", Object.keys(state.library).length, "revize", state.knownRevision);
     sharedOk = true;
   } catch (e) {
@@ -4498,6 +4525,10 @@ function applyRemoteSharedUpdate(shared) {
   state.parts = (shared.parts && shared.parts.length) ? shared.parts : structuredClone(DEFAULT_PARTS);
   state.driveApiKey = shared.driveApiKey || "";
   state.knownRevision = shared.revision || 0;
+  // 2/3: právě jsme převzali serverovou verzi, takže otisk teď odpovídá serveru.
+  // Bez tohohle řádku by aplikace při nejbližším uložení poslala serveru zpátky jeho
+  // vlastní data — neškodné, ale zbytečné, a hlavně by přestalo platit to jedno pravidlo.
+  savedSharedFingerprint = sharedFingerprint();
   // Schválně nepřekreslujeme, když je zrovna otevřený formulář nebo rozepsaná úprava (přidání/úprava
   // odkazu, správa složek/částí, profil) — ať živá aktualizace nesmaže rozepsaný text pod rukama.
   // Data v aplikaci jsou i tak už aktuální, jen se to na obrazovce neprojeví, dokud se formulář nezavře.
@@ -4509,10 +4540,69 @@ function applyRemoteSharedUpdate(shared) {
   else if (currentView === "editor") renderPickerList(); // sekvence tréninku se schválně nepřekresluje (viz níž)
 }
 
-async function saveUserData() {
+/* ZÁMEK NA UKLÁDÁNÍ.
+   Ukládání se spouští z desítek míst (autosave po každé změně i ruční tlačítka) a nic dřív
+   nebránilo tomu, aby dvě běžela naráz. Změřeno na simulaci se skutečným kódem: dvě uložení
+   spuštěná do JEDNOHO OBRÁTKU PO SÍTI od sebe se obě zapsala pod stejným číslem revize —
+   tedy pojistka, která má hlídat, že nikdo nepřepíše cizí změnu, je v tu chvíli slepá.
+   Na mobilních datech je to okno několikanásobně širší než na wifi.
+
+   Teď platí: běží vždycky nanejvýš jedno uložení. Když si o uložení řekne někdo další během
+   něj, druhé se nespustí — jen se poznamená, že po doběhnutí musí přijít ještě jedno.
+   A jen jedno, i kdyby si o něj řeklo deset míst; poslední stav se uloží stejně celý.
+
+   Kdo si o uložení řekl, dostane výsledek TOHO uložení, které jeho změnu doopravdy odneslo,
+   ne toho, co zrovna běželo. Proto dál platí, že `if (await saveUserData())` znamená
+   "moje změna je na serveru" — na tom stojí hlášky "Uloženo" po celé aplikaci. */
+let saveInFlight = null;
+let saveQueued = null;   // { promise, resolve } uložení, které přijde na řadu hned po tom běžícím
+function saveUserData() {
+  if (saveInFlight) {
+    if (!saveQueued) {
+      let resolve;
+      const promise = new Promise(r => { resolve = r; });
+      saveQueued = { promise, resolve };
+    }
+    return saveQueued.promise;
+  }
+  saveInFlight = runSaveUserData();
+  return saveInFlight;
+}
+async function runSaveUserData() {
+  let ok = false;
+  try {
+    ok = await saveUserDataNow();
+  } catch (e) {
+    // saveUserDataNow má vlastní catch, takže sem by se to dostat nemělo. Kdyby přece,
+    // nesmí to skončit neodchycenou chybou — volající počítají s tím, že dostanou true/false.
+    console.error("Uložení skončilo neočekávanou chybou:", e);
+  } finally {
+    saveInFlight = null;
+    const dalsi = saveQueued;
+    saveQueued = null;
+    if (dalsi) saveUserData().then(dalsi.resolve, () => dalsi.resolve(false));
+  }
+  return ok;
+}
+
+async function saveUserDataNow() {
   if (!uidCurrent) return false;
   try {
     const sharedRef = doc(db, "shared", "data");
+    /* Zapisují se jen sdílená data, která se doopravdy změnila. Dřív se celá knihovna
+       (334 videí) přepisovala i tehdy, když člověk jen přejmenoval trénink — a protože
+       autosave běží po každé změně, dělalo to desítky zbytečných přenosů za minutu.
+       Viz savedSharedFingerprint nahoře.
+       Čekající mazání zápis vynutí vždycky: to je jediná operace, kde by chyba znamenala,
+       že se smazané video vrátí zpátky. */
+    const sharedFp = sharedFingerprint();
+    const sharedZmeneno = pendingLibraryDeletions.size > 0
+      || sharedFp === null
+      || sharedFp !== savedSharedFingerprint;
+    if (!sharedZmeneno) {
+      logDebug("[save] knihovna beze změny, nezapisuje se (revize zůstává", state.knownRevision + ")");
+      return await saveMyTrainings();
+    }
     // Pojistka proti tichému přepsání: než uložíme, ověříme si čerstvě, jestli mezitím někdo jiný
     // (třeba aplikace zapomenutá otevřená jinde) neuložil novější verzi, než ze které vycházíme my.
     // Schválně tu není možnost "přepsat i tak" — i jedno nevědomé kliknutí v zapomenutém okně by
@@ -4553,62 +4643,22 @@ async function saveUserData() {
       lastEditedBy: uidCurrent, lastEditedAt: Date.now()
     });
     state.knownRevision = newRevision;
-    // Okamžité ověření: aplikace se hned znovu zeptá databáze, co tam doopravdy je, místo aby jen
-    // věřila tomu, že setDoc() nespadl do chyby. Dočasné, ať víme jistě, kde přesně se to láme.
-    try {
-      const verifySnap = await getDoc(sharedRef);
-      const verifyData = verifySnap.exists() ? verifySnap.data() : {};
-      const stillThere = [...deletedIdsThisSave].filter(id => (verifyData.library || {})[id]);
-      logDebug("[verify] hned po uložení aplikace na serveru vidí: počet videí",
-        Object.keys(verifyData.library || {}).length, "revize", verifyData.revision,
-        "— smazané položky, co tam přesto ještě jsou:", stillThere.length ? stillThere.join(",") : "žádné");
-    } catch (verifyErr) {
-      logDebug("[verify] ověření po uložení selhalo:", verifyErr.message || verifyErr.code || verifyErr);
-    }
+    savedSharedFingerprint = sharedFp;   // 3/3: teď server má přesně tohle
+    /* Dřív se tady aplikace hned znovu ptala serveru, co tam doopravdy je — řádek [verify].
+       Vzniklo to, když se nedařilo mazat videa, a od té doby to stálo jedno stažení CELÉ
+       knihovny po každém uložení. Mazání funguje, tak to stahování je pryč.
+       Řádek v 🐞 zůstává, jen říká jen to, co aplikace doopravdy ví: co právě odeslala.
+       Tvrdit "server to opravdu má", když se ho neptáme, by byla lež v záznamu. */
+    logDebug("[save] knihovna zapsána:", Object.keys(state.library).length, "videí, revize", newRevision,
+      deletedIdsThisSave.size ? `(smazáno ${deletedIdsThisSave.size})` : "");
     // Stejný princip jako u shareSnapshot tréninků níž: dokud je sdílení videa aktivní, veřejný
     // snímek v kolekci sharedVideos se obnoví při každém uložení knihovny, ať nikdy neukazuje
-    // starou kopii popisu/poznámek.
+    // starou kopii popisu/poznámek. (Když se knihovna nezměnila, sem se vůbec nedojde —
+    // snímek by z nezměněných dat vyšel stejně.)
     const sharedVideoItems = Object.values(state.library).filter(isVideoShareActive);
     const videoSnapshots = await Promise.all(sharedVideoItems.map(buildVideoShareSnapshot));
     await Promise.all(sharedVideoItems.map((item, i) => setDoc(doc(db, "sharedVideos", item.id), videoSnapshots[i])));
-    const mine = Object.values(state.trainings).filter(t => t.ownerUid === uidCurrent);
-    // Dřív se shareSnapshot (kopie dat pro veřejnou t.html) přestavoval jen při ručním kliknutí
-    // na "Uložit trénink" — běžné autosave (tenhle scheduleSave, po každé změně) ho nechávalo
-    // netknutý. Výsledek: přidáš/upravíš cvičení v aktivně sdíleném tréninku, appka to uloží
-    // (autosave funguje), ale veřejný odkaz dál ukazuje starou kopii — třeba "video smazáno" u
-    // videa, co bylo přidané až PO vytvoření odkazu. Teď se snapshot obnovuje při každém uložení.
-    const activeMine = mine.filter(isShareActive);
-    const trainingSnapshots = await Promise.all(activeMine.map(buildShareSnapshot));
-    activeMine.forEach((t, i) => { t.shareSnapshot = trainingSnapshots[i]; });
-    // ÚKLID PO VYPRŠENÍ. Odkaz platí 3 dny, ale kopie dat pro veřejnou stránku zůstávala
-    // v tréninku napořád (mazalo ji jen ruční "Zrušit sdílení"). A protože se tímhle jedním
-    // zápisem přepisují VŠECHNY tréninky, vozila se s sebou při každém uložení donekonečna —
-    // s náhledy jde o stovky kB na trénink. Jakmile odkaz vyprší, kopie letí pryč; nové
-    // sdílení si postaví čerstvou. Pole share zůstává, nese jen datum a je drobné.
-    mine.forEach(t => { if (t.shareSnapshot && !isShareActive(t)) t.shareSnapshot = null; });
-    // POSÍLÁ SE JEN TO, CO SE DOOPRAVDY ZMĚNILO. Dřív tenhle jeden řádek přepsal při každém
-    // uložení všechny tréninky uživatele — u dvaceti tréninků dvacet zápisů místo jednoho,
-    // a to po každé drobnosti, protože autosave běží po každé změně. Viz savedTrainingFingerprints
-    // nahoře: porovnává se celý obsah, ne dateModified.
-    //
-    // Otisk se pro každý trénink spočítá JEDNOU, tady, ještě před zápisem — a uloží se až po něm.
-    // Kdyby se počítal podruhé až po zápisu a člověk mezitím stihl něco upravit, zapsala by se
-    // na server stará verze, ale otisk by odpovídal té nové, a ta úprava by se tiše ztratila.
-    const changedTrainings = [];
-    mine.forEach(t => {
-      const fp = trainingFingerprint(t);
-      if (fp === null || fp !== savedTrainingFingerprints.get(t.id)) changedTrainings.push({ t, fp });
-    });
-    await Promise.all(changedTrainings.map(({ t }) => setDoc(doc(db, "users", uidCurrent, "trainings", t.id), t)));
-    // Až teď, po úspěšném zápisu. Když zápis spadne, vyletíme rovnou do catch a otisky zůstanou
-    // staré — takže se stejný trénink při dalším pokusu pošle znovu.
-    changedTrainings.forEach(({ t, fp }) => {
-      if (fp === null) savedTrainingFingerprints.delete(t.id);
-      else savedTrainingFingerprints.set(t.id, fp);
-    });
-    logDebug("[save] tréninky: zapsáno", changedTrainings.length, "z", mine.length,
-      changedTrainings.length ? "— " + changedTrainings.map(({ t }) => t.name).join(", ") : "(nic se nezměnilo)");
-    return true;
+    return await saveMyTrainings();
   } catch (e) {
     console.error("Nepodařilo se uložit data:", e);
     const msg = String(e && (e.message || e.code) || "");
@@ -4619,6 +4669,50 @@ async function saveUserData() {
     }
     return false;
   }
+}
+
+/** Uložení vlastních tréninků — druhá půlka saveUserDataNow. Je zvlášť proto, že se na ni
+    chodí dvěma cestami: buď po zápisu sdílených dat, nebo rovnou, když se knihovna nezměnila.
+    Volá se vždycky zevnitř try v saveUserDataNow, takže případnou chybu odchytí ono. */
+async function saveMyTrainings() {
+  const mine = Object.values(state.trainings).filter(t => t.ownerUid === uidCurrent);
+  // Dřív se shareSnapshot (kopie dat pro veřejnou t.html) přestavoval jen při ručním kliknutí
+  // na "Uložit trénink" — běžné autosave (tenhle scheduleSave, po každé změně) ho nechávalo
+  // netknutý. Výsledek: přidáš/upravíš cvičení v aktivně sdíleném tréninku, appka to uloží
+  // (autosave funguje), ale veřejný odkaz dál ukazuje starou kopii — třeba "video smazáno" u
+  // videa, co bylo přidané až PO vytvoření odkazu. Teď se snapshot obnovuje při každém uložení.
+  const activeMine = mine.filter(isShareActive);
+  const trainingSnapshots = await Promise.all(activeMine.map(buildShareSnapshot));
+  activeMine.forEach((t, i) => { t.shareSnapshot = trainingSnapshots[i]; });
+  // ÚKLID PO VYPRŠENÍ. Odkaz platí 3 dny, ale kopie dat pro veřejnou stránku zůstávala
+  // v tréninku napořád (mazalo ji jen ruční "Zrušit sdílení"). A protože se tímhle jedním
+  // zápisem přepisují VŠECHNY tréninky, vozila se s sebou při každém uložení donekonečna —
+  // s náhledy jde o stovky kB na trénink. Jakmile odkaz vyprší, kopie letí pryč; nové
+  // sdílení si postaví čerstvou. Pole share zůstává, nese jen datum a je drobné.
+  mine.forEach(t => { if (t.shareSnapshot && !isShareActive(t)) t.shareSnapshot = null; });
+  // POSÍLÁ SE JEN TO, CO SE DOOPRAVDY ZMĚNILO. Dřív tenhle jeden řádek přepsal při každém
+  // uložení všechny tréninky uživatele — u dvaceti tréninků dvacet zápisů místo jednoho,
+  // a to po každé drobnosti, protože autosave běží po každé změně. Viz savedTrainingFingerprints
+  // nahoře: porovnává se celý obsah, ne dateModified.
+  //
+  // Otisk se pro každý trénink spočítá JEDNOU, tady, ještě před zápisem — a uloží se až po něm.
+  // Kdyby se počítal podruhé až po zápisu a člověk mezitím stihl něco upravit, zapsala by se
+  // na server stará verze, ale otisk by odpovídal té nové, a ta úprava by se tiše ztratila.
+  const changedTrainings = [];
+  mine.forEach(t => {
+    const fp = trainingFingerprint(t);
+    if (fp === null || fp !== savedTrainingFingerprints.get(t.id)) changedTrainings.push({ t, fp });
+  });
+  await Promise.all(changedTrainings.map(({ t }) => setDoc(doc(db, "users", uidCurrent, "trainings", t.id), t)));
+  // Až teď, po úspěšném zápisu. Když zápis spadne, vyletíme rovnou do catch a otisky zůstanou
+  // staré — takže se stejný trénink při dalším pokusu pošle znovu.
+  changedTrainings.forEach(({ t, fp }) => {
+    if (fp === null) savedTrainingFingerprints.delete(t.id);
+    else savedTrainingFingerprints.set(t.id, fp);
+  });
+  logDebug("[save] tréninky: zapsáno", changedTrainings.length, "z", mine.length,
+    changedTrainings.length ? "— " + changedTrainings.map(({ t }) => t.name).join(", ") : "(nic se nezměnilo)");
+  return true;
 }
 async function deleteTrainingRemote(trainingId) {
   try { await deleteDoc(doc(db, "users", uidCurrent, "trainings", trainingId)); }
