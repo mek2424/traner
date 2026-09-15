@@ -2626,12 +2626,17 @@ let savedSharedFingerprint = null;
    po přihlášení podle toho, jestli v kolekci něco je. Zapisuje se zatím pořád postaru —
    viz komentář u načítání. */
 let libraryFromCollection = false;
+/* Otisky JEDNOTLIVÝCH videí — stejný princip jako u tréninků (savedTrainingFingerprints),
+   jen nad kolekcí videos: posílají se jen ta, co se doopravdy změnila. Platí tu totéž
+   pravidlo: "když otisk souhlasí, server to spolehlivě má". Seřizuje se na třech místech —
+   po načtení kolekce, po příchodu cizí změny a po vlastním úspěšném zápisu. */
+const savedVideoFingerprints = new Map();
 function sharedFingerprint() {
   try {
     return JSON.stringify([state.library, state.folders, state.tagPool, state.equipmentPool, state.parts]);
   } catch (e) { return null; }
 }
-const APP_VERSION = "2026-09-15 19:20";
+const APP_VERSION = "2026-09-15 21:15";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -4220,6 +4225,7 @@ onAuthStateChanged(auth, async (user) => {
     unsubscribeFromSharedThumbnails();
     unsubscribeFromVideos();
     libraryFromCollection = false;   // příští přihlášený si zdroj zjistí sám
+    savedVideoFingerprints.clear();
     unsubscribeFromOwnMembership();
     unsubscribeFromPendingRequests();
     stopHeartbeat();
@@ -4397,6 +4403,8 @@ async function loadUserData() {
         videosSnap.forEach(d => { zKolekce[d.id] = d.data(); });
         state.library = zKolekce;
         libraryFromCollection = true;
+        savedVideoFingerprints.clear();
+        Object.entries(zKolekce).forEach(([id, it]) => savedVideoFingerprints.set(id, trainingFingerprint(it)));
       }
     } catch (e) {
       // Nejčastější příčina: v pravidlech ve Firebase konzoli chybí blok pro "videos".
@@ -4632,8 +4640,18 @@ function subscribeToVideos() {
     let changed = false;
     snap.docChanges().forEach(change => {
       if (change.doc.metadata.hasPendingWrites) return; // ozvěna vlastního zápisu
-      if (change.type === "removed") { delete state.library[change.doc.id]; changed = true; }
-      else { state.library[change.doc.id] = change.doc.data(); changed = true; }
+      if (change.type === "removed") {
+        delete state.library[change.doc.id];
+        savedVideoFingerprints.delete(change.doc.id);
+        changed = true;
+      } else {
+        const data = change.doc.data();
+        state.library[change.doc.id] = data;
+        // Otisk se srovná na to, co právě přišlo ze serveru — jinak by aplikace při
+        // nejbližším uložení poslala serveru zpátky jeho vlastní data.
+        savedVideoFingerprints.set(change.doc.id, trainingFingerprint(data));
+        changed = true;
+      }
     });
     if (!changed) return;
     logDebug("[sync] knihovna: přišla změna, videí celkem", Object.keys(state.library).length);
@@ -4767,6 +4785,11 @@ async function saveUserDataNow() {
       logDebug("[save] knihovna beze změny, nezapisuje se (revize zůstává", state.knownRevision + ")");
       return await saveMyTrainings();
     }
+    /* Když knihovna žije v samostatných dokumentech, jdou JEDNOTLIVÁ VIDEA jako PRVNÍ —
+       od přestěhování jsou to ta pravá data. Teprve pak se obnoví staré pole v shared/data
+       (zápis níž), které je po dobu zabíhání už jen záloha. Pořadí je schválně takhle:
+       kdyby zápis zálohy selhal, pravá data už jsou v bezpečí. */
+    if (libraryFromCollection) await saveLibraryToCollection();
     /* POJISTKA PROTI TICHÉMU PŘEPSÁNÍ CIZÍ ZMĚNY.
        Dřív to fungovalo tak, že se aplikace NEJDŘÍV zeptala "jaká je na serveru revize?",
        a když seděla, TEPRVE PAK zapsala. Mezi tím uplynul jeden obrátek po síti a v té
@@ -4865,6 +4888,35 @@ async function saveUserDataNow() {
     }
     return false;
   }
+}
+
+/** Uloží do kolekce videos jen ta videa, která se od posledního zápisu doopravdy změnila,
+    a smaže ta, co čekají ve frontě na smazání. Stejný princip jako u tréninků.
+
+    Frontu pendingLibraryDeletions tady SCHVÁLNĚ nevyprazdňuje — potřebuje ji ještě zápis
+    do starého pole níž. Smazat už smazaný dokument nic neudělá, takže případné zopakování
+    při dalším uložení nevadí. */
+async function saveLibraryToCollection() {
+  const zmenena = [];
+  Object.entries(state.library).forEach(([id, it]) => {
+    const fp = trainingFingerprint(it);
+    if (fp === null || fp !== savedVideoFingerprints.get(id)) zmenena.push({ id, it, fp });
+  });
+  const smazana = [...pendingLibraryDeletions];
+  if (!zmenena.length && !smazana.length) return;
+  await Promise.all([
+    ...zmenena.map(({ id, it }) => setDoc(doc(db, "videos", id), it)),
+    ...smazana.map(id => deleteDoc(doc(db, "videos", id)))
+  ]);
+  // Až po úspěšném zápisu. Když spadne, vyletí to do catch v saveUserDataNow a otisky
+  // zůstanou staré — takže se stejná videa pošlou při dalším pokusu znovu.
+  zmenena.forEach(({ id, fp }) => {
+    if (fp === null) savedVideoFingerprints.delete(id);
+    else savedVideoFingerprints.set(id, fp);
+  });
+  smazana.forEach(id => savedVideoFingerprints.delete(id));
+  logDebug("[save] knihovna po videích: zapsáno", zmenena.length, "z", Object.keys(state.library).length,
+    smazana.length ? `, smazáno ${smazana.length}` : "");
 }
 
 /** Uložení vlastních tréninků — druhá půlka saveUserDataNow. Je zvlášť proto, že se na ni
