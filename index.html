@@ -2552,7 +2552,7 @@ import {
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
   doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, collection, collectionGroup, getDocs, onSnapshot,
-  arrayUnion, addDoc, query, orderBy, limit
+  arrayUnion, addDoc, query, orderBy, limit, runTransaction
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 
@@ -2624,7 +2624,7 @@ function sharedFingerprint() {
     return JSON.stringify([state.library, state.folders, state.tagPool, state.equipmentPool, state.parts]);
   } catch (e) { return null; }
 }
-const APP_VERSION = "2026-09-15 14:05";
+const APP_VERSION = "2026-09-15 16:30";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -4603,45 +4603,72 @@ async function saveUserDataNow() {
       logDebug("[save] knihovna beze změny, nezapisuje se (revize zůstává", state.knownRevision + ")");
       return await saveMyTrainings();
     }
-    // Pojistka proti tichému přepsání: než uložíme, ověříme si čerstvě, jestli mezitím někdo jiný
-    // (třeba aplikace zapomenutá otevřená jinde) neuložil novější verzi, než ze které vycházíme my.
-    // Schválně tu není možnost "přepsat i tak" — i jedno nevědomé kliknutí v zapomenutém okně by
-    // mohlo validně vrátit smazaná data zpátky, tak radši aplikace vždycky vezme tu novější verzi sama.
-    let baseRevision = state.knownRevision;
-    if (state.knownRevision !== undefined) {
-      const freshSnap = await getDoc(sharedRef);
-      const freshData = freshSnap.exists() ? freshSnap.data() : {};
-      const freshRevision = freshData.revision || 0;
-      if (freshRevision !== state.knownRevision) {
-        logDebug("[save] konflikt verzí — moje:", state.knownRevision, "na serveru:", freshRevision, "— beru tu novější");
-        applyRemoteSharedUpdate(freshData);
-        toast("Mezitím se aplikace změnila jinde (možná zapomenuté okno) — aplikace se obnovila na nejnovější verzi. Zkus svou poslední změnu prosím zopakovat.", 10000, "warn");
-        return false;
-      }
-      baseRevision = freshRevision;
+    /* POJISTKA PROTI TICHÉMU PŘEPSÁNÍ CIZÍ ZMĚNY.
+       Dřív to fungovalo tak, že se aplikace NEJDŘÍV zeptala "jaká je na serveru revize?",
+       a když seděla, TEPRVE PAK zapsala. Mezi tím uplynul jeden obrátek po síti a v té
+       mezeře byla pojistka slepá: kdo zapsal v ní, toho si nevšimla a jeho změnu zápis
+       přemazal, aniž by kdokoli cokoli poznal.
+
+       Teď se čtení i zápis dějí v JEDNOM kroku na straně serveru (transakce). Když do toho
+       někdo vstoupí, server transakci sám zopakuje s čerstvými daty — a protože revize už
+       nesedí, skončí to poctivým konfliktem místo tiché ztráty. Mezera se tím zavírá celá,
+       ne jen zužuje.
+
+       POZOR PŘI ÚPRAVÁCH: obsluha transakce se může spustit VÍCKRÁT ZA SEBOU (právě kvůli
+       těm opakováním). Nesmí v ní být nic, co "se stane jednou" — žádné hlášky, žádné
+       mazání fronty, žádné sahání do state. Jediné, co si odsud odnášíme, jsou ty dvě
+       proměnné níž, a ty se při každém průchodu přepočítají celé.
+
+       CENA, KTEROU TO MÁ: transakce potřebuje spojení. Bez signálu se zápis do knihovny
+       nezařadí do fronty na později (jako dřív), ale rovnou selže a řekne to. U tréninků
+       to tak není, ty se ukládají po starém a frontu mají. */
+    let konfliktSeServerem = null;   // { serverRevize, data } — vyřídí se AŽ ZA transakcí
+    let zapsanaRevize = null;
+    let ocekavanaRevize = state.knownRevision;   // undefined = ještě nevíme, pak se nekontroluje
+
+    async function zapisSdilena(zmeny) {
+      await runTransaction(db, async (tx) => {
+        const snap = await tx.get(sharedRef);
+        const data = snap.exists() ? snap.data() : {};
+        const serverRevize = data.revision || 0;
+        if (ocekavanaRevize !== undefined && serverRevize !== ocekavanaRevize) {
+          konfliktSeServerem = { serverRevize, data };
+          zapsanaRevize = null;
+          return;            // nic nezapíšeme; transakce se potvrdí prázdná
+        }
+        konfliktSeServerem = null;
+        zapsanaRevize = serverRevize + 1;
+        tx.update(sharedRef, { ...zmeny, revision: zapsanaRevize });
+      });
     }
-    let workingRevision = baseRevision || 0;
+    function vyriditKonflikt() {
+      logDebug("[save] konflikt verzí — moje:", ocekavanaRevize, "na serveru:", konfliktSeServerem.serverRevize, "— beru tu novější");
+      applyRemoteSharedUpdate(konfliktSeServerem.data);
+      toast("Mezitím se aplikace změnila jinde (možná zapomenuté okno) — aplikace se obnovila na nejnovější verzi. Zkus svou poslední změnu prosím zopakovat.", 10000, "warn");
+    }
+
     const deletedIdsThisSave = new Set(pendingLibraryDeletions);
     // Krok 1 (jen pokud je co mazat): samostatný zápis, který smaže konkrétní položky pomocí
     // deleteField() na přesné cestě — odděleně od hlavního zápisu, ať si nepřekáží v jednom
     // volání s tím, že posíláme i celé pole "library" jako celek.
     if (deletedIdsThisSave.size) {
-      const deletePayload = { revision: workingRevision + 1 };
+      const deletePayload = {};
       deletedIdsThisSave.forEach(id => { deletePayload[`library.${id}`] = deleteField(); });
-      await updateDoc(sharedRef, deletePayload);
-      workingRevision += 1;
+      await zapisSdilena(deletePayload);
+      if (konfliktSeServerem) { vyriditKonflikt(); return false; }
+      ocekavanaRevize = zapsanaRevize;   // druhý krok navazuje na revizi, kterou jsme právě zapsali
       pendingLibraryDeletions.clear();
     }
     // Krok 2: běžný zápis zbytku (nová/upravená videa, složky, štítky, vybavení, části).
-    const newRevision = workingRevision + 1;
-    await updateDoc(sharedRef, {
+    await zapisSdilena({
       library: state.library, folders: state.folders,
       tagPool: state.tagPool, equipmentPool: state.equipmentPool, parts: state.parts,
-      revision: newRevision,
       // Kdo a kdy naposled uložil — čte Cloud Function pro push notifikace admina, ať mu
       // nechodí upozornění na jeho vlastní změny a ať ví, kdo změnu udělal.
       lastEditedBy: uidCurrent, lastEditedAt: Date.now()
     });
+    if (konfliktSeServerem) { vyriditKonflikt(); return false; }
+    const newRevision = zapsanaRevize;
     state.knownRevision = newRevision;
     savedSharedFingerprint = sharedFp;   // 3/3: teď server má přesně tohle
     /* Dřív se tady aplikace hned znovu ptala serveru, co tam doopravdy je — řádek [verify].
@@ -4664,6 +4691,11 @@ async function saveUserDataNow() {
     const msg = String(e && (e.message || e.code) || "");
     if (/size|large|exceed|bytes|1048487|1 ?MB/i.test(msg)) {
       toast("Uložení selhalo — sdílená data jsou moc velká (nejspíš kvůli nějaké obří fotce). Zkus zmenšit/nahradit poslední přidanou fotku.", 10000, "err");
+    } else if (/unavailable|offline|network|deadline|failed-precondition|aborted/i.test(msg)) {
+      /* Změna knihovny se musí se serverem domluvit v jednom kroku (viz transakce výš), takže
+         bez spojení nejde odložit na později. Radši to říct rovnou a srozumitelně, než nechat
+         člověka v domnění, že je uloženo. Tréninky se ukládají po starém a odloží se samy. */
+      toast("Změnu v knihovně se nepodařilo uložit — vypadá to na výpadek spojení. Tvoje úprava je pořád tady na obrazovce; až budeš online, zopakuj ji (nebo cokoli v knihovně ťukni) a uloží se.", 12000, "err");
     } else {
       toast(`Uložení se nepovedlo (${msg || "neznámá chyba"}). Screenshot téhle hlášky mi pomůže najít příčinu.`, 12000, "err");
     }
