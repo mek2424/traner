@@ -2624,7 +2624,7 @@ function sharedFingerprint() {
     return JSON.stringify([state.library, state.folders, state.tagPool, state.equipmentPool, state.parts]);
   } catch (e) { return null; }
 }
-const APP_VERSION = "2026-09-15 16:30";
+const APP_VERSION = "2026-09-15 17:45";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -11009,11 +11009,17 @@ document.getElementById("saveDriveApiKeyBtn").addEventListener("click", async ()
   state.driveApiKey = key;
   try {
     const sharedRef = doc(db, "shared", "data");
-    const freshSnap = await getDoc(sharedRef);
-    const freshRevision = freshSnap.exists() ? (freshSnap.data().revision || 0) : 0;
-    const newRevision = freshRevision + 1;
-    await setDoc(sharedRef, { driveApiKey: key, revision: newRevision }, { merge: true });
-    state.knownRevision = newRevision;
+    /* Transakce ze stejného důvodu jako u ukládání výš: dřív se tu revize nejdřív přečetla
+       a teprve pak zapsala, a kdo do té mezery stihl uložit, dostal stejné číslo revize jako
+       my. Dvě různá data pod jedním číslem znamenají, že ostatní aplikace si myslí, že jsou
+       aktuální, i když nejsou. Klíč se zapisuje s merge, takže nic jiného v dokumentu nepřepíše. */
+    let novaRevize = null;
+    await runTransaction(db, async (tx) => {
+      const snap = await tx.get(sharedRef);
+      novaRevize = ((snap.exists() ? snap.data().revision : 0) || 0) + 1;
+      tx.set(sharedRef, { driveApiKey: key, revision: novaRevize }, { merge: true });
+    });
+    state.knownRevision = novaRevize;
     toast("API klíč uložen.");
   } catch (e) { console.error(e); toast("Uložení klíče selhalo.", 2200, "err"); }
 });
@@ -11555,21 +11561,28 @@ document.getElementById("deleteAccountBtn").addEventListener("click", async () =
     const myTrainingsSnap = await getDocs(collection(db, "users", uidCurrent, "trainings"));
     await Promise.all(myTrainingsSnap.docs.map(d => deleteDoc(d.ref)));
     // 2) odstranit svoje hodnocení/obtížnost/poznámky ze sdílené knihovny
+    /* TRANSAKCE — tady byla ta nejhorší ze všech tří děr. Kód si přečetl CELÝ sdílený dokument,
+       vyškrtal z něj své stopy a celý ho zapsal zpátky. Kdyby mezi tím čtením a zápisem uložil
+       kdokoli jiný cokoli do knihovny, jeho práce by zmizela úplně — přepsala by ji ta verze,
+       co se přečetla o vteřinu dřív.
+       Teď se čte i zapisuje v jednom nedělitelném kroku. Když někdo vstoupí do cesty, server
+       obsluhu zopakuje — a protože vždycky vychází z toho, co PRÁVĚ přečetl ze serveru, vyjde
+       z toho zas jen "čerstvá data minus moje stopy". Proto se ten průchod dá bez obav opakovat. */
     const sharedRef = doc(db, "shared", "data");
-    const sharedSnap = await getDoc(sharedRef);
-    if (sharedSnap.exists()) {
-      const shared = sharedSnap.data();
+    await runTransaction(db, async (tx) => {
+      const snap = await tx.get(sharedRef);
+      if (!snap.exists()) return;
+      const shared = snap.data();
       let changed = false;
       Object.values(shared.library || {}).forEach(it => {
         if (it.ratings && it.ratings[uidCurrent] !== undefined) { delete it.ratings[uidCurrent]; changed = true; }
         if (it.difficulties && it.difficulties[uidCurrent] !== undefined) { delete it.difficulties[uidCurrent]; changed = true; }
         if (it.notesByCoach && it.notesByCoach[uidCurrent] !== undefined) { delete it.notesByCoach[uidCurrent]; changed = true; }
       });
-      if (changed) {
-        shared.revision = (shared.revision || 0) + 1;
-        await setDoc(sharedRef, shared);
-      }
-    }
+      if (!changed) return;
+      shared.revision = (shared.revision || 0) + 1;
+      tx.set(sharedRef, shared);
+    });
     // 3) smazat profil
     await deleteDoc(doc(db, "users", uidCurrent));
     // 4) smazat samotný přihlašovací účet
