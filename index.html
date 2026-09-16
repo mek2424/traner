@@ -893,6 +893,27 @@ body.popout-mode .popout-btn{display:none !important;}
 }
 .focus-lib-picker .chip{font-size:11.5px;padding:4px 10px;text-align:left;}
 .focus-lib-elsewhere{font-size:9.5px;opacity:.75;margin-left:5px;font-weight:500;}
+
+/* ---------- Návrh zaměření po uložení tréninku ---------- */
+.focus-suggest{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  background:var(--warn-bg);border:1px solid var(--warn-border);color:var(--warn-ink);
+  border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:12px;font-size:12.5px;line-height:1.45;
+}
+.focus-suggest button{
+  border:1px solid var(--warn-border);background:var(--card);color:var(--warn-ink);
+  border-radius:var(--radius-sm);padding:6px 10px;font-size:12px;font-weight:700;white-space:nowrap;
+}
+/* Navržené zaměření je JEN návrh — čárkovaně, nezaškrtnuté, dokud na něj trenér neklepne. */
+.focus-pick button.suggested{border-style:dashed;border-color:var(--warn-border);}
+.focus-pick .fp-sugtag{
+  font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;
+  color:var(--warn-ink);background:var(--warn-bg);border-radius:999px;padding:1px 6px;margin-left:2px;
+}
+.focus-blocked{
+  background:var(--danger-bg);border:1px solid var(--danger);color:var(--danger);
+  border-radius:var(--radius-sm);padding:10px 12px;font-size:12.5px;line-height:1.5;margin-bottom:12px;
+}
 .help-group-title{font-size:13px;font-family:var(--font-body);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-faint);margin:22px 0 8px;}
 .help-group-title:first-child{margin-top:4px;}
 .help-block{border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:8px;overflow:hidden;background:var(--card);}
@@ -2076,8 +2097,15 @@ body.popout-mode .popout-btn{display:none !important;}
       <button class="btn btn-icon btn-ghost" id="closeFocusModalBtn"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <p style="font-size:13px;color:var(--ink-soft);line-height:1.5;margin:0 0 14px;">Klepni na zaměření, která trénink pokrývá — klidně víc najednou. Na kartě se pak proužek u levého okraje rozdělí na díly. Trénink bez zaměření spadne do „Bez zaměření“.</p>
+    <div class="focus-suggest hidden" id="focusModalSuggest">
+      <span id="focusModalSuggestText"></span>
+      <button type="button" id="focusModalSuggestUseBtn">Použít návrh</button>
+    </div>
     <div class="focus-pick" id="focusModalPick"></div>
     <p style="font-size:12.5px;color:var(--ink-faint);margin:14px 0 0;" id="focusModalHint"></p>
+    <div class="modal-actions hidden" id="focusModalSaveActions">
+      <button type="button" class="btn btn-primary btn-block" id="focusModalContinueBtn">Pokračovat</button>
+    </div>
   </div>
 </div>
 
@@ -2143,6 +2171,7 @@ body.popout-mode .popout-btn{display:none !important;}
     <div class="chip-collapse" id="visibilityHelpCollapse">
       <p style="font-size:13px;color:var(--ink-soft);line-height:1.5;margin:0 0 14px;">Trénink je defaultně jen tvůj — dokud ho sám nezveřejníš, nikdo jiný ho neuvidí. Editor totiž může sloužit i jako nástroj na třídění vlastních nápadů, ne jen na tvorbu hotových věcí k prezentaci — a rozpracované pokusy by neměly zaplevelovat Tržiště ostatním. Až bude trénink v podobě, co chceš ukázat kolegům, dej ho na Tržiště. Rozhodnutí se dá kdykoli změnit oběma směry.</p>
     </div>
+    <div class="focus-blocked hidden" id="visibilityBlockedNote"></div>
     <div class="modal-actions" style="display:flex;flex-direction:column;gap:8px;">
       <button type="button" class="btn btn-block" id="visibilityChoicePrivateBtn"><i class="fa-solid fa-lock"></i> Jen pro mě</button>
       <button type="button" class="btn btn-primary btn-block" id="visibilityChoicePublicBtn"><i class="fa-solid fa-globe"></i> Na Tržiště</button>
@@ -2842,7 +2871,7 @@ function sharedFingerprint() {
       state.trainingFocus, state.focusLibraryMap]);
   } catch (e) { return null; }
 }
-const APP_VERSION = "2026-09-16 22:20";
+const APP_VERSION = "2026-09-17 00:55";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -5290,6 +5319,12 @@ function switchView(view) {
   document.getElementById("libraryToolbarArea").classList.toggle("hidden", view !== "library");
   if (view === "library") renderLibrary();
   if (view === "trainings") { renderTrainingsList(); zkusDonacistMojeTreninky(); }
+  else {
+    // Mimo Tréninky nesmí hlavička zaměření zůstat "otevřená" — jinak by tlačítko Zpět
+    // z Knihovny zavíralo složku, kterou v tu chvíli nikdo nevidí. Stav složky se přitom
+    // neruší: po návratu na Tréninky ji renderTrainingsList() zase ukáže.
+    document.getElementById("focusHead").classList.add("hidden");
+  }
   const shownEl = document.getElementById(view + "View");
   shownEl.classList.remove("view-anim-in");
   void shownEl.offsetWidth;
@@ -7319,12 +7354,30 @@ function ensureOthersTrainingsLoaded() {
   othersTrainingsPromise = (async () => {
     try {
       const allSnap = await getDocs(collectionGroup(db, "trainings"));
+      /* ZÁCHRANNÁ SÍŤ NA VLASTNÍ TRÉNINKY (16. 9.)
+         Hromadný dotaz vrací i moje vlastní tréninky. Dřív se přeskakovaly úplně, protože
+         v paměti můžou být ČERSTVĚJŠÍ než na serveru (rozdělaná změna, kterou autosave ještě
+         neuložil) — a to pořád platí, takže se nic existujícího nepřepisuje.
+         Co se ale stát může a stalo: getDocs(users/{uid}/trainings) při přihlášení vrátí
+         NEÚPLNÝ seznam a nevyhodí chybu (Firestore umí odpovědět z lokální cache). Aplikace
+         si pak myslí, že načtení proběhlo, a vlastní tréninky v seznamu prostě chybí.
+         Log z 16. 9. přesně tohle ukázal: „mých: 2" hned po přihlášení, když jich má 19.
+         Proto se tady doplní jen ty, které v paměti ÚPLNĚ CHYBÍ. Bezpečný směr: nejhůř se
+         objeví trénink navíc, nikdy se žádný neztratí. */
+      let doplneno = 0;
       allSnap.forEach(d => {
-        // Vlastní tréninky se nepřepisují — v paměti můžou být čerstvější než na serveru
-        // (rozdělaná změna, kterou autosave ještě neuložil).
         const data = d.data();
-        if (data.ownerUid !== uidCurrent) state.trainings[d.id] = data;
+        if (data.ownerUid !== uidCurrent) { state.trainings[d.id] = data; return; }
+        if (state.trainings[d.id]) return;            // moje a už ho mám — nesahat na něj
+        state.trainings[d.id] = data;
+        savedTrainingFingerprints.set(d.id, trainingFingerprint(data));
+        doplneno++;
       });
+      if (doplneno) {
+        logDebug("[tréninky] POZOR: přihlášení vrátilo neúplný seznam vlastních tréninků,",
+          doplneno, "se doplnilo z hromadného dotazu");
+        toast(`Část tvých tréninků (${doplneno}) se načetla až teď — už jsou všechny vidět.`, 6000, "info");
+      }
       othersTrainingsLoaded = true;
     } catch (e) {
       console.error("Nepodařilo se načíst tréninky ostatních trenérů:", e);
@@ -7729,7 +7782,12 @@ function renderTrainingsList() {
     `).join("");
   }
 
-  zapisProcJePrazdno(!list.querySelector("[data-open]"), { all, mineAll, mineBase, othersBase, q });
+  /* Do 🐞 se zapisuje jen PODEZŘELÉ prázdno, ne každý prázdný seznam.
+     Prázdná složka je úplně normální stav — Mek si 16. 9. roztřídil tréninky a „Bez zaměření"
+     tím legitimně vyprázdnil; diagnostika to tehdy ohlásila jako problém a vypadalo to na
+     návrat staré chyby. Podezřelé je, až když v téhle záložce NENÍ VŮBEC NIC — to je přesně
+     ta původní chyba, kdy se tréninky nenačetly. */
+  zapisProcJePrazdno(base.length === 0, { all, mineAll, mineBase, othersBase, q });
   napojTreninkoveRadky(list);
 }
 
@@ -7950,18 +8008,61 @@ document.getElementById("addFocusBtn").addEventListener("click", async () => {
   if (ok) toast("Zaměření přidáno.");
 });
 
+/* =========================================================
+   NÁVRH ZAMĚŘENÍ A ZÁMEK NA TRŽIŠTĚ
+   =========================================================
+   Po uložení NOVÉHO tréninku se aplikace nejdřív zeptá na zaměření (s návrhem podle videí
+   uvnitř) a teprve pak na Tržiště — v tomhle pořadí schválně, protože bez zaměření se na
+   Tržiště nesmí. */
+
+/** Zaměření, která by k tréninku mohla sedět podle složek videí uvnitř. Rozhoduje MAPOVÁNÍ
+    ze Spravovat zaměření, ne shoda názvů — viz komentář u seedFocusLibraryMap. Zaměření,
+    která už trénink má, se nenavrhují znovu. */
+function navrhniZamereni(t) {
+  if (!t) return [];
+  const slozkyVideí = new Set();
+  getTrainingVideoIds(t).forEach(id => {
+    const v = state.library[id];
+    if (v && v.folderId) slozkyVideí.add(v.folderId);
+  });
+  if (!slozkyVideí.size) return [];
+  const uzMa = new Set(trainingFocusKeys(t));
+  return state.trainingFocus
+    .filter(f => !uzMa.has(f.key) && focusLibKeys(f.key).some(k => slozkyVideí.has(k)))
+    .map(f => f.key);
+}
+
+/** Na Tržiště jen zařazený trénink — bez zaměření by ho ostatní ve složkách nenašli. */
+function smiNaTrziste(t) { return trainingFocusKeys(t).length > 0; }
+const ZPRAVA_NEZARAZENY =
+  "Na Tržiště jde jen zařazený trénink — bez zaměření by ho ostatní ve složkách nenašli. " +
+  "Vyber mu aspoň jedno zaměření (tlačítko se zaměřením je hned pod názvem tréninku). " +
+  "Když ti žádné nesedí, ozvi se adminovi, zaměření přidává jen on.";
+
 /* ---------- Výběr zaměření (z kebabu i z editoru) ---------- */
 const focusModalBackdrop = document.getElementById("focusModalBackdrop");
 let focusModalTrainingId = null;
-document.getElementById("closeFocusModalBtn").addEventListener("click", () => focusModalBackdrop.classList.add("hidden"));
-focusModalBackdrop.addEventListener("click", (e) => { if (e.target === focusModalBackdrop) focusModalBackdrop.classList.add("hidden"); });
+function zavriVyberZamereni() {
+  focusModalBackdrop.classList.add("hidden");
+  // Křížek v řetězu po uložení = "ještě ne" — nic se nepotvrzuje a na Tržiště se
+  // aplikace nezeptá. Trénink se tím neztratí, ukládá se průběžně sám.
+  focusModalPriUlozeni = false;
+  focusModalNavrh = [];
+}
+document.getElementById("closeFocusModalBtn").addEventListener("click", zavriVyberZamereni);
+focusModalBackdrop.addEventListener("click", (e) => { if (e.target === focusModalBackdrop) zavriVyberZamereni(); });
 
-function otevriVyberZamereni(trainingId) {
+let focusModalPriUlozeni = false;   // true = jsme v řetězu po uložení, za tím čeká otázka na Tržiště
+let focusModalNavrh = [];
+function otevriVyberZamereni(trainingId, opts) {
   const t = state.trainings[trainingId];
   if (!t) return;
   // Pojistka: cizí trénink se nepřeřazuje, i kdyby se sem někdo dostal jinudy.
   if (t.ownerUid !== uidCurrent) { toast("Zaměření cizího tréninku mění jen jeho autor. Když ho chceš jinak, naklonuj si ho k sobě.", 7000, "warn"); return; }
   focusModalTrainingId = trainingId;
+  focusModalPriUlozeni = !!(opts && opts.priUlozeni);
+  focusModalNavrh = focusModalPriUlozeni ? navrhniZamereni(t) : [];
+  document.getElementById("focusModalSaveActions").classList.toggle("hidden", !focusModalPriUlozeni);
   renderFocusModalPick();
   focusModalBackdrop.classList.remove("hidden");
 }
@@ -7970,11 +8071,21 @@ function renderFocusModalPick() {
   const t = state.trainings[focusModalTrainingId];
   if (!t) return;
   const vybrana = trainingFocusKeys(t);
+  const navrhy = focusModalNavrh.filter(k => !vybrana.includes(k));
+  const sug = document.getElementById("focusModalSuggest");
+  sug.classList.toggle("hidden", !navrhy.length);
+  if (navrhy.length) {
+    document.getElementById("focusModalSuggestText").innerHTML =
+      "Podle složek videí uvnitř to vypadá na " +
+      navrhy.map(k => `<b>${esc((focusByKey(k) || {}).label)}</b>`).join(" a ") +
+      ". Rozhoduješ ty.";
+  }
   document.getElementById("focusModalPick").innerHTML = state.trainingFocus.map(f => {
     const on = vybrana.includes(f.key);
+    const navrzeno = navrhy.includes(f.key);
     const styl = on ? `border-color:${esc(f.color)};background:${hexDoPruhledna(f.color, .14)};` : "";
-    return `<button type="button" class="${on ? "on" : ""}" data-focus-pick="${esc(f.key)}" style="${styl}">
-        <span class="fp-sw" style="background:${esc(f.color)}"></span>${esc(f.label)}
+    return `<button type="button" class="${on ? "on" : ""}${navrzeno ? " suggested" : ""}" data-focus-pick="${esc(f.key)}" style="${styl}">
+        <span class="fp-sw" style="background:${esc(f.color)}"></span>${esc(f.label)}${navrzeno ? `<span class="fp-sugtag">návrh</span>` : ""}
       </button>`;
   }).join("");
   document.getElementById("focusModalHint").textContent = vybrana.length
@@ -8022,6 +8133,26 @@ function renderEditorFocusBtn() {
 }
 document.getElementById("editorFocusBtn").addEventListener("click", () => {
   if (currentTrainingId) otevriVyberZamereni(currentTrainingId);
+});
+
+document.getElementById("focusModalSuggestUseBtn").addEventListener("click", () => {
+  const t = state.trainings[focusModalTrainingId];
+  if (!t) return;
+  const nove = [...new Set([...trainingFocusKeys(t), ...focusModalNavrh])];
+  t.focus = nove;
+  t.dateModified = Date.now();
+  scheduleSave();
+  renderFocusModalPick();
+  if (currentView === "trainings") renderTrainingsList();
+  if (currentView === "editor") renderEditorFocusBtn();
+});
+document.getElementById("focusModalContinueBtn").addEventListener("click", () => {
+  const t = state.trainings[focusModalTrainingId];
+  if (t) t.focusDecided = true;
+  focusModalBackdrop.classList.add("hidden");
+  focusModalPriUlozeni = false;
+  scheduleSave();
+  pokracujVeVisibility();
 });
 
 /* ---------- Navigace mezi dlaždicemi a obsahem zaměření ---------- */
@@ -11642,6 +11773,21 @@ document.addEventListener("click", (e) => {
   const editor = wrap && wrap.querySelector(".rte-editor");
   if (!editor || editor.getAttribute("contenteditable") !== "true") return;
   editor.focus();
+  /* ÚPLNĚ PRÁZDNÉ POLE: execCommand nemá co odrážkovat a tiše neudělá vůbec nic — proto to
+     „nefunguje, dokud něco nenapíšu". Prázdné pole tady totiž není prázdné jen vizuálně:
+     obsluha `input` níž mu schválně nastavuje innerHTML = "" (kvůli CSS placeholderu),
+     takže v něm není ani osamocené <br>, na které by se dal seznam pověsit.
+     Řešení: pole se před příkazem osadí jedním prázdným odstavcem a kurzor se do něj
+     postaví — teprve pak má execCommand na čem pracovat. */
+  if (!editor.firstChild) {
+    editor.innerHTML = "<p><br></p>";
+    const r = document.createRange();
+    r.setStart(editor.firstChild, 0);
+    r.collapse(true);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(r);
+  }
   document.execCommand(btn.dataset.rteCmd, false, null);
   editor.dispatchEvent(new Event("input", { bubbles: true }));
 });
@@ -11660,7 +11806,11 @@ document.addEventListener("focusin", (e) => {
 document.addEventListener("input", (e) => {
   const el = e.target;
   if (!(el.classList && el.classList.contains("rte-editor"))) return;
-  if (el.innerHTML !== "" && el.textContent.trim() === "") el.innerHTML = "";
+  /* POZOR na `!el.querySelector("ul, ol")`: bez toho by tenhle řádek smazal seznam, který
+     uživatel právě založil na prázdném poli — čerstvá <ul><li><br></li></ul> nemá žádný
+     text, takže by prošla podmínkou „vizuálně prázdné" a zmizela dřív, než se do ní stihne
+     napsat první písmeno. */
+  if (el.innerHTML !== "" && el.textContent.trim() === "" && !el.querySelector("ul, ol, img")) el.innerHTML = "";
 });
 
 /* =========================================================
@@ -11770,6 +11920,8 @@ document.getElementById("trainingVisibilityBtn").addEventListener("click", async
   const t = state.trainings[currentTrainingId];
   if (!t) return;
   const naTrziste = !t.public;
+  // Stejný zámek jako v okně po uložení — sem se dá kliknout kdykoli, i o týden později.
+  if (naTrziste && !smiNaTrziste(t)) { toast(ZPRAVA_NEZARAZENY, 10000, "warn"); return; }
   const ok = await confirmDialog(
     naTrziste
       ? "Trénink uvidí všichni trenéři v klubu a budou si ho moct zkopírovat k sobě. Kdykoli ho můžeš zase skrýt."
@@ -11836,6 +11988,8 @@ document.getElementById("visibilityChoicePrivateBtn").addEventListener("click", 
 });
 document.getElementById("visibilityChoicePublicBtn").addEventListener("click", () => {
   const t = state.trainings[currentTrainingId];
+  // Pojistka i tady: disabled tlačítko se dá obejít, tenhle řádek ne.
+  if (t && !smiNaTrziste(t)) { toast(ZPRAVA_NEZARAZENY, 10000, "warn"); return; }
   if (t) { t.public = true; t.visibilityDecided = true; }
   document.getElementById("visibilityModalBackdrop").classList.add("hidden");
   renderTrainingVisibilityBtn();
@@ -11843,13 +11997,36 @@ document.getElementById("visibilityChoicePublicBtn").addEventListener("click", (
 });
 document.getElementById("saveTrainingBtn").addEventListener("click", () => {
   const t = state.trainings[currentTrainingId];
+  /* Pořadí je schválně tohle: nejdřív zaměření, pak Tržiště. Bez zaměření se na Tržiště
+     nesmí, takže opačně by člověk narazil na zákaz a musel se vracet. */
+  if (t && !t.focusDecided) { otevriVyberZamereni(currentTrainingId, { priUlozeni: true }); return; }
+  pokracujVeVisibility();
+});
+
+/** Druhý krok po uložení: otázka na Tržiště. Volá se i z okna zaměření, až tam dáš Pokračovat. */
+function pokracujVeVisibility() {
+  const t = state.trainings[currentTrainingId];
   if (t && !t.visibilityDecided) {
     document.getElementById("visibilityHelpCollapse").classList.remove("open");
+    renderVisibilityModalStav();
     document.getElementById("visibilityModalBackdrop").classList.remove("hidden");
     return;
   }
   finishSavingTraining();
-});
+}
+
+/** Zámek na Tržiště přímo v okně — zakázané tlačítko a vysvětlení, ne až hláška po kliknutí. */
+function renderVisibilityModalStav() {
+  const t = state.trainings[currentTrainingId];
+  const smi = !!t && smiNaTrziste(t);
+  const note = document.getElementById("visibilityBlockedNote");
+  note.classList.toggle("hidden", smi);
+  note.textContent = smi ? "" : ZPRAVA_NEZARAZENY;
+  const btn = document.getElementById("visibilityChoicePublicBtn");
+  btn.disabled = !smi;
+  btn.style.opacity = smi ? "" : ".5";
+  btn.title = smi ? "" : ZPRAVA_NEZARAZENY;
+}
 document.getElementById("deleteTrainingBtn").addEventListener("click", async () => {
   if (!(await confirmDialog("Smazat celý tento trénink?", { confirmLabel: "Smazat", danger: true }))) return;
   delete state.trainings[currentTrainingId];
@@ -13021,7 +13198,7 @@ const HELP_DATA = [
       { q: "Jak si dám aplikaci na plochu telefonu?", a: "V prohlížeči otevři nabídku (tři tečky, nebo ikona sdílení u iPhonu) a vyber „Přidat na plochu“ / „Nainstalovat aplikaci“. Pak funguje jako běžná nainstalovaná aplikace v telefonu — vlastní ikona, bez adresního řádku prohlížeče." },
       { q: "Funguje aplikace i bez internetu?", a: "Jen částečně — jednou načtené obrazovky zůstanou vidět, ale na uložení jakékoli změny (přidání videa, úprava tréninku) aplikace potřebuje připojení, protože všechna data se ukládají sdíleně pro všechny trenéry najednou." },
       { q: "Proč aplikace najednou vypadá jinak, nebo mám pocit, že mám starou verzi?", a: "Aplikace se sama tiše aktualizuje na pozadí a po instalaci nové verze se jednou automaticky obnoví. Když přesto něco nesedí, zkus stránku ručně obnovit (potáhnutí dolů na mobilu, F5/Ctrl+R na počítači)." },
-      { q: "Co dělá tlačítko Zpět na telefonu?", a: "Zavře aktuálně otevřené okno — třeba detail videa, editaci tréninku nebo Tréninkový režim — místo aby rovnou zavřelo celou aplikaci. Teprve když nic není otevřené, tlačítko Zpět aplikaci doopravdy opustí." },
+      { q: "Co dělá tlačítko Zpět na telefonu?", a: "Zavře aktuálně otevřené okno — třeba detail videa, editaci tréninku, Tréninkový režim nebo otevřené zaměření v Trénincích — místo aby rovnou zavřelo celou aplikaci. Teprve když nic není otevřené, tlačítko Zpět aplikaci doopravdy opustí. Na počítači dělá totéž klávesa Escape.", kw: "zpet escape zavrit okno" },
       { q: "Proč se otevřené okno nezavře, když kliknu vedle něj?", a: "Je to záměr — kliknutí mimo okno ho už nikdy samo nezavře, aby se nic nezavřelo omylem rozklepnutím. Zavíráš ho vždy křížkem nebo tlačítkem přímo v okně, případně tlačítkem Zpět na telefonu.", kw: "kliknuti mimo zavrit" },
       { q: "Jak zavřu okno na počítači?", a: "Křížkem v rohu, nebo klávesou Escape — ta vždycky zavře jen to okno, které je navrchu. Když máš rozepsaný text v nějakém poli, první Escape jen odklikne z pole a teprve druhý zavře okno.", kw: "escape klavesa zavrit okno pocitac" },
       { q: "Jak přepnu tmavý/světlý režim?", a: "V profilu (kolečko s tvojí iniciálou vpravo nahoře) najdeš přepínač se sluníčkem a měsícem — jedním klepnutím přepneš celý vzhled aplikace." }
@@ -13077,6 +13254,7 @@ const HELP_DATA = [
       { q: "Jak přidám úplně nový štítek nebo vybavení, které ještě neexistuje?", a: "Stačí ho napsat do příslušného pole při úpravě videa a potvrdit — aplikace ho rovnou přidá do nabídky pro příště, není potřeba nic zvlášť zakládat." },
       { q: "Co když omylem vznikly dva podobné štítky (např. „míč“ a „míče“)?", a: "Napiš adminovi. V Knihovně je na to nástroj na sloučení štítků a vybavení — sjednotí dva podobné na jeden napříč všemi videy, co je používají, a hodí se i na přejmenování štítku všude najednou. Protože ta změna sáhne do celé sdílené knihovny, má ho jen admin.", kw: "sloucit duplicitni stitek prejmenovat admin" },
       { q: "Jak rychle najdu konkrétní štítek nebo vybavení ve dlouhém seznamu?", a: "Nad seznamem štítků/vybavení (ve filtru i ve slučovacím nástroji) je malé vyhledávací pole — cokoli tam napíšeš, rovnou zúží zobrazený seznam, bez ohledu na velikost písmen." },
+      { q: "Aplikace napsala, že se část mých tréninků načetla až teď. Co to bylo?", a: "Při přihlášení se občas stane, že server vrátí neúplný seznam tvých tréninků a netváří se přitom, že by něco selhalo. Aplikace si toho teď všimne sama a chybějící tréninky dotáhne — hláška je jen upozornění, že se seznam mezitím doplnil. Nic se neztratilo a nemusíš nic dělat.", kw: "neuplny seznam treninku nacetly se pozdeji" },
       { q: "Jak se hledá v trénincích, když nevím, ve kterém zaměření trénink je?", a: "Stačí začít psát do hledání nad dlaždicemi — dlaždice ustoupí a ukáže se rovnou seznam všeho, co sedí, napříč všemi zaměřeními. Modrým pruhem „Zpátky na zaměření“ se vrátíš k dlaždicím. Když hledáš uvnitř otevřeného zaměření, hledá se nejdřív jen v něm a aplikace ti sama nabídne „Hledat ve všech zaměřeních“, kdyby toho bylo víc jinde.", kw: "hledani treninky zamereni napric" },
       { q: "Musím při psaní štítku trefit přesnou diakritiku, aby se mi nabídl ten správný?", a: "Ne — když píšeš štítek nebo vybavení do pole při úpravě videa, nabídka existujících hledá bez ohledu na diakritiku. Stačí napsat „mic“ a najde se i „Míč“.", kw: "diakritika hacky carky bez" }
     ]},
@@ -13117,8 +13295,12 @@ const HELP_DATA = [
       { q: "Jak trénink zařadím do zaměření?", a: "Dvěma způsoby, oba u vlastních tréninků: v otevřeném tréninku je tlačítko se zaměřením hned pod názvem, nebo v přehledu otevři u tréninku nabídku (⋮) a vyber „Změnit zaměření“. Klepáním na jednotlivá zaměření je přidáváš a zase odebíráš.", kw: "zaradit zmenit zamereni" },
       { q: "Co znamená „Bez zaměření“ a jak se odtud dostanu pryč?", a: "Je to prostě místo, kde skončí trénink, kterému jsi zatím žádné zaměření nedal — nejde ho zaškrtnout. Jakmile tréninku nějaké zaměření přiřadíš, odtud zmizí sám." },
       { q: "Proč nemůžu změnit zaměření u tréninku kolegy z Tržiště?", a: "Zařazení cizího tréninku mění jen jeho autor — jinak by si to trenéři navzájem přehazovali. Když ti u cizího tréninku zařazení nesedí, naklonuj si ho k sobě (nabídka ⋮ → „Klonovat“) a svojí kopii zařaď, jak chceš.", kw: "trziste cizi zamereni nejde zmenit" },
+      { q: "Jak se z otevřeného zaměření vrátím na dlaždice?", a: "Tlačítkem „Zaměření“ vlevo nahoře, tlačítkem Zpět na telefonu, nebo klávesou Escape na počítači — všechno dělá totéž.", kw: "zpet z zamereni escape dlazdice" },
       { q: "Chybí mi zaměření, které bych potřeboval. Jde přidat?", a: "Zaměření jsou společná pro všechny trenéry i pro Tržiště, takže je spravuje jen admin — přidává je, přejmenovává, mění jim barvu i pořadí. Napiš mu, co ti chybí." },
-      { q: "Co se stane s tréninky, když admin nějaké zaměření smaže?", a: "Tréninky zůstanou, jen z toho zaměření vypadnou. Ten, co neměl žádné jiné, se objeví v „Bez zaměření“ a dá se zařadit znovu. Nic se nemaže." }
+      { q: "Co se stane s tréninky, když admin nějaké zaměření smaže?", a: "Tréninky zůstanou, jen z toho zaměření vypadnou. Ten, co neměl žádné jiné, se objeví v „Bez zaměření“ a dá se zařadit znovu. Nic se nemaže." },
+      { q: "Proč se mě aplikace po uložení tréninku ptá na zaměření?", a: "Ptá se jen jednou, u tréninku, který ještě zařazený není — a hned za tím se zeptá, jestli ho chceš dát na Tržiště. Pořadí je schválně takhle: na Tržiště jde jen zařazený trénink, takže opačně by ses musel vracet. Když zrovna nechceš nic řešit, zavři okno křížkem a aplikace se zeptá zas příště.", kw: "otazka po ulozeni zamereni trziste" },
+      { q: "Co znamená to čárkované „návrh“ u některých zaměření?", a: "Aplikace se podívala, z jakých složek Knihovny jsou videa uvnitř tréninku, a podle toho tipla, kam by mohl patřit. Je to jen tip — dokud na něj neklepneš (nebo nedáš „Použít návrh“), nic se nezařadí. Rozhoduješ ty.", kw: "navrh zamereni carkovane tip" },
+      { q: "Proč mi aplikace u některých tréninků nic nenavrhne?", a: "Návrh vychází z toho, které složky Knihovny má admin u zaměření přiřazené. U průřezových složek jako „Technika“ nebo „Herní cvičení“ žádné zaměření neplyne, takže aplikace radši mlčí, než aby hádala. Zařadit trénink ručně jde vždycky.", kw: "navrh nefunguje mlci" }
     ]},
     { title: "Oblíbené a naposledy upravené", icon: "fa-solid fa-star", qa: [
       { q: "Jak si označím trénink jako oblíbený?", a: "Hvězdičkou přímo na kartě tréninku v seznamu. Klepnutím se rozsvítí zlatě a trénink se objeví ve složce ⭐ Oblíbené." },
@@ -13161,6 +13343,7 @@ const HELP_DATA = [
       { q: "Jak sdílím trénink s konkrétním kolegou?", a: "V přehledu tréninků otevři nabídku u tréninku (⋮) a vyber „Sdílet odkazem“ — vygeneruje se odkaz, který jde poslat komukoli, i bez přístupu do aplikace." },
       { q: "Co je Tržiště a jak tam trénink zveřejním?", a: "Tržiště je záložka, kde vidíš tréninky ostatních trenérů, které se rozhodli zveřejnit. Vlastní trénink tam dáš tlačítkem v hlavičce editoru — píše se na něm, jak na tom trénink teď je („Soukromé“ nebo „Na Tržišti“) a vedle toho, co se stane po kliknutí. Aplikace se ještě jednou zeptá, než ho zveřejní nebo zase skryje. Dokud to neuděláš, trénink je jen tvůj a nikdo jiný ho neuvidí.", kw: "trziste zverejnit sdilet soukrome" },
       { q: "Jaký je rozdíl mezi veřejným a soukromým tréninkem?", a: "Soukromý vidíš jen ty — hodí se i na rozpracované nápady, co ještě nejsou hotové k ukázání. Veřejný (na Tržišti) vidí a může si zkopírovat kdokoli z ostatních trenérů. Rozhodnutí jde kdykoli změnit oběma směry." },
+      { q: "Proč mi aplikace nedovolí dát trénink na Tržiště?", a: "Nejspíš nemá žádné zaměření. Tržiště je uspořádané do stejných složek jako tvoje tréninky, takže nezařazený trénink by v nich ostatní nenašli — spadl by do „Bez zaměření“ a nikdo by tam nekoukal. Přiřaď mu aspoň jedno zaměření tlačítkem pod názvem tréninku a tlačítko na Tržiště se odemkne. Když ti žádné zaměření nesedí, napiš adminovi, přidává je jen on.", kw: "nejde zverejnit trziste zamereni zamek" },
       { q: "Co se stane, když si někdo můj trénink z Tržiště zkopíruje?", a: "Vytvoří se mu vlastní kopie (s dovětkem „(kopie)“ v názvu), kterou může dál upravovat nezávisle na tvém originálu — nová kopie je vždy nejdřív soukromá, i když byl originál veřejný." },
       { q: "Jak trénink zkopíruju/naklonuju sám sobě?", a: "V nabídce u tréninku (⋮) je tlačítko „Klonovat“ — funguje stejně u vlastních i cizích tréninků z Tržiště." },
       { q: "Jde stáhnout PDF nebo sdílet i trénink kolegy z Tržiště, ne jen svůj vlastní?", a: "Ano — nabídka (⋮) u kteréhokoli tréninku v Tržišti nabízí stejné „Stáhnout PDF“, „Stáhnout TXT“ i „Sdílet odkazem“ jako u vlastních tréninků. Zrušit už vytvořené sdílení ale může jen původní vlastník tréninku, ne kdokoli jiný.", kw: "trziste sdilet cizi export" }
@@ -13285,7 +13468,11 @@ document.getElementById("helpSearchInput").addEventListener("input", (e) => rend
    smysl z něj jít tlačítkem Zpět tam, odkud přišel, ne rovnou ven z appky.
 */
 (function setupBackButtonNav() {
-  const TRACKED_SELECTOR = ".modal-backdrop, #trainingModeView, #overviewView, #editorView";
+  /* #focusHead = hlavička otevřeného zaměření v Trénincích. Není to okno, ale chová se tak:
+     vlezeš dovnitř složky a čekáš, že tě Zpět / Escape vrátí na dlaždice, ne rovnou z appky.
+     Tím, že se sem přidá, funguje obojí bez jediného řádku nové logiky — schová se přes
+     svoje vlastní tlačítko Zpět (viz CLOSE_TRIGGERS). */
+  const TRACKED_SELECTOR = ".modal-backdrop, #trainingModeView, #overviewView, #editorView, #focusHead";
   // Mapování otevřeného okna -> jeho vlastní zavírací tlačítko. Appka radši "klikne" na
   // existující tlačítko (ať se spustí i případné vedlejší účinky zavření), než aby okno
   // zavírala natvrdo sama. Prázdná hodnota = okno záměrně nemá zavírací tlačítko (viz
@@ -13315,9 +13502,12 @@ document.getElementById("helpSearchInput").addEventListener("input", (e) => rend
     exerciseInfoModalBackdrop: "closeExerciseInfoModalBtn",
     cropModalBackdrop: "closeCropModalBtn",
     helpModalBackdrop: "closeHelpModalBtn",
+    focusModalBackdrop: "closeFocusModalBtn",
+    focusManageBackdrop: "closeFocusManageBtn",
     trainingModeView: "tmExitBtn",
     overviewView: "ovBackBtn",
     editorView: "backToTrainingsBtn",
+    focusHead: "focusBackBtn",
   };
 
   const navStack = []; // sledované prvky, které appka aktuálně považuje za "otevřené", v pořadí otevření
