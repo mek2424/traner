@@ -965,6 +965,12 @@ body.popout-mode .popout-btn{display:none !important;}
   width:100%;height:100%;background-color:#2b2f36;background-size:cover;background-position:center;
   display:flex;align-items:center;justify-content:center;
 }
+.broken-toggle-link{
+  display:block;margin:2px 0 10px auto;border:none;background:none;padding:2px 0;
+  font-size:11.5px;color:var(--ink-faint);text-decoration:underline;text-underline-offset:2px;cursor:pointer;
+}
+.broken-toggle-link:hover{color:var(--ink-soft);}
+.broken-toggle-link.is-broken{color:var(--ok);}
 .detail-broken-watermark{
   font-family:var(--font-display);font-size:14px;letter-spacing:.05em;color:rgba(255,255,255,.88);
   background:rgba(20,22,20,.38);padding:6px 16px;border-radius:999px;
@@ -1940,6 +1946,8 @@ body.popout-mode .popout-btn{display:none !important;}
     <div class="embed-wrap" id="detailEmbedWrap"></div>
     <div id="detailTimestampHint" class="embed-timestamp-hint hidden"></div>
     <div id="detailFbFallback"></div>
+    <!-- Schválně malé a tiché: je to věc, na kterou člověk sáhne jednou za čas, ne hlavní akce karty. -->
+    <button type="button" class="broken-toggle-link hidden" id="detailBrokenToggleBtn"></button>
     <div class="detail-title" id="detailTitle"></div>
     <div class="detail-row" id="detailChips"></div>
     <div class="detail-row" id="detailMyRatingRow">
@@ -2871,7 +2879,7 @@ function sharedFingerprint() {
       state.trainingFocus, state.focusLibraryMap]);
   } catch (e) { return null; }
 }
-const APP_VERSION = "2026-09-17 00:55";
+const APP_VERSION = "2026-09-17 01:40";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -5853,25 +5861,9 @@ function openCardContextMenu(itemId, anchorBtn) {
     closeCardContextMenu();
     openAddToTrainingModal(itemId);
   });
-  menu.querySelector("[data-act='toggle-broken']")?.addEventListener("click", async () => {
+  menu.querySelector("[data-act='toggle-broken']")?.addEventListener("click", () => {
     closeCardContextMenu();
-    // Vrácení zpět (video zase funguje) nemá kontrolní otázku — je to jen krok zpátky. Označení
-    // jako nefunkční ale mění, co se ukazuje na kartě i v obou prezentacích, takže se ptáme (viz #91).
-    if (item.brokenAt) {
-      item.brokenAt = null;
-      scheduleSave();
-      renderLibrary();
-      toast("Vráceno zpět — video je znovu aktivní.");
-      return;
-    }
-    if (!(await confirmDialog(
-      "Po otevření videa (v Knihovně, v Tréninkovém režimu i ve sdílené prezentaci) se místo něj zobrazí náhledový obrázek s jemným vodoznakem a přímý odkaz na zdroj. Video samotné se nijak nezmění a jde to kdykoli vrátit zpět.",
-      { title: "Označit jako nefunkční?", confirmLabel: "Označit jako nefunkční" }
-    ))) return;
-    item.brokenAt = Date.now();
-    scheduleSave();
-    renderLibrary();
-    toast("Označeno jako nefunkční.");
+    prepniNefunkcniVideo(itemId);
   });
   menu.querySelector("[data-act='move']")?.addEventListener("click", async () => {
     closeCardContextMenu();
@@ -6613,6 +6605,49 @@ function closeDetailModal() {
   unsubscribeFromComments();
 }
 document.getElementById("closeDetailModalBtn").addEventListener("click", closeDetailModal);
+/** Označení videa jako nefunkčního. Jedno místo pro obě cesty — nabídku (⋮) na kartě
+    v Knihovně i malé tlačítko v otevřené kartě (detail videa, kam se dá dostat i z tréninku).
+    Kdyby to byly dvě kopie, dřív nebo později by se jejich hlášky rozešly.
+
+    Vrácení zpět (video zase funguje) se schválně NEPTÁ — je to jen krok zpátky. Označení jako
+    nefunkční ale mění, co se ukazuje na kartě i v obou prezentacích, takže se ptáme (viz #91). */
+async function prepniNefunkcniVideo(id) {
+  const item = state.library[id];
+  if (!item) return;
+  if (!isEditor()) { toast("Tuhle změnu může udělat jen trenér s právem upravovat knihovnu.", 6000, "warn"); return; }
+  if (item.brokenAt) {
+    item.brokenAt = null;
+    scheduleSave();
+    prekresliPoZmeneNefunkcnosti(id);
+    toast("Vráceno zpět — video je znovu aktivní.");
+    return;
+  }
+  if (!(await confirmDialog(
+    "Po otevření videa (v Knihovně, v Tréninkovém režimu i ve sdílené prezentaci) se místo něj zobrazí náhledový obrázek s jemným vodoznakem a přímý odkaz na zdroj. Video samotné se nijak nezmění a jde to kdykoli vrátit zpět.",
+    { title: "Označit jako nefunkční?", confirmLabel: "Označit jako nefunkční" }
+  ))) return;
+  item.brokenAt = Date.now();
+  scheduleSave();
+  prekresliPoZmeneNefunkcnosti(id);
+  toast("Označeno jako nefunkční.");
+}
+/** Nefunkčnost se propisuje na víc míst najednou, tak ať se na žádné nezapomene: karta
+    v Knihovně, otevřený detail (pokud je zrovna ten samý) a sekvence v editoru tréninku,
+    kde má položka vlastní náhled. */
+function prekresliPoZmeneNefunkcnosti(id) {
+  renderLibrary();
+  if (currentDetailId === id && !detailModalBackdrop.classList.contains("hidden")) {
+    /* Detail se překresluje tím, že se otevře znovu — jinak by se musela duplikovat celá
+       logika kolem embedu (přehrávač vs. náhled s vodoznakem). Jenže openDetailModal()
+       mimo jiné vyprázdní pole pro nový komentář, tak se rozepsaný text schová a vrátí:
+       ťuknutí na „Video nejde přehrát?" nesmí nikomu smazat rozepsanou poznámku. */
+    const rozepsany = document.getElementById("commentNewInput").value;
+    openDetailModal(id);
+    document.getElementById("commentNewInput").value = rozepsany;
+  }
+  if (currentView === "editor" && currentTrainingId) renderSequence();
+}
+
 function openDetailModal(id) {
   const item = state.library[id];
   if (!item) return;
@@ -6626,6 +6661,11 @@ function openDetailModal(id) {
     // to jen prázdný/rozbitý embed). Místo něj jen náhledový obrázek s jemným vodoznakem —
     // schválně nenápadný, appka o téhle informaci jinak nikde nekřičí. Přímý odkaz na zdroj je
     // pod tím (viz fbEl níž), appka ho ukazuje pro všechny platformy vždycky, ne jen tady.
+    /* POMĚR STRAN: náhled se drží 16/9 bez ohledu na to, jaký poměr má samotné video.
+       U videa na výšku (9/16) by se jinak roztáhl přes půl obrazovky, a hlavně by to bylo
+       k ničemu — náhledové obrázky z YouTube i Vimea jsou 16/9, takže ve vysokém rámu by se
+       stejně jen ořízly. Je to ten samý poměr, jaký má zavřená karta v Knihovně. */
+    embedWrap.style.aspectRatio = "16/9";
     const thumbUrl = resolveThumbnailUrl(item);
     embedWrap.innerHTML = `
       <div class="detail-broken-thumb" style="${thumbUrl ? `background-image:url('${esc(thumbUrl)}')` : ""}">
@@ -6668,6 +6708,17 @@ function openDetailModal(id) {
   document.getElementById("editFromDetailBtn").innerHTML = isEditor()
     ? '<i class="fa-solid fa-pen"></i> Upravit'
     : '<i class="fa-solid fa-star"></i> Hodnotit';
+  /* Malé tiché tlačítko pod náhledem. Do detailu videa se dá dostat i z tréninku (ťuknutím
+     na náhled u položky v sekvenci), takže odsud jde nefunkční video označit rovnou při
+     přípravě tréninku — ne až oklikou přes Knihovnu. Prohlížeč ho nevidí, mění to sdílená
+     data pro všechny. */
+  const brokenBtn = document.getElementById("detailBrokenToggleBtn");
+  brokenBtn.classList.toggle("hidden", !isEditor());
+  brokenBtn.classList.toggle("is-broken", !!item.brokenAt);
+  brokenBtn.textContent = item.brokenAt ? "Video zase funguje" : "Video nejde přehrát?";
+  brokenBtn.title = item.brokenAt
+    ? "Vrátit zpět — video se zase bude normálně přehrávat"
+    : "Označit jako nefunkční — místo videa se bude ukazovat náhled a přímý odkaz";
   setDetailDiffPicker(item.difficulties && item.difficulties[uidCurrent] ? item.difficulties[uidCurrent] : 3);
   setDetailRatingPicker(item.ratings && item.ratings[uidCurrent] ? item.ratings[uidCurrent] : 0);
   document.getElementById("commentNewInput").value = "";
@@ -6676,6 +6727,9 @@ function openDetailModal(id) {
   detailModalBackdrop.classList.remove("hidden");
   resetModalScroll(detailModalBackdrop);
 }
+document.getElementById("detailBrokenToggleBtn").addEventListener("click", () => {
+  if (currentDetailId) prepniNefunkcniVideo(currentDetailId);
+});
 document.getElementById("editFromDetailBtn").addEventListener("click", () => {
   closeDetailModal();
   openLinkModal(currentDetailId);
@@ -13274,6 +13328,9 @@ const HELP_DATA = [
       { q: "Jak upravím název, popis, štítky nebo vybavení u už přidaného videa?", a: "Otevři video (klikni na kartu v knihovně) a v detailu najdeš tlačítko úpravy — otevře se stejný formulář jako při přidávání." },
       { q: "Jak funguje obtížnost (barevný pruh) u videa?", a: "Obtížnost si u každého videa hodnotí každý trenér sám (1–5 hvězdiček), aplikace pak v knihovně ukazuje barevný pruh podle průměru ze všech hodnocení — není to tedy jedno pevné číslo, ale společný odhad." },
       { q: "Jak video smažu a dá se to vrátit zpátky?", a: "Smazané video putuje do Koše (najdeš ho v Knihovně), kde zůstane 14 dní a dá se kdykoli obnovit. Po 14 dnech ho aplikace sama nadobro smaže. Jde ho z Koše i rovnou smazat natrvalo dřív. Koš má každý editor — na rozdíl od správy složek a slučování štítků, které zůstávají adminovi.", kw: "kos smazat obnovit" },
+      { q: "Video se nedá přehrát (zdroj ho smazal nebo zprivátnil). Co s tím?", a: "Označ ho jako nefunkční — buď v Knihovně v nabídce (⋮) u karty, nebo rovnou v otevřené kartě videa malým tlačítkem „Video nejde přehrát?“ pod náhledem. Do otevřené karty se dostaneš i z tréninku, stačí ťuknout na náhled u cvičení, takže to jde vyřešit při přípravě tréninku a nemusíš kvůli tomu nikam chodit.", kw: "nefunkcni video oznacit nejde prehrat" },
+      { q: "Co se s videem stane, když ho označím jako nefunkční?", a: "Místo přehrávače se všude (v Knihovně, v Tréninkovém režimu i ve sdílené prezentaci) ukáže náhledový obrázek s jemným vodoznakem a přímý odkaz na zdroj. Video se nijak nemaže a nemění — je to jen značka, aby ostatní nepřekvapilo, že se nic nepřehrálo. Označení platí pro všechny trenéry a kdykoli ho jde vrátit zpět tlačítkem „Video zase funguje“.", kw: "vodoznak nefunkcni vratit zpet" },
+      { q: "Proč je náhled nefunkčního videa vždycky na šířku, i když je video na výšku?", a: "Aby nezabíral půl obrazovky. Náhledové obrázky z YouTube i Vimea jsou stejně na šířku, takže ve vysokém rámu by se jen ořízly — takhle je vidět celý a karta zůstane přehledná. Je to ten samý poměr, jaký má zavřená karta v Knihovně." },
       { q: "Když video smažu, zmizí i ze všech tréninků, kde je použité?", a: "Trénink si video „pamatuje“, dokud ho z Koše definitivně nesmažeš — pokud ho ale mezitím obnovíš, v tréninku zůstane beze změny." }
     ]},
     { title: "Když video nefunguje", icon: "fa-solid fa-video-slash", qa: [
