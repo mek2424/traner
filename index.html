@@ -85,6 +85,7 @@
   --break-ink:#5B6472;
   --break-ink-faint:rgba(27,36,48,.4);
 
+  --fav-gold:#E8B23A;
   --radius:12px;
   --radius-sm:7px;
   --shadow:0 1px 2px rgba(27,36,48,.07), 0 4px 14px rgba(27,36,48,.05);
@@ -125,6 +126,7 @@ body.dark-mode{
   --part-kompenzace:#585741;
   --part-prestavka:#434440;
 
+  --fav-gold:#C9972E;
   --break-stripe:#373A36;
   --break-chip:rgba(255,255,255,.10);
   --break-chip-border:rgba(255,255,255,.16);
@@ -938,9 +940,82 @@ body.popout-mode .popout-btn{display:none !important;}
 
 /* ---------- Trainings list ---------- */
 .training-row{
-  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;
+  position:relative;overflow:hidden;
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px 14px 20px;
   display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 10px;margin-bottom:10px;box-shadow:var(--shadow);
 }
+/* Dělený proužek u levého okraje — viz focusStripeStyle(). Svisle, ať jde poznat i smíšený
+   trénink, aniž by karta narostla o řádek se štítky. */
+.focus-stripe{position:absolute;left:0;top:0;bottom:0;width:5px;}
+
+/* ---------- Zaměření tréninků: dlaždice ---------- */
+.section-label{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;margin:16px 0 8px;}
+.focus-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:9px;margin-bottom:6px;}
+.focus-tile{
+  display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);
+  border-radius:var(--radius);padding:13px 12px;text-align:left;box-shadow:var(--shadow);min-width:0;
+}
+.focus-tile .ft-ic{font-size:20px;line-height:1;flex-shrink:0;}
+.focus-tile .ft-tx{min-width:0;flex:1;}
+/* Název a počet MUSÍ mít každý svůj řádek — jako spany by se slepily vedle sebe. */
+.focus-tile .ft-name{display:block;font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.focus-tile .ft-count{display:block;font-size:11.5px;color:var(--ink-faint);font-variant-numeric:tabular-nums;}
+.focus-tile.is-empty{background:var(--paper);box-shadow:none;}
+.focus-tile.is-empty .ft-name,.focus-tile.is-empty .ft-ic{opacity:.45;}
+.focus-tile.is-fav{border-color:var(--fav-gold);box-shadow:0 0 0 1px var(--fav-gold) inset,var(--shadow);}
+
+/* ---------- Zaměření tréninků: hlavička otevřené složky ---------- */
+.focus-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+.focus-head .fh-title{
+  font-family:var(--font-display);font-size:26px;letter-spacing:.03em;
+  display:flex;align-items:center;gap:9px;min-width:0;flex:1;
+}
+.focus-head .fh-ic{font-size:19px;}
+.focus-head .fh-count{font-family:var(--font-body);font-size:12px;font-weight:700;color:var(--ink-faint);letter-spacing:0;}
+
+/* ---------- Pás tří naposledy upravených ---------- */
+.recent-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px;}
+.recent-card{
+  position:relative;overflow:hidden;text-align:left;background:var(--card);border:1px solid var(--line);
+  border-radius:var(--radius);padding:11px 11px 11px 15px;min-width:0;
+}
+.recent-card .rc-name{
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  font-weight:700;font-size:13.5px;line-height:1.25;margin-bottom:3px;
+}
+.recent-card .rc-meta{display:block;font-size:11px;color:var(--ink-faint);}
+@media(max-width:640px){
+  .recent-strip{grid-template-columns:1fr;}
+  .recent-card .rc-name{-webkit-line-clamp:1;}
+}
+
+/* ---------- Hvězdička na kartě ---------- */
+.training-fav-btn{
+  border:none;background:none;padding:5px;font-size:17px;line-height:1;color:var(--ink-faint);flex-shrink:0;
+}
+.training-fav-btn.on{color:var(--fav-gold);}
+
+/* ---------- Pruh "hledá se jinde" ---------- */
+.scope-bar{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  background:var(--info-bg);border:1px solid var(--info-border);color:var(--info-ink);
+  border-radius:var(--radius-sm);padding:9px 12px;margin-bottom:10px;font-size:12.5px;
+}
+.scope-bar button{
+  border:1px solid var(--info-border);background:var(--card);color:var(--info-ink);
+  border-radius:var(--radius-sm);padding:5px 10px;font-size:12px;font-weight:700;
+}
+
+/* ---------- Výběr zaměření (modal + editor) ---------- */
+.focus-pick{display:flex;flex-wrap:wrap;gap:7px;}
+.focus-pick button{
+  display:inline-flex;align-items:center;gap:7px;border:1.5px solid var(--line);background:var(--card);
+  border-radius:999px;padding:7px 13px;font-size:13px;font-weight:700;color:var(--ink-soft);
+}
+.focus-pick button .fp-sw{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.focus-pick button.on{color:var(--ink);}
+.editor-focus-btn{display:inline-flex;align-items:center;gap:7px;flex-wrap:wrap;}
+.editor-focus-btn .efb-dot{width:9px;height:9px;border-radius:50%;display:inline-block;}
 .training-row-main{flex:1;min-width:160px;}
 .training-row-title{font-size:17px;font-weight:700;margin-bottom:3px;}
 .training-visibility-icon{font-size:12px;color:var(--ink-faint);margin-left:8px;vertical-align:middle;}
@@ -1587,6 +1662,27 @@ body.popout-mode .popout-btn{display:none !important;}
         <button type="button" class="filter-toggle-btn" id="toggleTrainingsTagFilterBtn"><i class="fa-solid fa-tag"></i> Štítky <i class="fa-solid fa-chevron-down"></i></button>
       </div>
       <div class="chip-collapse chip-panel-card" id="trainingsTagFilterCollapse"><div class="chip-panel-inner"><input type="text" class="chip-search-input" id="trainingsTagFilterSearch" placeholder="Hledat štítek…"><div class="chip-row chip-panel-scroll" id="trainingsTagFilterRow"></div></div></div>
+
+      <!-- hlavička otevřeného zaměření (skrytá v přehledu dlaždic) -->
+      <div class="focus-head hidden" id="focusHead">
+        <button type="button" class="btn btn-sm" id="focusBackBtn" style="margin-bottom:0;"><i class="fa-solid fa-chevron-left"></i> Zaměření</button>
+        <div class="fh-title" id="focusHeadTitle"></div>
+      </div>
+      <!-- pruh "hledá se jen tady / všude" -->
+      <div class="scope-bar hidden" id="trainingsScopeBar">
+        <span id="trainingsScopeText"></span>
+        <button type="button" id="trainingsScopeBtn"></button>
+      </div>
+      <!-- filtr zaměření uvnitř ⭐ Oblíbených -->
+      <div class="chip-row hidden" id="favFocusFilterRow" style="margin-bottom:12px;"></div>
+
+      <div id="recentTrainingsWrap" class="hidden">
+        <p class="section-label">Naposledy upravené</p>
+        <div class="recent-strip" id="recentTrainingsStrip"></div>
+      </div>
+      <p class="section-label hidden" id="focusTilesLabel">Zaměření</p>
+      <div class="focus-tiles hidden" id="focusTiles"></div>
+
       <div id="trainingsList"></div>
       <button type="button" class="manage-link hidden" id="toggleArchiveViewBtn" style="margin-top:14px;"></button>
     </section>
@@ -1603,8 +1699,9 @@ body.popout-mode .popout-btn{display:none !important;}
         <div class="start-time-chip" id="startTimeChip"><span>od</span><input type="time" id="trainingStartTimeInput" value=""><button type="button" class="start-time-clear hidden" id="clearStartTimeBtn" aria-label="Zrušit začátek tréninku" title="Zrušit začátek tréninku"><i class="fa-solid fa-xmark"></i></button></div>
       </div>
       <div id="trainingEquipmentSummary" class="hidden" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:-4px 0 12px;"></div>
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
         <button type="button" class="btn btn-sm" id="trainingVisibilityBtn" style="margin-bottom:0;"></button>
+        <button type="button" class="btn btn-sm editor-focus-btn" id="editorFocusBtn" style="margin-bottom:0;"></button>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:12px;">
         <button type="button" class="btn btn-primary" id="openOverviewBtn" style="flex:1;" title="Otevře Přehled tréninku — celý plán na jedné obrazovce; z něj se dá spustit prezentace"><i class="fa-solid fa-play"></i> Začít trénovat</button>
@@ -1935,6 +2032,19 @@ body.popout-mode .popout-btn{display:none !important;}
     <div class="modal-actions">
       <button type="button" class="btn btn-primary btn-block" id="addFolderBtn"><i class="fa-solid fa-plus"></i> Přidat novou složku</button>
     </div>
+  </div>
+</div>
+
+<!-- ===================== ZAMĚŘENÍ TRÉNINKU ===================== -->
+<div id="focusModalBackdrop" class="modal-backdrop hidden">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-head">
+      <h2 style="font-size:22px;">Zaměření tréninku</h2>
+      <button class="btn btn-icon btn-ghost" id="closeFocusModalBtn"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <p style="font-size:13px;color:var(--ink-soft);line-height:1.5;margin:0 0 14px;">Klepni na zaměření, která trénink pokrývá — klidně víc najednou. Na kartě se pak proužek u levého okraje rozdělí na díly. Trénink bez zaměření spadne do „Bez zaměření“.</p>
+    <div class="focus-pick" id="focusModalPick"></div>
+    <p style="font-size:12.5px;color:var(--ink-faint);margin:14px 0 0;" id="focusModalHint"></p>
   </div>
 </div>
 
@@ -2587,7 +2697,69 @@ try {
    STATE
    ========================================================= */
 let uidCurrent = null;
-let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {} };
+let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {},
+  trainingFocus: [], focusLibraryMap: {}, favoriteTrainings: new Set() };
+
+/* ZAMĚŘENÍ TRÉNINKŮ (16. 9.)
+   Pevná, společná sada složek pro Moje tréninky i Tržiště. Trénink smí patřit do VÍC
+   zaměření najednou — proto se na kartě kreslí dělený barevný proužek, ne jedna barva.
+
+   Dvě položky, které v seznamu SCHVÁLNĚ nejsou a přitom se tváří jako složky:
+   - ⭐ Oblíbené: to není zaměření, ale hvězdička. A hlavně je to věc KAŽDÉHO TRENÉRA ZVLÁŠŤ —
+     na Tržišti si člověk hvězdičkuje cizí tréninky, do kterých nemá právo zapisovat. Proto
+     nebydlí v tréninku, ale v uživatelském dokumentu (state.favoriteTrainings).
+   - Bez zaměření: jen místo, kam padne trénink s prázdným focus. Nejde zaškrtnout, takže
+     nemůže vzniknout nesmysl "Útok + Bez zaměření".
+
+   Barvy jsou vytažené z palety částí tréninku, ať to v appce drží pohromadě. */
+const DEFAULT_TRAINING_FOCUS = [
+  { key: "utok",     label: "Útok",     color: "#E8622C" },
+  { key: "obrana",   label: "Obrana",   color: "#4A7FB5" },
+  { key: "podani",   label: "Podání",   color: "#7FB0AC" },
+  { key: "prijem",   label: "Příjem",   color: "#A8C0DE" },
+  { key: "dohravka", label: "Dohrávka", color: "#C97B5C" },
+  { key: "nahravka", label: "Nahrávka", color: "#B8A8D4" },
+  { key: "blok",     label: "Blok",     color: "#5B8C5A" },
+  { key: "kondice",  label: "Kondice",  color: "#ABA875" }
+];
+const FOCUS_FAV = "__fav";
+const FOCUS_NONE = "__none";
+const FOCUS_FAV_COLOR = "#E8B23A";
+const FOCUS_NONE_COLOR = "#9AA3AE";
+
+/** Zaměření tréninku jako pole klíčů. Prázdné = spadne do "Bez zaměření".
+    Filtruje se proti aktuálnímu seznamu, ať smazané zaměření nestraší na kartách. */
+function trainingFocusKeys(t) {
+  const known = new Set(state.trainingFocus.map(f => f.key));
+  return ((t && t.focus) || []).filter(k => known.has(k));
+}
+function focusByKey(key) {
+  if (key === FOCUS_FAV) return { key: FOCUS_FAV, label: "Oblíbené", color: FOCUS_FAV_COLOR };
+  if (key === FOCUS_NONE) return { key: FOCUS_NONE, label: "Bez zaměření", color: FOCUS_NONE_COLOR };
+  return state.trainingFocus.find(f => f.key === key) || null;
+}
+/** Barva proužku u levého okraje karty. Víc zaměření = svislý pruh rozdělený na stejné díly
+    s ostrými přechody, ať je smíšenost vidět i při rychlém projetí seznamu. */
+function focusStripeStyle(t) {
+  const keys = trainingFocusKeys(t);
+  const cols = keys.length ? keys.map(k => (focusByKey(k) || {}).color || FOCUS_NONE_COLOR) : [FOCUS_NONE_COLOR];
+  if (cols.length === 1) return cols[0];
+  const step = 100 / cols.length;
+  return `linear-gradient(180deg,${cols.map((c, i) => `${c} ${i * step}% ${(i + 1) * step}%`).join(",")})`;
+}
+function isFavoriteTraining(id) { return state.favoriteTrainings.has(id); }
+/** Seed mapování zaměření → složky v Knihovně podle SHODY NÁZVŮ. Použije se jen tehdy,
+    když ve sdílených datech ještě žádné mapování není. Jakmile existuje, rozhoduje ono —
+    přejmenování složky v Knihovně pak už návrhy tiše nerozbije. */
+function seedFocusLibraryMap() {
+  const map = {};
+  state.trainingFocus.forEach(f => {
+    map[f.key] = state.folders
+      .filter(fo => (fo.label || "").trim().toLowerCase() === f.label.trim().toLowerCase())
+      .map(fo => fo.key);
+  });
+  return map;
+}
 /* OTISKY TRÉNINKŮ — aby se při ukládání neposílaly dokola i tréninky, se kterými se nic nestalo.
    Klíč je id tréninku, hodnota je jeho obsah přepsaný do textu v té podobě, v jaké naposledy
    doopravdy doputoval na server. Při dalším uložení se porovná a pošlou se jen ty, co se liší.
@@ -2633,10 +2805,11 @@ let libraryFromCollection = false;
 const savedVideoFingerprints = new Map();
 function sharedFingerprint() {
   try {
-    return JSON.stringify([state.library, state.folders, state.tagPool, state.equipmentPool, state.parts]);
+    return JSON.stringify([state.library, state.folders, state.tagPool, state.equipmentPool, state.parts,
+      state.trainingFocus, state.focusLibraryMap]);
   } catch (e) { return null; }
 }
-const APP_VERSION = "2026-09-16 18:40";
+const APP_VERSION = "2026-09-16 21:05";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -4364,6 +4537,10 @@ async function loadUserData() {
   startHeartbeat();
   // Kdy naposled uživatel otevřel panel "Co je nového" u komentářů — viz commentActivity/renderCommentBell.
   commentsSeenAt = legacy.commentsSeenAt || 0;
+  /* Oblíbené tréninky. Bydlí tady, a ne v tréninku samotném, protože na Tržišti si člověk
+     hvězdičkuje CIZÍ tréninky — do těch zapisovat nesmí a ani by neměl: hvězdička je jeho
+     věc, ne majitelova. */
+  state.favoriteTrainings = new Set(Array.isArray(legacy.favoriteTrainings) ? legacy.favoriteTrainings : []);
 
   // --- sdílená knihovna ---
   let sharedOk = false;
@@ -4390,6 +4567,11 @@ async function loadUserData() {
     state.tagPool = shared.tagPool || [];
     state.equipmentPool = shared.equipmentPool || [];
     state.parts = (shared.parts && shared.parts.length) ? shared.parts : structuredClone(DEFAULT_PARTS);
+    state.trainingFocus = (shared.trainingFocus && shared.trainingFocus.length)
+      ? shared.trainingFocus : structuredClone(DEFAULT_TRAINING_FOCUS);
+    // Mapování na Knihovnu: když na serveru ještě není, dopočítá se ze shody názvů. Je to
+    // čistě odvozená hodnota, takže ji spočítá stejně každý — první uložení ji pak usadí.
+    state.focusLibraryMap = shared.focusLibraryMap || null;
     state.knownRevision = shared.revision || 0;
     /* PŘECHOD NA KOLEKCI videos (krok 2 z plánu).
        Knihovna se stěhuje z jednoho velkého pole do samostatných dokumentů. Tahle verze
@@ -4416,6 +4598,8 @@ async function loadUserData() {
     // 1/3 otisku: AŽ TEĎ, když je state.library v definitivní podobě. Kdyby se seřizoval
     // před načtením kolekce, lišil by se od ní (jiné pořadí klíčů) a hned první uložení
     // po přihlášení by zbytečně přepsalo celé staré pole.
+    // AŽ TEĎ — seed potřebuje state.folders, které jsou v definitivní podobě o pár řádků výš.
+    if (!state.focusLibraryMap) state.focusLibraryMap = seedFocusLibraryMap();
     savedSharedFingerprint = sharedFingerprint();
     logDebug("[login] po přihlášení: počet videí", Object.keys(state.library).length,
       "revize", state.knownRevision, libraryFromCollection ? "— zdroj: kolekce videos" : "— zdroj: staré pole library");
@@ -4711,6 +4895,9 @@ function applyRemoteSharedUpdate(shared) {
   state.tagPool = shared.tagPool || [];
   state.equipmentPool = shared.equipmentPool || [];
   state.parts = (shared.parts && shared.parts.length) ? shared.parts : structuredClone(DEFAULT_PARTS);
+  state.trainingFocus = (shared.trainingFocus && shared.trainingFocus.length)
+    ? shared.trainingFocus : structuredClone(DEFAULT_TRAINING_FOCUS);
+  state.focusLibraryMap = shared.focusLibraryMap || seedFocusLibraryMap();
   state.driveApiKey = shared.driveApiKey || "";
   state.knownRevision = shared.revision || 0;
   // 2/3: právě jsme převzali serverovou verzi, takže otisk teď odpovídá serveru.
@@ -4856,6 +5043,7 @@ async function saveUserDataNow() {
     await zapisSdilena({
       library: state.library, folders: state.folders,
       tagPool: state.tagPool, equipmentPool: state.equipmentPool, parts: state.parts,
+      trainingFocus: state.trainingFocus, focusLibraryMap: state.focusLibraryMap,
       // Kdo a kdy naposled uložil — čte Cloud Function pro push notifikace admina, ať mu
       // nechodí upozornění na jeho vlastní změny a ať ví, kdo změnu udělal.
       lastEditedBy: uidCurrent, lastEditedAt: Date.now()
@@ -6867,7 +7055,12 @@ document.getElementById("commentActivityListEl").addEventListener("click", e => 
 document.getElementById("newTrainingBtn").addEventListener("click", () => {
   const id = uid();
   const label = (state.profile && state.profile.username) || (auth.currentUser && auth.currentUser.email) || uidCurrent;
-  state.trainings[id] = { id, name: "Nový trénink", dateCreated: Date.now(), dateModified: Date.now(), items: [], ownerUid: uidCurrent, ownerLabel: label };
+  /* Když trénink zakládáš uvnitř zaměření, je rovnou zaškrtnuté — začal jsi ho tam, takže
+     tam nejspíš patří, a hlavně ti hned nezmizí ze seznamu, ve kterém stojíš.
+     ⭐ Oblíbené ani Bez zaměření se takhle nepředvyplňují: to nejsou zaměření. */
+  const zVybraneho = (openFocusKey && openFocusKey !== FOCUS_FAV && openFocusKey !== FOCUS_NONE
+    && state.trainingFocus.some(f => f.key === openFocusKey)) ? [openFocusKey] : [];
+  state.trainings[id] = { id, name: "Nový trénink", dateCreated: Date.now(), dateModified: Date.now(), items: [], focus: zVybraneho, ownerUid: uidCurrent, ownerLabel: label };
   scheduleSave();
   openEditor(id);
 });
@@ -7134,6 +7327,10 @@ document.querySelectorAll(".subtab-btn").forEach(btn => {
   btn.addEventListener("click", async () => {
     trainingsSubTab = btn.dataset.subtab;
     showingArchivedTrainings = false;
+    // Zpátky na dlaždice: v každé záložce jsou jiné počty, takže i jiné pořadí složek.
+    openFocusKey = null;
+    searchWidened = false;
+    favFocusFilter.clear();
     trainingSelectMode = false;
     selectedTrainingIds.clear();
     document.getElementById("toggleTrainingSelectModeBtn").classList.remove("btn-accent");
@@ -7171,6 +7368,7 @@ document.getElementById("trainingBulkArchiveBtn").addEventListener("click", asyn
   else toast("Uložení se nepovedlo, zkus to prosím znovu.", 2200, "err");
 });
 document.getElementById("toggleArchiveViewBtn").addEventListener("click", () => {
+  openFocusKey = null; searchWidened = false; favFocusFilter.clear();
   showingArchivedTrainings = !showingArchivedTrainings;
   trainingSelectMode = false;
   selectedTrainingIds.clear();
@@ -7183,14 +7381,17 @@ function renderTrainingRow(t, mine) {
   const totalDisplay = hasReps ? '<i class="fa-solid fa-stopwatch"></i> ?' : Math.round(totalSeconds / 60) + " min";
   const isNew = !mine && (t.dateCreated || 0) > sessionBadgeThreshold;
   const isSelected = selectedTrainingIds.has(t.id);
+  const oblibeny = isFavoriteTraining(t.id);
   return `
     <div class="training-row">
+      <span class="focus-stripe" style="background:${focusStripeStyle(t)}"></span>
       ${mine && trainingSelectMode ? `<button type="button" class="training-select-box ${isSelected ? "checked" : ""}" data-toggle-select="${esc(t.id)}" aria-label="Vybrat">${isSelected ? '<i class="fa-solid fa-check"></i>' : ""}</button>` : ""}
       <button class="training-row-main" data-open="${esc(t.id)}" style="background:none;border:none;text-align:left;cursor:pointer;padding:0;">
         <div class="training-row-title">${isNew ? '<span class="new-badge-inline" title="Nové od posledního přihlášení"></span>' : ""}${esc(t.name)}${mine ? `<i class="fa-solid ${t.public ? "fa-globe" : "fa-lock"} training-visibility-icon" title="${t.public ? "Na Tržišti" : "Soukromé"}"></i>` : ""}</div>
         <div class="training-row-meta">${t.items.length} položek · ${totalDisplay}</div>
       </button>
       <div class="training-row-actions">
+        <button type="button" class="training-fav-btn ${oblibeny ? "on" : ""}" data-fav="${esc(t.id)}" aria-label="${oblibeny ? "Odebrat z oblíbených" : "Přidat do oblíbených"}" title="${oblibeny ? "Odebrat z oblíbených" : "Přidat do oblíbených"}">${oblibeny ? "★" : "☆"}</button>
         <button type="button" class="btn btn-icon" data-action="open-menu" data-kebab="${esc(t.id)}" aria-label="Menu"><i class="fa-solid fa-ellipsis-vertical"></i></button>
       </div>
     </div>`;
@@ -7206,6 +7407,9 @@ function openTrainingRowMenu(trainingId, anchorBtn) {
   items.push(`<button type="button" data-act="txt"><i class="fa-solid fa-file-lines"></i> Stáhnout TXT</button>`);
   if (!archived) items.push(`<button type="button" data-act="clone"><i class="fa-regular fa-copy"></i> Klonovat</button>`);
   if (!archived && (mine || t.public)) items.push(`<button type="button" data-act="share"><i class="fa-solid fa-share-nodes"></i> ${isShareActive(t) ? "Spravovat sdílení" : "Sdílet odkazem"}</button>`);
+  /* Zaměření cizího tréninku NEMĚNÍ NIKDO, ani admin — Mek to tak rozhodl. Kdo chce jiné
+     zařazení, naklonuje si trénink k sobě. */
+  if (mine) items.push(`<button type="button" data-act="focus"><i class="fa-solid fa-folder"></i> Změnit zaměření</button>`);
   if (mine && !archived) items.push(`<button type="button" data-act="archive"><i class="fa-solid fa-box-archive"></i> Archivovat</button>`);
   if (mine && archived) items.push(`<button type="button" data-act="restore"><i class="fa-solid fa-rotate-left"></i> Obnovit</button>`);
   if (mine) items.push(`<button type="button" class="danger" data-act="delete"><i class="fa-solid fa-trash"></i> Smazat</button>`);
@@ -7217,6 +7421,10 @@ function openTrainingRowMenu(trainingId, anchorBtn) {
   menu.style.top = (window.scrollY + r.bottom + 4) + "px";
   menu.style.left = Math.max(8, window.scrollX + r.right - menu.offsetWidth) + "px";
   openContextMenuEl = menu;
+  menu.querySelector("[data-act='focus']")?.addEventListener("click", () => {
+    closeCardContextMenu();
+    otevriVyberZamereni(trainingId);
+  });
   menu.querySelector("[data-act='pdf']")?.addEventListener("click", () => {
     closeCardContextMenu();
     const t2 = state.trainings[trainingId];
@@ -7299,40 +7507,203 @@ function renderTrainingsTagFilterRow() {
   const othersBase = all.filter(t => t.ownerUid !== uidCurrent && !t.archived && t.public);
   renderFilterChips("trainingsTagFilterRow", tagsUsedInVisibleTrainings(trainingsSubTab === "mine" ? mineBase : othersBase), trainingsTagFilter, renderTrainingsList);
 }
+/* ====================================================================
+   ZÁLOŽKA TRÉNINKY — dlaždice zaměření a obsah jednoho zaměření
+   ====================================================================
+   Dvě obrazovky v jedné sekci:
+   - openFocusKey === null  → dlaždice zaměření (+ pás tří naposledy upravených)
+   - openFocusKey !== null  → seznam tréninků v tom zaměření
+   Hledání a štítky přehled dlaždic OPOUŠTĚJÍ: jakmile se hledá, ukáže se plochý
+   seznam napříč vším, protože v tu chvíli člověk zrovna neví, kde trénink je. */
+let openFocusKey = null;
+let favFocusFilter = new Set();   // uvnitř ⭐ Oblíbených; zaškrtnutá platí VŠECHNA zároveň
+let searchWidened = false;        // uvnitř zaměření: dočasně hledat i mimo něj
+
+function trainingInFocus(t, key) {
+  if (key === FOCUS_FAV) return isFavoriteTraining(t.id);
+  if (key === FOCUS_NONE) return trainingFocusKeys(t).length === 0;
+  return trainingFocusKeys(t).includes(key);
+}
+/** Dlaždice v pořadí "nejvíc tréninků nahoře". Remízu (a těch bude u nul spousta) rozhodne
+    pořadí ze Spravovat zaměření — proto tam ta táhla na přetahování nejsou zbytečná.
+    ⭐ Oblíbené jsou vždycky první a Bez zaměření vždycky poslední, ať neposkakují. */
+function focusTilesFor(base) {
+  const pocet = key => base.filter(t => trainingInFocus(t, key)).length;
+  const stred = state.trainingFocus
+    .map((f, i) => ({ f, i, n: pocet(f.key) }))
+    .sort((a, b) => (b.n - a.n) || (a.i - b.i));
+  return [
+    { f: focusByKey(FOCUS_FAV), n: pocet(FOCUS_FAV) },
+    ...stred.map(r => ({ f: r.f, n: r.n })),
+    { f: focusByKey(FOCUS_NONE), n: pocet(FOCUS_NONE) }
+  ];
+}
+function pocetTreninku(n) { return n === 1 ? "trénink" : (n >= 2 && n <= 4 ? "tréninky" : "tréninků"); }
+
+function renderFocusTiles(base) {
+  document.getElementById("focusTiles").innerHTML = focusTilesFor(base).map(({ f, n }) => {
+    const fav = f.key === FOCUS_FAV;
+    const ikona = fav
+      ? `<span class="ft-ic" style="color:${esc(f.color)}">★</span>`
+      : `<span class="ft-ic" style="color:${esc(f.color)}"><i class="fa-solid fa-folder"></i></span>`;
+    return `
+      <button type="button" class="focus-tile ${n ? "" : "is-empty"} ${fav ? "is-fav" : ""}" data-focus="${esc(f.key)}">
+        ${ikona}
+        <span class="ft-tx">
+          <span class="ft-name">${esc(f.label)}</span>
+          <span class="ft-count">${n} ${pocetTreninku(n)}</span>
+        </span>
+      </button>`;
+  }).join("");
+}
+
+function renderRecentStrip(base) {
+  const posledni = base.slice(0, 3);
+  document.getElementById("recentTrainingsStrip").innerHTML = posledni.map(t => `
+    <button type="button" class="recent-card" data-open="${esc(t.id)}">
+      <span class="focus-stripe" style="background:${focusStripeStyle(t)}"></span>
+      <span class="rc-name">${esc(t.name)}</span>
+      <span class="rc-meta">${t.items.length} položek</span>
+    </button>`).join("");
+  return posledni.length;
+}
+
+/** Filtr zaměření uvnitř ⭐ Oblíbených. Zaškrtnutá platí VŠECHNA ZÁROVEŇ — stejně jako
+    pruh štítků, ať se dvě sousední řady chipů nechovají každá jinak. */
+function renderFavFocusFilterRow(base) {
+  const row = document.getElementById("favFocusFilterRow");
+  const pouzita = new Set();
+  base.filter(t => isFavoriteTraining(t.id)).forEach(t => trainingFocusKeys(t).forEach(k => pouzita.add(k)));
+  const dostupna = state.trainingFocus.filter(f => pouzita.has(f.key));
+  if (!dostupna.length) { row.classList.add("hidden"); row.innerHTML = ""; return; }
+  row.classList.remove("hidden");
+  row.innerHTML = `<button type="button" class="chip ${favFocusFilter.size ? "" : "active"}" data-fav-focus="">Vše</button>`
+    + dostupna.map(f => `
+      <button type="button" class="chip ${favFocusFilter.has(f.key) ? "active" : ""}" data-fav-focus="${esc(f.key)}">
+        <span class="fp-sw" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${esc(f.color)};margin-right:5px;"></span>${esc(f.label)}
+      </button>`).join("");
+}
+
 function renderTrainingsList() {
   const list = document.getElementById("trainingsList");
   const all = Object.values(state.trainings);
   const mineAll = all.filter(t => t.ownerUid === uidCurrent);
   const mineBase = mineAll.filter(t => !!t.archived === showingArchivedTrainings).sort((a, b) => (b.dateModified || 0) - (a.dateModified || 0));
   const othersBase = all.filter(t => t.ownerUid !== uidCurrent && !t.archived && t.public).sort((a, b) => (b.dateModified || 0) - (a.dateModified || 0));
+  const jeMoje = trainingsSubTab === "mine";
+  const base = jeMoje ? mineBase : othersBase;
 
   renderTrainingsTagFilterRow();
 
-  const mineList = filterTrainingsBySearch(mineBase);
-  const othersList = filterTrainingsBySearch(othersBase);
+  const q = (document.getElementById("trainingsSearch").value || "").trim();
+  const hleda = !!q || trainingsTagFilter.size > 0;
 
   const archiveBtn = document.getElementById("toggleArchiveViewBtn");
   const archivedCount = mineAll.filter(t => t.archived).length;
-  archiveBtn.classList.toggle("hidden", trainingsSubTab !== "mine");
+  archiveBtn.classList.toggle("hidden", !jeMoje || openFocusKey !== null);
   archiveBtn.innerHTML = showingArchivedTrainings
     ? '<i class="fa-solid fa-arrow-left"></i> Zpátky na běžné tréninky'
     : `<i class="fa-solid fa-box-archive"></i> Archiv (${archivedCount})`;
 
-  if (trainingsSubTab === "mine") {
-    list.innerHTML = mineList.length
-      ? mineList.map(t => renderTrainingRow(t, true)).join("")
-      : (mineBase.length
-        ? emptyStateHtml("fa-magnifying-glass", "Nic nesedí", "Zkus upravit hledání nebo uvolnit štítky.")
-        : (showingArchivedTrainings
-          ? emptyStateHtml("fa-box-archive", "Archiv je prázdný", "Archivované tréninky se objeví tady.")
-          : emptyStateHtml("fa-clipboard-list", "Zatím žádné tréninky", "Založ první tlačítkem nahoře.")));
-  } else if (!othersList.length) {
-    list.innerHTML = othersBase.length
+  const head = document.getElementById("focusHead");
+  const tiles = document.getElementById("focusTiles");
+  const tilesLabel = document.getElementById("focusTilesLabel");
+  const recentWrap = document.getElementById("recentTrainingsWrap");
+  const scopeBar = document.getElementById("trainingsScopeBar");
+  const favRow = document.getElementById("favFocusFilterRow");
+
+  /* ---------- A) přehled dlaždic, nikde se nehledá ---------- */
+  if (openFocusKey === null && !hleda) {
+    head.classList.add("hidden");
+    scopeBar.classList.add("hidden");
+    favRow.classList.add("hidden");
+    tiles.classList.remove("hidden");
+    tilesLabel.classList.remove("hidden");
+    // Pás posledních tří jen v Mých trénincích, jen v běžném (ne archivním) pohledu.
+    const ukazPas = jeMoje && !showingArchivedTrainings && renderRecentStrip(base) > 0;
+    recentWrap.classList.toggle("hidden", !ukazPas);
+    renderFocusTiles(base);
+    list.innerHTML = "";
+    document.getElementById("trainingsSearch").placeholder = "Hledat ve všech trénincích…";
+    // Na přehledu dlaždic znamená "prázdno" to, že nepřišla vůbec žádná data — dlaždic je
+    // vždycky deset, takže ty o ničem nevypovídají.
+    zapisProcJePrazdno(base.length === 0, { all, mineAll, mineBase, othersBase, q });
+    napojTreninkoveRadky(list);
+    return;
+  }
+
+  /* ---------- B) hledá se z přehledu → dlaždice ustoupí plochému seznamu ---------- */
+  tiles.classList.add("hidden");
+  tilesLabel.classList.add("hidden");
+  recentWrap.classList.add("hidden");
+
+  let zaklad;
+  if (openFocusKey === null) {
+    head.classList.add("hidden");
+    favRow.classList.add("hidden");
+    zaklad = base;
+    scopeBar.classList.remove("hidden");
+    document.getElementById("trainingsScopeText").textContent = "Hledá se napříč všemi zaměřeními.";
+    document.getElementById("trainingsScopeBtn").textContent = "Zpátky na zaměření";
+    document.getElementById("trainingsScopeBtn").dataset.act = "clear-search";
+  } else {
+    /* ---------- C) otevřené zaměření ---------- */
+    const f = focusByKey(openFocusKey) || focusByKey(FOCUS_NONE);
+    head.classList.remove("hidden");
+    const ikona = f.key === FOCUS_FAV
+      ? `<span class="fh-ic" style="color:${esc(f.color)}">★</span>`
+      : `<span class="fh-ic" style="color:${esc(f.color)}"><i class="fa-solid fa-folder-open"></i></span>`;
+    const vObalu = base.filter(t => trainingInFocus(t, f.key));
+    document.getElementById("focusHeadTitle").innerHTML =
+      `${ikona}${esc(f.label)} <span class="fh-count">${vObalu.length}</span>`;
+    document.getElementById("trainingsSearch").placeholder = `Hledat v „${f.label}“…`;
+
+    if (f.key === FOCUS_FAV) renderFavFocusFilterRow(base); else { favRow.classList.add("hidden"); favFocusFilter.clear(); }
+
+    zaklad = searchWidened ? base : vObalu;
+    if (f.key === FOCUS_FAV && favFocusFilter.size) {
+      // všechna zaškrtnutá zaměření zároveň
+      zaklad = zaklad.filter(t => [...favFocusFilter].every(k => trainingInFocus(t, k)));
+    }
+  }
+
+  const vysledek = filterTrainingsBySearch(zaklad);
+
+  /* Pruh "tady nic, jinde ano" — jen uvnitř zaměření a jen když se opravdu hledá. */
+  if (openFocusKey !== null) {
+    if (!hleda) {
+      scopeBar.classList.add("hidden");
+      searchWidened = false;
+    } else if (searchWidened) {
+      scopeBar.classList.remove("hidden");
+      document.getElementById("trainingsScopeText").textContent = "Hledá se ve všech zaměřeních.";
+      document.getElementById("trainingsScopeBtn").textContent = "Zpátky jen do tohohle";
+      document.getElementById("trainingsScopeBtn").dataset.act = "narrow";
+    } else {
+      const vsude = filterTrainingsBySearch(base).length;
+      const navic = vsude - vysledek.length;
+      scopeBar.classList.toggle("hidden", navic <= 0);
+      document.getElementById("trainingsScopeText").textContent = vysledek.length
+        ? `Jinde je toho ještě ${navic}.`
+        : `Tady nic. Jinde ${navic}.`;
+      document.getElementById("trainingsScopeBtn").textContent = "Hledat ve všech zaměřeních";
+      document.getElementById("trainingsScopeBtn").dataset.act = "widen";
+    }
+  }
+
+  if (!vysledek.length) {
+    list.innerHTML = zaklad.length
       ? emptyStateHtml("fa-magnifying-glass", "Nic nesedí", "Zkus upravit hledání nebo uvolnit štítky.")
-      : emptyStateHtml("fa-store", "Tržiště je zatím prázdné", "Jakmile někdo zveřejní svůj trénink, objeví se tady.");
+      : (jeMoje
+        ? (showingArchivedTrainings
+          ? emptyStateHtml("fa-box-archive", "Archiv je prázdný", "Archivované tréninky se objeví tady.")
+          : emptyStateHtml("fa-clipboard-list", "Tady zatím nic není", "Založ trénink tlačítkem nahoře — zaměření bude rovnou zaškrtnuté."))
+        : emptyStateHtml("fa-store", "Tady na Tržišti zatím nic není", "Jakmile sem někdo dá svůj trénink, objeví se tady."));
+  } else if (jeMoje) {
+    list.innerHTML = vysledek.map(t => renderTrainingRow(t, true)).join("");
   } else {
     const groups = {};
-    othersList.forEach(t => {
+    vysledek.forEach(t => {
       const key = t.ownerUid;
       if (!groups[key]) groups[key] = { label: t.ownerLabel || "Kolega", items: [] };
       groups[key].items.push(t);
@@ -7343,25 +7714,55 @@ function renderTrainingsList() {
     `).join("");
   }
 
-  /* Když se nevykreslil ani jeden trénink, zapiš do 🐞 PROČ. Jen v tomhle případě —
-     při běžném překreslení by to zbytečně zaplnilo záznam. Mek hlásil, že se záložka
-     občas ukáže prázdná a spraví to až tvrdé obnovení; tenhle řádek příště rovnou ukáže,
-     jestli je prázdná paměť, zaseknutý filtr, nebo přepnutý archiv. */
-  if (!list.querySelector("[data-open]")) {
-    logDebug("[tréninky] seznam je prázdný —",
-      "v paměti celkem:", all.length,
-      "| mých:", mineAll.length,
-      "| po archivu:", mineBase.length,
-      "| po hledání a štítcích:", mineList.length,
-      "| cizích veřejných:", othersBase.length, "→", othersList.length,
-      "| záložka:", trainingsSubTab,
-      "| archiv:", showingArchivedTrainings,
-      "| hledání:", (document.getElementById("trainingsSearch").value || "").trim() || "(prázdné)",
-      "| štítků:", trainingsTagFilter.size,
-      "| cizí načtené:", othersTrainingsLoaded,
-      "| vlastní načtené:", myTrainingsLoadedOk);
-  }
+  zapisProcJePrazdno(!list.querySelector("[data-open]"), { all, mineAll, mineBase, othersBase, q });
+  napojTreninkoveRadky(list);
+}
+
+/* Když se nevykreslil ani jeden trénink, zapiš do 🐞 PROČ. Jen v tomhle případě —
+   při běžném překreslení by to zbytečně zaplnilo záznam. Mek hlásil, že se záložka
+   občas ukáže prázdná a spraví to až tvrdé obnovení; tenhle řádek rovnou ukáže,
+   jestli je prázdná paměť, zaseknutý filtr, nebo přepnutý archiv. */
+function zapisProcJePrazdno(prazdno, ctx) {
+  if (!prazdno) return;
+  logDebug("[tréninky] prázdno —",
+    "v paměti celkem:", ctx.all.length,
+    "| mých:", ctx.mineAll.length,
+    "| po archivu:", ctx.mineBase.length,
+    "| cizích veřejných:", ctx.othersBase.length,
+    "| záložka:", trainingsSubTab,
+    "| zaměření:", openFocusKey === null ? "(přehled)" : openFocusKey,
+    "| archiv:", showingArchivedTrainings,
+    "| hledání:", ctx.q || "(prázdné)",
+    "| štítků:", trainingsTagFilter.size,
+    "| cizí načtené:", othersTrainingsLoaded,
+    "| vlastní načtené:", myTrainingsLoadedOk);
+}
+
+function napojTreninkoveRadky(list) {
+  document.querySelectorAll("#focusTiles [data-focus], #recentTrainingsStrip [data-open]").forEach(b => {
+    if (b.dataset.focus !== undefined) {
+      b.addEventListener("click", () => {
+        openFocusKey = b.dataset.focus;
+        searchWidened = false;
+        favFocusFilter.clear();
+        renderTrainingsList();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+    } else {
+      b.addEventListener("click", () => openEditor(b.dataset.open));
+    }
+  });
+  document.querySelectorAll("#favFocusFilterRow [data-fav-focus]").forEach(b => b.addEventListener("click", () => {
+    const k = b.dataset.favFocus;
+    if (!k) favFocusFilter.clear();
+    else if (favFocusFilter.has(k)) favFocusFilter.delete(k); else favFocusFilter.add(k);
+    renderTrainingsList();
+  }));
   list.querySelectorAll("[data-open]").forEach(b => b.addEventListener("click", () => openEditor(b.dataset.open)));
+  list.querySelectorAll("[data-fav]").forEach(b => b.addEventListener("click", (e) => {
+    e.stopPropagation();
+    prepniOblibeny(b.dataset.fav);
+  }));
   list.querySelectorAll("[data-kebab]").forEach(b => b.addEventListener("click", (e) => {
     e.stopPropagation();
     openTrainingRowMenu(b.dataset.kebab, b);
@@ -7373,6 +7774,110 @@ function renderTrainingsList() {
     updateTrainingBulkBar();
   }));
   updateTrainingBulkBar();
+}
+
+/* ---------- Výběr zaměření (z kebabu i z editoru) ---------- */
+const focusModalBackdrop = document.getElementById("focusModalBackdrop");
+let focusModalTrainingId = null;
+document.getElementById("closeFocusModalBtn").addEventListener("click", () => focusModalBackdrop.classList.add("hidden"));
+focusModalBackdrop.addEventListener("click", (e) => { if (e.target === focusModalBackdrop) focusModalBackdrop.classList.add("hidden"); });
+
+function otevriVyberZamereni(trainingId) {
+  const t = state.trainings[trainingId];
+  if (!t) return;
+  // Pojistka: cizí trénink se nepřeřazuje, i kdyby se sem někdo dostal jinudy.
+  if (t.ownerUid !== uidCurrent) { toast("Zaměření cizího tréninku mění jen jeho autor. Když ho chceš jinak, naklonuj si ho k sobě.", 7000, "warn"); return; }
+  focusModalTrainingId = trainingId;
+  renderFocusModalPick();
+  focusModalBackdrop.classList.remove("hidden");
+}
+
+function renderFocusModalPick() {
+  const t = state.trainings[focusModalTrainingId];
+  if (!t) return;
+  const vybrana = trainingFocusKeys(t);
+  document.getElementById("focusModalPick").innerHTML = state.trainingFocus.map(f => {
+    const on = vybrana.includes(f.key);
+    const styl = on ? `border-color:${esc(f.color)};background:${hexDoPruhledna(f.color, .14)};` : "";
+    return `<button type="button" class="${on ? "on" : ""}" data-focus-pick="${esc(f.key)}" style="${styl}">
+        <span class="fp-sw" style="background:${esc(f.color)}"></span>${esc(f.label)}
+      </button>`;
+  }).join("");
+  document.getElementById("focusModalHint").textContent = vybrana.length
+    ? "Zařazeno do: " + vybrana.map(k => (focusByKey(k) || {}).label).join(" + ")
+    : "Zatím nikam — trénink je v „Bez zaměření“.";
+  document.getElementById("focusModalPick").querySelectorAll("[data-focus-pick]").forEach(b => {
+    b.addEventListener("click", () => {
+      const t2 = state.trainings[focusModalTrainingId];
+      if (!t2) return;
+      const k = b.dataset.focusPick;
+      const soucasna = trainingFocusKeys(t2);
+      t2.focus = soucasna.includes(k) ? soucasna.filter(x => x !== k) : [...soucasna, k];
+      t2.dateModified = Date.now();
+      scheduleSave();
+      renderFocusModalPick();
+      if (currentView === "trainings") renderTrainingsList();
+      if (currentView === "editor") renderEditorFocusBtn();
+    });
+  });
+}
+
+/** #RRGGBB → rgba() s danou průhledností. Kvůli podbarvení zaškrtnutého zaměření — barvy
+    složek jsou volitelné (admin si je přebarví), takže se nedá spolehnout na hotovou třídu. */
+function hexDoPruhledna(hex, alpha) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ""));
+  if (!m) return "transparent";
+  const n = parseInt(m[1], 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
+}
+
+/** Tlačítko se zaměřením v hlavičce editoru — Mek chtěl zařazení měnit na obou místech. */
+function renderEditorFocusBtn() {
+  const btn = document.getElementById("editorFocusBtn");
+  if (!btn) return;
+  const t = state.trainings[currentTrainingId];
+  if (!t || t.ownerUid !== uidCurrent) { btn.classList.add("hidden"); return; }
+  btn.classList.remove("hidden");
+  const keys = trainingFocusKeys(t);
+  btn.innerHTML = keys.length
+    ? keys.map(k => {
+        const f = focusByKey(k) || {};
+        return `<span class="efb-dot" style="background:${esc(f.color)}"></span>${esc(f.label)}`;
+      }).join(' <span style="color:var(--ink-faint);">·</span> ')
+    : '<i class="fa-solid fa-folder-plus"></i> Zařadit do zaměření';
+}
+document.getElementById("editorFocusBtn").addEventListener("click", () => {
+  if (currentTrainingId) otevriVyberZamereni(currentTrainingId);
+});
+
+/* ---------- Navigace mezi dlaždicemi a obsahem zaměření ---------- */
+document.getElementById("focusBackBtn").addEventListener("click", () => {
+  openFocusKey = null;
+  searchWidened = false;
+  favFocusFilter.clear();
+  renderTrainingsList();
+});
+document.getElementById("trainingsScopeBtn").addEventListener("click", (e) => {
+  const act = e.currentTarget.dataset.act;
+  if (act === "widen") searchWidened = true;
+  else if (act === "narrow") searchWidened = false;
+  else if (act === "clear-search") {
+    document.getElementById("trainingsSearch").value = "";
+    trainingsTagFilter.clear();
+  }
+  renderTrainingsList();
+});
+
+/** Hvězdička. Ukládá se do uživatelského dokumentu samostatným drobným zápisem — schválně
+    mimo hlavní ukládací řetěz, ať hvězdička na Tržišti nesahá na cizí trénink ani na
+    sdílená data. Když zápis selže, nechá se to být: hvězdičku si člověk kdykoli dá znovu. */
+function prepniOblibeny(id) {
+  if (state.favoriteTrainings.has(id)) state.favoriteTrainings.delete(id);
+  else state.favoriteTrainings.add(id);
+  renderTrainingsList();
+  if (!uidCurrent) return;
+  setDoc(doc(db, "users", uidCurrent), { favoriteTrainings: [...state.favoriteTrainings] }, { merge: true })
+    .catch(e => console.warn("Uložení oblíbených tréninků selhalo:", e));
 }
 function updateTrainingBulkBar() {
   const bar = document.getElementById("trainingBulkActionBar");
@@ -9636,6 +10141,7 @@ function openEditor(id) {
   document.getElementById("deleteTrainingBtn").classList.toggle("hidden", editorReadOnly);
   document.getElementById("trainingVisibilityBtn").classList.toggle("hidden", editorReadOnly);
   renderTrainingVisibilityBtn();
+  renderEditorFocusBtn();
   pickerTagFilter.clear();
   pickerEquipFilter.clear();
   pickerFavOnlyFilter = false;
@@ -12397,6 +12903,7 @@ const HELP_DATA = [
       { q: "Jak přidám úplně nový štítek nebo vybavení, které ještě neexistuje?", a: "Stačí ho napsat do příslušného pole při úpravě videa a potvrdit — aplikace ho rovnou přidá do nabídky pro příště, není potřeba nic zvlášť zakládat." },
       { q: "Co když omylem vznikly dva podobné štítky (např. „míč“ a „míče“)?", a: "V Knihovně je nástroj na sloučení štítků a vybavení — vybereš dva podobné, aplikace je sjednotí na jeden napříč všemi videy, co je používají. Hodí se to i na přejmenování štítku všude najednou.", kw: "sloucit duplicitni stitek prejmenovat" },
       { q: "Jak rychle najdu konkrétní štítek nebo vybavení ve dlouhém seznamu?", a: "Nad seznamem štítků/vybavení (ve filtru i ve slučovacím nástroji) je malé vyhledávací pole — cokoli tam napíšeš, rovnou zúží zobrazený seznam, bez ohledu na velikost písmen." },
+      { q: "Jak se hledá v trénincích, když nevím, ve kterém zaměření trénink je?", a: "Stačí začít psát do hledání nad dlaždicemi — dlaždice ustoupí a ukáže se rovnou seznam všeho, co sedí, napříč všemi zaměřeními. Modrým pruhem „Zpátky na zaměření“ se vrátíš k dlaždicím. Když hledáš uvnitř otevřeného zaměření, hledá se nejdřív jen v něm a aplikace ti sama nabídne „Hledat ve všech zaměřeních“, kdyby toho bylo víc jinde.", kw: "hledani treninky zamereni napric" },
       { q: "Musím při psaní štítku trefit přesnou diakritiku, aby se mi nabídl ten správný?", a: "Ne — když píšeš štítek nebo vybavení do pole při úpravě videa, nabídka existujících hledá bez ohledu na diakritiku. Stačí napsat „mic“ a najde se i „Míč“.", kw: "diakritika hacky carky bez" }
     ]},
     { title: "Práce s víc videi najednou", icon: "fa-solid fa-square-check", qa: [
@@ -12429,8 +12936,23 @@ const HELP_DATA = [
     ]}
   ]},
   { group: "Tréninky", blocks: [
+    { title: "Zaměření — složky u tréninků", icon: "fa-solid fa-folder-tree", qa: [
+      { q: "Co jsou „zaměření“ a proč nevidím rovnou seznam tréninků?", a: "Záložka Tréninky začíná dlaždicemi zaměření — Útok, Obrana, Podání, Příjem, Dohrávka, Nahrávka, Blok, Kondice, plus ⭐ Oblíbené a Bez zaměření. Klepneš na dlaždici a otevře se, co v ní je; tlačítkem vlevo nahoře se vrátíš zpátky na dlaždice. Je to jen jiné uspořádání, žádný trénink se nikam neztratil.", kw: "slozky zamereni dlazdice treninky" },
+      { q: "Proč jsou dlaždice pokaždé v jiném pořadí?", a: "Řadí se podle toho, kolik tréninků v nich je — nahoře je, čeho máš nejvíc, dole to, co zatím zanedbáváš. ⭐ Oblíbené jsou vždycky první a Bez zaměření vždycky poslední, ty neposkakují nikdy. Prázdná zaměření zůstávají vidět, jen zašedlá.", kw: "poradi slozek podle poctu prazdne" },
+      { q: "Může být trénink ve víc zaměřeních najednou?", a: "Ano, a je to běžné — herní trénink klidně patří do Útoku i Obrany. Na kartě to poznáš podle barevného proužku u levého okraje: u jednoho zaměření je celý jednobarevný, u víc zaměření se rozdělí na díly.", kw: "vic slozek smiseny prouzek" },
+      { q: "Jak trénink zařadím do zaměření?", a: "Dvěma způsoby, oba u vlastních tréninků: v otevřeném tréninku je tlačítko se zaměřením hned pod názvem, nebo v přehledu otevři u tréninku nabídku (⋮) a vyber „Změnit zaměření“. Klepáním na jednotlivá zaměření je přidáváš a zase odebíráš.", kw: "zaradit zmenit zamereni" },
+      { q: "Co znamená „Bez zaměření“ a jak se odtud dostanu pryč?", a: "Je to prostě místo, kde skončí trénink, kterému jsi zatím žádné zaměření nedal — nejde ho zaškrtnout. Jakmile tréninku nějaké zaměření přiřadíš, odtud zmizí sám." },
+      { q: "Proč nemůžu změnit zaměření u tréninku kolegy z Tržiště?", a: "Zařazení cizího tréninku mění jen jeho autor — jinak by si to trenéři navzájem přehazovali. Když ti u cizího tréninku zařazení nesedí, naklonuj si ho k sobě (nabídka ⋮ → „Klonovat“) a svojí kopii zařaď, jak chceš.", kw: "trziste cizi zamereni nejde zmenit" },
+      { q: "Chybí mi zaměření, které bych potřeboval. Jde přidat?", a: "Zaměření jsou společná pro všechny trenéry i pro Tržiště, takže je spravuje jen admin. Napiš mu, co ti chybí." }
+    ]},
+    { title: "Oblíbené a naposledy upravené", icon: "fa-solid fa-star", qa: [
+      { q: "Jak si označím trénink jako oblíbený?", a: "Hvězdičkou přímo na kartě tréninku v seznamu. Klepnutím se rozsvítí zlatě a trénink se objeví ve složce ⭐ Oblíbené." },
+      { q: "Můžu si dát do oblíbených i cizí trénink z Tržiště?", a: "Ano. Oblíbené jsou tvoje vlastní — nikdo jiný je nevidí a autorovi tréninku se tím nic nemění. V Mých trénincích máš ve složce ⭐ Oblíbené ty svoje, na Tržišti ty cizí.", kw: "oblibene trziste hvezdicka cizi" },
+      { q: "K čemu je v Oblíbených ten řádek barevných zaměření?", a: "Zúží ti oblíbené podle zaměření. Když zaškrtneš víc, platí všechna zároveň — Útok a Obrana tedy ukáže jen tréninky, které jsou v obou. Tlačítkem „Vše“ se filtr zruší.", kw: "filtr zamereni v oblibenych" },
+      { q: "Co je ten pás „Naposledy upravené“ nahoře?", a: "Tři tréninky, na kterých jsi dělal naposled — ať hned víš, kde jsi skončil. Nic se do něj nenastavuje, plní se sám. Uvnitř otevřeného zaměření už není." }
+    ]},
     { title: "Vytváření tréninku", icon: "fa-solid fa-clipboard-list", qa: [
-      { q: "Jak založím nový trénink?", a: "Na záložce Tréninky klikni na tlačítko pro založení nového a pojmenuj ho — otevře se editor, kde skládáš jeho obsah." },
+      { q: "Jak založím nový trénink?", a: "Na záložce Tréninky klikni na tlačítko pro založení nového a pojmenuj ho — otevře se editor, kde skládáš jeho obsah. Když ho zakládáš uvnitř nějakého zaměření, bude v něm rovnou zařazený (odškrtnout se to dá kdykoli).", kw: "novy trenink zalozit" },
       { q: "Jak do tréninku přidám video nebo cvičení z knihovny?", a: "Dvěma způsoby. Buď v editoru tréninku klikni na tlačítko pro přidání položky a vyber video z knihovny (jde filtrovat stejně jako v Knihovně — podle složky, štítku, oblíbených), nebo naopak z Knihovny: otevři kartu videa a dole je „Přidat do tréninku“, kde si vybereš, do kterého tréninku má přibýt. To samé je i v nabídce pod třemi tečkami u karty v Knihovně.", kw: "pridat video do treninku karta kebab" },
       { q: "Jak přidám přestávku?", a: "Přestávka se přidává stejně jako video — jen jako zvláštní typ položky bez videa, jen s délkou trvání." },
       { q: "Co je „skupina“ cvičení a k čemu je dobrá?", a: "Skupina spojuje víc cvičení dohromady tak, aby se v Tréninkovém režimu střídala v jednom bloku (třeba tři varianty přihrávky za sebou) — vybereš víc položek a použiješ „Seskupit“." }
@@ -12451,7 +12973,8 @@ const HELP_DATA = [
       { q: "Jak zkopíruju cvičení nebo celou skupinu z jiného tréninku?", a: "V editoru tréninku, ze kterého chceš cvičení vzít, ho vyber a použij „Kopírovat do tréninku“ — vybereš cílový trénink a cvičení se do něj přidá jako kopie." },
       { q: "Jak trénink celý smažu?", a: "V editoru tréninku je tlačítko „Smazat“ — pozor, na rozdíl od videí v knihovně tréninky nemají Koš, smazání je nevratné." },
       { q: "Co je archivace tréninku a čím se liší od smazání?", a: "Archivace jen schová trénink z běžného přehledu, aniž by ho smazala — hodí se na starší tréninky, co si chceš nechat pro pozdější inspiraci, ale nepřekáží v seznamu. Najdeš je zpátky přes tlačítko „Archiv“ v přehledu Tréninků a jde je odtud kdykoli „Obnovit“.", kw: "archivovat archiv" },
-      { q: "Jak archivuju víc tréninků najednou?", a: "V přehledu Tréninků zapni režim výběru (ikona zaškrtnutí), označ, co chceš schovat, a použij hromadné tlačítko „Archivovat“ dole." }
+      { q: "Jak archivuju víc tréninků najednou?", a: "V přehledu Tréninků zapni režim výběru (ikona zaškrtnutí), označ, co chceš schovat, a použij hromadné tlačítko „Archivovat“ dole." },
+      { q: "Jsou archivované tréninky taky ve složkách?", a: "Ne, archiv zůstává zvlášť — je to odkladiště, ne zaměření. Tlačítko „Archiv“ najdeš dole pod dlaždicemi zaměření a otevře se ti prostý seznam archivovaných.", kw: "archiv slozky zamereni" }
     ]},
     { title: "Export a tisk", icon: "fa-solid fa-file-export", qa: [
       { q: "Jak stáhnu trénink jako PDF?", a: "Nejrychleji rovnou z přehledu Tréninků — u tréninku otevři nabídku (⋮) a vyber „Stáhnout PDF“, bez nutnosti trénink otevírat. Stejná volba je i uvnitř editoru tréninku, když ho zrovna máš otevřený." },
