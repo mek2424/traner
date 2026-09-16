@@ -2636,7 +2636,7 @@ function sharedFingerprint() {
     return JSON.stringify([state.library, state.folders, state.tagPool, state.equipmentPool, state.parts]);
   } catch (e) { return null; }
 }
-const APP_VERSION = "2026-09-15 21:15";
+const APP_VERSION = "2026-09-16 18:40";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -4226,6 +4226,7 @@ onAuthStateChanged(auth, async (user) => {
     unsubscribeFromVideos();
     libraryFromCollection = false;   // příští přihlášený si zdroj zjistí sám
     savedVideoFingerprints.clear();
+    zapomenTreninkyOstatnich();
     unsubscribeFromOwnMembership();
     unsubscribeFromPendingRequests();
     stopHeartbeat();
@@ -4453,6 +4454,9 @@ async function loadUserData() {
     // i když Tržiště nikdo neotevřel, a drželo to přihlášení.
     state.trainings = {};
     savedTrainingFingerprints.clear();
+    // S vyprázdněním seznamu padají i cizí tréninky — příznak musí zpátky na false,
+    // jinak by se Tržiště tvářilo jako načtené a zůstalo prázdné.
+    zapomenTreninkyOstatnich();
     mySnap.forEach(d => {
       const data = d.data();
       state.trainings[d.id] = data;
@@ -4470,7 +4474,9 @@ async function loadUserData() {
       Object.values(state.trainings).filter(t => t.ownerUid === uidCurrent).forEach(t => setDoc(doc(myTrainingsCol, t.id), t));
     }
     trainingsOk = true;
+    myTrainingsLoadedOk = true;
   } catch (e) {
+    myTrainingsLoadedOk = false;
     console.error("Nepodařilo se načíst tréninky:", e);
     loadErrors.push(`tréninky (${e.code || e.message || "?"})`);
   }
@@ -5059,7 +5065,7 @@ function switchView(view) {
   // nad Tréninky.
   document.getElementById("libraryToolbarArea").classList.toggle("hidden", view !== "library");
   if (view === "library") renderLibrary();
-  if (view === "trainings") renderTrainingsList();
+  if (view === "trainings") { renderTrainingsList(); zkusDonacistMojeTreninky(); }
   const shownEl = document.getElementById(view + "View");
   shownEl.classList.remove("view-anim-in");
   void shownEl.offsetWidth;
@@ -7065,8 +7071,43 @@ let showingArchivedTrainings = false;
 document.getElementById("trainingsSearch").addEventListener("input", renderTrainingsList);
 /** Tréninky ostatních trenérů (Tržiště) se stahují až na vyžádání, ne při každém přihlášení.
     Jednou načtené zůstanou v paměti do konce relace — druhé otevření záložky už nic nestahuje. */
+/* POZOR: tyhle dva příznaky se MUSÍ nulovat pokaždé, když se vyprázdní state.trainings.
+   Dřív se othersTrainingsLoaded nastavil na true a nikde se nevracel zpátky — ani při
+   odhlášení. Když se pak data načetla znovu ve stejné záložce prohlížeče (loadUserData
+   dělá state.trainings = {} a naplní jen VLASTNÍ tréninky), ensureOthersTrainingsLoaded()
+   se rovnou vrátilo jako hotové a cizí tréninky se nedotáhly. Výsledek: Tržiště zůstalo
+   prázdné až do tvrdého obnovení stránky (to příznak vynuluje tím, že se načte celá appka).
+   Nulování je na dvou místech: v zapomenTreninkyOstatnich() volané z loadUserData
+   a při odhlášení. */
 let othersTrainingsLoaded = false;
 let othersTrainingsPromise = null;
+function zapomenTreninkyOstatnich() {
+  othersTrainingsLoaded = false;
+  othersTrainingsPromise = null;
+}
+/* Povedlo se při přihlášení stáhnout VLASTNÍ tréninky? Když ne (výpadek sítě na vteřinu,
+   zakolísání Firestore), zůstal seznam prázdný na CELOU RELACI a nic ho nezkusilo znovu —
+   jediná záchrana bylo obnovit stránku. Teď se to zkusí znovu vždycky, když člověk otevře
+   záložku Tréninky. Nevyprazdňuje se přitom nic, jen se doplní, co chybí. */
+let myTrainingsLoadedOk = false;
+async function zkusDonacistMojeTreninky() {
+  if (myTrainingsLoadedOk || !uidCurrent) return;
+  try {
+    const snap = await getDocs(collection(db, "users", uidCurrent, "trainings"));
+    snap.forEach(d => {
+      const data = d.data();
+      state.trainings[d.id] = data;
+      savedTrainingFingerprints.set(d.id, trainingFingerprint(data));
+    });
+    myTrainingsLoadedOk = true;
+    logDebug("[tréninky] první načtení selhalo, dodatečně staženo:", snap.size, "vlastních tréninků");
+    if (snap.size) toast(`Tréninky se dodatečně načetly (${snap.size}).`, 3000, "info");
+    renderTrainingsList();
+  } catch (e) {
+    console.error("Ani dodatečné načtení tréninků se nepovedlo:", e);
+    logDebug("[tréninky] dodatečné načtení taky selhalo:", e.code || e.message || e);
+  }
+}
 function ensureOthersTrainingsLoaded() {
   if (othersTrainingsLoaded) return Promise.resolve();
   if (othersTrainingsPromise) return othersTrainingsPromise;
@@ -7302,6 +7343,24 @@ function renderTrainingsList() {
     `).join("");
   }
 
+  /* Když se nevykreslil ani jeden trénink, zapiš do 🐞 PROČ. Jen v tomhle případě —
+     při běžném překreslení by to zbytečně zaplnilo záznam. Mek hlásil, že se záložka
+     občas ukáže prázdná a spraví to až tvrdé obnovení; tenhle řádek příště rovnou ukáže,
+     jestli je prázdná paměť, zaseknutý filtr, nebo přepnutý archiv. */
+  if (!list.querySelector("[data-open]")) {
+    logDebug("[tréninky] seznam je prázdný —",
+      "v paměti celkem:", all.length,
+      "| mých:", mineAll.length,
+      "| po archivu:", mineBase.length,
+      "| po hledání a štítcích:", mineList.length,
+      "| cizích veřejných:", othersBase.length, "→", othersList.length,
+      "| záložka:", trainingsSubTab,
+      "| archiv:", showingArchivedTrainings,
+      "| hledání:", (document.getElementById("trainingsSearch").value || "").trim() || "(prázdné)",
+      "| štítků:", trainingsTagFilter.size,
+      "| cizí načtené:", othersTrainingsLoaded,
+      "| vlastní načtené:", myTrainingsLoadedOk);
+  }
   list.querySelectorAll("[data-open]").forEach(b => b.addEventListener("click", () => openEditor(b.dataset.open)));
   list.querySelectorAll("[data-kebab]").forEach(b => b.addEventListener("click", (e) => {
     e.stopPropagation();
