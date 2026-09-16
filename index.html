@@ -871,6 +871,28 @@ body.popout-mode .popout-btn{display:none !important;}
 @media(min-width:480px){.folder-manage-row .folder-note-input{flex:1 1 45%;flex-basis:0;order:0;margin-left:0;width:auto;min-width:0;}}
 .folder-manage-row .btn-danger{flex-shrink:0;}
 .folder-founder-note{flex-basis:100%;order:6;margin-left:42px;font-size:11.5px;color:var(--ink-faint);}
+
+/* ---------- Správa zaměření tréninků (jen admin) ---------- */
+.focus-manage-row{border:1px solid var(--line);border-radius:var(--radius-sm);padding:8px 9px;margin-bottom:8px;background:var(--card);}
+.focus-manage-head{display:flex;align-items:center;gap:8px;}
+.focus-manage-head .drag-handle{color:var(--ink-faint);flex-shrink:0;cursor:grab;}
+.focus-manage-head input[type=color]{width:32px;height:32px;padding:2px;border:1px solid var(--line);border-radius:var(--radius-sm);flex-shrink:0;}
+.focus-manage-head .focus-name-input{flex:1;min-width:0;padding:7px 9px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper);color:var(--ink);}
+.focus-lib{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);}
+.focus-lib-label{font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;margin-right:2px;}
+.focus-lib-chip{
+  display:inline-flex;align-items:center;gap:4px;background:var(--paper);border:1px solid var(--line);
+  border-radius:999px;padding:2px 4px 2px 9px;font-size:11.5px;color:var(--ink-soft);font-weight:600;
+}
+.focus-lib-chip button{border:none;background:none;color:var(--ink-faint);font-size:14px;line-height:1;padding:0 3px;}
+.focus-lib-none{font-size:11.5px;color:var(--ink-faint);font-style:italic;}
+.focus-lib-add{border:1px dashed var(--line);background:none;border-radius:999px;padding:2px 9px;font-size:11.5px;font-weight:700;color:var(--court);}
+.focus-lib-picker{
+  display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;padding:8px;background:var(--paper);
+  border:1px solid var(--line);border-radius:var(--radius-sm);max-height:170px;overflow-y:auto;
+}
+.focus-lib-picker .chip{font-size:11.5px;padding:4px 10px;text-align:left;}
+.focus-lib-elsewhere{font-size:9.5px;opacity:.75;margin-left:5px;font-weight:500;}
 .help-group-title{font-size:13px;font-family:var(--font-body);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-faint);margin:22px 0 8px;}
 .help-group-title:first-child{margin-top:4px;}
 .help-block{border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:8px;overflow:hidden;background:var(--card);}
@@ -1685,6 +1707,7 @@ body.popout-mode .popout-btn{display:none !important;}
 
       <div id="trainingsList"></div>
       <button type="button" class="manage-link hidden" id="toggleArchiveViewBtn" style="margin-top:14px;"></button>
+      <button type="button" class="manage-link hidden" id="openFocusManageBtn" style="margin-top:4px;"><i class="fa-solid fa-sliders"></i> Spravovat zaměření</button>
     </section>
 
     <!-- ---------- TRAINING EDITOR VIEW ---------- -->
@@ -1829,15 +1852,9 @@ body.popout-mode .popout-btn{display:none !important;}
           <div class="rte-editor" contenteditable="true" id="linkLongDesc" data-placeholder="Např. Trenér hází střídavě krátké a dlouhé balony, hráčky rotují v zadní řadě."></div>
         </div>
       </div>
-      <div class="two-col">
-        <div class="field">
-          <label for="linkFolder">Složka</label>
-          <select id="linkFolder"></select>
-        </div>
-        <div class="field">
-          <label for="newFolderInput">…nebo nová složka</label>
-          <input type="text" id="newFolderInput" placeholder="Např. Útok">
-        </div>
+      <div class="field">
+        <label for="linkFolder">Složka</label>
+        <select id="linkFolder"></select>
       </div>
       <div class="field">
         <label for="linkDefaultPart">Výchozí část tréninku</label>
@@ -2031,6 +2048,22 @@ body.popout-mode .popout-btn{display:none !important;}
     <div id="foldersManageList"></div>
     <div class="modal-actions">
       <button type="button" class="btn btn-primary btn-block" id="addFolderBtn"><i class="fa-solid fa-plus"></i> Přidat novou složku</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== SPRÁVA ZAMĚŘENÍ (jen admin) ===================== -->
+<div id="focusManageBackdrop" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 style="font-size:22px;">Zaměření tréninků</h2>
+      <button class="btn btn-icon btn-ghost" id="closeFocusManageBtn"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <p style="font-size:12.5px;color:var(--ink-soft);line-height:1.5;margin:0 0 6px;">Zaměření platí pro všechny trenéry i pro Tržiště, proto je spravuješ jen ty. Pořadí měníš přetažením — rozhoduje tam, kde má víc zaměření stejný počet tréninků.</p>
+    <p style="font-size:12.5px;color:var(--ink-soft);line-height:1.5;margin:0 0 14px;"><b>Z Knihovny</b> říká, ze kterých složek videí aplikace pozná, že nový trénink sem nejspíš patří. Napoprvé se to naplnilo podle shody názvů; od té chvíle rozhoduje jen tenhle seznam, takže přejmenování složky v Knihovně už návrhy nerozbije.</p>
+    <div id="focusManageList"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-primary btn-block" id="addFocusBtn"><i class="fa-solid fa-plus"></i> Přidat nové zaměření</button>
     </div>
   </div>
 </div>
@@ -2809,7 +2842,7 @@ function sharedFingerprint() {
       state.trainingFocus, state.focusLibraryMap]);
   } catch (e) { return null; }
 }
-const APP_VERSION = "2026-09-16 21:05";
+const APP_VERSION = "2026-09-16 22:20";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -3401,12 +3434,15 @@ const isEditor = () => state.myRole !== "viewer";
     prohlížeč knihovnu jen čte a tvoří si vlastní tréninky. */
 function applyRoleUI() {
   const editor = isEditor();
-  ["openAddLinkMenuBtn", "openAddLinkBtn", "toggleSelectModeBtn", "manageTagsBtn", "manageFoldersBtn", "openTrashBtn", "openBulkDriveBtn"]
+  ["openAddLinkMenuBtn", "openAddLinkBtn", "toggleSelectModeBtn", "openTrashBtn", "openBulkDriveBtn"]
     .forEach(id => { const el = document.getElementById(id); if (el) el.classList.toggle("hidden", !editor); });
-  // Části tréninku (na rozdíl od zbytku výše) ovlivňují úplně všechny trenéry najednou — barvy,
-  // pořadí ve výběru, v PDF... proto je smí přidávat/upravovat jen admin, ne každý editor.
-  const managePartsBtn = document.getElementById("managePartsBtn");
-  if (managePartsBtn) managePartsBtn.classList.toggle("hidden", uidCurrent !== ADMIN_UID);
+  /* Tyhle tři ovlivňují úplně všechny trenéry najednou — barvy a pořadí složek, sloučení
+     štítku napříč celou knihovnou, části tréninku v PDF. Proto je smí jen admin, ne každý
+     editor. Koš ZŮSTÁVÁ editorům: tam si každý uklízí po sobě a nic společného nemění. */
+  ["managePartsBtn", "manageFoldersBtn", "manageTagsBtn"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle("hidden", uidCurrent !== ADMIN_UID);
+  });
 }
 let libraryViewMode = "grid"; // "grid" | "list" — týká se jen desktopu
 const isMobileViewport = () => window.matchMedia("(max-width:640px)").matches;
@@ -5887,7 +5923,6 @@ function openLinkModal(id) {
   document.getElementById("fetchMetaBtn").classList.remove("pulse");
   document.getElementById("linkTitle").value = item ? item.title : "";
   document.getElementById("linkFolder").value = item ? item.folderId : "";
-  document.getElementById("newFolderInput").value = "";
   document.getElementById("linkDefaultPart").value = item ? item.defaultPart : (state.parts[0] ? state.parts[0].key : "");
   document.getElementById("linkAspectRatio").value = item ? (item.aspectRatio || "16/9") : "16/9";
   document.getElementById("linkTimestamp").value = item ? secondsToTimestamp(item.timestamp) : "";
@@ -5918,7 +5953,7 @@ function openLinkModal(id) {
 
   // Prohlížeč smí v tomhle formuláři upravit jen svoje hodnocení/obtížnost —
   // zbytek aplikace zamkne needitovatelný, ale dál viditelný pro přehled.
-  const lockedIds = ["linkUrl", "fetchMetaBtn", "linkTitle", "linkFolder", "newFolderInput", "linkDefaultPart",
+  const lockedIds = ["linkUrl", "fetchMetaBtn", "linkTitle", "linkFolder", "linkDefaultPart",
     "linkAspectRatio", "linkTimestamp", "linkLongDesc", "thumbFileInput", "tagInput", "equipInput"];
   const viewerLockNotice = document.getElementById("viewerLockNotice");
   const allowEdit = isEditor();
@@ -6446,34 +6481,11 @@ linkForm.addEventListener("submit", async (e) => {
   if (!videoId && platform === "instagram") videoId = extractInstagramId(url);
   if (!videoId && platform === "tiktok") videoId = extractTikTokId(url);
 
-  const newFolderName = document.getElementById("newFolderInput").value.trim();
-  let folderId = document.getElementById("linkFolder").value;
-  if (newFolderName) {
-    const existing = state.folders.find(f => f.label.toLowerCase() === newFolderName.toLowerCase());
-    if (existing) { folderId = existing.key; }
-    else {
-      // Nenápadná pojistka proti skoro-duplicitním složkám (viz #97) — appka nabídne podobnou
-      // existující složku, ale rozhodnutí nechává na uživateli, žádné vynucení.
-      const similar = findSimilarFolder(newFolderName, state.folders);
-      let useExisting = false;
-      if (similar) {
-        useExisting = await confirmDialog(
-          `Podobná složka už existuje: „${similar.label}“. Chceš video zařadit tam, místo aby se vytvářela nová složka „${newFolderName}“?`,
-          { title: "Podobná složka už existuje", confirmLabel: `Použít „${similar.label}“`, cancelLabel: "Přesto vytvořit novou" }
-        );
-      }
-      if (useExisting) {
-        folderId = similar.key;
-      } else {
-        const key = uid();
-        state.folders.push({
-          key, label: newFolderName, color: nextFolderColor(), note: "",
-          createdBy: uidCurrent, createdByLabel: currentUserDisplayLabel(), dateAdded: Date.now()
-        });
-        folderId = key;
-      }
-    }
-  }
+  /* Políčko „…nebo nová složka" tady bývalo — trenér si mohl při přidávání videa rovnou
+     založit novou složku. Od 16. 9. je pryč: složky jsou společné pro všechny a spravuje
+     je jen admin, takže se vybírá z existujících. Tím se taky přestanou množit skoro-
+     duplicitní složky, kvůli kterým tu byla pojistka s findSimilarFolder. */
+  const folderId = document.getElementById("linkFolder").value;
 
   formTags.forEach(t => { if (!state.tagPool.includes(t)) state.tagPool.push(t); });
   formEquip.forEach(t => { if (!state.equipmentPool.includes(t)) state.equipmentPool.push(t); });
@@ -7601,6 +7613,9 @@ function renderTrainingsList() {
   const archiveBtn = document.getElementById("toggleArchiveViewBtn");
   const archivedCount = mineAll.filter(t => t.archived).length;
   archiveBtn.classList.toggle("hidden", !jeMoje || openFocusKey !== null);
+  // Správa zaměření patří k dlaždicím, ne dovnitř složky — a vidí ji jen admin.
+  document.getElementById("openFocusManageBtn")
+    .classList.toggle("hidden", uidCurrent !== ADMIN_UID || openFocusKey !== null);
   archiveBtn.innerHTML = showingArchivedTrainings
     ? '<i class="fa-solid fa-arrow-left"></i> Zpátky na běžné tréninky'
     : `<i class="fa-solid fa-box-archive"></i> Archiv (${archivedCount})`;
@@ -7775,6 +7790,165 @@ function napojTreninkoveRadky(list) {
   }));
   updateTrainingBulkBar();
 }
+
+/* =========================================================
+   SPRÁVA ZAMĚŘENÍ (jen admin)
+   =========================================================
+   Stejný vzor jako Spravovat složky v Knihovně: řádek = barva, název, pořadí přetažením,
+   koš. Navíc má každé zaměření seznam PŘIDRUŽENÝCH SLOŽEK Z KNIHOVNY — z nich aplikace
+   po uložení nového tréninku pozná, kam nejspíš patří (dávka 3).
+
+   Proč seznam, a ne shoda názvů za běhu: jakmile mapování jednou existuje, rozhoduje ono.
+   Kdyby se souběžně dál porovnávaly názvy, stačilo by v Knihovně složku přejmenovat a návrhy
+   by se tiše změnily pod rukama. Napoprvé se seznam naplní shodou (viz seedFocusLibraryMap). */
+const focusManageBackdrop = document.getElementById("focusManageBackdrop");
+let focusSortable = null;
+let focusLibPickerFor = null;   // u kterého zaměření je zrovna rozbalený výběr složek
+
+document.getElementById("closeFocusManageBtn").addEventListener("click", () => focusManageBackdrop.classList.add("hidden"));
+document.getElementById("openFocusManageBtn").addEventListener("click", () => {
+  if (uidCurrent !== ADMIN_UID) return;
+  focusLibPickerFor = null;
+  renderFocusManageList();
+  focusManageBackdrop.classList.remove("hidden");
+});
+
+function focusLibKeys(key) {
+  const v = (state.focusLibraryMap || {})[key];
+  return Array.isArray(v) ? v : [];
+}
+function setFocusLibKeys(key, keys) {
+  if (!state.focusLibraryMap) state.focusLibraryMap = {};
+  state.focusLibraryMap[key] = keys;
+}
+
+function renderFocusManageList() {
+  const wrap = document.getElementById("focusManageList");
+  wrap.innerHTML = state.trainingFocus.map(f => {
+    const prirazene = focusLibKeys(f.key);
+    const chipy = prirazene.length
+      ? prirazene.map(k => {
+          const fo = getFolder(k);
+          return `<span class="focus-lib-chip">${esc(fo ? fo.label : "(smazaná složka)")}<button type="button" data-unmap="${esc(f.key)}|${esc(k)}" aria-label="Odebrat">&times;</button></span>`;
+        }).join("")
+      : `<span class="focus-lib-none">zatím nic — u tohohle zaměření aplikace nic nenavrhne</span>`;
+    const picker = focusLibPickerFor === f.key
+      ? `<div class="focus-lib-picker">${state.folders.map(fo => {
+          const on = prirazene.includes(fo.key);
+          // Jedna složka smí patřit do víc zaměření (Herní cvičení → Útok i Obrana), ale ať
+          // je vidět, kde všude už je — jinak z toho snadno vznikne návrh na půlku appky.
+          const jinde = state.trainingFocus
+            .filter(g => g.key !== f.key && focusLibKeys(g.key).includes(fo.key))
+            .map(g => g.label);
+          return `<button type="button" class="chip ${on ? "active" : ""}" data-map="${esc(f.key)}|${esc(fo.key)}">${esc(fo.label)}${jinde.length ? `<span class="focus-lib-elsewhere">už v ${esc(jinde.join(", "))}</span>` : ""}</button>`;
+        }).join("")}</div>`
+      : "";
+    return `
+      <div class="focus-manage-row" data-key="${esc(f.key)}">
+        <div class="focus-manage-head">
+          <span class="drag-handle"><i class="fa-solid fa-grip-lines"></i></span>
+          <input type="color" value="${esc(f.color)}" data-field="color">
+          <input type="text" class="focus-name-input" value="${esc(f.label)}" placeholder="Název" data-field="label">
+          <button type="button" class="btn btn-icon btn-danger" data-delete-focus="${esc(f.key)}" aria-label="Smazat zaměření"><i class="fa-solid fa-trash"></i></button>
+        </div>
+        <div class="focus-lib">
+          <span class="focus-lib-label">Z Knihovny</span>
+          ${chipy}
+          <button type="button" class="focus-lib-add" data-lib-picker="${esc(f.key)}">${focusLibPickerFor === f.key ? "hotovo" : "+ přidat"}</button>
+        </div>
+        ${picker}
+      </div>`;
+  }).join("");
+
+  wrap.querySelectorAll("input").forEach(inp => {
+    inp.addEventListener("change", () => {
+      const f = state.trainingFocus.find(x => x.key === inp.closest(".focus-manage-row").dataset.key);
+      if (!f) return;
+      const field = inp.dataset.field;
+      f[field] = field === "label" ? (inp.value.trim() || f.label) : inp.value;
+      scheduleSave();
+      if (currentView === "trainings") renderTrainingsList();
+      toast("Uloženo.");
+    });
+  });
+  wrap.querySelectorAll("[data-lib-picker]").forEach(b => b.addEventListener("click", () => {
+    focusLibPickerFor = focusLibPickerFor === b.dataset.libPicker ? null : b.dataset.libPicker;
+    renderFocusManageList();
+  }));
+  wrap.querySelectorAll("[data-map]").forEach(b => b.addEventListener("click", () => {
+    const [fk, lk] = b.dataset.map.split("|");
+    const keys = focusLibKeys(fk);
+    setFocusLibKeys(fk, keys.includes(lk) ? keys.filter(x => x !== lk) : [...keys, lk]);
+    scheduleSave();
+    renderFocusManageList();
+  }));
+  wrap.querySelectorAll("[data-unmap]").forEach(b => b.addEventListener("click", () => {
+    const [fk, lk] = b.dataset.unmap.split("|");
+    setFocusLibKeys(fk, focusLibKeys(fk).filter(x => x !== lk));
+    scheduleSave();
+    renderFocusManageList();
+  }));
+  wrap.querySelectorAll("[data-delete-focus]").forEach(btn => btn.addEventListener("click", async () => {
+    const key = btn.dataset.deleteFocus;
+    const f = focusByKey(key);
+    if (!f) return;
+    const pocet = Object.values(state.trainings).filter(t => trainingFocusKeys(t).includes(key)).length;
+    const msg = pocet
+      ? `Smazat zaměření „${f.label}“? ${pocet} tréninků z něj vypadne — ty, co nemají žádné jiné, skončí v „Bez zaměření“. Cizích tréninků se to týká taky.`
+      : `Smazat zaměření „${f.label}“?`;
+    if (!(await confirmDialog(msg, { confirmLabel: "Smazat zaměření", danger: true }))) return;
+    state.trainingFocus = state.trainingFocus.filter(x => x.key !== key);
+    if (state.focusLibraryMap) delete state.focusLibraryMap[key];
+    /* Klíč se z VLASTNÍCH tréninků uklidí rovnou; u cizích to nejde (nemáme do nich právo
+       zapisovat) a nevadí — trainingFocusKeys() neznámé klíče stejně odfiltruje, takže se
+       cizí trénink prostě přestane v tom zaměření ukazovat. */
+    Object.values(state.trainings).forEach(t => {
+      if (t.ownerUid !== uidCurrent) return;
+      const nove = (t.focus || []).filter(k => k !== key);
+      if (nove.length !== (t.focus || []).length) { t.focus = nove; t.dateModified = Date.now(); }
+    });
+    if (openFocusKey === key) openFocusKey = null;
+    favFocusFilter.delete(key);
+    renderFocusManageList();
+    if (currentView === "trainings") renderTrainingsList();
+    const ok = await saveUserData();
+    if (ok) toast("Zaměření smazáno.");
+  }));
+
+  if (focusSortable) { focusSortable.destroy(); focusSortable = null; }
+  // Stejná pojistka jako u složek v Knihovně: bez knihovny z internetu se správa vykreslí,
+  // jen nepůjde měnit pořadí přetažením.
+  if (typeof Sortable === "undefined") {
+    logDebug("[zaměření] knihovna na přetahování se nenačetla — pořadí teď nejde měnit");
+    return;
+  }
+  focusSortable = Sortable.create(wrap, {
+    handle: ".drag-handle",
+    animation: 150,
+    onEnd: () => {
+      const order = [...wrap.querySelectorAll(".focus-manage-row")].map(el => el.dataset.key);
+      state.trainingFocus.sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key));
+      scheduleSave();
+      if (currentView === "trainings") renderTrainingsList();
+    }
+  });
+}
+
+document.getElementById("addFocusBtn").addEventListener("click", async () => {
+  const label = await promptDialog("Název nového zaměření:", { title: "Nové zaměření" });
+  if (!label || !label.trim()) return;
+  const trimmed = label.trim();
+  if (state.trainingFocus.some(f => f.label.toLowerCase() === trimmed.toLowerCase())) {
+    toast("Takové zaměření už existuje.", 5000, "warn");
+    return;
+  }
+  state.trainingFocus.push({ key: uid(), label: trimmed, color: nextFolderColor() });
+  focusLibPickerFor = null;
+  renderFocusManageList();
+  if (currentView === "trainings") renderTrainingsList();
+  const ok = await saveUserData();
+  if (ok) toast("Zaměření přidáno.");
+});
 
 /* ---------- Výběr zaměření (z kebabu i z editoru) ---------- */
 const focusModalBackdrop = document.getElementById("focusModalBackdrop");
@@ -12867,7 +13041,7 @@ const HELP_DATA = [
     ]},
     { title: "Kdy založit novou složku/štítek, a kdy použít existující", icon: "fa-solid fa-folder-tree", qa: [
       { q: "Proč si radši rozmyslet novou složku, než ji rovnou založit?", a: "Složky jsou hlavní způsob, jak si trenéři filtrují knihovnu podle typu cvičení. Každá další skoro-duplicitní složka (třeba „Kondice“ a „Kondice+Pinkání“) znamená, že se stejné cvičení nezobrazí tomu, kdo hledá jen v té „správné“ — filtrování se tím tříští a přestává být spolehlivé." },
-      { q: "Jak poznám, že už podobná složka existuje?", a: "Aplikace se tě při zakládání nové složky sama zeptá, jestli nemyslíš spíš tu podobnou existující. U štítků a vybavení tuhle kontrolu při zakládání nemá, takže se vyplatí mrknout do nabídky předem — a kdyby už podobná dvojice vznikla, jde je kdykoli dodatečně sloučit v nástroji na sloučení štítků v Knihovně." },
+      { q: "Jak se pozná, že už podobná složka existuje?", a: "Když admin zakládá novou složku, aplikace se sama zeptá, jestli nemyslí spíš tu podobnou existující. U štítků a vybavení tuhle kontrolu nemá, takže se vyplatí mrknout do nabídky předem — a kdyby už podobná dvojice vznikla, admin je umí dodatečně sloučit.", kw: "podobna slozka duplicita" },
       { q: "Kdy je naopak v pořádku novou složku nebo štítek založit?", a: "Vždycky, když popisuje opravdu jinou kategorii cvičení, ne jen kombinaci dvou existujících. Kombinaci (např. „kondice a pinkání zároveň“) stačí vyřešit dvěma štítky na jednom videu — na to štítky jsou. Složka by u videa měla zůstat jedna, štítků může mít víc." }
     ]},
     { title: "Jak napsat popis cvičení, aby byl k něčemu", icon: "fa-solid fa-pen-nib", qa: [
@@ -12890,7 +13064,7 @@ const HELP_DATA = [
       { q: "Proč mi aplikace řekne, ať popis rozepíšu víc, i když jsem něco napsal?", a: "Když je popis hodně krátký (pod pár slov), aplikace se jen jednou zeptá, jestli by nešlo přidat víc detailů, a ukáže konkrétní příklad, jak by to mohlo vypadat. Uložit se dá i tak, jak je — je to jen jemné doporučení, ne povinnost." }
     ]},
     { title: "Organizace knihovny — složky", icon: "fa-solid fa-folder", qa: [
-      { q: "K čemu jsou složky a jak vytvořím novou?", a: "Složky slouží k roztřídění knihovny podle typu cvičení (např. Kondice, Přihrávka, Útok). Novou založíš přímo při přidávání videa, nebo ve správě složek v Knihovně." },
+      { q: "K čemu jsou složky a jak vznikne nová?", a: "Složky slouží k roztřídění knihovny podle typu cvičení (např. Kondice, Přihrávka, Útok). Vidí je všichni trenéři stejně, proto je zakládá a upravuje jen admin — u videa si vybíráš z existujících. Když ti nějaká chybí, napiš mu.", kw: "nova slozka zalozit admin" },
       { q: "Proč mi aplikace při zakládání složky nabídne nějakou podobnou existující?", a: "Aplikace hlídá, aby zbytečně nevznikaly skoro-duplicitní složky (např. „Kondice“ a „Kondice+Pinkání“), které by pak rozbíjely filtrování. Nabídne existující podobnou složku, ale rozhodnutí je vždycky na tobě — novou jde založit i tak.", kw: "duplicitni podobna slozka" },
       { q: "Kdo smí složky mazat?", a: "Mazání složek je jen na adminovi — ostatní trenéři je mohou zakládat, přejmenovávat a přiřazovat k nim videa, ale ne je mazat." },
       { q: "Jak přidám video do složky, nebo ho přesunu do jiné?", a: "Otevři video k úpravě a vyber složku v poli pro to určeném. Jde to změnit kdykoli později, video tím nijak nepřijde o svoje štítky ani obtížnost." },
@@ -12901,7 +13075,7 @@ const HELP_DATA = [
       { q: "Co jsou štítky a k čemu v knihovně slouží?", a: "Štítky jsou volné popisky (např. „přihrávka“, „mladší žactvo“), podle kterých se dá knihovna filtrovat napříč složkami — jedno video může mít víc štítků najednou." },
       { q: "Co znamená „vybavení“ u videa?", a: "Označuje, co je na cvičení potřeba (míče, obruče, švihadla...) — hodí se to hlavně při skládání tréninku, kdy aplikace umí ukázat souhrn všeho vybavení, co si na trénink vzít." },
       { q: "Jak přidám úplně nový štítek nebo vybavení, které ještě neexistuje?", a: "Stačí ho napsat do příslušného pole při úpravě videa a potvrdit — aplikace ho rovnou přidá do nabídky pro příště, není potřeba nic zvlášť zakládat." },
-      { q: "Co když omylem vznikly dva podobné štítky (např. „míč“ a „míče“)?", a: "V Knihovně je nástroj na sloučení štítků a vybavení — vybereš dva podobné, aplikace je sjednotí na jeden napříč všemi videy, co je používají. Hodí se to i na přejmenování štítku všude najednou.", kw: "sloucit duplicitni stitek prejmenovat" },
+      { q: "Co když omylem vznikly dva podobné štítky (např. „míč“ a „míče“)?", a: "Napiš adminovi. V Knihovně je na to nástroj na sloučení štítků a vybavení — sjednotí dva podobné na jeden napříč všemi videy, co je používají, a hodí se i na přejmenování štítku všude najednou. Protože ta změna sáhne do celé sdílené knihovny, má ho jen admin.", kw: "sloucit duplicitni stitek prejmenovat admin" },
       { q: "Jak rychle najdu konkrétní štítek nebo vybavení ve dlouhém seznamu?", a: "Nad seznamem štítků/vybavení (ve filtru i ve slučovacím nástroji) je malé vyhledávací pole — cokoli tam napíšeš, rovnou zúží zobrazený seznam, bez ohledu na velikost písmen." },
       { q: "Jak se hledá v trénincích, když nevím, ve kterém zaměření trénink je?", a: "Stačí začít psát do hledání nad dlaždicemi — dlaždice ustoupí a ukáže se rovnou seznam všeho, co sedí, napříč všemi zaměřeními. Modrým pruhem „Zpátky na zaměření“ se vrátíš k dlaždicím. Když hledáš uvnitř otevřeného zaměření, hledá se nejdřív jen v něm a aplikace ti sama nabídne „Hledat ve všech zaměřeních“, kdyby toho bylo víc jinde.", kw: "hledani treninky zamereni napric" },
       { q: "Musím při psaní štítku trefit přesnou diakritiku, aby se mi nabídl ten správný?", a: "Ne — když píšeš štítek nebo vybavení do pole při úpravě videa, nabídka existujících hledá bez ohledu na diakritiku. Stačí napsat „mic“ a najde se i „Míč“.", kw: "diakritika hacky carky bez" }
@@ -12921,7 +13095,7 @@ const HELP_DATA = [
     { title: "Úprava, obtížnost a mazání videí", icon: "fa-solid fa-pen", qa: [
       { q: "Jak upravím název, popis, štítky nebo vybavení u už přidaného videa?", a: "Otevři video (klikni na kartu v knihovně) a v detailu najdeš tlačítko úpravy — otevře se stejný formulář jako při přidávání." },
       { q: "Jak funguje obtížnost (barevný pruh) u videa?", a: "Obtížnost si u každého videa hodnotí každý trenér sám (1–5 hvězdiček), aplikace pak v knihovně ukazuje barevný pruh podle průměru ze všech hodnocení — není to tedy jedno pevné číslo, ale společný odhad." },
-      { q: "Jak video smažu a dá se to vrátit zpátky?", a: "Smazané video putuje do Koše (najdeš ho v Knihovně), kde zůstane 14 dní a dá se kdykoli obnovit. Po 14 dnech ho aplikace sama nadobro smaže. Jde ho z Koše i rovnou smazat natrvalo dřív." },
+      { q: "Jak video smažu a dá se to vrátit zpátky?", a: "Smazané video putuje do Koše (najdeš ho v Knihovně), kde zůstane 14 dní a dá se kdykoli obnovit. Po 14 dnech ho aplikace sama nadobro smaže. Jde ho z Koše i rovnou smazat natrvalo dřív. Koš má každý editor — na rozdíl od správy složek a slučování štítků, které zůstávají adminovi.", kw: "kos smazat obnovit" },
       { q: "Když video smažu, zmizí i ze všech tréninků, kde je použité?", a: "Trénink si video „pamatuje“, dokud ho z Koše definitivně nesmažeš — pokud ho ale mezitím obnovíš, v tréninku zůstane beze změny." }
     ]},
     { title: "Když video nefunguje", icon: "fa-solid fa-video-slash", qa: [
@@ -12943,7 +13117,8 @@ const HELP_DATA = [
       { q: "Jak trénink zařadím do zaměření?", a: "Dvěma způsoby, oba u vlastních tréninků: v otevřeném tréninku je tlačítko se zaměřením hned pod názvem, nebo v přehledu otevři u tréninku nabídku (⋮) a vyber „Změnit zaměření“. Klepáním na jednotlivá zaměření je přidáváš a zase odebíráš.", kw: "zaradit zmenit zamereni" },
       { q: "Co znamená „Bez zaměření“ a jak se odtud dostanu pryč?", a: "Je to prostě místo, kde skončí trénink, kterému jsi zatím žádné zaměření nedal — nejde ho zaškrtnout. Jakmile tréninku nějaké zaměření přiřadíš, odtud zmizí sám." },
       { q: "Proč nemůžu změnit zaměření u tréninku kolegy z Tržiště?", a: "Zařazení cizího tréninku mění jen jeho autor — jinak by si to trenéři navzájem přehazovali. Když ti u cizího tréninku zařazení nesedí, naklonuj si ho k sobě (nabídka ⋮ → „Klonovat“) a svojí kopii zařaď, jak chceš.", kw: "trziste cizi zamereni nejde zmenit" },
-      { q: "Chybí mi zaměření, které bych potřeboval. Jde přidat?", a: "Zaměření jsou společná pro všechny trenéry i pro Tržiště, takže je spravuje jen admin. Napiš mu, co ti chybí." }
+      { q: "Chybí mi zaměření, které bych potřeboval. Jde přidat?", a: "Zaměření jsou společná pro všechny trenéry i pro Tržiště, takže je spravuje jen admin — přidává je, přejmenovává, mění jim barvu i pořadí. Napiš mu, co ti chybí." },
+      { q: "Co se stane s tréninky, když admin nějaké zaměření smaže?", a: "Tréninky zůstanou, jen z toho zaměření vypadnou. Ten, co neměl žádné jiné, se objeví v „Bez zaměření“ a dá se zařadit znovu. Nic se nemaže." }
     ]},
     { title: "Oblíbené a naposledy upravené", icon: "fa-solid fa-star", qa: [
       { q: "Jak si označím trénink jako oblíbený?", a: "Hvězdičkou přímo na kartě tréninku v seznamu. Klepnutím se rozsvítí zlatě a trénink se objeví ve složce ⭐ Oblíbené." },
