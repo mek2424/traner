@@ -1737,8 +1737,12 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
       </div>
       <div class="filter-toggle-row">
         <button type="button" class="filter-toggle-btn" id="toggleTrainingsTagFilterBtn"><i class="fa-solid fa-tag"></i> Štítky <i class="fa-solid fa-chevron-down"></i></button>
+        <!-- Jen na Tržišti — ve vlastních trénincích by filtr podle trenéra nedával smysl,
+             všechny jsou tvoje. Vizuálně stejné jako „Kdo nahrál" v Knihovně. -->
+        <button type="button" class="filter-toggle-btn hidden" id="toggleTrainingsOwnerFilterBtn"><i class="fa-solid fa-user"></i> Trenér <i class="fa-solid fa-chevron-down"></i></button>
       </div>
       <div class="chip-collapse chip-panel-card" id="trainingsTagFilterCollapse"><div class="chip-panel-inner"><input type="text" class="chip-search-input" id="trainingsTagFilterSearch" placeholder="Hledat štítek…"><div class="chip-row chip-panel-scroll" id="trainingsTagFilterRow"></div></div></div>
+      <div class="chip-collapse chip-panel-card" id="trainingsOwnerFilterCollapse"><div class="chip-panel-inner"><input type="text" class="chip-search-input" id="trainingsOwnerFilterSearch" placeholder="Hledat jméno…"><div class="chip-row chip-panel-scroll" id="trainingsOwnerFilterRow"></div></div></div>
 
       <!-- hlavička otevřeného zaměření (skrytá v přehledu dlaždic) -->
       <div class="focus-head hidden" id="focusHead">
@@ -2919,7 +2923,7 @@ function sharedFingerprint() {
       state.trainingFocus, state.focusLibraryMap]);
   } catch (e) { return null; }
 }
-const APP_VERSION = "2026-09-17 13:05";
+const APP_VERSION = "2026-09-17 14:10";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -5836,9 +5840,11 @@ setupFilterToggle("toggleUploaderFilterBtn", "uploaderFilterCollapse");
 setupFilterToggle("pickerToggleTagFilterBtn", "pickerTagFilterCollapse");
 setupFilterToggle("pickerToggleEquipFilterBtn", "pickerEquipFilterCollapse");
 setupFilterToggle("toggleTrainingsTagFilterBtn", "trainingsTagFilterCollapse");
+setupFilterToggle("toggleTrainingsOwnerFilterBtn", "trainingsOwnerFilterCollapse");
 setupChipSearchInput("tagFilterSearch", "tagFilterRow", renderTagFilterRow);
 setupChipSearchInput("equipFilterSearch", "equipFilterRow", renderEquipFilterRow);
 setupChipSearchInput("uploaderFilterSearch", "uploaderFilterRow", renderUploaderFilterRow);
+setupChipSearchInput("trainingsOwnerFilterSearch", "trainingsOwnerFilterRow", renderTrainingsList);
 setupChipSearchInput("pickerTagFilterSearch", "pickerTagFilterRow", renderPickerFilterChips);
 setupChipSearchInput("pickerEquipFilterSearch", "pickerEquipFilterRow", renderPickerFilterChips);
 setupChipSearchInput("trainingsTagFilterSearch", "trainingsTagFilterRow", renderTrainingsTagFilterRow);
@@ -7322,6 +7328,16 @@ document.getElementById("backToTrainingsBtn").addEventListener("click", () => sw
 
 let trainingsSubTab = "mine";
 let trainingsTagFilter = new Set();
+/* Filtr podle trenéra na Tržišti. Zaškrtnutí VÍC trenérů znamená „od kohokoli z nich" —
+   na rozdíl od štítků, kde zaškrtnuté platí všechny najednou. Trénink má právě jednoho
+   autora, takže „všichni zároveň" by nevrátilo nikdy nic. */
+let trainingsOwnerFilter = new Set();
+/** Jméno trenéra, jak se ukazuje u tréninku. Bere se z tréninku samotného (ownerLabel),
+    protože seznam členů týmu nemusí být načtený a u cizího trenéra ho ani mít nemusíme. */
+function trainingOwnerName(uid, list) {
+  const t = (list || Object.values(state.trainings)).find(x => x.ownerUid === uid);
+  return (t && t.ownerLabel) || "Kolega";
+}
 /** Vrátí ID všech videí použitých v tréninku, včetně videí uvnitř skupin — používá se pro
     fulltextové hledání (podle názvů cviků) i pro filtr podle štítků. */
 function getTrainingVideoIds(t) {
@@ -7500,13 +7516,19 @@ function tagsUsedInVisibleTrainings(baseList) {
 function filterTrainingsBySearch(list) {
   const q = document.getElementById("trainingsSearch").value.trim().toLowerCase();
   return list.filter(t => {
+    /* Trenéři se sčítají (OR), ne násobí jako štítky — trénink má právě jednoho autora,
+       takže „všichni zaškrtnutí zároveň" by nevrátilo nikdy nic. */
+    if (trainingsOwnerFilter.size && !trainingsOwnerFilter.has(t.ownerUid)) return false;
     if (trainingsTagFilter.size) {
       const tags = getTrainingSearchTags(t);
       if (![...trainingsTagFilter].every(tag => tags.has(tag))) return false;
     }
     if (q) {
       const videoTitles = getTrainingVideoIds(t).map(id => state.library[id] ? state.library[id].title : "").join(" ");
-      const hay = `${t.name} ${videoTitles}`.toLowerCase();
+      // Jméno trenéra je součástí prohledávaných slov jen u CIZÍCH tréninků — ve vlastních
+      // by to znamenalo, že si vlastním jménem vytáhneš úplně všechno.
+      const autor = t.ownerUid !== uidCurrent ? (t.ownerLabel || "") : "";
+      const hay = `${t.name} ${videoTitles} ${autor}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -7603,6 +7625,7 @@ document.querySelectorAll(".subtab-btn").forEach(btn => {
     openFocusKey = null;
     searchWidened = false;
     favFocusFilter.clear();
+    trainingsOwnerFilter.clear();
     trainingSelectMode = false;
     selectedTrainingIds.clear();
     document.getElementById("toggleTrainingSelectModeBtn").classList.remove("btn-accent");
@@ -7778,6 +7801,44 @@ function renderTrainingsTagFilterRow() {
   const mineBase = all.filter(t => t.ownerUid === uidCurrent && !!t.archived === showingArchivedTrainings);
   const othersBase = all.filter(t => t.ownerUid !== uidCurrent && !t.archived && t.public);
   renderFilterChips("trainingsTagFilterRow", tagsUsedInVisibleTrainings(trainingsSubTab === "mine" ? mineBase : othersBase), trainingsTagFilter, renderTrainingsList);
+  renderTrainingsOwnerFilterRow(othersBase);
+}
+
+/** Chipy „Trenér" na Tržišti — stejný vzor jako „Kdo nahrál" v Knihovně. Vlastní render
+    (ne sdílený renderFilterChips) má stejný důvod jako tam: hodnota je uid, ale zobrazuje
+    se jméno. */
+function renderTrainingsOwnerFilterRow(othersBase) {
+  const btn = document.getElementById("toggleTrainingsOwnerFilterBtn");
+  const collapse = document.getElementById("trainingsOwnerFilterCollapse");
+  const jeTrziste = trainingsSubTab === "others";
+  btn.classList.toggle("hidden", !jeTrziste);
+  if (!jeTrziste) {
+    // Mimo Tržiště panel zavřít a filtr pustit — jinak by ve vlastních trénincích tiše
+    // schovával tréninky podle filtru, který není nikde vidět.
+    collapse.classList.remove("open");
+    btn.classList.remove("open");
+    trainingsOwnerFilter.clear();
+    return;
+  }
+  const row = document.getElementById("trainingsOwnerFilterRow");
+  const uids = [...new Set(othersBase.map(t => t.ownerUid))]
+    .sort((a, b) => trainingOwnerName(a, othersBase).localeCompare(trainingOwnerName(b, othersBase), "cs"));
+  if (uids.length <= 1) {
+    row.innerHTML = `<span style="font-size:12px;color:var(--ink-faint);">Na Tržišti je zatím jen jeden trenér.</span>`;
+    return;
+  }
+  const q = helpNorm(chipSearchQuery.trainingsOwnerFilterRow || "");
+  const videt = q ? uids.filter(uid => helpNorm(trainingOwnerName(uid, othersBase)).includes(q)) : uids;
+  if (!videt.length) { row.innerHTML = `<span style="font-size:12px;color:var(--ink-faint);">Nic nenalezeno.</span>`; return; }
+  row.innerHTML = videt.map(uid => {
+    const pocet = othersBase.filter(t => t.ownerUid === uid).length;
+    return `<button type="button" class="chip ${trainingsOwnerFilter.has(uid) ? "active" : ""}" data-owner="${esc(uid)}">${esc(trainingOwnerName(uid, othersBase))} <span style="opacity:.6">${pocet}</span></button>`;
+  }).join("");
+  row.querySelectorAll("[data-owner]").forEach(chip => chip.addEventListener("click", () => {
+    const v = chip.dataset.owner;
+    if (trainingsOwnerFilter.has(v)) trainingsOwnerFilter.delete(v); else trainingsOwnerFilter.add(v);
+    renderTrainingsList();
+  }));
 }
 /* ====================================================================
    ZÁLOŽKA TRÉNINKY — dlaždice zaměření a obsah jednoho zaměření
@@ -7868,7 +7929,7 @@ function renderTrainingsList() {
   renderTrainingsTagFilterRow();
 
   const q = (document.getElementById("trainingsSearch").value || "").trim();
-  const hleda = !!q || trainingsTagFilter.size > 0;
+  const hleda = !!q || trainingsTagFilter.size > 0 || trainingsOwnerFilter.size > 0;
 
   const archiveBtn = document.getElementById("toggleArchiveViewBtn");
   const archivedCount = mineAll.filter(t => t.archived).length;
@@ -8014,6 +8075,7 @@ function zapisProcJePrazdno(prazdno, ctx) {
     "| archiv:", showingArchivedTrainings,
     "| hledání:", ctx.q || "(prázdné)",
     "| štítků:", trainingsTagFilter.size,
+    "| trenérů:", trainingsOwnerFilter.size,
     "| cizí načtené:", othersTrainingsLoaded,
     "| vlastní načtené:", myTrainingsLoadedOk);
 }
@@ -8376,6 +8438,7 @@ document.getElementById("trainingsScopeBtn").addEventListener("click", (e) => {
   else if (act === "clear-search") {
     document.getElementById("trainingsSearch").value = "";
     trainingsTagFilter.clear();
+    trainingsOwnerFilter.clear();
   }
   renderTrainingsList();
 });
@@ -13462,6 +13525,7 @@ const HELP_DATA = [
       { q: "Co když omylem vznikly dva podobné štítky (např. „míč“ a „míče“)?", a: "Napiš adminovi. V Knihovně je na to nástroj na sloučení štítků a vybavení — sjednotí dva podobné na jeden napříč všemi videy, co je používají, a hodí se i na přejmenování štítku všude najednou. Protože ta změna sáhne do celé sdílené knihovny, má ho jen admin.", kw: "sloucit duplicitni stitek prejmenovat admin" },
       { q: "Jak rychle najdu konkrétní štítek nebo vybavení ve dlouhém seznamu?", a: "Nad seznamem štítků/vybavení (ve filtru i ve slučovacím nástroji) je malé vyhledávací pole — cokoli tam napíšeš, rovnou zúží zobrazený seznam, bez ohledu na velikost písmen." },
       { q: "Aplikace napsala, že se část mých tréninků načetla až teď. Co to bylo?", a: "Při přihlášení se občas stane, že server vrátí neúplný seznam tvých tréninků a netváří se přitom, že by něco selhalo. Aplikace si toho teď všimne sama a chybějící tréninky dotáhne — hláška je jen upozornění, že se seznam mezitím doplnil. Nic se neztratilo a nemusíš nic dělat.", kw: "neuplny seznam treninku nacetly se pozdeji" },
+      { q: "Jak na Tržišti najdu tréninky od konkrétního trenéra?", a: "Nad seznamem je vedle „Štítky“ tlačítko „Trenér“ — rozbalí se seznam všech, kdo na Tržiště něco dali, i s počtem tréninků. Klepnutím na jméno se seznam zúží; můžeš zaškrtnout i víc trenérů najednou a uvidíš tréninky od kohokoli z nich. Je to stejné jako „Kdo nahrál“ v Knihovně. Jméno trenéra navíc zabírá i obyčejné hledání — stačí ho napsat do políčka nahoře.", kw: "trziste filtr trener autor kdo" },
       { q: "Jak se hledá v trénincích, když nevím, ve kterém zaměření trénink je?", a: "Stačí začít psát do hledání nad dlaždicemi — dlaždice ustoupí a ukáže se rovnou seznam všeho, co sedí, napříč všemi zaměřeními. Modrým pruhem „Zpátky na zaměření“ se vrátíš k dlaždicím. Když hledáš uvnitř otevřeného zaměření, hledá se nejdřív jen v něm a aplikace ti sama nabídne „Hledat ve všech zaměřeních“, kdyby toho bylo víc jinde.", kw: "hledani treninky zamereni napric" },
       { q: "Musím při psaní štítku trefit přesnou diakritiku, aby se mi nabídl ten správný?", a: "Ne — když píšeš štítek nebo vybavení do pole při úpravě videa, nabídka existujících hledá bez ohledu na diakritiku. Stačí napsat „mic“ a najde se i „Míč“.", kw: "diakritika hacky carky bez" }
     ]},
