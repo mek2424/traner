@@ -991,11 +991,6 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
   display:block;margin:0 0 10px auto;border:none;background:none;padding:2px 0;
   font-size:11.5px;color:var(--ok);text-decoration:underline;text-underline-offset:2px;cursor:pointer;
 }
-.broken-note{
-  display:flex;align-items:flex-start;gap:8px;background:var(--warn-bg);border:1px solid var(--warn-border);
-  color:var(--warn-ink);border-radius:var(--radius-sm);padding:8px 10px;font-size:12px;line-height:1.45;margin-bottom:8px;
-}
-.broken-note i{margin-top:2px;flex-shrink:0;}
 .comment-report-tag{
   border:1px solid var(--warn-border);background:var(--warn-bg);color:var(--warn-ink);
   border-radius:999px;padding:1px 7px;font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
@@ -1978,13 +1973,12 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
     </div>
     <div class="embed-wrap" id="detailEmbedWrap"></div>
     <div id="detailTimestampHint" class="embed-timestamp-hint hidden"></div>
-    <!-- ROZPADACÍ ŘÁDEK (17. 9.)
+    <!-- ROZPADACÍ ŘÁDEK (17. 9.)  [#detailSrcBig]
          Dokud video funguje, jsou obě akce jen dvě ikonky na konci řádku s názvem a nezaberou
          ani řádek navíc. Jakmile je označené jako nefunkční, ikonky z řádku odejdou a odkaz na
          zdroj se roztáhne přes celou šířku — tehdy je to totiž jediná cesta, jak video vidět,
          takže má být hlavní akcí. Vedlejší efekt, kvůli kterému to tak je: ve stavu, kdy by se
          dlouhý název s ikonkami pral o místo, tam ty ikonky vůbec nejsou. -->
-    <div class="broken-note hidden" id="detailBrokenNote"></div>
     <a class="src-big hidden" id="detailSrcBig" target="_blank" rel="noopener"></a>
     <button type="button" class="undo-broken hidden" id="detailUndoBrokenBtn"></button>
     <div class="detail-titlerow">
@@ -2925,7 +2919,7 @@ function sharedFingerprint() {
       state.trainingFocus, state.focusLibraryMap]);
   } catch (e) { return null; }
 }
-const APP_VERSION = "2026-09-17 12:20";
+const APP_VERSION = "2026-09-17 13:05";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -6729,7 +6723,7 @@ function prekresliPoZmeneNefunkcnosti(id) {
   if (currentView === "editor" && currentTrainingId) renderSequence();
 }
 
-/** Rozpadací řádek pod videem — viz komentář u #detailBrokenNote v HTML.
+/** Rozpadací řádek pod videem — viz komentář u #detailSrcBig v HTML.
 
     Kdo co vidí:
     - trenér (editor): ikonka „označit jako nefunkční"; u označeného videa místo ní
@@ -6739,38 +6733,41 @@ function prekresliPoZmeneNefunkcnosti(id) {
       video dál tváří normálně.
 
     Odkaz na zdroj je vidět vždycky (Mek ho chce i u funkčního videa), ale u funkčního je to
-    jen ikonka a u nefunkčního tlačítko přes celou šířku. */
+    jen ikonka a u nefunkčního tlačítko přes celou šířku.
+
+    Žlutý proužek „označeno jako nefunkční" tady byl a Mek ho vyhodil — a měl pravdu, že je
+    zbytečný: že je video označené, říká vodoznak přes náhled a hned pod ním velké tlačítko
+    na zdroj. Dvakrát totéž. */
+/** Jen IKONA platformy, bez jejího názvu. PLATFORM_DIRECT_LINK_LABELS totiž obsahuje ikonu
+    i text („<i …></i> YouTube") — a ten text se do třicetipixelového tlačítka nevejde a
+    přeteče přes název videa. Trenéra navíc nezajímá, z čeho video je; ikona to řekne sama. */
+function platformIconHtml(item) {
+  const znacka = PLATFORM_DIRECT_LINK_LABELS[item.platform] || "";
+  const m = /<i [^>]*><\/i>/.exec(znacka);
+  return m ? m[0] : "";
+}
+
 function renderDetailVideoControls(item) {
   const jeRozbite = !!item.brokenAt;
   const jeEditor = isEditor();
   const url = item.url || "";
-  const znacka = PLATFORM_DIRECT_LINK_LABELS[item.platform] || "";
-  const maOdkaz = !!(url && znacka);
-  const nazevPlatformy = znacka.replace(/<[^>]*>/g, "").trim();
-
-  // žlutý proužek — dokud je video označené, ať to za měsíc nikoho nepřekvapí
-  const note = document.getElementById("detailBrokenNote");
-  note.classList.toggle("hidden", !jeRozbite);
-  note.innerHTML = jeRozbite
-    ? `<i class="fa-solid fa-triangle-exclamation"></i><span>${jeEditor
-        ? "Označeno jako nefunkční — ostatním se místo videa ukáže tenhle náhled a odkaz na zdroj."
-        : "Tohle video je označené jako nefunkční. Otevři si ho rovnou u zdroje."}</span>`
-    : "";
+  const ikona = platformIconHtml(item);
+  const maOdkaz = !!(url && ikona);
 
   // velký odkaz (jen u rozbitého) vs. malá ikonka (jen u funkčního)
   const big = document.getElementById("detailSrcBig");
   big.classList.toggle("hidden", !(jeRozbite && maOdkaz));
   if (jeRozbite && maOdkaz) {
     big.href = url;
-    big.innerHTML = `${znacka} <span>Otevřít${nazevPlatformy ? " na " + esc(nazevPlatformy) : ""}</span> <span style="opacity:.7">↗</span>`;
+    big.innerHTML = `${ikona} <span>Otevřít video</span> <span style="opacity:.7">↗</span>`;
   }
   const small = document.getElementById("detailSrcSmall");
   small.classList.toggle("hidden", !(!jeRozbite && maOdkaz));
   if (!jeRozbite && maOdkaz) {
     small.href = url;
     small.className = "ghost-ico src-yt";
-    small.innerHTML = znacka;
-    small.title = `Otevřít${nazevPlatformy ? " na " + nazevPlatformy : " u zdroje"} ↗`;
+    small.innerHTML = ikona;
+    small.title = "Otevřít video u zdroje ↗";
   }
 
   // vrácení zpět — jen trenér a jen u označeného videa
@@ -13484,10 +13481,10 @@ const HELP_DATA = [
       { q: "Jak upravím název, popis, štítky nebo vybavení u už přidaného videa?", a: "Otevři video (klikni na kartu v knihovně) a v detailu najdeš tlačítko úpravy — otevře se stejný formulář jako při přidávání." },
       { q: "Jak funguje obtížnost (barevný pruh) u videa?", a: "Obtížnost si u každého videa hodnotí každý trenér sám (1–5 hvězdiček), aplikace pak v knihovně ukazuje barevný pruh podle průměru ze všech hodnocení — není to tedy jedno pevné číslo, ale společný odhad." },
       { q: "Jak video smažu a dá se to vrátit zpátky?", a: "Smazané video putuje do Koše (najdeš ho v Knihovně), kde zůstane 14 dní a dá se kdykoli obnovit. Po 14 dnech ho aplikace sama nadobro smaže. Jde ho z Koše i rovnou smazat natrvalo dřív. Koš má každý editor — na rozdíl od správy složek a slučování štítků, které zůstávají adminovi.", kw: "kos smazat obnovit" },
-      { q: "Video se nedá přehrát (zdroj ho smazal nebo zprivátnil). Co s tím?", a: "V otevřené kartě videa jsou vedle názvu dvě malé ikonky: šipka na zdroj (YouTube, Disk…) a přeškrtnutá kamera. Tou kamerou video označíš jako nefunkční. Totéž je i v Knihovně v nabídce (⋮) u karty. Do otevřené karty se dostaneš i z tréninku — stačí ťuknout na náhled u cvičení, takže to jde vyřešit při přípravě tréninku.", kw: "nefunkcni video oznacit nejde prehrat ikonka" },
+      { q: "Video se nedá přehrát (zdroj ho smazal nebo zprivátnil). Co s tím?", a: "V otevřené kartě videa jsou vedle názvu dvě malé ikonky: logo zdroje (YouTube, Disk…) a přeškrtnutá kamera. Tou kamerou video označíš jako nefunkční. Totéž je i v Knihovně v nabídce (⋮) u karty. Do otevřené karty se dostaneš i z tréninku — stačí ťuknout na náhled u cvičení, takže to jde vyřešit při přípravě tréninku.", kw: "nefunkcni video oznacit nejde prehrat ikonka" },
       { q: "Jsem prohlížeč a video mi nejde. Co mám dělat?", a: "Vedle názvu videa máš vlaječku — ťukni na ni a aplikace o tom dá vědět adminovi. Dostaneš „Díky, admin o tom ví“ a vlaječka zešedne. Video se ti dál tváří normálně, protože to klidně může být jen tvoje připojení a ostatním hraje; jestli je vážně rozbité, posoudí trenér.", kw: "prohlizec nahlasit video vlajecka" },
       { q: "Kam se moje hlášení dostane?", a: "Napíše se jako komentář přímo k tomu videu, označený štítkem „hlášení“ — adminovi se rozsvítí zvoneček a uvidí ho v „Co je nového“. Dá se pod ním normálně odpovídat a admin ho po opravě smaže.", kw: "hlaseni komentar zvonecek" },
-      { q: "Co se s videem stane, když ho označím jako nefunkční?", a: "Místo přehrávače se všude (v Knihovně, v Tréninkovém režimu i ve sdílené prezentaci) ukáže náhledový obrázek s jemným vodoznakem. V kartě navíc naskočí žlutý proužek a velké zelené tlačítko s odkazem na zdroj — tehdy je to jediná cesta, jak se na video podívat, takže se z drobné ikonky stane hlavní tlačítko. Video se nijak nemaže a nemění. Označení platí pro všechny trenéry a kdykoli ho vrátíš odkazem „Video zase funguje“.", kw: "vodoznak nefunkcni vratit zpet zelene tlacitko" },
+      { q: "Co se s videem stane, když ho označím jako nefunkční?", a: "Místo přehrávače se všude (v Knihovně, v Tréninkovém režimu i ve sdílené prezentaci) ukáže náhledový obrázek s jemným vodoznakem. V kartě se navíc z drobné ikonky odkazu stane velké zelené tlačítko „Otevřít video“ — tehdy je to totiž jediná cesta, jak se na video podívat. Video se nijak nemaže a nemění. Označení platí pro všechny trenéry a kdykoli ho vrátíš odkazem „Video zase funguje“ pod tlačítkem.", kw: "vodoznak nefunkcni vratit zpet zelene tlacitko" },
       { q: "Proč je náhled nefunkčního videa vždycky na šířku, i když je video na výšku?", a: "Aby nezabíral půl obrazovky. Náhledové obrázky z YouTube i Vimea jsou stejně na šířku, takže ve vysokém rámu by se jen ořízly — takhle je vidět celý a karta zůstane přehledná. Je to ten samý poměr, jaký má zavřená karta v Knihovně." },
       { q: "Když video smažu, zmizí i ze všech tréninků, kde je použité?", a: "Trénink si video „pamatuje“, dokud ho z Koše definitivně nesmažeš — pokud ho ale mezitím obnovíš, v tréninku zůstane beze změny." }
     ]},
