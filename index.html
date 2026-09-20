@@ -1868,6 +1868,14 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
         <i class="fa-solid fa-eye"></i>
         <span>Jako prohlížeč můžeš upravit jen svoje hodnocení a obtížnost — zbytek je jen ke čtení. Komentovat můžeš v detailu videa.</span>
       </div>
+      <div class="duplicate-warning hidden" id="tipSendNotice" style="background:var(--info-bg);border-color:var(--info-border);color:var(--info-ink);">
+        <i class="fa-solid fa-paper-plane"></i>
+        <span>Tohle je tip pro admina — sám ho do knihovny uložit nemůžeš. Až ho zařadí, objeví se video v knihovně pod tvým jménem.</span>
+      </div>
+      <div class="duplicate-warning hidden" id="tipApproveNotice" style="background:var(--info-bg);border-color:var(--info-border);color:var(--info-ink);">
+        <i class="fa-solid fa-user-check"></i>
+        <span>Tip od <strong id="tipApproveWho"></strong> — po uložení ponese video jeho jméno, ne tvoje.</span>
+      </div>
       <div class="field">
         <label for="linkUrl">Odkaz (YouTube, Facebook, Disk, jiné)</label>
         <div class="url-row">
@@ -1962,6 +1970,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
       <div class="modal-actions">
         <button type="submit" class="btn btn-primary" id="linkFormSubmitBtn"><i class="fa-solid fa-floppy-disk"></i> Uložit</button>
         <button type="button" class="btn btn-danger hidden" id="deleteLinkBtn"><i class="fa-solid fa-trash"></i> Smazat</button>
+        <button type="button" class="btn btn-danger hidden" id="rejectTipBtn"><i class="fa-solid fa-xmark"></i> Nezařadit</button>
       </div>
     </form>
   </div>
@@ -2365,6 +2374,20 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
 </div>
 
 <!-- ===================== KOŠ ===================== -->
+<!-- ===================== TIPY NA VIDEA ===================== -->
+<!-- Jedno okno pro obě strany: adminovi ukazuje došlé tipy k vyřízení, ostatním jejich
+     vlastní odeslané tipy a jak dopadly. Rozhoduje openVideoTipsModal(mode). -->
+<div id="videoTipsModalBackdrop" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 style="font-size:22px;" id="videoTipsModalTitle">Došlé tipy</h2>
+      <button class="btn btn-icon btn-ghost" id="closeVideoTipsModalBtn"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:0;" id="videoTipsModalLead"></p>
+    <div id="videoTipsList"></div>
+  </div>
+</div>
+
 <div id="trashModalBackdrop" class="modal-backdrop hidden">
   <div class="modal">
     <div class="modal-head">
@@ -2529,6 +2552,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
         <button type="button" class="btn btn-sm" id="openChangePasswordBtn" style="margin-bottom:0;"><i class="fa-solid fa-key"></i> Změnit heslo</button>
         <button type="button" class="btn btn-sm" id="openChangeEmailBtn" style="margin-bottom:0;"><i class="fa-solid fa-envelope"></i> Změnit e-mail</button>
+        <button type="button" class="btn btn-sm hidden" id="openMyTipsBtn" style="margin-bottom:0;"><i class="fa-solid fa-paper-plane"></i> Moje tipy<span id="myTipsInlineCount" class="pending-inline-count hidden"></span></button>
       </div>
       <div class="modal-actions">
         <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Uložit profil</button>
@@ -2550,6 +2574,10 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
     <div id="adminPendingSection" class="hidden" style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line);">
       <h3 style="font-size:14px;font-family:var(--font-body);font-weight:700;color:var(--ink-soft);margin:0 0 8px;">Čekají na schválení<span id="pendingInlineCount" class="pending-inline-count hidden"></span></h3>
       <div id="pendingApprovalsList"></div>
+    </div>
+    <div id="adminTipsSection" class="hidden" style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line);">
+      <button type="button" class="btn btn-ghost btn-block" id="openVideoTipsAdminBtn"><i class="fa-solid fa-inbox"></i> Došlé tipy na videa<span id="tipsInlineCount" class="pending-inline-count hidden"></span></button>
+      <p style="font-size:11.5px;color:var(--ink-faint);margin:6px 0 0;">Videa, která ti poslali trenéři bez práva zakládat. Zařazené video ponese jméno toho, kdo ho poslal.</p>
     </div>
     <div id="adminMembersSection" class="hidden" style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line);">
       <button type="button" class="btn btn-sm" id="openAdminActivityBtn" style="margin-bottom:14px;"><i class="fa-solid fa-chart-simple"></i> Kdo je online a co dělá</button>
@@ -2778,7 +2806,7 @@ import {
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
   doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, collection, collectionGroup, getDocs, onSnapshot,
-  arrayUnion, addDoc, query, orderBy, limit, runTransaction
+  arrayUnion, addDoc, query, where, orderBy, limit, runTransaction
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 
@@ -2923,7 +2951,7 @@ function sharedFingerprint() {
       state.trainingFocus, state.focusLibraryMap]);
   } catch (e) { return null; }
 }
-const APP_VERSION = "2026-09-17 14:10";
+const APP_VERSION = "2026-09-21 00:30";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -2937,6 +2965,13 @@ async function ensurePdfFonts() {
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
 let currentView = "library";
 let editingLinkId = null;       // id knihovní položky, když se edituje
+/* Režim formuláře "Přidat odkaz". Formulář je jediný, ale používají ho tři různé cesty:
+   "normal"  — zakládání a úprava videa, jak to bylo vždycky
+   "tip"     — prohlížeč posílá tip adminovi (ukládá se do videoTips, ne do knihovny)
+   "approve" — admin zařazuje došlý tip (ukládá do knihovny, ale pod jménem tipujícího)
+   Schválně jeden formulář místo tří: kdyby byly tři, dřív nebo později se rozejdou. */
+let linkModalMode = "normal";
+let approvingTip = null;        // dokument tipu, který admin právě zařazuje (režim "approve")
 let currentTrainingId = null;   // id tréninku otevřeného v editoru
 let editorReadOnly = false;     // true, když prohlížím trénink kolegy (nejde upravovat)
 let currentDetailId = null;     // id knihovní položky v detail modalu
@@ -4519,6 +4554,7 @@ onAuthStateChanged(auth, async (user) => {
     zapomenTreninkyOstatnich();
     unsubscribeFromOwnMembership();
     unsubscribeFromPendingRequests();
+    unsubscribeFromVideoTips();
     stopHeartbeat();
     document.getElementById("app").classList.add("hidden");
     document.getElementById("pendingScreen").classList.add("hidden");
@@ -4581,6 +4617,8 @@ async function checkMembershipAndProceed() {
   subscribeToOwnMembership();
   subscribeToCommentActivity();
   subscribeToPendingRequests();
+  subscribeToVideoTips();
+  subscribeToMyTips();
   if (isEditor()) purgeOldTrash().catch(err => console.warn("Úklid koše selhal:", err));
   // Tréninky ostatních trenérů se dotáhnou na pozadí, až když má prohlížeč chvilku klidu —
   // appka je potřebuje jen pro údaj "v tréninku N×" na kartách a pro Tržiště, takže nemají
@@ -4592,6 +4630,10 @@ async function checkMembershipAndProceed() {
   if (window.requestIdleCallback) requestIdleCallback(prefetchOthers, { timeout: 8000 });
   else setTimeout(prefetchOthers, 3000);
   handlePopoutDeepLink();
+  handleShareTarget().catch(err => {
+    console.error("Příjem sdílení selhal:", err);
+    logDebug(`[sdílení] příjem selhal — ${(err && err.message) || String(err)}`);
+  });
   const nightHour = new Date().getHours();
   if (nightHour >= 0 && nightHour < 5) {
     toast("Mazej spát, smrďochu prďochu, nebo pujdeš ráno běhat kopečky s Faunou!!!! Už je po večerce. 😄", 6000, "info");
@@ -5342,6 +5384,68 @@ function handlePopoutDeepLink() {
     else if (type === "help") openHelpModal();
   } catch (e) { console.error("Otevření z popoutu selhalo:", e); }
 }
+/* =========================================================
+   PŘÍJEM SDÍLENÍ ZE SYSTÉMU (Web Share Target)
+   V manifest.json je blok share_target, takže se nainstalovaný Trenér objeví v systémové
+   nabídce Sdílet. Systém pak otevře index.html s odkazem v parametrech.
+   Nefunguje na iOS/iPadOS — WebKit Web Share Target neumí (chyba 194593, otevřená od 2019).
+   Tam zůstává vkládání odkazu ručně; nic se tím nerozbije, appka se prostě v nabídce neobjeví.
+   ========================================================= */
+/** Každá aplikace posílá obsah jinam: YouTube na Androidu dává adresu do "text", jiné do
+    "url", některé jen do "title" — a v textu bývá kolem adresy i název a popis videa.
+    Proto se prohledají všechna tři pole a adresa se vytáhne výrazem, ne přečte napřímo. */
+function extractSharedUrl(params) {
+  for (const key of ["url", "text", "title"]) {
+    const raw = params.get(key);
+    if (!raw) continue;
+    const m = raw.match(/https?:\/\/[^\s<>"']+/i);
+    if (m) return m[0];
+  }
+  return null;
+}
+/* Strop na čekání, než se otevře formulář. Sdílení běží typicky na telefonu v hale, kde
+   bývá signál mizerný — bez stropu by appka mohla viset na točítku, dokud fetch sám
+   nevzdá. Po vypršení se formulář otevře s tím, co se stihlo načíst. */
+const SHARE_META_TIMEOUT_MS = 6000;
+/** Volá se až PO přihlášení a načtení dat (viz konec inicializace appky) — sdílení otevírá
+    appku novým vstupním bodem a bez toho by sáhlo do knihovny dřív, než vůbec existuje. */
+async function handleShareTarget() {
+  const params = new URLSearchParams(location.search);
+  if (!params.has("url") && !params.has("text") && !params.has("title")) return;
+  const sharedUrl = extractSharedUrl(params);
+  // Adresa se z prohlížeče maže hned: jinak by obnovení stránky (F5) otevíralo tentýž
+  // formulář pořád dokola. Stejný postup jako u popout okna výš.
+  history.replaceState(null, "", location.pathname);
+  if (!sharedUrl) {
+    toast("Ze sdíleného obsahu se nepodařilo vytáhnout odkaz — zkus ho prosím vložit ručně.", 8000, "warn");
+    return;
+  }
+  const mode = isEditor() ? "normal" : "tip";
+  openLinkModal(null, { mode, prefillUrl: sharedUrl });
+  // Formulář se otevřel (kvůli linkUrl, ze kterého fetchLinkMeta čte) a hned se nad ním
+  // rozjede stahování. U Facebooku a Instagramu se nečeká vůbec — odtamtud stejně nic
+  // nepřijde, takže by to bylo točítko pro nic.
+  const platform = detectPlatform(sharedUrl);
+  if (platform === "facebook" || platform === "instagram") {
+    toast("Název a náhled u téhle sítě zadej prosím ručně.", 6000, "warn");
+    return;
+  }
+  try {
+    await Promise.race([
+      fetchLinkMeta(),
+      new Promise(resolve => setTimeout(resolve, SHARE_META_TIMEOUT_MS))
+    ]);
+  } catch (e) {
+    console.warn("Načtení info o sdíleném videu selhalo:", e);
+    logDebug(`[sdílení] načtení info selhalo — ${(e && e.message) || String(e)}`);
+  }
+  if (fetchMetaInProgress) {
+    // Doběhlo to na strop, ne na odpověď. Stahování běží dál a hodnoty se doplní samo,
+    // až dorazí — jen o tom uživatel ví, aby nečekal a mohl psát.
+    logDebug(`[sdílení] info se nestihlo načíst do ${SHARE_META_TIMEOUT_MS} ms — formulář otevřen bez něj.`);
+    toast("Info se načítá dýl než obvykle — vyplň zatím, co víš.", 6000, "warn");
+  }
+}
 document.getElementById("popoutDetailBtn").addEventListener("click", () => popoutWindow("video", currentDetailId));
 document.getElementById("popoutLinkBtn").addEventListener("click", () => popoutWindow("editVideo", editingLinkId));
 document.getElementById("popoutHelpBtn").addEventListener("click", () => popoutWindow("help"));
@@ -5981,8 +6085,16 @@ function pickRandomExampleDesc() {
 // a před uložením se jemně zeptá, jestli by nešel rozepsat víc — viz #96. Nejde o tvrdý limit,
 // uložit jde vždycky, appka jen nechce, aby odbytá věta prošla bez povšimnutí.
 const DESC_NUDGE_MIN_LENGTH = 40;
-function openLinkModal(id) {
-  if (!id && !isEditor()) return; // prohlížeč nesmí zakládat nová videa
+/** opts.mode — viz linkModalMode výš ("normal" | "tip" | "approve"); chybí-li, je "normal".
+    opts.tip — dokument tipu, když se zařazuje (režim "approve") nebo posílá (režim "tip").
+    opts.prefillUrl — odkaz, kterým se formulář rovnou vyplní (příjem sdílení). */
+function openLinkModal(id, opts) {
+  opts = opts || {};
+  linkModalMode = opts.mode || "normal";
+  approvingTip = linkModalMode === "approve" ? (opts.tip || null) : null;
+  // Prohlížeč nesmí zakládat nová videa — jedinou výjimkou je posílání tipu, který
+  // do knihovny nic nezapisuje (ukládá se do videoTips a čeká na admina).
+  if (!id && linkModalMode !== "tip" && !isEditor()) return;
   editingLinkId = id;
   renderFolderOptions();
   renderPartSelectOptions();
@@ -6024,12 +6136,39 @@ function openLinkModal(id) {
   setDiffPicker(item && item.difficulties && item.difficulties[uidCurrent] ? item.difficulties[uidCurrent] : 3);
   setRatingPicker(item && item.ratings && item.ratings[uidCurrent] ? item.ratings[uidCurrent] : 0);
 
+  // Předvyplnění z došlého tipu (admin ho zařazuje) nebo ze sdíleného odkazu.
+  // Až ZA běžným plněním výš, ať se stávající cesty nemusí sahat — tohle jen přepíše,
+  // co má být jinak, a když se otevírá normálně, neprovede se nic.
+  if (linkModalMode === "approve" && approvingTip) {
+    document.getElementById("linkUrl").value = approvingTip.url || "";
+    metaFetchedForUrl = approvingTip.url || "";
+    document.getElementById("linkTitle").value = approvingTip.title || "";
+    document.getElementById("linkLongDesc").innerHTML = richValueToHtml(approvingTip.longDesc || "");
+    document.getElementById("linkAspectRatio").value = approvingTip.aspectRatio || "16/9";
+    document.getElementById("linkFolder").value = approvingTip.folderId || "";
+    if (approvingTip.defaultPart) document.getElementById("linkDefaultPart").value = approvingTip.defaultPart;
+    document.getElementById("linkTimestamp").value = secondsToTimestamp(approvingTip.timestamp);
+    const tp = document.getElementById("thumbPreview");
+    tp.dataset.thumb = approvingTip.thumbnail || "";
+    tp.dataset.platform = approvingTip.platform || "";
+    tp.dataset.videoId = approvingTip.videoId || "";
+    if (approvingTip.thumbnail) { tp.style.backgroundImage = `url('${approvingTip.thumbnail}')`; tp.innerHTML = ""; }
+    formTags = Array.isArray(approvingTip.tags) ? [...approvingTip.tags] : [];
+    formEquip = Array.isArray(approvingTip.equipment) ? [...approvingTip.equipment] : [];
+    renderTagPills();
+    renderEquipPills();
+  } else if (opts.prefillUrl) {
+    document.getElementById("linkUrl").value = opts.prefillUrl;
+    metaFetchedForUrl = ""; // info se pro tenhle odkaz ještě nestahovalo
+  }
+
   // Prohlížeč smí v tomhle formuláři upravit jen svoje hodnocení/obtížnost —
   // zbytek aplikace zamkne needitovatelný, ale dál viditelný pro přehled.
+  // VÝJIMKA: když posílá tip, potřebuje vyplnit všechno — do knihovny tím nic nezapisuje.
   const lockedIds = ["linkUrl", "fetchMetaBtn", "linkTitle", "linkFolder", "linkDefaultPart",
     "linkAspectRatio", "linkTimestamp", "linkLongDesc", "thumbFileInput", "tagInput", "equipInput"];
   const viewerLockNotice = document.getElementById("viewerLockNotice");
-  const allowEdit = isEditor();
+  const allowEdit = isEditor() || linkModalMode === "tip";
   lockedIds.forEach(fid => {
     const el = document.getElementById(fid);
     if (!el) return;
@@ -6043,9 +6182,29 @@ function openLinkModal(id) {
   });
   viewerLockNotice.classList.toggle("hidden", allowEdit);
 
+  // Nadpis, hlášky a tlačítka podle režimu. Jeden formulář, tři cesty — viz linkModalMode.
+  const submitBtn = document.getElementById("linkFormSubmitBtn");
+  document.getElementById("tipSendNotice").classList.toggle("hidden", linkModalMode !== "tip");
+  document.getElementById("tipApproveNotice").classList.toggle("hidden", linkModalMode !== "approve");
+  document.getElementById("rejectTipBtn").classList.toggle("hidden", linkModalMode !== "approve");
+  if (linkModalMode === "tip") {
+    document.getElementById("linkModalTitle").textContent = "Poslat tip na video";
+    submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Poslat tip';
+    document.getElementById("deleteLinkBtn").classList.add("hidden");
+    document.getElementById("popoutLinkBtn").classList.add("hidden");
+  } else if (linkModalMode === "approve") {
+    document.getElementById("linkModalTitle").textContent = "Zařadit tip do knihovny";
+    document.getElementById("tipApproveWho").textContent = approvingTip ? (approvingTip.fromLabel || "neznámého trenéra") : "";
+    submitBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Uložit do knihovny';
+    document.getElementById("deleteLinkBtn").classList.add("hidden");
+    document.getElementById("popoutLinkBtn").classList.add("hidden");
+  } else {
+    submitBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Uložit';
+  }
+
   linkModalBackdrop.classList.remove("hidden");
   resetModalScroll(linkModalBackdrop);
-  if (isEditor()) {
+  if (allowEdit) {
     document.getElementById("linkTitle").focus();
   } else {
     const firstDiffBtn = document.querySelector("#diffPicker button");
@@ -6148,7 +6307,11 @@ function captureVideoFrameThumbnails(url) {
   });
 }
 let fetchMetaInProgress = false;
-document.getElementById("fetchMetaBtn").addEventListener("click", async () => {
+/** Stažení názvu, náhledu a tvaru videa z odkazu. Bylo to přímo v obsluze tlačítka
+    „Načíst info"; vytaženo do pojmenované funkce, aby se dalo spustit i z příjmu sdílení
+    (handleShareTarget níž), který potřebuje POČKAT, až doběhne. Chování tlačítka se tím
+    nemění ani o kousek — obsluha je hned pod funkcí a jen ji zavolá. */
+async function fetchLinkMeta() {
   // Rozbalení sdíleného FB odkazu umí i přes víc pokusů/proxy trvat desítky sekund — bez tohohle
   // zámku každé netrpělivé opětovné ťuknutí spustilo úplně nový souběžný pokus (viz i stejný
   // zámek u samotného Uložit tlačítka o kus níž, kde to reálně vedlo až k trojitému uložení).
@@ -6255,7 +6418,8 @@ document.getElementById("fetchMetaBtn").addEventListener("click", async () => {
     fetchMetaInProgress = false;
     btn.disabled = false;
   }
-});
+}
+document.getElementById("fetchMetaBtn").addEventListener("click", () => { fetchLinkMeta(); });
 
 /** Zkontroluje, jestli aplikace nemá tohle video už v knihovně — porovnává platformu+ID videa,
     a když aplikace ID nezná (např. neznámý formát odkazu), aspoň přesnou shodu URL. */
@@ -6575,6 +6739,46 @@ linkForm.addEventListener("submit", async (e) => {
   difficulties[uidCurrent] = myDiff;
   if (myRating) ratings[uidCurrent] = myRating; else delete ratings[uidCurrent];
 
+  /* ——— TIP OD PROHLÍŽEČE ———
+     Do knihovny se nezapisuje vůbec nic: tip jde do vlastní kolekce videoTips a čeká,
+     až ho admin zařadí. Náhled se schválně ukládá rovnou do dokumentu tipu (klidně i jako
+     data URL), NE přes saveThumbnailToFirestore do sharedThumbnails — kdyby tip skončil
+     nezařazený, zůstala by tam po něm osiřelá fotka, kterou nikdo neuklidí. Vejde se:
+     náhledy mají strop THUMB_SAFE_BYTES (20 kB), limit dokumentu je 1 MB.
+     Odesílá se až sem dolů schválně — tip tak projde úplně stejnou přípravou dat
+     (rozbalení FB odkazu, rozpoznání platformy a videoId) jako běžné uložení. */
+  if (linkModalMode === "tip") {
+    try {
+      await setDoc(doc(db, "videoTips", id), {
+        url, platform, videoId,
+        title: document.getElementById("linkTitle").value.trim(),
+        thumbnail: pendingThumbUpload || document.getElementById("thumbPreview").dataset.thumb || "",
+        folderId,
+        defaultPart: document.getElementById("linkDefaultPart").value,
+        aspectRatio: document.getElementById("linkAspectRatio").value,
+        tags: [...formTags],
+        equipment: [...formEquip],
+        longDesc: sanitizeRichHtml(document.getElementById("linkLongDesc").innerHTML),
+        timestamp: parseTimestampToSeconds(document.getElementById("linkTimestamp").value),
+        fromUid: uidCurrent,
+        fromLabel: myLabel(),
+        sentAt: Date.now(),
+        status: "waiting",
+        rejectReason: ""
+      });
+    } catch (err) {
+      const code = (err && err.code) || "";
+      console.error("Odeslání tipu selhalo:", err);
+      logDebug(`[tip] ✗ ODESLÁNÍ SELHALO — kód: ${code || "(žádný)"} — ${(err && err.message) || String(err)}`);
+      if (code === "permission-denied") logDebug("[tip] → pravidla Firestore zápis do videoTips nepovolují (jsou už v konzoli doplněná?).");
+      toast(`Tip se nepodařilo odeslat${code ? ` (${code})` : ""}. Zkus to prosím znovu — detaily v 🐞.`, 9000, "err");
+      return;
+    }
+    closeLinkModal();
+    toast("Tip odeslaný. Jak to dopadlo, uvidíš v profilu pod „Moje tipy“.", 6000);
+    return;
+  }
+
   // Nová/změněná ručně nahraná či zachycená fotka aplikace neukládá přímo do knihovny (to je
   // přesně to, co ji dřív přeplnilo přes limit) — jde do vlastní, samostatné kolekce, a v
   // knihovně po ní zůstane jen krátký odkaz. Beze změny (např. odkaz z YouTube, nebo fotka,
@@ -6616,18 +6820,44 @@ linkForm.addEventListener("submit", async (e) => {
     longDesc: sanitizeRichHtml(document.getElementById("linkLongDesc").innerHTML),
     timestamp: parseTimestampToSeconds(document.getElementById("linkTimestamp").value),
     dateAdded: editingLinkId ? (state.library[editingLinkId].dateAdded || Date.now()) : Date.now(),
-    addedBy: editingLinkId ? (state.library[editingLinkId].addedBy || null) : uidCurrent
+    // Zařazený tip nese jméno toho, kdo ho poslal, ne admina, který ho zařadil — aby se dal
+    // ve filtru „Kdo nahrál" najít pod ním. Filtr ani nic dalšího o tipech nic neví, čte
+    // addedBy jako u každého jiného videa.
+    addedBy: editingLinkId ? (state.library[editingLinkId].addedBy || null)
+      : (linkModalMode === "approve" && approvingTip ? approvingTip.fromUid : uidCurrent)
   };
+  /* Tip se schválně NEMAŽE, jen se mu přepne stav — tipující se pak v „Mých tipech" dozví,
+     jak to dopadlo, a u zařazeného se dostane rovnou na video. Adminovi z Došlých tipů zmizí
+     tím, že se ukazují jen ty se stavem "waiting".
+     Přepíná se až tady, po úspěšném sestavení záznamu: kdyby se stav změnil dřív a uložení
+     pak selhalo, tip by byl vyřízený a video nikde. */
+  if (linkModalMode === "approve" && approvingTip) {
+    try {
+      await updateDoc(doc(db, "videoTips", approvingTip.id),
+        { status: "approved", resolvedAt: Date.now(), libraryId: id });
+    } catch (err) {
+      console.warn("Stav tipu se nepodařilo přepnout:", err);
+      logDebug(`[tip] video uloženo, ale tip ${approvingTip.id} zůstal ve stavu "waiting" — objeví se v Došlých tipech znovu.`);
+    }
+  }
   scheduleSave();
   closeLinkModal();
   renderLibrary();
   if (currentView === "editor") renderPickerList();
-  toast("Uloženo.");
+  toast(linkModalMode === "approve" && approvingTip
+    ? `Uloženo do knihovny pod jménem ${approvingTip.fromLabel || "tipujícího"}.`
+    : "Uloženo.", linkModalMode === "approve" ? 5000 : 2200);
   } finally {
     linkFormSubmitting = false;
     submitBtn.disabled = false;
     submitBtn.innerHTML = submitBtnHtml;
   }
+});
+
+document.getElementById("rejectTipBtn").addEventListener("click", async () => {
+  if (linkModalMode !== "approve" || !approvingTip) return;
+  await rejectVideoTip(approvingTip);
+  closeLinkModal();
 });
 
 document.getElementById("deleteLinkBtn").addEventListener("click", async () => {
@@ -7235,21 +7465,196 @@ function renderPendingBadge() {
   const badge = document.getElementById("pendingBadge");
   const inline = document.getElementById("pendingInlineCount");
   const n = pendingRequestsCount;
+  // Kolečko na profilovce sčítá VŠECHNO, co v profilu čeká na admina — žádosti o přístup
+  // i došlé tipy. Schválně jedno číslo: dvě kolečka vedle sebe by se na avataru nevešla
+  // a stejně obě vedou do téhož okna. Rozpad je vidět až uvnitř, u obou sekcí zvlášť.
+  const total = n + videoTipsWaiting.length;
   if (badge) {
-    badge.classList.toggle("hidden", n === 0);
-    badge.textContent = n > 9 ? "9+" : String(n);
+    badge.classList.toggle("hidden", total === 0);
+    badge.textContent = total > 9 ? "9+" : String(total);
   }
   if (inline) {
     inline.classList.toggle("hidden", n === 0);
     inline.textContent = String(n);
   }
+  const tipsInline = document.getElementById("tipsInlineCount");
+  if (tipsInline) {
+    tipsInline.classList.toggle("hidden", videoTipsWaiting.length === 0);
+    tipsInline.textContent = String(videoTipsWaiting.length);
+  }
   const profileBtn = document.getElementById("profileBtn");
   if (profileBtn) {
-    profileBtn.setAttribute("aria-label", n
-      ? `Profil — ${n} ${n === 1 ? "člověk čeká" : (n < 5 ? "lidé čekají" : "lidí čeká")} na schválení`
-      : "Profil, nové komentáře");
+    const parts = [];
+    if (n) parts.push(`${n} ${n === 1 ? "člověk čeká" : (n < 5 ? "lidé čekají" : "lidí čeká")} na schválení`);
+    if (videoTipsWaiting.length) parts.push(`${videoTipsWaiting.length} ${videoTipsWaiting.length === 1 ? "tip čeká" : "tipů čeká"} na vyřízení`);
+    profileBtn.setAttribute("aria-label", parts.length ? `Profil — ${parts.join(", ")}` : "Profil, nové komentáře");
   }
 }
+/* =========================================================
+   TIPY NA VIDEA (videoTips)
+   Trenér s rolí "prohlížeč" nemá tlačítko "Přidat odkaz" a mít ho nebude — jediná cesta,
+   jak dostat video do knihovny, je poslat tip přes systémové Sdílet. Tip čeká, dokud ho
+   admin nezařadí; zařazené video pak nese jméno TIPUJÍCÍHO (addedBy), ať se dá najít
+   ve filtru "Kdo nahrál" pod ním.
+   Stav tipu: "waiting" -> "approved" (+ libraryId) | "rejected" (+ rejectReason).
+   Tipy se schválně nemažou — tipující se jinak nedozví, jak to dopadlo.
+   Odběr je stavěný podle subscribeToPendingRequests výš, včetně odznaku.
+   ========================================================= */
+let videoTipsUnsub = null;
+let videoTipsWaiting = [];   // jen tipy se stavem "waiting" — to, co má admin vyřídit
+let myTipsUnsub = null;
+let myTips = [];             // vlastní odeslané tipy, všechny stavy
+function subscribeToVideoTips() {
+  if (videoTipsUnsub) { videoTipsUnsub(); videoTipsUnsub = null; }
+  if (uidCurrent !== ADMIN_UID) { videoTipsWaiting = []; renderPendingBadge(); return; }
+  videoTipsUnsub = onSnapshot(collection(db, "videoTips"), (snap) => {
+    videoTipsWaiting = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(t => (t.status || "waiting") === "waiting")
+      .sort((a, b) => (b.sentAt || 0) - (a.sentAt || 0));
+    renderPendingBadge();
+    if (!document.getElementById("videoTipsModalBackdrop").classList.contains("hidden")) renderVideoTipsList("admin");
+    if (!document.getElementById("profileModalBackdrop").classList.contains("hidden")) applyTipsSectionsVisibility();
+  }, (err) => {
+    // Nejčastější důvod je chybějící pravidlo v konzoli — ať je to v 🐞 vidět jako příčina,
+    // ne jako "tipy nefungují".
+    console.warn("Sledování tipů selhalo:", err);
+    logDebug(`[tip] sledování došlých tipů selhalo (${(err && err.code) || "?"}) — jsou v konzoli doplněná pravidla pro videoTips?`);
+  });
+}
+/** Vlastní odeslané tipy. Sleduje je každý (i editor — mohl tipy poslat dřív, než mu
+    admin roli změnil), tlačítko "Moje tipy" se ale ukáže, jen když nějaké opravdu má. */
+function subscribeToMyTips() {
+  if (myTipsUnsub) { myTipsUnsub(); myTipsUnsub = null; }
+  if (!uidCurrent) { myTips = []; return; }
+  myTipsUnsub = onSnapshot(query(collection(db, "videoTips"), where("fromUid", "==", uidCurrent)), (snap) => {
+    myTips = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.sentAt || 0) - (a.sentAt || 0));
+    if (!document.getElementById("videoTipsModalBackdrop").classList.contains("hidden")) renderVideoTipsList("mine");
+    if (!document.getElementById("profileModalBackdrop").classList.contains("hidden")) applyTipsSectionsVisibility();
+  }, (err) => {
+    console.warn("Sledování vlastních tipů selhalo:", err);
+    logDebug(`[tip] sledování vlastních tipů selhalo (${(err && err.code) || "?"}).`);
+  });
+}
+function unsubscribeFromVideoTips() {
+  if (videoTipsUnsub) { videoTipsUnsub(); videoTipsUnsub = null; }
+  if (myTipsUnsub) { myTipsUnsub(); myTipsUnsub = null; }
+  videoTipsWaiting = [];
+  myTips = [];
+  renderPendingBadge();
+}
+/** Tlačítka v profilu — admin vidí došlé tipy, tipující svoje. Obě jen když je co ukázat. */
+function applyTipsSectionsVisibility() {
+  const isAdmin = uidCurrent === ADMIN_UID;
+  document.getElementById("adminTipsSection").classList.toggle("hidden", !isAdmin);
+  const tipsCount = document.getElementById("tipsInlineCount");
+  tipsCount.classList.toggle("hidden", videoTipsWaiting.length === 0);
+  tipsCount.textContent = String(videoTipsWaiting.length);
+  const myBtn = document.getElementById("openMyTipsBtn");
+  myBtn.classList.toggle("hidden", myTips.length === 0);
+  const waitingMine = myTips.filter(t => (t.status || "waiting") === "waiting").length;
+  const myCount = document.getElementById("myTipsInlineCount");
+  myCount.classList.toggle("hidden", waitingMine === 0);
+  myCount.textContent = String(waitingMine);
+}
+const videoTipsModalBackdrop = document.getElementById("videoTipsModalBackdrop");
+let videoTipsModalMode = "admin";
+function openVideoTipsModal(mode) {
+  videoTipsModalMode = mode;
+  document.getElementById("videoTipsModalTitle").textContent = mode === "admin" ? "Došlé tipy" : "Moje tipy";
+  document.getElementById("videoTipsModalLead").textContent = mode === "admin"
+    ? "Videa od trenérů bez práva zakládat. „Zařadit“ otevře běžný formulář — doplň složku a štítky a ulož."
+    : "Tipy, které jsi poslal. Zařazené video najdeš v knihovně pod svým jménem.";
+  renderVideoTipsList(mode);
+  videoTipsModalBackdrop.classList.remove("hidden");
+  resetModalScroll(videoTipsModalBackdrop);
+}
+document.getElementById("closeVideoTipsModalBtn").addEventListener("click", () => videoTipsModalBackdrop.classList.add("hidden"));
+document.getElementById("openVideoTipsAdminBtn").addEventListener("click", () => openVideoTipsModal("admin"));
+document.getElementById("openMyTipsBtn").addEventListener("click", () => openVideoTipsModal("mine"));
+const TIP_STATE_LABELS = {
+  waiting: { text: "čeká na vyřízení", bg: "var(--warn-bg)", border: "var(--warn-border)", ink: "var(--warn-ink)" },
+  approved: { text: "v knihovně", bg: "#E8F3EA", border: "#A9CFB6", ink: "#2A6B41" },
+  rejected: { text: "nezařazeno", bg: "var(--danger-bg)", border: "#EFC9C9", ink: "var(--danger)" }
+};
+function renderVideoTipsList(mode) {
+  const wrap = document.getElementById("videoTipsList");
+  const list = mode === "admin" ? videoTipsWaiting : myTips;
+  if (!list.length) {
+    wrap.innerHTML = `<p style="font-size:12.5px;color:var(--ink-faint);margin:10px 0 0;">${
+      mode === "admin" ? "Zatím ti nikdo žádný tip neposlal." : "Zatím jsi žádný tip neposlal."}</p>`;
+    return;
+  }
+  wrap.innerHTML = list.map(t => {
+    const st = TIP_STATE_LABELS[t.status || "waiting"] || TIP_STATE_LABELS.waiting;
+    const thumb = t.thumbnail
+      ? `<div style="width:84px;aspect-ratio:16/9;border-radius:6px;flex:0 0 auto;background:center/cover no-repeat url('${esc(t.thumbnail)}');"></div>`
+      : `<div style="width:84px;aspect-ratio:16/9;border-radius:6px;flex:0 0 auto;background:var(--paper);border:1px dashed var(--line);"></div>`;
+    const when = t.sentAt ? new Date(t.sentAt).toLocaleString("cs-CZ", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+    const meta = mode === "admin" ? `${esc(t.fromLabel || "neznámý trenér")} · ${when}` : when;
+    const reason = t.status === "rejected" && t.rejectReason
+      ? `<div style="font-size:11px;color:var(--ink-soft);font-style:italic;margin-top:3px;">„${esc(t.rejectReason)}“</div>` : "";
+    const actions = mode === "admin"
+      ? `<div style="display:flex;gap:6px;margin-top:6px;">
+           <button type="button" class="btn btn-primary btn-sm" data-tip-approve="${esc(t.id)}" style="margin:0;">Zařadit</button>
+           <button type="button" class="btn btn-sm" data-tip-reject="${esc(t.id)}" style="margin:0;">Nezařadit</button>
+         </div>`
+      : (t.status === "approved" && t.libraryId && state.library[t.libraryId]
+          ? `<div style="margin-top:6px;"><button type="button" class="btn btn-sm" data-tip-open="${esc(t.libraryId)}" style="margin:0;">Otevřít v knihovně</button></div>` : "");
+    return `<div style="display:flex;gap:9px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line);">
+      ${thumb}
+      <div style="min-width:0;flex:1;">
+        <div style="font-size:12.5px;font-weight:600;line-height:1.3;">${esc(t.title || t.url || "(bez názvu)")}</div>
+        <div style="font-size:10.5px;color:var(--ink-faint);margin:2px 0 3px;">${esc(meta)}</div>
+        <span style="font-size:10px;font-weight:700;border-radius:999px;padding:2px 8px;background:${st.bg};border:1px solid ${st.border};color:${st.ink};">${st.text}</span>
+        ${reason}
+        ${actions}
+      </div>
+    </div>`;
+  }).join("");
+}
+document.getElementById("videoTipsList").addEventListener("click", async (e) => {
+  const approveBtn = e.target.closest("[data-tip-approve]");
+  if (approveBtn) {
+    const tip = videoTipsWaiting.find(t => t.id === approveBtn.dataset.tipApprove);
+    if (!tip) return;
+    videoTipsModalBackdrop.classList.add("hidden");
+    openLinkModal(null, { mode: "approve", tip });
+    return;
+  }
+  const rejectBtn = e.target.closest("[data-tip-reject]");
+  if (rejectBtn) {
+    const tip = videoTipsWaiting.find(t => t.id === rejectBtn.dataset.tipReject);
+    if (tip) await rejectVideoTip(tip);
+    return;
+  }
+  const openBtn = e.target.closest("[data-tip-open]");
+  if (openBtn) {
+    videoTipsModalBackdrop.classList.add("hidden");
+    openDetailModal(openBtn.dataset.tipOpen);
+  }
+});
+/** Nezařazení tipu. Důvod je nepovinný — když ho admin nenapíše, tipující uvidí jen
+    "nezařazeno". Tip se nemaže, jen mění stav (viz komentář u kolekce výš). */
+async function rejectVideoTip(tip) {
+  const reason = await promptDialog(
+    `Proč nezařazuješ tip „${tip.title || tip.url}“ od ${tip.fromLabel || "trenéra"}? Nechat prázdné je v pořádku — pak uvidí jen „nezařazeno“.`,
+    { title: "Nezařadit tip", confirmLabel: "Nezařadit" }
+  );
+  if (reason === null) return; // zrušeno
+  try {
+    await updateDoc(doc(db, "videoTips", tip.id),
+      { status: "rejected", rejectReason: (reason || "").trim().slice(0, 300), resolvedAt: Date.now() });
+    toast("Tip nezařazen.");
+  } catch (err) {
+    console.error("Nezařazení tipu selhalo:", err);
+    logDebug(`[tip] nezařazení tipu ${tip.id} selhalo — ${(err && err.message) || String(err)}`);
+    toast("Nepovedlo se to uložit, zkus to prosím znovu.", 7000, "err");
+  }
+}
+
 function subscribeToCommentActivity() {
   if (commentActivityUnsub) { commentActivityUnsub(); commentActivityUnsub = null; }
   commentActivityUnsub = onSnapshot(
@@ -12402,6 +12807,7 @@ function openProfileModal() {
     renderPendingApprovals();
     renderMembersRoleList();
   }
+  applyTipsSectionsVisibility();
   renderCommentActivityPanel();
   markCommentsSeen();
   profileModalBackdrop.classList.remove("hidden");
@@ -13473,6 +13879,18 @@ const HELP_DATA = [
       { q: "Jak zavřu okno na počítači?", a: "Křížkem v rohu, nebo klávesou Escape — ta vždycky zavře jen to okno, které je navrchu. Když máš rozepsaný text v nějakém poli, první Escape jen odklikne z pole a teprve druhý zavře okno.", kw: "escape klavesa zavrit okno pocitac" },
       { q: "Jak přepnu tmavý/světlý režim?", a: "V profilu (kolečko s tvojí iniciálou vpravo nahoře) najdeš přepínač se sluníčkem a měsícem — jedním klepnutím přepneš celý vzhled aplikace." }
     ]},
+    { title: "Přidání videa přímo ze stránky", icon: "fa-solid fa-share-nodes", qa: [
+      { q: "Našel jsem video na YouTube. Jak ho dostanu do Trenéra, aniž bych kopíroval odkaz?", a: "Přímo na stránce s videem dej Sdílet (v prohlížeči nebo v aplikaci YouTube) a v nabídce vyber Trenér. Aplikace se otevře, sama si stáhne název i náhled a rovnou ti nabídne vyplněný formulář — ty už jen doplníš složku a štítky a uložíš. Nic se neuloží samo, poslední slovo máš vždycky ty.", kw: "sdilet share pridat video ze stranky youtube" },
+      { q: "V nabídce Sdílet žádný Trenér nevidím. Proč?", a: "Skoro jistě proto, že máš Trenéra otevřeného jen jako stránku v prohlížeči. Do nabídky Sdílet se dostane až aplikace nainstalovaná na plochu (viz otázka „Jak si dám aplikaci na plochu telefonu?“). Když ji nainstalovanou máš a Trenér se přesto neobjevuje, zkus ji odinstalovat a nainstalovat znovu — systém si nastavení aplikace pamatuje a novinek si všimne až po přeinstalování.", kw: "sdilet nabidka neobjevuje chybi instalace" },
+      { q: "Na iPhonu mi sdílení do Trenéra nejde vůbec. Dá se s tím něco dělat?", a: "Bohužel ne — Safari a iOS tuhle možnost neumí a zatím se to nechystá změnit. Na iPhonu tedy odkaz zkopíruj a vlož do formuláře ručně, jako dosud. Na Androidu a na počítači s Chromem nebo Edge sdílení funguje normálně.", kw: "iphone ios safari sdileni nefunguje" },
+      { q: "Sdílel jsem video a název ani náhled se nenačetly. Co s tím?", a: "U Facebooku a Instagramu se nenačtou nikdy — tyhle sítě je aplikaci nedávají, takže je napiš ručně. U ostatních to může být pomalým připojením: aplikace čeká pár vteřin a pak formulář otevře i bez nich, ať nečekáš zbytečně. Chybějící údaje doplň sám, nebo zkus tlačítko „Načíst info“ znovu.", kw: "nacteni nazev nahled nenacetlo sdileni" }
+    ]},
+    { title: "Tipy na videa (role Prohlížeč)", icon: "fa-solid fa-paper-plane", qa: [
+      { q: "Jsem Prohlížeč a nemám tlačítko na přidání videa. Jak můžu knihovnu doplnit?", a: "Pošli adminovi tip. Na stránce s videem dej Sdílet a vyber Trenér — otevře se ti formulář jako každému jinému, vyplníš, co víš, a dole dáš „Poslat tip“. Do knihovny se tím nic nezapíše; tip počká, až ho admin projde a zařadí.", kw: "prohlizec tip poslat video pridat knihovna" },
+      { q: "Co se stane s videem, které jsem poslal jako tip?", a: "Když ho admin zařadí, objeví se v knihovně pod TVÝM jménem — ve filtru „Kdo nahrál“ ho pak najdeš pod sebou, i když ho do knihovny uložil admin. Složku, štítky a případné úpravy popisu doplňuje on.", kw: "tip zarazeni kdo nahral jmeno" },
+      { q: "Kde zjistím, jestli admin můj tip zařadil?", a: "V profilu (kolečko s iniciálou vpravo nahoře) máš tlačítko „Moje tipy“ — ukáže se, jakmile aspoň jeden tip pošleš. U každého vidíš, jestli čeká na vyřízení, je už v knihovně, nebo ho admin nezařadil. U nezařazeného bývá i krátké vysvětlení proč.", kw: "moje tipy stav cekani zarazeno nezarazeno" },
+      { q: "Můžu poslat jako tip i video, které v knihovně už je?", a: "Aplikace tě na to upozorní ještě ve formuláři — když odkaz pozná, ukáže žlutou hlášku s názvem videa, které už v knihovně je. Tip pak nemá smysl posílat.", kw: "duplicita tip uz v knihovne" }
+    ]},
     { title: "Profil", icon: "fa-solid fa-user", qa: [
       { q: "Jak si změním přezdívku, klub nebo fotku?", a: "Klikni na kolečko se svou iniciálou vpravo nahoře — v profilu jde upravit přezdívka, kategorie, klub i profilová fotka (včetně oříznutí)." },
       { q: "K čemu jsou barvy nastavené v profilu?", a: "Nastaví barevné ladění celé aplikace jen pro tebe — každý trenér si tak může mít svůj vlastní vzhled, aniž by to ovlivnilo, jak aplikaci vidí kolegové." },
@@ -13769,6 +14187,7 @@ document.getElementById("helpSearchInput").addEventListener("input", (e) => rend
     partsModalBackdrop: "closePartsModalBtn",
     bulkDriveModalBackdrop: "closeBulkDriveModalBtn",
     trashModalBackdrop: "closeTrashModalBtn",
+    videoTipsModalBackdrop: "closeVideoTipsModalBtn",
     addToTrainingModalBackdrop: "closeAddToTrainingModalBtn",
     copyToTrainingModalBackdrop: "closeCopyToTrainingModalBtn",
     bulkTagModalBackdrop: "closeBulkTagModalBtn",
