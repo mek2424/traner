@@ -622,6 +622,13 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 #changePasswordModalBackdrop{z-index:60;}
 #changeEmailModalBackdrop{z-index:60;}
 #adminActivityModalBackdrop{z-index:60;}
+/* Okno tipů se otevírá Z PROFILU, takže musí být nad ním — stejně jako změna hesla
+   a spol. výš. V DOM je totiž dřív než profil, a se stejným z-indexem by vyjelo pod ním. */
+#videoTipsModalBackdrop{z-index:60;}
+/* A formulář videa musí být ještě nad oknem tipů, když se z něj otevírá (Prohlédnout),
+   i nad profilem, když prohlížeč posílá tip. Mimo tyhle dvě cesty si formulář drží
+   svoje běžné pořadí a třídu nedostane. */
+#linkModalBackdrop.above-profile{z-index:70;}
 #exerciseInfoModalBackdrop{z-index:210;}
 /* Výška schválně v PROCENTECH, ne ve vh: v záložním CSS otočení (tm-forced-landscape) je celý
    tréninkový režim otočený transformem, takže vh míří na fyzicky neotočenou obrazovku — okno
@@ -1870,11 +1877,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
       </div>
       <div class="duplicate-warning hidden" id="tipSendNotice" style="background:var(--info-bg);border-color:var(--info-border);color:var(--info-ink);">
         <i class="fa-solid fa-paper-plane"></i>
-        <span>Tohle je tip pro admina — sám ho do knihovny uložit nemůžeš. Až ho zařadí, objeví se video v knihovně pod tvým jménem.</span>
-      </div>
-      <div class="duplicate-warning hidden" id="tipApproveNotice" style="background:var(--info-bg);border-color:var(--info-border);color:var(--info-ink);">
-        <i class="fa-solid fa-user-check"></i>
-        <span>Tip od <strong id="tipApproveWho"></strong> — po uložení ponese video jeho jméno, ne tvoje.</span>
+        <span>Tip půjde adminovi ke schválení.</span>
       </div>
       <div class="field">
         <label for="linkUrl">Odkaz (YouTube, Facebook, Disk, jiné)</label>
@@ -1888,9 +1891,12 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
         <span>Tohle video už v knihovně možná je: <strong id="duplicateWarningTitle"></strong></span>
         <button type="button" class="btn btn-sm" id="openDuplicateBtn">Otevřít existující</button>
       </div>
+      <!-- Při prohlížení došlého tipu tady místo náhledu běží samotné video, ať se dá
+           rozhodnout až po zhlédnutí. Náhled se zatím schová (i s návrhy a nahráváním). -->
+      <div class="embed-wrap hidden" id="tipEmbedWrap"></div>
       <div class="thumb-preview" id="thumbPreview"><i class="fa-solid fa-clapperboard thumb-empty-icon"></i><span class="thumb-empty-label">Bez náhledu</span></div>
       <div class="thumb-suggestions hidden" id="thumbSuggestions"></div>
-      <div class="thumb-upload-row">
+      <div class="thumb-upload-row" id="thumbUploadRow">
         <label class="btn btn-sm" for="thumbFileInput"><i class="fa-solid fa-image"></i> Nahrát vlastní náhled</label>
         <input type="file" id="thumbFileInput" accept="image/*">
       </div>
@@ -2576,8 +2582,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
       <div id="pendingApprovalsList"></div>
     </div>
     <div id="adminTipsSection" class="hidden" style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line);">
-      <button type="button" class="btn btn-ghost btn-block" id="openVideoTipsAdminBtn"><i class="fa-solid fa-inbox"></i> Došlé tipy na videa<span id="tipsInlineCount" class="pending-inline-count hidden"></span></button>
-      <p style="font-size:11.5px;color:var(--ink-faint);margin:6px 0 0;">Videa, která ti poslali trenéři bez práva zakládat. Zařazené video ponese jméno toho, kdo ho poslal.</p>
+      <button type="button" class="btn btn-sm" id="openVideoTipsAdminBtn" style="margin-bottom:0;"><i class="fa-solid fa-inbox"></i> Tipy<span id="tipsInlineCount" class="pending-inline-count hidden"></span></button>
     </div>
     <div id="adminMembersSection" class="hidden" style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line);">
       <button type="button" class="btn btn-sm" id="openAdminActivityBtn" style="margin-bottom:14px;"><i class="fa-solid fa-chart-simple"></i> Kdo je online a co dělá</button>
@@ -2951,7 +2956,7 @@ function sharedFingerprint() {
       state.trainingFocus, state.focusLibraryMap]);
   } catch (e) { return null; }
 }
-const APP_VERSION = "2026-09-21 00:30";
+const APP_VERSION = "2026-09-21 01:10";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -6185,17 +6190,19 @@ function openLinkModal(id, opts) {
   // Nadpis, hlášky a tlačítka podle režimu. Jeden formulář, tři cesty — viz linkModalMode.
   const submitBtn = document.getElementById("linkFormSubmitBtn");
   document.getElementById("tipSendNotice").classList.toggle("hidden", linkModalMode !== "tip");
-  document.getElementById("tipApproveNotice").classList.toggle("hidden", linkModalMode !== "approve");
   document.getElementById("rejectTipBtn").classList.toggle("hidden", linkModalMode !== "approve");
+  // Obě cesty k tipům vedou přes profil (a zařazení ještě přes okno tipů), které jsou
+  // v DOM až za formulářem — bez tohohle by formulář vyjel pod nimi.
+  linkModalBackdrop.classList.toggle("above-profile", linkModalMode !== "normal");
+  renderTipEmbed(linkModalMode === "approve" ? approvingTip : null);
   if (linkModalMode === "tip") {
     document.getElementById("linkModalTitle").textContent = "Poslat tip na video";
     submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Poslat tip';
     document.getElementById("deleteLinkBtn").classList.add("hidden");
     document.getElementById("popoutLinkBtn").classList.add("hidden");
   } else if (linkModalMode === "approve") {
-    document.getElementById("linkModalTitle").textContent = "Zařadit tip do knihovny";
-    document.getElementById("tipApproveWho").textContent = approvingTip ? (approvingTip.fromLabel || "neznámého trenéra") : "";
-    submitBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Uložit do knihovny';
+    document.getElementById("linkModalTitle").textContent = "Tip od " + (approvingTip && approvingTip.fromLabel ? approvingTip.fromLabel : "trenéra");
+    submitBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Zařadit do knihovny';
     document.getElementById("deleteLinkBtn").classList.add("hidden");
     document.getElementById("popoutLinkBtn").classList.add("hidden");
   } else {
@@ -6211,7 +6218,38 @@ function openLinkModal(id, opts) {
     if (firstDiffBtn) firstDiffBtn.focus();
   }
 }
-function closeLinkModal() { linkModalBackdrop.classList.add("hidden"); }
+/** U došlého tipu se místo náhledu pouští rovnou video, ať jde o zařazení rozhodnout
+    až po zhlédnutí. Pro ostatní režimy (a při zavření okna) se přehrávač vyprázdní —
+    jinak by hrál dál na pozadí, stejně jako u detailu videa. */
+function renderTipEmbed(tip) {
+  const wrap = document.getElementById("tipEmbedWrap");
+  const showEmbed = !!tip;
+  const item = showEmbed ? {
+    platform: tip.platform, videoId: tip.videoId, url: tip.url,
+    timestamp: tip.timestamp, aspectRatio: tip.aspectRatio || "16/9"
+  } : null;
+  wrap.innerHTML = showEmbed ? renderEmbedHtml(item) : "";
+  wrap.classList.toggle("hidden", !showEmbed);
+  // Svislá videa (Reels/Shorts/TikTok) si CSS zúží samo podle tohohle stylu —
+  // selektor .embed-wrap[style*="9 / 16"] výš, proto ta mezera kolem lomítka.
+  wrap.style.aspectRatio = showEmbed ? (tip.aspectRatio || "16/9").replace("/", " / ") : "";
+  // Videa z Disku potřebují dorovnat přehrávání stejně jako v detailu videa;
+  // u ostatních platforem funkce sama nic neudělá.
+  if (showEmbed) setupDriveVideoPlayback(wrap, item, { maxVh: 55 });
+  // Náhled, návrhy i nahrávání vlastní fotky jdou u tipu stranou — místo je potřeba
+  // na video a náhled si tipující už vybral.
+  ["thumbPreview", "thumbSuggestions", "thumbUploadRow"].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (showEmbed) el.classList.add("hidden");
+    else if (id !== "thumbSuggestions") el.classList.remove("hidden");
+  });
+}
+function closeLinkModal() {
+  linkModalBackdrop.classList.add("hidden");
+  renderTipEmbed(null); // zastaví přehrávání na pozadí a vrátí náhled zpátky
+  linkModalBackdrop.classList.remove("above-profile");
+}
 
 /** Vybere z předdefinovaných možností tu, která nejlíp odpovídá skutečnému poměru stran. */
 function pickClosestAspectRatio(w, h) {
@@ -7565,8 +7603,8 @@ function openVideoTipsModal(mode) {
   videoTipsModalMode = mode;
   document.getElementById("videoTipsModalTitle").textContent = mode === "admin" ? "Došlé tipy" : "Moje tipy";
   document.getElementById("videoTipsModalLead").textContent = mode === "admin"
-    ? "Videa od trenérů bez práva zakládat. „Zařadit“ otevře běžný formulář — doplň složku a štítky a ulož."
-    : "Tipy, které jsi poslal. Zařazené video najdeš v knihovně pod svým jménem.";
+    ? "„Prohlédnout“ pustí video a otevře formulář — teprve tam se rozhoduje."
+    : "Zařazené video najdeš v knihovně pod svým jménem.";
   renderVideoTipsList(mode);
   videoTipsModalBackdrop.classList.remove("hidden");
   resetModalScroll(videoTipsModalBackdrop);
@@ -7598,7 +7636,7 @@ function renderVideoTipsList(mode) {
       ? `<div style="font-size:11px;color:var(--ink-soft);font-style:italic;margin-top:3px;">„${esc(t.rejectReason)}“</div>` : "";
     const actions = mode === "admin"
       ? `<div style="display:flex;gap:6px;margin-top:6px;">
-           <button type="button" class="btn btn-primary btn-sm" data-tip-approve="${esc(t.id)}" style="margin:0;">Zařadit</button>
+           <button type="button" class="btn btn-primary btn-sm" data-tip-approve="${esc(t.id)}" style="margin:0;">Prohlédnout</button>
            <button type="button" class="btn btn-sm" data-tip-reject="${esc(t.id)}" style="margin:0;">Nezařadit</button>
          </div>`
       : (t.status === "approved" && t.libraryId && state.library[t.libraryId]
