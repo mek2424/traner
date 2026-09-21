@@ -11,6 +11,19 @@
 <meta name="apple-mobile-web-app-title" content="Trenér">
 <link rel="manifest" href="manifest.json">
 <script>
+/* Nabídka instalace (fáze 3, 21. 9. 2026). Chrome/Edge pošlou událost beforeinstallprompt,
+   jen když appka JDE nainstalovat a ještě nainstalovaná NENÍ. Zachytává se tady v hlavičce,
+   ne až v modulu — ten startuje později (čeká na přihlášení) a událost by mohl propásnout.
+   preventDefault() schová vlastní lištu Chromu; instalaci nabízí ikona v horní liště
+   (viz updateInstallButton v modulu). */
+window.__trenerInstallPrompt = null;
+window.addEventListener("beforeinstallprompt", function (e) {
+  e.preventDefault();
+  window.__trenerInstallPrompt = e;
+  if (typeof window.__trenerInstallChanged === "function") window.__trenerInstallChanged();
+});
+</script>
+<script>
 /* Volba tmavého režimu žije v profilu na serveru, takže se dozvíme až po přihlášení a načtení
    profilu — do té doby by appka svítila bíle a pak teprve ztmavla. Proto si volbu zrcadlíme do
    prohlížeče a nastavíme ji hned tady, ještě než se cokoli vykreslí. Server pořád rozhoduje;
@@ -396,6 +409,11 @@ header.topbar{
 .topbar-title{font-family:var(--font-display);font-size:24px;letter-spacing:.03em;}
 .topbar-user{display:flex;align-items:center;gap:10px;font-size:12px;color:rgba(255,255,255,.75);}
 .topbar-user button{background:rgba(255,255,255,.12);border:none;color:#fff;border-radius:var(--radius-sm);padding:6px 10px;font-size:12px;}
+/* Ikona instalace pulzuje jasem, dokud na ni trenér jednou neťukne (pak svítí klidně).
+   Při „omezit animace" v systému nepulzuje vůbec — viz i obecné pravidlo výš. */
+@keyframes installPulse{0%,100%{background:rgba(255,255,255,.12);box-shadow:0 0 0 0 rgba(255,255,255,0);}50%{background:rgba(255,255,255,.34);box-shadow:0 0 0 4px rgba(255,255,255,.18);}}
+#installAppBtn.pulse-install{animation:installPulse 1.6s ease-in-out infinite;}
+@media (prefers-reduced-motion: reduce){#installAppBtn.pulse-install{animation:none;}}
 .avatar-btn{
   position:relative;width:30px;height:30px;border-radius:50% !important;background-color:rgba(255,255,255,.18);
   background-position:center !important;background-size:cover !important;background-repeat:no-repeat !important;
@@ -1656,13 +1674,13 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
     </div>
     <div class="topbar-user">
       <button id="openHelpBtn" class="btn btn-icon btn-ghost" aria-label="Nápověda"><i class="fa-solid fa-circle-question"></i></button>
+      <button id="installAppBtn" class="btn btn-icon btn-ghost hidden" aria-label="Nainstalovat Trenéra" title="Nainstalovat Trenéra"><i class="fa-solid fa-download"></i></button>
       <button id="profileBtn" class="avatar-btn" aria-label="Profil, nové komentáře" title="Profil">
         <span id="avatarInitial">?</span>
         <span class="bell-dot hidden" id="commentBellDot"></span>
         <span class="pending-badge hidden" id="pendingBadge" aria-hidden="true"></span>
       </button>
       <span id="userEmailLabel"></span>
-      <button id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Odhlásit</button>
     </div>
   </header>
   <nav class="tabs">
@@ -2569,6 +2587,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
         <button type="button" class="btn btn-sm" id="openChangePasswordBtn" style="margin-bottom:0;"><i class="fa-solid fa-key"></i> Změnit heslo</button>
         <button type="button" class="btn btn-sm" id="openChangeEmailBtn" style="margin-bottom:0;"><i class="fa-solid fa-envelope"></i> Změnit e-mail</button>
+        <button type="button" class="btn btn-sm" id="logoutBtn" style="margin-bottom:0;"><i class="fa-solid fa-right-from-bracket"></i> Odhlásit</button>
         <button type="button" class="btn btn-sm hidden" id="openMyTipsBtn" style="margin-bottom:0;"><i class="fa-solid fa-paper-plane"></i> Moje tipy<span id="myTipsInlineCount" class="pending-inline-count hidden"></span></button>
       </div>
       <div class="modal-actions">
@@ -2967,7 +2986,7 @@ function sharedFingerprint() {
       state.trainingFocus, state.focusLibraryMap]);
   } catch (e) { return null; }
 }
-const APP_VERSION = "2026-09-21 17:00";
+const APP_VERSION = "2026-09-21 20:50";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -4505,6 +4524,64 @@ function translateAuthError(code) {
 }
 
 document.getElementById("logoutBtn").addEventListener("click", () => signOut(auth));
+
+/* =========================================================
+   INSTALACE — ikona v horní liště (fáze 3, Mekova rozhodnutí 21. 9. 2026)
+   - Ukáže se jen tomu, kdo Trenéra nainstalovaného nemá: v Chrome/Edge, když prohlížeč
+     poslal beforeinstallprompt (zachytává ho skript v hlavičce), na iPhonu/iPadu vždy,
+     dokud appka neběží z plochy. Kde to nejde (Firefox, Safari na Macu), neukáže se nic.
+   - Pulzuje, dokud na ni trenér jednou neťukne — i kdyby pak instalaci odmítl.
+     Zapamatuje se jen v tomhle prohlížeči (localStorage) — je to drobnost, ne data.
+   - Ťuknutí: v Chrome/Edge systémové okno instalace, na iPhonu krátký návod.
+   - Z nainstalované appky (standalone) ikona zmizí vždycky, i na iPhonu.
+   ========================================================= */
+const INSTALL_ICON_SEEN_KEY = "trener_install_icon_seen";
+function isRunningInstalled() {
+  return (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true;
+}
+function isAppleMobile() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+function installIconSeen() { try { return localStorage.getItem(INSTALL_ICON_SEEN_KEY) === "1"; } catch (e) { return false; } }
+function markInstallIconSeen() { try { localStorage.setItem(INSTALL_ICON_SEEN_KEY, "1"); } catch (e) { /* nevadí, jen bude dál pulzovat */ } }
+function updateInstallButton() {
+  const btn = document.getElementById("installAppBtn");
+  if (!btn) return;
+  const show = !isRunningInstalled() && (!!window.__trenerInstallPrompt || isAppleMobile());
+  btn.classList.toggle("hidden", !show);
+  btn.classList.toggle("pulse-install", show && !installIconSeen());
+}
+window.__trenerInstallChanged = updateInstallButton; // když Chrome pošle událost až teď
+window.addEventListener("appinstalled", () => {
+  window.__trenerInstallPrompt = null;
+  logDebug("[instalace] Trenér nainstalován");
+  updateInstallButton();
+});
+document.getElementById("installAppBtn").addEventListener("click", async () => {
+  markInstallIconSeen();
+  const ev = window.__trenerInstallPrompt;
+  if (ev) {
+    window.__trenerInstallPrompt = null; // prompt() jde na jedné události zavolat jen jednou
+    updateInstallButton();
+    try {
+      ev.prompt();
+      const choice = await ev.userChoice;
+      logDebug(`[instalace] systémové okno: ${choice && choice.outcome}`);
+    } catch (err) {
+      logDebug(`[instalace] systémové okno se neotevřelo — ${(err && err.message) || String(err)}`);
+    }
+    updateInstallButton();
+    return;
+  }
+  updateInstallButton();
+  if (isAppleMobile()) {
+    await alertDialog(
+      "Na iPhonu to jde jen ručně: v Safari klepni na Sdílet (podle verze iOS je dole, nebo pod třemi tečkami) a vyber „Přidat na plochu“. Pak Trenéra otevírej z plochy — ikona tady nahoře pak zmizí.",
+      { title: "Trenér na plochu", confirmLabel: "Rozumím" }
+    );
+  }
+});
+updateInstallButton();
 
 // Firebase Auth umí onAuthStateChanged spustit s platným uživatelem i VÍCKRÁT za
 // jednu session (typicky po obnově tokenu nebo když mobilní prohlížeč appku na
@@ -14002,7 +14079,8 @@ const HELP_DATA = [
       { q: "Odkaz na nové heslo mi nepřišel. Proč?", a: "Skoro jistě proto, že máš účet na české schránce. Seznam, Centrum, Volný a spol. e-maily z aplikace tiše zahazují — nedorazí ani do spamu, prostě zmizí cestou. Řešení je mít účet na Gmailu: přihlas se (heslo zatím znáš) a v profilu si přes „Změnit e-mail“ přepni adresu. Když už se přihlásit nemůžeš, ozvi se adminovi, ten to umí přepnout za tebe.", kw: "seznam centrum volny email nedorazil nechodi spam" }
     ]},
     { title: "Instalace a základy aplikace", icon: "fa-solid fa-mobile-screen-button", qa: [
-      { q: "Jak si dám aplikaci na plochu telefonu?", a: "V prohlížeči otevři nabídku (tři tečky, nebo ikona sdílení u iPhonu) a vyber „Přidat na plochu“ / „Nainstalovat aplikaci“. Pak funguje jako běžná nainstalovaná aplikace v telefonu — vlastní ikona, bez adresního řádku prohlížeče." },
+      { q: "Jak si dám aplikaci na plochu telefonu?", a: "Nejjednodušší je ťuknout na ikonu se šipkou v horní liště (vedle otazníku) — ukazuje se, dokud Trenéra nainstalovaného nemáš. Jinak v prohlížeči otevři nabídku (tři tečky, nebo ikona sdílení u iPhonu) a vyber „Přidat na plochu“ / „Nainstalovat aplikaci“. Pak funguje jako běžná nainstalovaná aplikace v telefonu — vlastní ikona, bez adresního řádku prohlížeče." },
+      { q: "Co je ta blikající ikona se šipkou v horní liště?", a: "Nabízí instalaci Trenéra do telefonu nebo počítače a ukazuje se jen tomu, kdo ho ještě nainstalovaného nemá. Ťukni na ni a instalaci potvrď — pak ikona zmizí. Nainstalovaný Trenér se otevírá z plochy jako běžná aplikace a hlavně se objeví v nabídce Sdílet, takže do něj jdou posílat videa rovnou z prohlížeče. Po prvním ťuknutí už ikona nebliká. Na iPhonu otevře krátký návod.", kw: "ikona sipka blika instalace nainstalovat" },
       { q: "Funguje aplikace i bez internetu?", a: "Jen částečně — jednou načtené obrazovky zůstanou vidět, ale na uložení jakékoli změny (přidání videa, úprava tréninku) aplikace potřebuje připojení, protože všechna data se ukládají sdíleně pro všechny trenéry najednou." },
       { q: "Proč aplikace najednou vypadá jinak, nebo mám pocit, že mám starou verzi?", a: "Aplikace se sama tiše aktualizuje na pozadí a po instalaci nové verze se jednou automaticky obnoví. Když přesto něco nesedí, zkus stránku ručně obnovit (potáhnutí dolů na mobilu, F5/Ctrl+R na počítači)." },
       { q: "Co dělá tlačítko Zpět na telefonu?", a: "Zavře aktuálně otevřené okno — třeba detail videa, editaci tréninku, Tréninkový režim nebo otevřené zaměření v Trénincích — místo aby rovnou zavřelo celou aplikaci. Teprve když nic není otevřené, tlačítko Zpět aplikaci doopravdy opustí. Na počítači dělá totéž klávesa Escape.", kw: "zpet escape zavrit okno" },
@@ -14023,6 +14101,7 @@ const HELP_DATA = [
       { q: "Můžu poslat jako tip i video, které v knihovně už je?", a: "Aplikace tě na to upozorní ještě ve formuláři — když odkaz pozná, ukáže žlutou hlášku s názvem videa, které už v knihovně je. Tip pak nemá smysl posílat.", kw: "duplicita tip uz v knihovne" }
     ]},
     { title: "Profil", icon: "fa-solid fa-user", qa: [
+      { q: "Jak se odhlásím?", a: "V profilu (kolečko s tvojí iniciálou vpravo nahoře) je tlačítko „Odhlásit“ — hned vedle „Změnit heslo“ a „Změnit e-mail“.", kw: "odhlasit odhlaseni logout" },
       { q: "Jak si změním přezdívku, klub nebo fotku?", a: "Klikni na kolečko se svou iniciálou vpravo nahoře — v profilu jde upravit přezdívka, kategorie, klub i profilová fotka (včetně oříznutí)." },
       { q: "K čemu jsou barvy nastavené v profilu?", a: "Nastaví barevné ladění celé aplikace jen pro tebe — každý trenér si tak může mít svůj vlastní vzhled, aniž by to ovlivnilo, jak aplikaci vidí kolegové." },
       { q: "Jak si změním heslo?", a: "V profilu najdeš tlačítko „Změnit heslo“ — aplikace tě požádá o současné heslo a pak o nové (aspoň 6 znaků)." },
