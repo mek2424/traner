@@ -566,6 +566,16 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
    čáru pod sebou potřebuje, jinak by splynula s Tipy. */
 #pendingApprovalsList .pending-approval-row:last-child{border-bottom:1px solid var(--line);}
 #pendingApprovalsList p{margin:10px 0;font-size:12.5px;}
+/* Panel se záznamem (🐞) — úklid vývojářského režimu 21. 9. 2026: pás nahoře drží při rolování
+   (sticky), tlačítka jdou zleva doprava a zalamují se jen uvnitř pásu, ne přes záznam. */
+.debug-bar{position:sticky;top:0;z-index:1;display:flex;flex-direction:column;gap:8px;padding:12px 14px 10px;background:#0A0C0F;border-bottom:1px solid #2A323D;white-space:normal;font-family:var(--font-body);}
+/* Řádek se nezalamuje: na úzkém telefonu se radši zalomí text uvnitř nejdelšího tlačítka,
+   ať pořadí zleva doprava zůstane na jednom řádku. */
+.debug-bar-row{display:flex;gap:6px;}
+.debug-btn{flex:0 1 auto;min-width:0;background:#E9ECEF;color:#1B2430;border:none;padding:6px 10px;border-radius:6px;font-family:var(--font-body);font-weight:600;font-size:12.5px;line-height:1.25;cursor:pointer;}
+.debug-btn-off{background:#5B2B2B;color:#fff;}
+.debug-btn:disabled{opacity:.6;cursor:wait;}
+#debugLogContent{padding:12px 14px;white-space:pre-wrap;}
 .comment-activity-list{display:flex;flex-direction:column;gap:2px;max-height:60vh;overflow-y:auto;}
 .comment-activity-item{
   display:flex;gap:10px;align-items:flex-start;padding:10px 4px;border-bottom:1px solid var(--line);
@@ -2814,18 +2824,21 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
 <div id="appVersionLabel" style="position:fixed;bottom:14px;left:14px;z-index:500;font-size:10.5px;color:var(--ink-faint);font-family:monospace;background:var(--card);padding:3px 7px;border-radius:5px;pointer-events:none;"></div>
 <button type="button" id="debugLogBtn" aria-label="Diagnostický záznam" class="hidden" style="position:fixed;bottom:14px;right:14px;z-index:500;width:38px;height:38px;border-radius:50%;background:rgba(27,36,48,.55);color:#fff;border:none;font-size:16px;">🐞</button>
 <button type="button" id="scrollTopBtn" class="scroll-top-btn" aria-label="Nahoru"><i class="fa-solid fa-arrow-up"></i></button>
-<div id="debugLogPanel" class="hidden" style="position:fixed;inset:0;z-index:501;background:rgba(10,12,15,.96);color:#7CFC8C;font-family:monospace;font-size:11.5px;padding:14px;overflow-y:auto;white-space:pre-wrap;">
-  <button type="button" id="closeDebugLogBtn" style="position:sticky;top:0;float:right;background:#fff;color:#000;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-left:8px;">Zavřít</button>
-  <button type="button" id="copyDebugLogBtn" style="position:sticky;top:0;float:right;background:#2B6CB0;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;">Kopírovat záznam</button>
-  <button type="button" id="disableDevModeBtn" style="position:sticky;top:0;float:right;background:#5B2B2B;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;">Vypnout vývojářský režim</button>
-  <button type="button" id="shrinkOversizedBtn" class="hidden" style="position:sticky;top:0;float:right;background:#C99A2E;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Přestěhovat staré náhledy</button>
-  <button type="button" id="checkLibrarySizeBtn" class="hidden" style="position:sticky;top:0;float:right;background:#2B6CB0;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Změřit velikost knihovny</button>
-  <button type="button" id="migrateVideosDryBtn" class="hidden" style="position:sticky;top:0;float:right;background:#6B7684;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Knihovna → videos (nanečisto)</button>
-  <button type="button" id="migrateVideosRunBtn" class="hidden" style="position:sticky;top:0;float:right;background:#216321;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Knihovna → videos (OSTŘE)</button>
-  <button type="button" id="adoptDriveThumbsBtn" class="hidden" style="position:sticky;top:0;float:right;background:#2F7A4F;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Uložit Disk náhledy natrvalo</button>
-  <button type="button" id="refreshDriveThumbsBtn" class="hidden" style="position:sticky;top:0;float:right;background:#5B8DD9;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Obnovit Disk náhledy</button>
-  <button type="button" id="fixUnassignedUploaderBtn" class="hidden" style="position:sticky;top:0;float:right;background:#8A5CC9;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-family:var(--font-body);font-weight:600;margin-right:8px;">Opravit "Nepřiřazeno"</button>
-  <div style="clear:both;"></div>
+<!-- Úklid 21. 9. 2026: pevný pás nahoře, tlačítka zleva doprava, jednotné barvy (jen Vypnout červené).
+     pre-wrap je jen na samotném záznamu — na celém panelu by mezery a konce řádků v tomhle HTML
+     udělaly nad pásem prázdné místo. -->
+<div id="debugLogPanel" class="hidden" style="position:fixed;inset:0;z-index:501;background:rgba(10,12,15,.96);color:#7CFC8C;font-family:monospace;font-size:11.5px;overflow-y:auto;">
+  <div class="debug-bar">
+    <div class="debug-bar-row">
+      <button type="button" id="copyDebugLogBtn" class="debug-btn">Kopírovat záznam</button>
+      <button type="button" id="disableDevModeBtn" class="debug-btn debug-btn-off">Vypnout vývojářský režim</button>
+      <button type="button" id="closeDebugLogBtn" class="debug-btn">Zavřít</button>
+    </div>
+    <div class="debug-bar-row hidden" id="debugToolsRow">
+      <button type="button" id="checkLibrarySizeBtn" class="debug-btn hidden">Změřit velikost knihovny</button>
+      <button type="button" id="fixThumbsBtn" class="debug-btn hidden">Opravit náhledy</button>
+    </div>
+  </div>
   <div id="debugLogContent"></div>
 </div>
 
@@ -3028,7 +3041,7 @@ function sharedFingerprint() {
       state.trainingFocus, state.focusLibraryMap]);
   } catch (e) { return null; }
 }
-const APP_VERSION = "2026-09-21 21:59";
+const APP_VERSION = "2026-09-21 22:38";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -3179,23 +3192,26 @@ function downloadTextFile(filename, content, mime = "application/octet-stream") 
 /** Zapíše zprávu do konzole (pro PC) i do panelu viditelného přímo v aplikaci (pro mobil bez
     propojení s PC) — dočasný diagnostický nástroj, klidně ho jednou v budoucnu odstraníme. */
 let debugLog = [];
+// 300 řádků (dřív 60): přihlášení a synchronizace záznam zaplní rychle a začátek (třeba řádek
+// [login] se zdrojem knihovny) vypadával dřív, než šel zkopírovat. (Mek, 21. 9. 2026)
+const DEBUG_LOG_MAX = 300;
 function logDebug(...args) {
   const msg = args.map(a => (typeof a === "object" ? JSON.stringify(a) : String(a))).join(" ");
   debugLog.push(`${new Date().toLocaleTimeString("cs-CZ")}  ${msg}`);
-  if (debugLog.length > 60) debugLog.shift();
+  if (debugLog.length > DEBUG_LOG_MAX) debugLog.shift();
   console.log(...args);
   const el = document.getElementById("debugLogContent");
   if (el) el.textContent = debugLog.join("\n");
 }
 document.getElementById("debugLogBtn").addEventListener("click", () => {
   document.getElementById("debugLogContent").textContent = debugLog.length ? debugLog.join("\n") : "(zatím žádné záznamy — proveď akci, co chceš prověřit, a pak se sem vrať)";
-  document.getElementById("shrinkOversizedBtn").classList.toggle("hidden", uidCurrent !== ADMIN_UID);
-  document.getElementById("checkLibrarySizeBtn").classList.toggle("hidden", uidCurrent !== ADMIN_UID);
-  document.getElementById("migrateVideosDryBtn").classList.toggle("hidden", uidCurrent !== ADMIN_UID);
-  document.getElementById("migrateVideosRunBtn").classList.toggle("hidden", uidCurrent !== ADMIN_UID);
-  document.getElementById("adoptDriveThumbsBtn").classList.toggle("hidden", !isEditor());
-  document.getElementById("refreshDriveThumbsBtn").classList.toggle("hidden", !isEditor());
-  document.getElementById("fixUnassignedUploaderBtn").classList.toggle("hidden", !isEditor());
+  // Nástroje: velikost knihovny jen admin, náhledy editoři i admin (jako dřív). Když není
+  // vidět ani jeden, schová se celý druhý řádek pásu.
+  const showSize = uidCurrent === ADMIN_UID;
+  const showThumbs = isEditor();
+  document.getElementById("checkLibrarySizeBtn").classList.toggle("hidden", !showSize);
+  document.getElementById("fixThumbsBtn").classList.toggle("hidden", !showThumbs);
+  document.getElementById("debugToolsRow").classList.toggle("hidden", !showSize && !showThumbs);
   document.getElementById("debugLogPanel").classList.remove("hidden");
 });
 document.getElementById("closeDebugLogBtn").addEventListener("click", () => {
@@ -3258,135 +3274,11 @@ document.getElementById("checkLibrarySizeBtn").addEventListener("click", () => {
   logDebug(`[velikost] samostatná kolekce náhledů dohromady: ~${kb(separateThumbsJson.length)} KB (má svůj vlastní, oddělený limit na KAŽDOU fotku zvlášť)`);
   const oldStyleCount = Object.values(state.library).filter(it => it.thumbnail && it.thumbnail.startsWith("data:")).length;
   const newStyleCount = Object.values(state.library).filter(it => it.thumbnail && it.thumbnail.startsWith(LOCAL_THUMB_PREFIX)).length;
-  logDebug(`[velikost] náhledy ještě uložené postaru přímo v knihovně: ${oldStyleCount}${oldStyleCount ? " — spusť \"Přestěhovat staré náhledy\"" : ""}`);
+  logDebug(`[velikost] náhledy ještě uložené postaru přímo v knihovně: ${oldStyleCount}${oldStyleCount ? " — nečekané (má být 0), pošli prosím 🐞" : ""}`);
   logDebug(`[velikost] náhledy už přestěhované do samostatné kolekce: ${newStyleCount}`);
   toast(`Hlavní dokument: ~${kb(wholeDoc.length)} KB z ~1024 KB limitu. Detaily v 🐞.`, 8000, "info");
 });
 
-/* =========================================================
-   PŘESTĚHOVÁNÍ KNIHOVNY DO SAMOSTATNÝCH DOKUMENTŮ (jednorázové, jen admin)
-
-   Každé video dostane vlastní dokument videos/{id}. Staré pole library v shared/data
-   zůstává NETKNUTÉ — je to celou dobu cesta zpátky. Smaže se až za několik dní, ručně,
-   v posledním kroku plánu.
-
-   Nanečisto vypíše, co by se stalo, a nic nezapíše. Ostře to provede.
-   ========================================================= */
-const MIGRACE_PO = 20;   // kolik videí poslat naráz, ať se spojení nezahltí
-
-/** Načte, co v kolekci videos už je. Vrací mapu id → data, nebo null při chybě. */
-async function nactiKolekciVideos() {
-  try {
-    const snap = await getDocs(collection(db, "videos"));
-    const m = {};
-    snap.forEach(d => { m[d.id] = d.data(); });
-    return m;
-  } catch (e) {
-    logDebug("[migrace] kolekci videos nejde přečíst:", e.code || e.message || e);
-    logDebug("[migrace] nejčastější příčina: v pravidlech ve Firebase konzoli chybí blok pro \"videos\".");
-    return null;
-  }
-}
-
-async function migraceKnihovnyPrehled() {
-  const vKolekci = await nactiKolekciVideos();
-  if (vKolekci === null) { toast("Kolekci videos nejde přečíst — zkontroluj pravidla ve Firebase konzoli. Detaily v 🐞.", 10000, "err"); return null; }
-  const ids = Object.keys(state.library);
-  const nove = ids.filter(id => !vKolekci[id]);
-  const uzTam = ids.filter(id => vKolekci[id]);
-  const navic = Object.keys(vKolekci).filter(id => !state.library[id]);
-  logDebug("[migrace] === přehled ===");
-  logDebug(`[migrace] v knihovně (${libraryFromCollection ? "zdroj: kolekce" : "zdroj: staré pole"}): ${ids.length} videí`);
-  logDebug(`[migrace] v kolekci videos už je: ${Object.keys(vKolekci).length}`);
-  logDebug(`[migrace] přibylo by: ${nove.length}`);
-  logDebug(`[migrace] přepsalo by se: ${uzTam.length}`);
-  logDebug(`[migrace] v kolekci navíc (v knihovně nejsou): ${navic.length}${navic.length ? " — " + navic.slice(0, 10).join(", ") : ""}`);
-  return { ids, nove, uzTam, navic };
-}
-
-document.getElementById("migrateVideosDryBtn").addEventListener("click", async () => {
-  if (uidCurrent !== ADMIN_UID) return;
-  const r = await migraceKnihovnyPrehled();
-  if (!r) return;
-  logDebug("[migrace] NANEČISTO — nic se nezapsalo.");
-  toast(`Nanečisto: přibylo by ${r.nove.length}, přepsalo se ${r.uzTam.length}. Nic se nezapsalo. Detaily v 🐞.`, 9000, "info");
-});
-
-document.getElementById("migrateVideosRunBtn").addEventListener("click", async () => {
-  if (uidCurrent !== ADMIN_UID) return;
-  const r = await migraceKnihovnyPrehled();
-  if (!r) return;
-  const ano = await confirmDialog(
-    `Přestěhovat ${r.ids.length} videí do samostatných dokumentů?\n\nStaré pole v shared/data zůstane netknuté, takže cesta zpátky je pořád otevřená. Po dokončení stránku obnov.`,
-    { title: "Přestěhovat knihovnu", confirmLabel: "Přestěhovat", cancelLabel: "Zrušit" }
-  );
-  if (!ano) return;
-
-  const btn = document.getElementById("migrateVideosRunBtn");
-  btn.disabled = true;
-  let hotovo = 0, chyb = 0;
-  try {
-    for (let i = 0; i < r.ids.length; i += MIGRACE_PO) {
-      const davka = r.ids.slice(i, i + MIGRACE_PO);
-      const vysledky = await Promise.allSettled(
-        davka.map(id => setDoc(doc(db, "videos", id), state.library[id]))
-      );
-      vysledky.forEach((v, k) => {
-        if (v.status === "fulfilled") hotovo++;
-        else { chyb++; logDebug("[migrace] video se nepodařilo uložit:", davka[k], v.reason && (v.reason.code || v.reason.message)); }
-      });
-      btn.textContent = `Stěhuji… ${hotovo}/${r.ids.length}`;
-    }
-    // Kontrola z druhé strany: aplikace se serveru zeptá, kolik jich tam doopravdy je.
-    const po = await nactiKolekciVideos();
-    const sedi = po && Object.keys(po).length >= r.ids.length;
-    logDebug(`[migrace] === hotovo === zapsáno ${hotovo}, chyb ${chyb}, na serveru teď ${po ? Object.keys(po).length : "?"} videí`);
-    if (chyb || !sedi) {
-      toast(`Přestěhováno ${hotovo} z ${r.ids.length}, ale ${chyb} se nepovedlo. NIC se nesmazalo, stará knihovna platí dál. Pošli mi prosím 🐞.`, 14000, "err");
-    } else {
-      toast(`Hotovo — ${hotovo} videí má vlastní dokument. Stará knihovna zůstala netknutá. Teď obnov stránku.`, 14000, "info");
-    }
-  } catch (e) {
-    console.error("Migrace selhala:", e);
-    logDebug("[migrace] migrace spadla:", e.code || e.message || e);
-    toast("Stěhování selhalo. Nic se nesmazalo, stará knihovna platí dál. Detaily v 🐞.", 12000, "err");
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "Knihovna → videos (OSTŘE)";
-  }
-});
-
-document.getElementById("shrinkOversizedBtn").addEventListener("click", async () => {
-  if (uidCurrent !== ADMIN_UID) return;
-  if (!(await confirmDialog("Aplikace projde celou knihovnu, najde staré ručně nahrané fotky uložené přímo v knihovně, přestěhuje je do samostatné kolekce (a případně ještě zmenší) a rovnou uloží. Pokračovat?"))) return;
-  logDebug("[stěhování] hledám staré náhledy uložené přímo v knihovně…");
-  let fixedCount = 0;
-  for (const [id, item] of Object.entries(state.library)) {
-    if (!item.thumbnail || !item.thumbnail.startsWith("data:")) continue; // odkazy (URL) aplikaci nezajímají, jen staré vlastní nahrané fotky
-    const beforeLen = item.thumbnail.length;
-    try {
-      item.thumbnail = await saveThumbnailToFirestore(id, item.thumbnail);
-      fixedCount++;
-      logDebug(`[stěhování] „${item.title}" přestěhováno (${Math.round(beforeLen * 0.75 / 1024)} KB z hlavního dokumentu → samostatná kolekce)`);
-    } catch (err) {
-      logDebug(`[stěhování] „${item.title}" selhalo:`, err.message || err);
-    }
-  }
-  if (!fixedCount) {
-    logDebug("[stěhování] aplikace nenašla žádný starý náhled uložený přímo v knihovně — nejspíš už je vše přestěhované.");
-    toast("Aplikace nenašla žádný starý náhled ke stěhování.", 6000, "warn");
-    return;
-  }
-  logDebug(`[stěhování] hotovo, přestěhováno ${fixedCount} náhledů, ukládám hlavní dokument…`);
-  const ok = await saveUserData();
-  logDebug(`[stěhování] uložení hlavního dokumentu: ${ok ? "úspěch" : "selhalo"}`);
-  if (ok) {
-    renderLibrary();
-    toast(`Přestěhováno ${fixedCount} náhledů mimo hlavní dokument.`, 8000);
-  } else {
-    toast("Náhledy aplikace přestěhovala, ale uložení hlavního dokumentu selhalo — zkus to prosím znovu.", 8000, "err");
-  }
-});
 /* =========================================================
    STĚHOVÁNÍ NÁHLEDŮ Z FIRESTORE DO STORAGE — jen pro admina, jen ve vývojářském režimu.
    Tři tlačítka schválně odděleně, v tomhle pořadí:
@@ -3419,40 +3311,6 @@ function listThumbsToMigrate() {
     .map(it => ({ item: it, dataUrl: state.thumbnails[it.id] || "" }));
 }
 
-/** Ruční spuštění migrace "Nepřiřazeno" (jinak se zkouší potichu sama při každém přihlášení,
-    viz loadUserData) — tohle tlačítko dělá přesně to samé, jen na vyžádání a s reportem, ať
-    jde snadno ověřit, jestli se to fakt propsalo do Firestore, ne jen do state.library v
-    tomhle jednom otevřeném okně. Zkouší to i víckrát (viz stejný důvod okomentovaný u
-    automatické migrace v loadUserData) — u hodně aktivní appky totiž jedno selhání kvůli
-    konfliktu revizí je celkem běžné, ne výjimka, a bez opakování by to uživatel musel pořád
-    dokola spouštět ručně sám. */
-document.getElementById("fixUnassignedUploaderBtn").addEventListener("click", async () => {
-  if (!isEditor()) return;
-  let unassigned = Object.values(state.library).filter(it => !it.addedBy);
-  const totalFound = unassigned.length;
-  logDebug(`[Nepřiřazeno] videí bez addedBy: ${totalFound}`);
-  if (!totalFound) {
-    toast("Aplikace nenašla žádné video bez přiřazeného autora.", 6000, "warn");
-    return;
-  }
-  let ok = false;
-  for (let attempt = 1; attempt <= 6 && !ok; attempt++) {
-    unassigned = Object.values(state.library).filter(it => !it.addedBy);
-    if (!unassigned.length) { ok = true; break; }
-    unassigned.forEach(it => { it.addedBy = ADMIN_UID; });
-    logDebug(`[Nepřiřazeno] pokus ${attempt}/6: přiřazuju ${unassigned.length} videí, ukládám…`);
-    ok = await saveUserData();
-    logDebug(`[Nepřiřazeno] pokus ${attempt}/6: uložení ${ok ? "úspěch" : "selhalo (konflikt revizí — zkouším znovu na čerstvých datech)"}, revize: ${state.knownRevision}`);
-    if (!ok && attempt < 6) await new Promise(r => setTimeout(r, 500 + Math.random() * 500));
-  }
-  if (ok) {
-    renderLibrary();
-    toast(`Opraveno ${totalFound} videí. Zkus filtr "Kdo nahrál" znovu.`, 8000);
-  } else {
-    toast("Uložení se opakovaně nepovedlo — appka je zrovna hodně aktivní (časté ukládání odjinud). Zkus to prosím za chvíli znovu.", 10000, "err");
-  }
-});
-
 /** Aplikace zkusí STÁHNOUT obrázek (ne jen ho zobrazit) a převést na data URL — to je jiná,
     přísnější operace než běžné zobrazení, a u některých zdrojů (typicky právě Disk) na ni
     aplikace může narazit na bezpečnostní omezení prohlížeče. Když se to nepovede, aplikace to tiše
@@ -3481,70 +3339,104 @@ function fetchImageAsDataUrl(url) {
     img.src = url;
   });
 }
-document.getElementById("adoptDriveThumbsBtn").addEventListener("click", async () => {
-  if (!isEditor()) return;
-  const targets = Object.values(state.library).filter(it => !it.deletedAt && it.platform !== "youtube" && it.thumbnail && /^https?:\/\//.test(it.thumbnail));
-  if (!targets.length) { toast("Aplikace nenašla žádné video s náhledem odkazovaným zvenčí (YouTube náhledy aplikace schválně nechává být, ty jsou spolehlivé samy o sobě).", 2200, "warn"); return; }
-  if (!(await confirmDialog(`Aplikace zkusí stáhnout a uložit natrvalo k sobě ${targets.length} náhledů (Disk, TikTok apod.). U videí z YouTube aplikace nic měnit nebude. Může to chvíli trvat, hlavně u víc videí najednou. Pokračovat?`))) return;
-  logDebug(`[náhledy] stahuji a ukládám ${targets.length} externě odkazovaných náhledů…`);
-  let okCount = 0, failCount = 0;
-  for (const item of targets) {
-    const dataUrl = await fetchImageAsDataUrl(item.thumbnail);
-    if (!dataUrl) { failCount++; logDebug(`[náhledy] „${item.title}" — nepovedlo se stáhnout (aplikace to tiše přeskočila, video samo zůstává beze změny)`); continue; }
-    try {
-      item.thumbnail = await saveThumbnailToFirestore(item.id, dataUrl);
-      okCount++;
-    } catch (err) {
-      failCount++;
-      logDebug(`[náhledy] „${item.title}" — uložení selhalo:`, err.message || err);
+/* =========================================================
+   NÁHLEDY NATRVALO (úklid vývojářského režimu, Mekova rozhodnutí 21. 9. 2026)
+   Náhled videa z Disku (TikToku apod.) bývá v knihovně jen adresa na cizí server a ta časem
+   přestane platit (viděli jsme to naostro). Tady se stáhne a uloží natrvalo do sharedThumbnails
+   (v knihovně pak „local:ID“). YouTube se schválně vynechává, tamní adresy vydrží samy.
+   Dřív na to byla dvě tlačítka („Uložit Disk náhledy natrvalo“ a „Obnovit Disk náhledy“), teď
+   jedno „Opravit náhledy“ v panelu 🐞 — a totéž se samo zkusí hned po hromadném přidání
+   z Disku, kdy jsou adresy čerstvé a stažení má největší šanci.
+   ========================================================= */
+/** Videa, jejichž náhled má smysl uložit natrvalo: ne smazaná, ne YouTube, náhled je adresa
+    (http/https) — a u Disku i video úplně bez náhledu (čerstvou adresu jde zjistit přes klíč). */
+function thumbsToFix(items) {
+  return items.filter(it => it && !it.deletedAt && it.platform !== "youtube" &&
+    ((typeof it.thumbnail === "string" && /^https?:\/\//.test(it.thumbnail)) ||
+     (it.platform === "drive" && it.videoId && !it.thumbnail)));
+}
+/** Projde videa po jednom, podle id — objekt v knihovně se mezitím může vyměnit živou
+    synchronizací, takže se po každém čekání bere znovu ze state.library. U Disku nejdřív
+    čerstvá adresa přes klíč (když refreshDrive, nebo když video adresu nemá vůbec), pak stažení
+    a uložení natrvalo. Co stáhnout nejde, zůstane jako adresa — u Disku aspoň ta čerstvá.
+    Knihovnu NEukládá, to je na volajícím. */
+async function saveThumbsPermanently(ids, { refreshDrive = false, onProgress = null } = {}) {
+  let saved = 0, refreshed = 0, done = 0;
+  for (const id of ids) {
+    const item = state.library[id];
+    if (item) {
+      const title = item.title || id;
+      let url = (typeof item.thumbnail === "string" && /^https?:\/\//.test(item.thumbnail)) ? item.thumbnail : "";
+      if ((refreshDrive || !url) && item.platform === "drive" && item.videoId && state.driveApiKey) {
+        try {
+          const res = await fetch(`https://www.googleapis.com/drive/v3/files/${item.videoId}?fields=thumbnailLink&key=${state.driveApiKey}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.thumbnailLink) {
+              url = data.thumbnailLink;
+              if (state.library[id]) { state.library[id].thumbnail = url; refreshed++; }
+            }
+          }
+        } catch (e) { /* u tohohle videa to appka vzdá a jede dál */ }
+      }
+      if (!url) {
+        logDebug(`[náhledy] „${title}“ — žádná adresa náhledu`);
+      } else {
+        const dataUrl = await fetchImageAsDataUrl(url);
+        if (!dataUrl) {
+          logDebug(`[náhledy] „${title}“ — stažení se nepovedlo, zůstává adresa`);
+        } else {
+          try {
+            const local = await saveThumbnailToFirestore(id, dataUrl);
+            if (state.library[id]) { state.library[id].thumbnail = local; saved++; }
+          } catch (err) {
+            logDebug(`[náhledy] „${title}“ — uložení natrvalo selhalo:`, (err && err.message) || err);
+          }
+        }
+      }
     }
+    done++;
+    if (onProgress) onProgress(done, ids.length);
   }
-  logDebug(`[náhledy] hotovo — uloženo ${okCount}, nepovedlo se ${failCount}`);
-  if (!okCount) {
-    toast(`Aplikaci se nepovedlo stáhnout ani jeden náhled (${failCount} selhalo) — na tomhle zařízení/prohlížeči to nejspíš nepůjde.`, 10000, "err");
+  logDebug(`[náhledy] hotovo — natrvalo uloženo ${saved} z ${ids.length}, čerstvá adresa u ${refreshed}`);
+  return { saved, refreshed, total: ids.length };
+}
+document.getElementById("fixThumbsBtn").addEventListener("click", async () => {
+  if (!isEditor()) return;
+  const btn = document.getElementById("fixThumbsBtn");
+  if (btn.disabled) return;
+  const ids = thumbsToFix(Object.values(state.library)).map(it => it.id);
+  if (!ids.length) {
+    logDebug("[náhledy] nic k opravě — žádný náhled uložený jen jako adresa (YouTube se schválně vynechává)");
+    toast("Aplikace nenašla žádný náhled, který by šel uložit natrvalo (YouTube náhledy schválně nechává být, ty vydrží samy).", 6000, "warn");
+    return;
+  }
+  const driveCount = ids.filter(id => state.library[id].platform === "drive").length;
+  let msg = `Aplikace zkusí u ${ids.length} ${czPlural(ids.length, "videa", "videí", "videí")} uložit náhled natrvalo.`;
+  if (driveCount) msg += state.driveApiKey
+    ? ` U videí z Disku (${driveCount}) nejdřív zjistí čerstvou adresu.`
+    : ` Klíč k Disku není nastavený (nastavuje ho admin ve Správě), takže u videí z Disku (${driveCount}) zkusí jen adresu, kterou mají.`;
+  msg += " Může to chvíli trvat. Pokračovat?";
+  if (!(await confirmDialog(msg, { title: "Opravit náhledy", confirmLabel: "Opravit" }))) return;
+  const uidAtStart = uidCurrent;
+  btn.disabled = true;
+  let r;
+  try {
+    // Panel 🐞 leží nad hláškami (toast), proto průběh ukazuje přímo tlačítko.
+    r = await saveThumbsPermanently(ids, { refreshDrive: true, onProgress: (d, n) => { btn.textContent = `Opravuji náhledy… ${d}/${n}`; } });
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Opravit náhledy";
+  }
+  if (uidCurrent !== uidAtStart) return; // mezitím odhlášení — nic neukládat
+  if (!r.saved && !r.refreshed) {
+    toast(`Nepovedlo se uložit ani jeden náhled (${r.total}) — na tomhle zařízení to nejspíš nepůjde. Detaily v 🐞.`, 10000, "err");
     return;
   }
   renderLibrary();
   const ok = await saveUserData();
-  if (ok) toast(`Uloženo natrvalo: ${okCount} náhledů. ${failCount ? `${failCount} se nepovedlo stáhnout.` : ""}`, 10000);
-  else toast("Náhledy aplikace stáhla, ale uložení selhalo — zkus to prosím znovu.", 8000, "err");
-});
-
-document.getElementById("refreshDriveThumbsBtn").addEventListener("click", async () => {
-  if (!isEditor()) return;
-  // Cílí jen na Disk videa BEZ vlastní, aplikací uložené fotky — u těch aplikace nejdřív zkusí
-  // získat čerstvou adresu náhledu (stejným způsobem jako tlačítko „Načíst info"), a hned
-  // nato tu čerstvou adresu zkusí i stáhnout a uložit aplikaci natrvalo. Když se stažení
-  // nepovede, aspoň ta čerstvá adresa zůstane nastavená — lepší než nic.
-  const targets = Object.values(state.library).filter(it => !it.deletedAt && it.platform === "drive" && it.videoId && (!it.thumbnail || it.thumbnail.startsWith("http")));
-  if (!targets.length) { toast("Aplikace nenašla žádné video z Disku bez vlastní uložené fotky.", 2200, "warn"); return; }
-  if (!state.driveApiKey) { toast("Aplikace nemá nastavený přístupový klíč k Disku (nastavuje se v Profilu) — bez něj tohle nepůjde.", 6000, "warn"); return; }
-  if (!(await confirmDialog(`Aplikace u ${targets.length} videí z Disku nejdřív zkusí získat čerstvou adresu náhledu, a hned nato ji zkusí uložit natrvalo k aplikaci. Může to chvíli trvat. Pokračovat?`))) return;
-  logDebug(`[náhledy] obnovuji a ukládám náhledy u ${targets.length} videí z Disku…`);
-  let refreshedCount = 0, savedCount = 0;
-  for (const item of targets) {
-    let freshUrl = null;
-    try {
-      const res = await fetch(`https://www.googleapis.com/drive/v3/files/${item.videoId}?fields=thumbnailLink&key=${state.driveApiKey}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.thumbnailLink) { freshUrl = data.thumbnailLink; item.thumbnail = freshUrl; refreshedCount++; }
-      }
-    } catch (e) { /* aplikace to u tohohle videa prostě vzdá a jede na další */ }
-    if (!freshUrl) { logDebug(`[náhledy] „${item.title}" — nepovedlo se ani získat čerstvou adresu`); continue; }
-    const dataUrl = await fetchImageAsDataUrl(freshUrl);
-    if (!dataUrl) { logDebug(`[náhledy] „${item.title}" — čerstvá adresa nastavena, stažení natrvalo se nepovedlo`); continue; }
-    try {
-      item.thumbnail = await saveThumbnailToFirestore(item.id, dataUrl);
-      savedCount++;
-    } catch (err) {
-      logDebug(`[náhledy] „${item.title}" — uložení natrvalo selhalo:`, err.message || err);
-    }
-  }
-  logDebug(`[náhledy] hotovo — čerstvá adresa u ${refreshedCount}, natrvalo uloženo ${savedCount}`);
-  renderLibrary();
-  const ok = await saveUserData();
-  if (ok) toast(`Hotovo: čerstvá adresa u ${refreshedCount} videí, natrvalo uloženo ${savedCount} z nich.`, 10000);
+  logDebug(`[náhledy] uložení knihovny: ${ok ? "úspěch" : "selhalo"}`);
+  if (ok) toast(`Hotovo: natrvalo uloženo ${r.saved} z ${r.total} náhledů.${r.refreshed ? ` Čerstvá adresa u ${r.refreshed}.` : ""}`, 10000);
   else toast("Náhledy aplikace zpracovala, ale uložení selhalo — zkus to prosím znovu.", 8000, "err");
 });
 
@@ -14082,7 +13974,7 @@ document.getElementById("bulkDriveLoadBtn").addEventListener("click", async () =
     return;
   }
   if (!state.driveApiKey) {
-    statusEl.textContent = "Aplikace nemá nastavený přístupový klíč k Disku (nastavuje se v Profilu) — bez něj hromadný import nepůjde.";
+    statusEl.textContent = "Aplikace nemá nastavený přístupový klíč k Disku (nastavuje ho admin ve Správě) — bez něj hromadný import nepůjde.";
     return;
   }
   statusEl.textContent = "Načítám obsah složky…";
@@ -14126,10 +14018,12 @@ document.getElementById("bulkDriveImportBtn").addEventListener("click", async ()
   const bulkShortDesc = document.getElementById("bulkDriveShortDesc").value.trim();
   const now = Date.now();
   let addedCount = 0;
+  const newIds = [];
   checked.forEach(fileId => {
     const f = bulkDriveFoundFiles.find(x => x.id === fileId);
     if (!f) return;
     const id = uid();
+    newIds.push(id);
     state.library[id] = {
       id, url: `https://drive.google.com/file/d/${fileId}/view`, platform: "drive", videoId: fileId,
       title: f.name, thumbnail: f.thumbnailLink || "",
@@ -14145,8 +14039,27 @@ document.getElementById("bulkDriveImportBtn").addEventListener("click", async ()
   bulkDriveTags.forEach(t => { if (!state.tagPool.includes(t)) state.tagPool.push(t); });
   bulkDriveEquip.forEach(t => { if (!state.equipmentPool.includes(t)) state.equipmentPool.push(t); });
   const ok = await saveUserData();
-  if (ok) { toast(`Uloženo — přidáno ${addedCount} videí.`, 6000); closeBulkDriveModal(); }
-  else toast("Videa aplikace přidala, ale uložení selhalo — zkus to prosím znovu.", 8000, "err");
+  if (!ok) { toast("Videa aplikace přidala, ale uložení selhalo — zkus to prosím znovu.", 8000, "err"); return; }
+  toast(`Uloženo — přidáno ${addedCount} videí.`, 6000);
+  closeBulkDriveModal();
+  /* Náhledy natrvalo hned teď (Mekova volba C, 21. 9. 2026): adresy z Disku jsou právě čerstvé,
+     takže je největší šance je stáhnout. Videa jsou v tu chvíli už bezpečně uložená — když se
+     náhled nepovede, zůstane jako dřív jen adresa a opraví ho „Opravit náhledy“ v panelu 🐞. */
+  const fixIds = thumbsToFix(newIds.map(id => state.library[id])).map(it => it.id);
+  if (!fixIds.length) return;
+  const uidAtStart = uidCurrent;
+  const r = await saveThumbsPermanently(fixIds, {
+    onProgress: (d, n) => toast(`Videa uložena. Ukládám náhledy natrvalo… ${d}/${n}`, 4000, "progress")
+  });
+  if (uidCurrent !== uidAtStart) return; // mezitím odhlášení — nic neukládat
+  if (!r.saved && !r.refreshed) {
+    toast(`Přidáno ${addedCount} videí. Náhledy se natrvalo uložit nepodařilo, zůstávají jako adresa.`, 8000, "warn");
+    return;
+  }
+  renderLibrary();
+  const ok2 = await saveUserData();
+  if (ok2) toast(`Přidáno ${addedCount} videí, náhledy natrvalo uloženy u ${r.saved} z ${r.total}.`, 8000);
+  else toast(`Přidáno ${addedCount} videí, ale uložení náhledů selhalo — zůstávají jako adresa.`, 10000, "err");
 });
 
 if ("serviceWorker" in navigator) {
