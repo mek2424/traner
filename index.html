@@ -812,6 +812,12 @@ body.popout-mode .popout-btn{display:none !important;}
 }
 .duplicate-warning i{color:var(--warn-icon);}
 .duplicate-warning span{flex:1;min-width:150px;}
+/* Štítky/vybavení, které při pokusu o uložení chyběly. Rámeček zmizí hned s první kapslí
+   (viz renderTagPills/renderEquipPills). Předem se nikde nepíše, že jsou povinné — Mekovo zadání. */
+.tag-input-wrap.field-missing{border-color:var(--danger);box-shadow:0 0 0 1px var(--danger);}
+/* Řádek pod výběrem složky, když je vybraná složka schovaná z hlavního seznamu. */
+.folder-hidden-hint{display:flex;gap:7px;align-items:flex-start;font-size:12px;color:var(--ink-faint);margin-top:6px;line-height:1.35;}
+.folder-hidden-hint i{margin-top:2px;}
 .thumb-preview{width:100%;aspect-ratio:16/9;background:var(--paper);border:1px dashed var(--line);border-radius:var(--radius-sm);
   display:flex;flex-direction:column;gap:4px;align-items:center;justify-content:center;color:var(--ink-faint);font-size:12px;margin-bottom:8px;background-size:cover;background-position:center;overflow:hidden;}
 .thumb-preview .thumb-empty-icon{color:var(--ink-faint);font-size:20px;}
@@ -1928,6 +1934,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
       <div class="field">
         <label for="linkFolder">Složka</label>
         <select id="linkFolder"></select>
+        <div class="folder-hidden-hint hidden" id="linkFolderHiddenHint"><i class="fa-solid fa-eye-slash"></i><span>Skrytá složka: v hlavním seznamu se video neukáže.</span></div>
       </div>
       <div class="field">
         <label for="linkDefaultPart">Výchozí část tréninku</label>
@@ -2956,7 +2963,7 @@ function sharedFingerprint() {
       state.trainingFocus, state.focusLibraryMap]);
   } catch (e) { return null; }
 }
-const APP_VERSION = "2026-09-21 01:10";
+const APP_VERSION = "2026-09-21 15:45";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -5516,12 +5523,27 @@ function renderFolderOptions() {
   const bulkSel = document.getElementById("bulkDriveFolder");
   const prevForm = formSel.value, prevPicker = pickerSel ? pickerSel.value : "";
   const opts = state.folders.map(f => `<option value="${esc(f.key)}">${esc(f.label)}</option>`).join("");
-  formSel.innerHTML = '<option value="">— vyber —</option>' + opts;
+  // Ve formuláři videa se u složek schovaných z hlavního seznamu píše „(skrytá)" — jinak trenér
+  // uloží video, v Knihovně ho nevidí a nahraje ho znovu (stalo se). Šedá barva je jen bonus pro
+  // počítač: výběr na Androidu kreslí systém a barvy položek ignoruje, proto hlavně ten text.
+  // Ostatní výběry složek (filtr v editoru, hromadné přidání z Disku) zůstávají beze změny.
+  const formOpts = state.folders.map(f => f.hiddenFromMain
+    ? `<option value="${esc(f.key)}" style="color:var(--ink-faint);">${esc(f.label)} (skrytá)</option>`
+    : `<option value="${esc(f.key)}">${esc(f.label)}</option>`).join("");
+  formSel.innerHTML = '<option value="">— vyber —</option>' + formOpts;
   if (pickerSel) pickerSel.innerHTML = '<option value="">Všechny složky</option>' + opts;
   if (bulkSel) bulkSel.innerHTML = '<option value="">— vyber —</option>' + opts;
   if (state.folders.some(f => f.key === prevForm)) formSel.value = prevForm;
   if (pickerSel && state.folders.some(f => f.key === prevPicker)) pickerSel.value = prevPicker;
 }
+
+/** Ukáže/schová řádek pod výběrem složky ve formuláři videa podle toho, jestli je vybraná
+    složka schovaná z hlavního seznamu. Volá se při otevření formuláře a při každé změně výběru. */
+function updateFolderHiddenHint() {
+  const f = state.folders.find(x => x.key === document.getElementById("linkFolder").value);
+  document.getElementById("linkFolderHiddenHint").classList.toggle("hidden", !(f && f.hiddenFromMain));
+}
+document.getElementById("linkFolder").addEventListener("change", updateFolderHiddenHint);
 
 function renderPartSelectOptions() {
   const opts = state.parts.map(p => `<option value="${esc(p.key)}">${esc(p.label)}</option>`).join("");
@@ -6187,6 +6209,10 @@ function openLinkModal(id, opts) {
   });
   viewerLockNotice.classList.toggle("hidden", allowEdit);
 
+  updateFolderHiddenHint();
+  document.getElementById("tagWrap").classList.remove("field-missing");
+  document.getElementById("equipWrap").classList.remove("field-missing");
+
   // Nadpis, hlášky a tlačítka podle režimu. Jeden formulář, tři cesty — viz linkModalMode.
   const submitBtn = document.getElementById("linkFormSubmitBtn");
   document.getElementById("tipSendNotice").classList.toggle("hidden", linkModalMode !== "tip");
@@ -6607,6 +6633,7 @@ function setupAutocomplete(inputId, dropId, getPool, getCurrent, addFn) {
 function renderTagPills() {
   const wrap = document.getElementById("tagWrap");
   const input = document.getElementById("tagInput");
+  if (formTags.length) wrap.classList.remove("field-missing");
   wrap.querySelectorAll(".tag-pill").forEach(p => p.remove());
   formTags.forEach(t => {
     const pill = document.createElement("span");
@@ -6619,6 +6646,7 @@ function renderTagPills() {
 function renderEquipPills() {
   const wrap = document.getElementById("equipWrap");
   const input = document.getElementById("equipInput");
+  if (formEquip.length) wrap.classList.remove("field-missing");
   wrap.querySelectorAll(".tag-pill").forEach(p => p.remove());
   formEquip.forEach(t => {
     const pill = document.createElement("span");
@@ -6713,9 +6741,40 @@ document.querySelectorAll("#detailRatingPicker button").forEach(b => b.addEventL
 }));
 
 let linkFormSubmitting = false;
+/** Rozepsaný, ale neodentrovaný štítek/vybavení se přidá do kapslí. Dřív se k tomu dostal až
+    posluchač blur o 200 ms později — to už bylo video uložené a napsaný štítek se tiše ztratil.
+    S povinnými štítky by to navíc zablokovalo uložení, přestože je trenér napsal. */
+function commitPendingPillInputs() {
+  [["tagInput", addTag], ["equipInput", addEquip]].forEach(([inputId, addFn]) => {
+    const el = document.getElementById(inputId);
+    if (el && !el.disabled && el.value.trim()) { addFn(el.value); el.value = ""; }
+  });
+}
+/** Štítky a vybavení jsou povinné (aspoň jedno od každého; „Bez vybavení" se počítá) — vždycky,
+    i při úpravě starého videa. NEPLATÍ pro: tip od prohlížeče (doplní admin při zařazení, kde to
+    platí), prohlížeče, který si ukládá jen hodnocení/obtížnost (štítky upravit nemůže), a pro
+    hromadné přidání z Disku (to formulářem vůbec nejde). Vrací, co chybí: "tags" / "equip". */
+function missingRequiredLinkFields() {
+  if (linkModalMode === "tip" || !isEditor()) return [];
+  const missing = [];
+  if (!formTags.length) missing.push("tags");
+  if (!formEquip.length) missing.push("equip");
+  return missing;
+}
+function showMissingRequiredLinkFields(missing) {
+  const ids = { tags: ["tagWrap", "tagInput"], equip: ["equipWrap", "equipInput"] };
+  missing.forEach(k => document.getElementById(ids[k][0]).classList.add("field-missing"));
+  const [wrapId, inputId] = ids[missing[0]];
+  document.getElementById(wrapId).scrollIntoView({ block: "center", behavior: "smooth" });
+  document.getElementById(inputId).focus({ preventScroll: true });
+  toast(missing.length > 1 ? "Doplň štítky a vybavení." : (missing[0] === "tags" ? "Doplň štítky." : "Doplň vybavení."), 4000, "err");
+}
 linkForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   if (linkFormSubmitting) return;
+  commitPendingPillInputs();
+  const missingFields = missingRequiredLinkFields();
+  if (missingFields.length) { showMissingRequiredLinkFields(missingFields); return; }
   // Jemné (ne blokující) nabádání k delšímu popisu (viz #96) — appka se jen zeptá, uložit
   // krátký text jde vždycky, appka jen nechce, aby odbytá věta typu "trochu těžší" prošla bez
   // povšimnutí. Kontrola PŘED zámkem/spinnerem, ať se dá bez vedlejších efektů vrátit k psaní.
@@ -6761,9 +6820,6 @@ linkForm.addEventListener("submit", async (e) => {
      je jen admin, takže se vybírá z existujících. Tím se taky přestanou množit skoro-
      duplicitní složky, kvůli kterým tu byla pojistka s findSimilarFolder. */
   const folderId = document.getElementById("linkFolder").value;
-
-  formTags.forEach(t => { if (!state.tagPool.includes(t)) state.tagPool.push(t); });
-  formEquip.forEach(t => { if (!state.equipmentPool.includes(t)) state.equipmentPool.push(t); });
 
   const id = editingLinkId || uid();
   const existing = editingLinkId ? state.library[editingLinkId] : null;
@@ -6816,6 +6872,12 @@ linkForm.addEventListener("submit", async (e) => {
     toast("Tip odeslaný. Jak to dopadlo, uvidíš v profilu pod „Moje tipy“.", 6000);
     return;
   }
+
+  // Nové štítky/vybavení do společného seznamu pro našeptávání — až TADY, za odbočkou tipu.
+  // Dřív to bylo nad ní, takže se do seznamu (a tím do sdílených dat klubu) dostaly štítky
+  // i z tipu, který admin nakonec nezařadil. Při zařazení tipu projdou tudy normálně.
+  formTags.forEach(t => { if (!state.tagPool.includes(t)) state.tagPool.push(t); });
+  formEquip.forEach(t => { if (!state.equipmentPool.includes(t)) state.equipmentPool.push(t); });
 
   // Nová/změněná ručně nahraná či zachycená fotka aplikace neukládá přímo do knihovny (to je
   // přesně to, co ji dřív přeplnilo přes limit) — jde do vlastní, samostatné kolekce, a v
@@ -6882,9 +6944,17 @@ linkForm.addEventListener("submit", async (e) => {
   closeLinkModal();
   renderLibrary();
   if (currentView === "editor") renderPickerList();
-  toast(linkModalMode === "approve" && approvingTip
-    ? `Uloženo do knihovny pod jménem ${approvingTip.fromLabel || "tipujícího"}.`
-    : "Uloženo.", linkModalMode === "approve" ? 5000 : 2200);
+  // Uložení DO skryté složky (nové video, nebo přesun z jiné) se ohlásí zvlášť a na déle —
+  // video v hlavním seznamu vidět nebude a bez vysvětlení to vypadá, že se neuložilo.
+  // Úprava videa, které ve skryté složce už bylo, se znovu neohlašuje.
+  const savedFolder = state.folders.find(f => f.key === folderId);
+  if (savedFolder && savedFolder.hiddenFromMain && (!existing || existing.folderId !== folderId)) {
+    toast(`Uloženo do skryté složky „${savedFolder.label}“. V hlavním seznamu ho neuvidíš.`, 6000);
+  } else {
+    toast(linkModalMode === "approve" && approvingTip
+      ? `Uloženo do knihovny pod jménem ${approvingTip.fromLabel || "tipujícího"}.`
+      : "Uloženo.", linkModalMode === "approve" ? 5000 : 2200);
+  }
   } finally {
     linkFormSubmitting = false;
     submitBtn.disabled = false;
@@ -13972,10 +14042,12 @@ const HELP_DATA = [
       { q: "Kdo smí složky mazat?", a: "Mazání složek je jen na adminovi — ostatní trenéři je mohou zakládat, přejmenovávat a přiřazovat k nim videa, ale ne je mazat." },
       { q: "Jak přidám video do složky, nebo ho přesunu do jiné?", a: "Otevři video k úpravě a vyber složku v poli pro to určeném. Jde to změnit kdykoli později, video tím nijak nepřijde o svoje štítky ani obtížnost." },
       { q: "Co dělá zaškrtávátko „Schovat z hlavního seznamu“ u složky?", a: "Videa z takhle označené složky se neukážou v hlavním přehledu Knihovny ani ve výběru videí pro trénink, dokud si tu složku sám cíleně nevybereš. Hledání i procházení té složky napřímo funguje pořád normálně — hodí se to na složky, co nechceš mít pořád na očích, ale ne úplně skrýt.", kw: "schovat slozku" },
+      { q: "Uložil jsem video a v Knihovně ho nevidím. Proč?", a: "Nejspíš je ve složce, která je schovaná z hlavního seznamu. Ve výběru složky ji poznáš podle „(skrytá)“ a pod výběrem se ukáže upozornění. Video uložené je — uvidíš ho, když si tu složku vybereš, nebo ho vyhledáš podle názvu. Nenahrávej ho znovu.", kw: "nevidim video ulozene skryta slozka schovana" },
       { q: "K čemu je pole „Poznámka“ u složky?", a: "Je to volitelný text jen pro upřesnění, co do složky patří — vidí ho jen trenéři při správě složek, nikde jinde v aplikaci se nezobrazuje." }
     ]},
     { title: "Štítky a vybavení", icon: "fa-solid fa-tags", qa: [
       { q: "Co jsou štítky a k čemu v knihovně slouží?", a: "Štítky jsou volné popisky (např. „přihrávka“, „mladší žactvo“), podle kterých se dá knihovna filtrovat napříč složkami — jedno video může mít víc štítků najednou." },
+      { q: "Proč mi aplikace nechce uložit video?", a: "Každé video musí mít aspoň jeden štítek a aspoň jednu položku vybavení — i když ho jen upravuješ. Chybějící pole se orámuje červeně a aplikace tě k němu posune. Když cvičení žádné pomůcky nepotřebuje, vyber „Bez vybavení“.", kw: "nejde ulozit povinne stitky vybaveni cerveny ramecek" },
       { q: "Co znamená „vybavení“ u videa?", a: "Označuje, co je na cvičení potřeba (míče, obruče, švihadla...) — hodí se to hlavně při skládání tréninku, kdy aplikace umí ukázat souhrn všeho vybavení, co si na trénink vzít." },
       { q: "Jak přidám úplně nový štítek nebo vybavení, které ještě neexistuje?", a: "Stačí ho napsat do příslušného pole při úpravě videa a potvrdit — aplikace ho rovnou přidá do nabídky pro příště, není potřeba nic zvlášť zakládat." },
       { q: "Co když omylem vznikly dva podobné štítky (např. „míč“ a „míče“)?", a: "Napiš adminovi. V Knihovně je na to nástroj na sloučení štítků a vybavení — sjednotí dva podobné na jeden napříč všemi videy, co je používají, a hodí se i na přejmenování štítku všude najednou. Protože ta změna sáhne do celé sdílené knihovny, má ho jen admin.", kw: "sloucit duplicitni stitek prejmenovat admin" },
