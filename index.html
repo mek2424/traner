@@ -1889,8 +1889,12 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
         <label for="linkUrl">Odkaz (YouTube, Facebook, Disk, jiné)</label>
         <div class="url-row">
           <input type="url" id="linkUrl" placeholder="https://…" required>
-          <button type="button" class="btn btn-sm" id="fetchMetaBtn"><i class="fa-solid fa-arrow-rotate-right"></i> Načíst info</button>
+          <button type="button" class="btn btn-sm btn-ghost" id="fetchMetaBtn"><i class="fa-solid fa-arrow-rotate-right"></i> Načíst znovu</button>
         </div>
+      </div>
+      <div class="duplicate-warning hidden" id="fbShareWarning">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>Tenhle odkaz z Facebooku Trenér neumí, musí obsahovat /reel/. Otevři reel v Chromu a sdílej ho odtamtud.</span>
       </div>
       <div class="duplicate-warning hidden" id="duplicateWarning">
         <i class="fa-solid fa-triangle-exclamation"></i>
@@ -2963,7 +2967,7 @@ function sharedFingerprint() {
       state.trainingFocus, state.focusLibraryMap]);
   } catch (e) { return null; }
 }
-const APP_VERSION = "2026-09-21 15:45";
+const APP_VERSION = "2026-09-21 17:00";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -3002,10 +3006,46 @@ let saveTimer = null;
 let sortableInstance = null;
 let groupSortableInstances = [];
 let pendingThumbUpload = null; // data URL vlastního nahraného náhledu, čeká na uložení formuláře
-let metaFetchedForUrl = ""; // aplikace si pamatuje, pro jaký přesně odkaz už "Načíst info" proběhlo — podle toho pulzuje tlačítko
+let metaFetchedForUrl = ""; // pro jaký přesně odkaz už načtení info proběhlo — podle toho se pozná, jestli načítat znovu (viz scheduleLinkAutoFetch)
+/* Krátké odkazy z aplikace Facebook (facebook.com/share/r/…, /share/v/…) Trenér neumí:
+   přehrávač Facebooku je odmítne („Video není dostupné") a rozbalit je umí jen prohlížeč,
+   ve kterém se otevřou — z JavaScriptu appky se k přesměrování dostat nejde. Veřejné proxy,
+   přes které se to dřív zkoušelo, na Facebook nefungují (ověřeno 21. 9. 2026 v Chromu).
+   Proto se odkaz jen pozná a pod polem se ukáže pruh (Mekovo znění), uložit nepustí. */
+const FB_SHARE_LINK_RE = /facebook\.com\/share\//i;
+function isFacebookShareLink(v) { return FB_SHARE_LINK_RE.test(v || ""); }
+function updateFbShareWarning() {
+  const on = isFacebookShareLink(document.getElementById("linkUrl").value);
+  document.getElementById("fbShareWarning").classList.toggle("hidden", !on);
+  return on;
+}
+/* „Načíst info" se spouští samo (Mekovo rozhodnutí 21. 9.) — trenéři tlačítko ignorovali,
+   takže se název, náhled ani upozornění na duplicitu vůbec nenačetly. Při vložení odkazu
+   hned, při ručním psaní až po chvilce klidu a jen když text vypadá jako celá adresa.
+   Tlačítko zůstává jako „Načíst znovu" pro případ, že se načtení nepovede.
+   U existujícího videa se nic nespustí, dokud se odkaz nezmění (metaFetchedForUrl). */
+const LINK_AUTOFETCH_DELAY_MS = 800;
+let linkAutoFetchTimer = null;
+function looksLikeFullUrl(v) { return /^https?:\/\/[^\s\/]+\.[^\s\/]{2,}/i.test(v || ""); }
+function scheduleLinkAutoFetch(delay) {
+  clearTimeout(linkAutoFetchTimer);
+  linkAutoFetchTimer = setTimeout(() => {
+    const el = document.getElementById("linkUrl");
+    const v = el.value.trim();
+    if (el.disabled || !v || v === metaFetchedForUrl || !looksLikeFullUrl(v)) return;
+    // Když ještě běží předchozí načtení, zkusí se to za chvilku znovu, ne vůbec.
+    if (fetchMetaInProgress) { scheduleLinkAutoFetch(LINK_AUTOFETCH_DELAY_MS); return; }
+    fetchLinkMeta();
+  }, delay);
+}
 document.getElementById("linkUrl").addEventListener("input", () => {
-  const v = document.getElementById("linkUrl").value.trim();
-  document.getElementById("fetchMetaBtn").classList.toggle("pulse", !!v && v !== metaFetchedForUrl);
+  updateFbShareWarning();
+  scheduleLinkAutoFetch(LINK_AUTOFETCH_DELAY_MS);
+});
+document.getElementById("linkUrl").addEventListener("paste", () => {
+  // Hodnota pole se změní až PO téhle události (a hned za ní přijde "input" s odkladem) —
+  // proto krátké odložení a pak načtení bez čekání.
+  setTimeout(() => { updateFbShareWarning(); scheduleLinkAutoFetch(0); }, 0);
 });
 
 const DEFAULT_PARTS = [
@@ -4104,69 +4144,6 @@ function extractTikTokId(url) {
 function normalizeFacebookUrl(url) {
   const m = url.match(/facebook\.com\/reel\/(\d+)/);
   return m ? `https://www.facebook.com/reel/${m[1]}/` : url;
-}
-/** Z HTML stránky (i necelé/proxy) zkusí vytáhnout skutečnou adresu videa — buď přímo z meta
-    značky og:url (tu Facebook servíruje spolehlivě i robotům/proxy bez přihlášení, protože ji
-    potřebuje pro vlastní náhledy odkazů), nebo aspoň numerické reel ID zašité někde v obsahu. */
-function extractFacebookUrlFromHtml(html) {
-  if (!html) return null;
-  const og = html.match(/property=["']og:url["'][^>]*content=["']([^"']+)["']/i)
-    || html.match(/content=["']([^"']+)["'][^>]*property=["']og:url["']/i);
-  if (og) return og[1];
-  const reelMatch = html.match(/facebook\.com\\?\/reel\\?\/(\d+)/i);
-  if (reelMatch) return `https://www.facebook.com/reel/${reelMatch[1]}/`;
-  return null;
-}
-/** Odkazy tvaru facebook.com/share/r/... jsou jen krátký kód, který se na tu skutečnou adresu
-    (/reel/123.../) přesměruje až na Facebooku samotném (běžný HTTP redirect, nebo dokonce jen
-    přes JS — proxy níž to zkoušejí obojí) — z JS v prohlížeči appky se tam kvůli CORS nedostaneme
-    (Facebook cizím stránkám nedovolí si přečíst, kam přesměroval). Zkoušíme proto postupně víc
-    veřejných proxy — je to appkou neprovozovaná infrastruktura, občas některá neodpoví/je pomalá
-    nebo ji zrovna Facebook blokuje, proto víc pokusů za sebou a vždycky fallback na ruční postup
-    (viz volající kód), když neuspěje ani jedna. */
-/** fetch() sám o sobě nemá žádný rozumný vestavěný timeout — ať appka nestrávila u pomalé/spadlé
-    proxy klidně minutu (přesně tohle se stalo, než uživatel netrpělivě zaklikal formulář), každý
-    pokus se sám vzdá nejpozději po 7 sekundách. */
-function fetchWithTimeout(url, ms = 7000) {
-  const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), ms);
-  return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(t));
-}
-async function resolveFacebookShareUrl(url) {
-  const attempts = [
-    { name: "allorigins/get", fn: async () => {
-      const res = await fetchWithTimeout(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      return (data && data.status && data.status.url) || extractFacebookUrlFromHtml(data && data.contents);
-    } },
-    { name: "allorigins/raw", fn: async () => {
-      const res = await fetchWithTimeout(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return extractFacebookUrlFromHtml(await res.text());
-    } },
-    { name: "codetabs", fn: async () => {
-      const res = await fetchWithTimeout(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return extractFacebookUrlFromHtml(await res.text());
-    } },
-  ];
-  for (const attempt of attempts) {
-    try {
-      const finalUrl = await attempt.fn();
-      if (finalUrl) {
-        const normalized = normalizeFacebookUrl(finalUrl);
-        if (normalized !== url && !/facebook\.com\/share\//.test(normalized)) {
-          logDebug(`[facebook] sdílený odkaz rozbalen přes ${attempt.name}: ${normalized}`);
-          return normalized;
-        }
-      }
-      logDebug(`[facebook] ${attempt.name} nevrátil použitelnou adresu, zkouším další…`);
-    } catch (e) {
-      logDebug(`[facebook] ${attempt.name} selhal: ${e && e.message}`);
-    }
-  }
-  return null;
 }
 /** Sjednotí odkaz na Instagram příspěvek/reel (/p/, /reel/, /reels/, /tv/, i s uživatelským
     jménem před tím) na tvar /reel/{kód}/, o kterém víme, že aplikace umí spolehlivě přehrát. */
@@ -5438,6 +5415,7 @@ async function handleShareTarget() {
   // rozjede stahování. U Facebooku a Instagramu se nečeká vůbec — odtamtud stejně nic
   // nepřijde, takže by to bylo točítko pro nic.
   const platform = detectPlatform(sharedUrl);
+  if (isFacebookShareLink(sharedUrl)) return; // krátký odkaz z aplikace FB — pruh pod odkazem už ukázal openLinkModal
   if (platform === "facebook" || platform === "instagram") {
     toast("Název a náhled u téhle sítě zadej prosím ručně.", 6000, "warn");
     return;
@@ -5549,7 +5527,7 @@ function renderPartSelectOptions() {
   const opts = state.parts.map(p => `<option value="${esc(p.key)}">${esc(p.label)}</option>`).join("");
   const defSel = document.getElementById("linkDefaultPart");
   const pickerSel = document.getElementById("pickerPartFilter");
-  if (defSel) { const prev = defSel.value; defSel.innerHTML = opts; if ([...defSel.options].some(o => o.value === prev)) defSel.value = prev; }
+  if (defSel) { const prev = defSel.value; defSel.innerHTML = '<option value="">— vyber —</option>' + opts; if ([...defSel.options].some(o => o.value === prev)) defSel.value = prev; }
   if (pickerSel) { const prev = pickerSel.value; pickerSel.innerHTML = '<option value="">Jakákoli část</option>' + opts; if ([...pickerSel.options].some(o => o.value === prev)) pickerSel.value = prev; }
 }
 
@@ -6135,7 +6113,9 @@ function openLinkModal(id, opts) {
   document.getElementById("fetchMetaBtn").classList.remove("pulse");
   document.getElementById("linkTitle").value = item ? item.title : "";
   document.getElementById("linkFolder").value = item ? item.folderId : "";
-  document.getElementById("linkDefaultPart").value = item ? item.defaultPart : (state.parts[0] ? state.parts[0].key : "");
+  // Nová videa začínají bez výchozí části („— vyber —", Mekovo rozhodnutí 21. 9.) —
+  // v tréninku pak spadnou do části posledního řádku, viz partForNewTrainingRow.
+  document.getElementById("linkDefaultPart").value = item ? (item.defaultPart || "") : "";
   document.getElementById("linkAspectRatio").value = item ? (item.aspectRatio || "16/9") : "16/9";
   document.getElementById("linkTimestamp").value = item ? secondsToTimestamp(item.timestamp) : "";
   // Sloučení krátkého a dlouhého popisu do jednoho pole (viz #89) — appka od teď nabízí jen
@@ -6210,6 +6190,7 @@ function openLinkModal(id, opts) {
   viewerLockNotice.classList.toggle("hidden", allowEdit);
 
   updateFolderHiddenHint();
+  updateFbShareWarning();
   document.getElementById("tagWrap").classList.remove("field-missing");
   document.getElementById("equipWrap").classList.remove("field-missing");
 
@@ -6389,16 +6370,10 @@ async function fetchLinkMeta() {
   btn.disabled = true;
   try {
   if (url.includes("facebook.com")) {
-    if (/facebook\.com\/share\//.test(url)) {
-      toast("Rozbaluju sdílený odkaz z Facebooku…", 4000, "progress");
-      const resolved = await resolveFacebookShareUrl(url);
-      if (resolved) { url = resolved; toast("Odkaz rozpoznán.", 1800); }
-      else {
-        toast("Tenhle typ sdíleného facebookového odkazu se nepodařilo automaticky rozpoznat. Otevři video přímo na Facebooku a zkopíruj adresu, která bude obsahovat „/reel/“ a dlouhé číslo.", 9000, "warn");
-        return;
-      }
-    }
-    else url = normalizeFacebookUrl(url);
+    // Krátký odkaz z aplikace Facebook se nerozbaluje (nejde to) — jen se ukáže pruh pod
+    // odkazem, viz updateFbShareWarning. Dřív se tu až 20 s zkoušely proxy, které nefungují.
+    if (isFacebookShareLink(url)) { updateFbShareWarning(); return; }
+    url = normalizeFacebookUrl(url);
   }
   else if (url.includes("instagram.com")) url = normalizeInstagramUrl(url);
   document.getElementById("linkUrl").value = url;
@@ -6572,7 +6547,7 @@ function addEquip(v) {
      - Když napsaný text není přesná shoda s ničím v poolu ani s tím, co už je přidané, nabídne
        se navíc jako poslední položka v nabídce "+ Přidat „X“" — explicitní klikatelný/ťuknutelný
        způsob, jak založit úplně nový štítek, i bez klávesových zkratek. */
-function setupAutocomplete(inputId, dropId, getPool, getCurrent, addFn) {
+function setupAutocomplete(inputId, dropId, getPool, getCurrent, addFn, orderFn) {
   const input = document.getElementById(inputId);
   const drop = document.getElementById(dropId);
   function commit(raw) {
@@ -6586,7 +6561,9 @@ function setupAutocomplete(inputId, dropId, getPool, getCurrent, addFn) {
     const q = helpNorm(raw);
     const current = getCurrent();
     const pool = getPool();
-    const matches = pool.filter(t => !current.includes(t) && (!q || helpNorm(t).includes(q))).slice(0, 8);
+    let matches = pool.filter(t => !current.includes(t) && (!q || helpNorm(t).includes(q)));
+    if (orderFn) matches = orderFn(matches, q, current); // jen formulář videa, ostatní pole beze změny
+    matches = matches.slice(0, 8);
     let html = matches.map(t => `<button type="button" data-v="${esc(t)}">${esc(t)}</button>`).join("");
     if (q) {
       const exists = pool.some(t => helpNorm(t) === q) || current.some(t => helpNorm(t) === q);
@@ -6656,8 +6633,43 @@ function renderEquipPills() {
     wrap.insertBefore(pill, input);
   });
 }
-setupAutocomplete("tagInput", "tagAutocomplete", () => state.tagPool, () => formTags, addTag);
-setupAutocomplete("equipInput", "equipAutocomplete", () => state.equipmentPool, () => formEquip, addEquip);
+/** Pořadí návrhů štítků/vybavení ve formuláři videa (Mekovo rozhodnutí 21. 9., varianta D):
+    nahoře to, co je nejčastější ve VYBRANÉ SLOŽCE, zbytek doplní nejpoužívanější z celé
+    knihovny. Při psaní jdou první ty, které napsaným textem ZAČÍNAJÍ, pak ty, které ho mají
+    uprostřed. U vybavení je „Bez vybavení" vždycky první, dokud nic nenapíšeš ani nevybereš —
+    ať se nezapomíná, že existuje (najde se bez ohledu na velká písmena a diakritiku; kdyby
+    v seznamu nebylo, nabídne se i tak). Kdyby to po čase nesedělo, přepnout na čistou
+    četnost v celé knihovně = vyhodit inFolder z porovnání v byUse. */
+function orderLinkFormSuggestions(field) {
+  return (matches, q, current) => {
+    const folderId = document.getElementById("linkFolder").value;
+    const global = new Map(), inFolder = new Map();
+    Object.values(state.library).forEach(it => {
+      if (!it || it.deletedAt) return;
+      (it[field] || []).forEach(v => {
+        global.set(v, (global.get(v) || 0) + 1);
+        if (folderId && it.folderId === folderId) inFolder.set(v, (inFolder.get(v) || 0) + 1);
+      });
+    });
+    const byUse = (a, b) => ((inFolder.get(b) || 0) - (inFolder.get(a) || 0)) || ((global.get(b) || 0) - (global.get(a) || 0));
+    let out;
+    if (q) {
+      const starts = matches.filter(t => helpNorm(t).startsWith(q)).sort(byUse);
+      const inside = matches.filter(t => !helpNorm(t).startsWith(q)).sort(byUse);
+      out = [...starts, ...inside];
+    } else {
+      out = [...matches].sort(byUse);
+    }
+    if (field === "equipment" && !q && !current.length) {
+      const bezNorm = helpNorm("Bez vybavení");
+      const bez = out.find(t => helpNorm(t) === bezNorm) || "Bez vybavení";
+      out = [bez, ...out.filter(t => t !== bez)];
+    }
+    return out;
+  };
+}
+setupAutocomplete("tagInput", "tagAutocomplete", () => state.tagPool, () => formTags, addTag, orderLinkFormSuggestions("tags"));
+setupAutocomplete("equipInput", "equipAutocomplete", () => state.equipmentPool, () => formEquip, addEquip, orderLinkFormSuggestions("equipment"));
 setupAutocomplete("bulkTagInput", "bulkTagAutocomplete", () => state.tagPool, () => bulkTagAddList,
   (v) => { if (!bulkTagAddList.includes(v)) { bulkTagAddList.push(v); renderBulkTagAddPills(); } });
 setupAutocomplete("bulkEquipInput", "bulkEquipAutocomplete", () => state.equipmentPool, () => bulkEquipAddList,
@@ -6773,6 +6785,12 @@ linkForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   if (linkFormSubmitting) return;
   commitPendingPillInputs();
+  // Krátký odkaz z aplikace Facebook uložit nejde (přehrávač ho odmítne). Žádná hláška dole —
+  // jen pruh pod odkazem, ke kterému formulář sjede, ať na telefonu není mimo obrazovku.
+  if (updateFbShareWarning()) {
+    document.getElementById("fbShareWarning").scrollIntoView({ block: "center", behavior: "smooth" });
+    return;
+  }
   const missingFields = missingRequiredLinkFields();
   if (missingFields.length) { showMissingRequiredLinkFields(missingFields); return; }
   // Jemné (ne blokující) nabádání k delšímu popisu (viz #96) — appka se jen zeptá, uložit
@@ -6797,16 +6815,7 @@ linkForm.addEventListener("submit", async (e) => {
   submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Ukládám…';
   try {
   let url = document.getElementById("linkUrl").value.trim();
-  if (/facebook\.com\/share\//.test(url)) {
-    toast("Rozbaluju sdílený odkaz z Facebooku…", 4000, "progress");
-    const resolved = await resolveFacebookShareUrl(url);
-    if (resolved) { url = resolved; document.getElementById("linkUrl").value = url; }
-    else {
-      toast("Tenhle typ sdíleného facebookového odkazu se nepodařilo automaticky rozpoznat. Otevři video přímo na Facebooku a zkopíruj adresu, která bude obsahovat „/reel/“ a dlouhé číslo.", 9000, "warn");
-      return;
-    }
-  }
-  else if (url.includes("facebook.com")) url = normalizeFacebookUrl(url);
+  if (url.includes("facebook.com")) url = normalizeFacebookUrl(url);
   else if (url.includes("instagram.com")) url = normalizeInstagramUrl(url);
   const platform = document.getElementById("thumbPreview").dataset.platform || detectPlatform(url);
   let videoId = document.getElementById("thumbPreview").dataset.videoId || null;
@@ -11367,13 +11376,27 @@ function renderPickerList() {
   }));
 }
 
+/** Do jaké části tréninku spadne nově přidané video. Má-li výchozí část, platí ta (jako dřív).
+    Nemá-li (ve formuláři „— vyber —"), vezme se část POSLEDNÍHO řádku tréninku, který nějakou
+    skutečnou část má — přestávky a skupiny „Bez části" se přeskakují, jinak by video za
+    přestávkou spadlo do přestávky. Prázdný trénink -> první část (Mekovo rozhodnutí 21. 9.). */
+function partForNewTrainingRow(t, lib) {
+  if (lib && lib.defaultPart) return lib.defaultPart;
+  const items = (t && t.items) || [];
+  for (let i = items.length - 1; i >= 0; i--) {
+    const r = items[i];
+    if (!r || !r.part || r.part === "prestavka") continue;
+    if (state.parts.some(p => p.key === r.part)) return r.part;
+  }
+  return state.parts[0] ? state.parts[0].key : "";
+}
 /** Přidá video z knihovny do KTERÉHOKOLI tréninku (ne nutně toho právě otevřeného v editoru) —
     používá se jak z editoru (addItemToTraining), tak z kontextového menu karty v knihovně. */
 function addLibraryItemToTraining(trainingId, libraryId) {
   const t = state.trainings[trainingId];
   if (!t) return false;
   const lib = state.library[libraryId];
-  const part = (lib && lib.defaultPart && getPart(lib.defaultPart)) ? lib.defaultPart : state.parts[0].key;
+  const part = partForNewTrainingRow(t, lib);
   t.items.push({ itemId: uid(), videoId: libraryId, part, duration: 10, cue: "", poznamka: "", label: "" });
   t.dateModified = Date.now();
   return true;
@@ -13926,7 +13949,7 @@ document.getElementById("bulkDriveImportBtn").addEventListener("click", async ()
     state.library[id] = {
       id, url: `https://drive.google.com/file/d/${fileId}/view`, platform: "drive", videoId: fileId,
       title: f.name, thumbnail: f.thumbnailLink || "",
-      folderId, defaultPart: state.parts[0] ? state.parts[0].key : "", aspectRatio: "16/9",
+      folderId, defaultPart: "", aspectRatio: "16/9",
       tags: [...bulkDriveTags], equipment: [...bulkDriveEquip],
       difficulties: {}, ratings: {}, notesByCoach: {},
       shortDesc: bulkShortDesc, longDesc: "", timestamp: null, dateAdded: now, addedBy: uidCurrent
@@ -13991,7 +14014,7 @@ const HELP_DATA = [
       { q: "Našel jsem video na YouTube. Jak ho dostanu do Trenéra, aniž bych kopíroval odkaz?", a: "Přímo na stránce s videem dej Sdílet (v prohlížeči nebo v aplikaci YouTube) a v nabídce vyber Trenér. Aplikace se otevře, sama si stáhne název i náhled a rovnou ti nabídne vyplněný formulář — ty už jen doplníš složku a štítky a uložíš. Nic se neuloží samo, poslední slovo máš vždycky ty.", kw: "sdilet share pridat video ze stranky youtube" },
       { q: "V nabídce Sdílet žádný Trenér nevidím. Proč?", a: "Skoro jistě proto, že máš Trenéra otevřeného jen jako stránku v prohlížeči. Do nabídky Sdílet se dostane až aplikace nainstalovaná na plochu (viz otázka „Jak si dám aplikaci na plochu telefonu?“). Když ji nainstalovanou máš a Trenér se přesto neobjevuje, zkus ji odinstalovat a nainstalovat znovu — systém si nastavení aplikace pamatuje a novinek si všimne až po přeinstalování.", kw: "sdilet nabidka neobjevuje chybi instalace" },
       { q: "Na iPhonu mi sdílení do Trenéra nejde vůbec. Dá se s tím něco dělat?", a: "Bohužel ne — Safari a iOS tuhle možnost neumí a zatím se to nechystá změnit. Na iPhonu tedy odkaz zkopíruj a vlož do formuláře ručně, jako dosud. Na Androidu a na počítači s Chromem nebo Edge sdílení funguje normálně.", kw: "iphone ios safari sdileni nefunguje" },
-      { q: "Sdílel jsem video a název ani náhled se nenačetly. Co s tím?", a: "U Facebooku a Instagramu se nenačtou nikdy — tyhle sítě je aplikaci nedávají, takže je napiš ručně. U ostatních to může být pomalým připojením: aplikace čeká pár vteřin a pak formulář otevře i bez nich, ať nečekáš zbytečně. Chybějící údaje doplň sám, nebo zkus tlačítko „Načíst info“ znovu.", kw: "nacteni nazev nahled nenacetlo sdileni" }
+      { q: "Sdílel jsem video a název ani náhled se nenačetly. Co s tím?", a: "U Facebooku a Instagramu se nenačtou nikdy — tyhle sítě je aplikaci nedávají, takže je napiš ručně. U ostatních to může být pomalým připojením: aplikace čeká pár vteřin a pak formulář otevře i bez nich, ať nečekáš zbytečně. Chybějící údaje doplň sám, nebo klepni na „Načíst znovu“ vedle odkazu.", kw: "nacteni nazev nahled nenacetlo sdileni" }
     ]},
     { title: "Tipy na videa (role Prohlížeč)", icon: "fa-solid fa-paper-plane", qa: [
       { q: "Jsem Prohlížeč a nemám tlačítko na přidání videa. Jak můžu knihovnu doplnit?", a: "Pošli adminovi tip. Na stránce s videem dej Sdílet a vyber Trenér — otevře se ti formulář jako každému jinému, vyplníš, co víš, a dole dáš „Poslat tip“. Do knihovny se tím nic nezapíše; tip počká, až ho admin projde a zařadí.", kw: "prohlizec tip poslat video pridat knihovna" },
@@ -14029,9 +14052,10 @@ const HELP_DATA = [
   ]},
   { group: "Knihovna videí", blocks: [
     { title: "Přidávání videí", icon: "fa-solid fa-plus", qa: [
-      { q: "Jak přidám nové video do knihovny?", a: "V Knihovně klikni na tlačítko pro přidání a vlož odkaz na video. Aplikace platformu (YouTube, Google Drive, Facebook, Instagram, TikTok) pozná sama podle adresy." },
+      { q: "Jak přidám nové video do knihovny?", a: "V Knihovně klikni na tlačítko pro přidání a vlož odkaz na video. Aplikace platformu (YouTube, Google Drive, Facebook, Instagram, TikTok) pozná sama podle adresy a hned po vložení si sama načte název, náhled i tvar videa. Kdyby se to nepovedlo, klepni na „Načíst znovu“ vedle odkazu." },
+      { q: "Co je „Výchozí část tréninku“ a co když ji nevyberu?", a: "Určuje, do které části tréninku video spadne, když ho do tréninku přidáš. Když necháš „— vyber —“, přidá se do stejné části jako poslední cvičení v tréninku (přestávky se přeskakují), v prázdném tréninku do první části. V tréninku ho pak můžeš kdykoli přehodit.", kw: "vychozi cast treninku vyber nezaraditelne" },
       { q: "Jaké odkazy/platformy aplikace podporuje?", a: "YouTube, Google Drive, Facebook, Instagram a TikTok. U videí, která nejdou vložit žádnou z těchhle cest, jde použít i platformu „Soubor“ (přímý odkaz na video)." },
-      { q: "Proč mi nejde vložit sdílený odkaz z Facebooku?", a: "Sdílené odkazy typu „/share/“ aplikace zkouší rozbalit automaticky, ale ne vždy se to povede. Pokud to nevyjde, otevři video přímo na Facebooku a zkopíruj adresu, která obsahuje „/reel/“ a dlouhé číslo — tu už aplikace přijme spolehlivě." },
+      { q: "Proč mi nejde vložit sdílený odkaz z Facebooku?", a: "Krátké odkazy typu „/share/…“, které dává aplikace Facebook, Trenér neumí — Facebook je přehrát nedovolí a rozbalit je umí jen jeho vlastní aplikace nebo prohlížeč. Pod odkazem se v tu chvíli ukáže upozornění. Otevři reel v Chromu (ne v aplikaci Facebook) a sdílej ho odtamtud, nebo zkopíruj adresu, která obsahuje „/reel/“ a dlouhé číslo." },
       { q: "Můžu přidat cvičení bez videa, jen popisem?", a: "Ano — při přidávání nech pole s odkazem prázdné a napiš jen popis cvičení. Aplikace ho v knihovně i v tréninku zobrazí jako textové cvičení místo videa." },
       { q: "Co je pole „Popiš cvičení“?", a: "Je to hlavní popis cvičení — nahradilo dřívější rozdělení na krátký a dlouhý popis. Píše se tam, v čem cvičení spočívá, ideálně tak podrobně, aby ho podle toho zvládl vést i kolega, co ho nikdy neviděl." },
       { q: "Proč mi aplikace řekne, ať popis rozepíšu víc, i když jsem něco napsal?", a: "Když je popis hodně krátký (pod pár slov), aplikace se jen jednou zeptá, jestli by nešlo přidat víc detailů, a ukáže konkrétní příklad, jak by to mohlo vypadat. Uložit se dá i tak, jak je — je to jen jemné doporučení, ne povinnost." }
@@ -14047,6 +14071,7 @@ const HELP_DATA = [
     ]},
     { title: "Štítky a vybavení", icon: "fa-solid fa-tags", qa: [
       { q: "Co jsou štítky a k čemu v knihovně slouží?", a: "Štítky jsou volné popisky (např. „přihrávka“, „mladší žactvo“), podle kterých se dá knihovna filtrovat napříč složkami — jedno video může mít víc štítků najednou." },
+      { q: "Podle čeho mi aplikace nabízí štítky a vybavení?", a: "Nahoře jsou ty, které se nejčastěji používají u videí ve složce, kterou máš vybranou; zbytek doplní nejpoužívanější z celé knihovny. Když píšeš, nejdřív se nabídnou ty, které napsaným textem začínají. U vybavení je vždycky první „Bez vybavení“, dokud nic nevybereš.", kw: "naseptavani poradi stitky vybaveni navrhy" },
       { q: "Proč mi aplikace nechce uložit video?", a: "Každé video musí mít aspoň jeden štítek a aspoň jednu položku vybavení — i když ho jen upravuješ. Chybějící pole se orámuje červeně a aplikace tě k němu posune. Když cvičení žádné pomůcky nepotřebuje, vyber „Bez vybavení“.", kw: "nejde ulozit povinne stitky vybaveni cerveny ramecek" },
       { q: "Co znamená „vybavení“ u videa?", a: "Označuje, co je na cvičení potřeba (míče, obruče, švihadla...) — hodí se to hlavně při skládání tréninku, kdy aplikace umí ukázat souhrn všeho vybavení, co si na trénink vzít." },
       { q: "Jak přidám úplně nový štítek nebo vybavení, které ještě neexistuje?", a: "Stačí ho napsat do příslušného pole při úpravě videa a potvrdit — aplikace ho rovnou přidá do nabídky pro příště, není potřeba nic zvlášť zakládat." },
