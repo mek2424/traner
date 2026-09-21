@@ -547,6 +547,25 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   padding:0 5px;margin-left:8px;border-radius:999px;background:var(--danger);color:#fff;
   font-size:11px;font-weight:700;vertical-align:middle;
 }
+/* Profil a Správa (fáze 4, 21. 9. 2026): jednotné nadpisy skupin v obou oknech a řádky
+   Správy ve stylu nastavení v telefonu (ikona, název, případně počet, šipka). */
+.panel-group-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--court);margin:22px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line);}
+.modal-head + .panel-group-title,#profileForm > .panel-group-title:first-child{margin-top:4px;}
+.admin-head-btn{position:relative;color:var(--court);}
+.admin-head-btn .pending-badge{border-color:var(--card);bottom:-2px;right:-3px;}
+.admin-group{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:0 14px;}
+.admin-row{display:flex;align-items:center;gap:12px;width:100%;padding:12px 0;border:none;border-bottom:1px solid var(--line);background:none;color:var(--ink);font:inherit;text-align:left;cursor:pointer;}
+.admin-row:last-child{border-bottom:none;}
+.admin-row:disabled{opacity:.6;cursor:wait;}
+.admin-row>i:first-child{width:20px;text-align:center;color:var(--court);font-size:15px;flex-shrink:0;}
+.admin-row-label{flex:1;font-size:14px;font-weight:600;min-width:0;}
+.admin-row-sub{display:block;font-size:11.5px;font-weight:400;color:var(--ink-faint);margin-top:2px;}
+.admin-row-chev{color:var(--ink-faint);font-size:12px;}
+.admin-row .pending-inline-count{margin-left:0;}
+/* Žádosti o přístup jsou ve Správě ve stejné skupině jako řádek Tipy — poslední žádost proto
+   čáru pod sebou potřebuje, jinak by splynula s Tipy. */
+#pendingApprovalsList .pending-approval-row:last-child{border-bottom:1px solid var(--line);}
+#pendingApprovalsList p{margin:10px 0;font-size:12.5px;}
 .comment-activity-list{display:flex;flex-direction:column;gap:2px;max-height:60vh;overflow-y:auto;}
 .comment-activity-item{
   display:flex;gap:10px;align-items:flex-start;padding:10px 4px;border-bottom:1px solid var(--line);
@@ -647,6 +666,13 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
    i nad profilem, když prohlížeč posílá tip. Mimo tyhle dvě cesty si formulář drží
    svoje běžné pořadí a třídu nedostane. */
 #linkModalBackdrop.above-profile{z-index:70;}
+/* Správa (fáze 4, 21. 9. 2026) se otevírá ze štítu v hlavičce profilu, takže musí být nad ním.
+   Trenéři a role, Kdo je online i Tipy se otvírají ze Správy — v DOM jsou až za ní, a se stejným
+   z-indexem 60 tak vyjedou nad ní. */
+#spravaModalBackdrop,#membersModalBackdrop{z-index:60;}
+/* Okna, která mají domov jinde (panel složek, editor tréninku) a běžně z-index 50, dostanou
+   tuhle třídu jen na dobu, co jsou otevřená ze Správy — viz openAboveSprava(). */
+.modal-backdrop.above-sprava{z-index:70;}
 #exerciseInfoModalBackdrop{z-index:210;}
 /* Výška schválně v PROCENTECH, ne ve vh: v záložním CSS otočení (tm-forced-landscape) je celý
    tréninkový režim otočený transformem, takže vh míří na fyzicky neotočenou obrazovku — okno
@@ -2275,6 +2301,53 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
   </div>
 </div>
 
+<!-- ===================== SPRÁVA (jen admin) ===================== -->
+<!-- Fáze 4 (21. 9. 2026): všechny adminské nástroje pohromadě, dřív rozházené po spodku profilu.
+     Otevírá se štítem v hlavičce profilu. V DOM schválně PŘED okny Kdo je online a Tipy (a hned
+     za ní Trenéři a role) — ty se otvírají odtud a se stejným z-indexem 60 tak vyjedou nad ní. -->
+<div id="spravaModalBackdrop" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 style="font-size:22px;">Správa</h2>
+      <button class="btn btn-icon btn-ghost" id="closeSpravaModalBtn" aria-label="Zavřít"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <p class="panel-group-title">Čeká na tebe</p>
+    <div class="admin-group">
+      <div id="pendingApprovalsList"></div>
+      <button type="button" class="admin-row" id="openVideoTipsAdminBtn"><i class="fa-solid fa-inbox"></i><span class="admin-row-label">Tipy</span><span id="tipsInlineCount" class="pending-inline-count hidden"></span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
+    </div>
+    <p class="panel-group-title">Lidé</p>
+    <div class="admin-group">
+      <button type="button" class="admin-row" id="openMembersBtn"><i class="fa-solid fa-users"></i><span class="admin-row-label">Trenéři a role<span class="admin-row-sub">Editor / prohlížeč, odhlásit na dálku, odebrat přístup</span></span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
+      <button type="button" class="admin-row" id="openAdminActivityBtn"><i class="fa-solid fa-chart-simple"></i><span class="admin-row-label">Kdo je online a co dělá</span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
+    </div>
+    <p class="panel-group-title">Knihovna</p>
+    <div class="admin-group">
+      <button type="button" class="admin-row" id="spravaFoldersBtn"><i class="fa-solid fa-folder-tree"></i><span class="admin-row-label">Spravovat složky</span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
+      <button type="button" class="admin-row" id="spravaTagsBtn"><i class="fa-solid fa-code-merge"></i><span class="admin-row-label">Sloučit štítky a vybavení</span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
+      <button type="button" class="admin-row" id="spravaPartsBtn"><i class="fa-solid fa-sliders"></i><span class="admin-row-label">Části tréninku</span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
+      <button type="button" class="admin-row" id="openBulkImportBtn"><i class="fa-solid fa-table-list"></i><span class="admin-row-label">Hromadná úprava videí (import)</span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
+    </div>
+    <p class="panel-group-title">Nastavení a záloha</p>
+    <div class="admin-group">
+      <button type="button" class="admin-row" id="openDriveKeyBtn"><i class="fa-brands fa-google-drive"></i><span class="admin-row-label">Google Drive API klíč<span class="admin-row-sub" id="driveKeyStatus"></span></span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
+      <button type="button" class="admin-row" id="backupLibraryBtn"><i class="fa-solid fa-download"></i><span class="admin-row-label">Stáhnout zálohu<span class="admin-row-sub" id="backupStatus">Knihovna a tréninky všech trenérů</span></span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== TRENÉŘI A ROLE (jen admin, otevírá se ze Správy) ===================== -->
+<div id="membersModalBackdrop" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 style="font-size:22px;">Trenéři a role</h2>
+      <button class="btn btn-icon btn-ghost" id="closeMembersModalBtn" aria-label="Zavřít"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:0;">Editor smí přidávat/upravovat videa. Prohlížeč jen vidí knihovnu a tvoří vlastní tréninky.</p>
+    <div id="membersRoleList"></div>
+  </div>
+</div>
+
 <!-- ===================== ZMĚNA HESLA ===================== -->
 <div id="changePasswordModalBackdrop" class="modal-backdrop hidden">
   <div class="modal" style="max-width:400px;">
@@ -2535,10 +2608,14 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
 </div>
 
 <!-- ===================== PROFILE MODAL ===================== -->
+<!-- Fáze 4 (21. 9. 2026): profil přeskládaný do skupin O mně / Vzhled / Účet — nahoře, co se
+     vyplňuje a ukládá tlačítkem Uložit profil, pod tím, co funguje hned. Všechno adminské se
+     odstěhovalo do okna Správa (štít v hlavičce, vidí ho jen admin). -->
 <div id="profileModalBackdrop" class="modal-backdrop hidden">
   <div class="modal">
     <div class="modal-head">
       <h2 style="font-size:22px;">Profil</h2>
+      <button type="button" class="btn btn-icon btn-ghost admin-head-btn hidden" id="openSpravaBtn" aria-label="Správa" title="Správa"><i class="fa-solid fa-user-shield"></i><span class="pending-badge hidden" id="spravaBadge" aria-hidden="true"></span></button>
       <button class="btn btn-icon btn-ghost" id="closeProfileModalBtn"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="comments-card hidden" id="profileCommentActivitySection" style="margin-top:0;margin-bottom:18px;">
@@ -2549,6 +2626,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
       <div id="commentActivityListEl" class="comment-activity-list"></div>
     </div>
     <form id="profileForm">
+      <p class="panel-group-title">O mně</p>
       <div class="thumb-preview" id="avatarPreview" style="aspect-ratio:1/1;max-width:120px;margin:0 auto 8px;border-radius:50%;">bez fotky</div>
       <div class="thumb-upload-row" style="justify-content:center;">
         <label class="btn btn-sm" for="avatarFileInput"><i class="fa-solid fa-image"></i> Nahrát fotku</label>
@@ -2568,9 +2646,10 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
           <input type="text" id="profileClub" placeholder="např. SK Meteor Praha">
         </div>
       </div>
+      <p class="panel-group-title">Vzhled</p>
       <div class="two-col">
         <div class="field">
-          <label for="profileColorPrimary">Hlavní barva aplikace</label>
+          <label for="profileColorPrimary">Hlavní barva</label>
           <input type="color" id="profileColorPrimary" style="width:100%;height:40px;padding:2px;border:1px solid var(--line);border-radius:var(--radius-sm);">
         </div>
         <div class="field">
@@ -2578,62 +2657,25 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
           <input type="color" id="profileColorAccent" style="width:100%;height:40px;padding:2px;border:1px solid var(--line);border-radius:var(--radius-sm);">
         </div>
       </div>
+      <div style="display:flex;justify-content:flex-end;margin:-6px 0 8px;">
+        <button type="button" class="btn btn-sm btn-ghost" id="resetColorsBtn"><i class="fa-solid fa-rotate-left"></i> Výchozí barvy</button>
+      </div>
       <div class="field" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
         <label style="margin:0;text-transform:none;font-size:13px;letter-spacing:0;font-weight:500;">Tmavý režim</label>
         <button type="button" class="theme-toggle" id="darkModeToggle" role="switch" aria-checked="false" aria-label="Přepnout tmavý režim">
           <span class="theme-toggle-knob"><i class="fa-solid fa-sun"></i><i class="fa-solid fa-moon"></i></span>
         </button>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-        <button type="button" class="btn btn-sm" id="openChangePasswordBtn" style="margin-bottom:0;"><i class="fa-solid fa-key"></i> Změnit heslo</button>
-        <button type="button" class="btn btn-sm" id="openChangeEmailBtn" style="margin-bottom:0;"><i class="fa-solid fa-envelope"></i> Změnit e-mail</button>
-        <button type="button" class="btn btn-sm" id="logoutBtn" style="margin-bottom:0;"><i class="fa-solid fa-right-from-bracket"></i> Odhlásit</button>
-        <button type="button" class="btn btn-sm hidden" id="openMyTipsBtn" style="margin-bottom:0;"><i class="fa-solid fa-paper-plane"></i> Moje tipy<span id="myTipsInlineCount" class="pending-inline-count hidden"></span></button>
-      </div>
-      <div class="modal-actions">
-        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Uložit profil</button>
-        <button type="button" class="btn btn-ghost" id="resetColorsBtn">Výchozí barvy</button>
-      </div>
+      <button type="submit" class="btn btn-primary btn-block" style="margin-top:6px;"><i class="fa-solid fa-floppy-disk"></i> Uložit profil</button>
     </form>
-    <div style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line);">
-      <button type="button" class="btn btn-ghost btn-block" id="backupLibraryBtn"><i class="fa-solid fa-download"></i> Stáhnout zálohu knihovny</button>
-      <p style="font-size:11.5px;color:var(--ink-faint);margin:6px 0 0;">Stáhne celou sdílenou knihovnu (odkazy, štítky, složky) jako soubor pro klid duše.</p>
+    <p class="panel-group-title">Účet</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button type="button" class="btn btn-sm hidden" id="openMyTipsBtn" style="margin-bottom:0;"><i class="fa-solid fa-paper-plane"></i> Moje tipy<span id="myTipsInlineCount" class="pending-inline-count hidden"></span></button>
+      <button type="button" class="btn btn-sm" id="openChangePasswordBtn" style="margin-bottom:0;"><i class="fa-solid fa-key"></i> Změnit heslo</button>
+      <button type="button" class="btn btn-sm" id="openChangeEmailBtn" style="margin-bottom:0;"><i class="fa-solid fa-envelope"></i> Změnit e-mail</button>
+      <button type="button" class="btn btn-sm" id="logoutBtn" style="margin-bottom:0;"><i class="fa-solid fa-right-from-bracket"></i> Odhlásit</button>
     </div>
-    <div id="adminSectionHeading" class="hidden" style="margin-top:26px;padding-top:18px;border-top:2px solid var(--court);">
-      <h2 style="font-size:16px;font-family:var(--font-display);letter-spacing:.03em;color:var(--court);margin:0 0 4px;"><i class="fa-solid fa-user-shield"></i> Administrace</h2>
-      <p style="font-size:11.5px;color:var(--ink-faint);margin:0;">Tyhle nástroje vidíš jen ty jako admin — jsou tu všechny pohromadě.</p>
-    </div>
-    <div id="bulkImportSection" class="hidden" style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line);">
-      <button type="button" class="btn btn-ghost btn-block" id="openBulkImportBtn"><i class="fa-solid fa-table-list"></i> Hromadná úprava videí (import)</button>
-      <p style="font-size:11.5px;color:var(--ink-faint);margin:6px 0 0;">Vlož připravenou tabulku (název/štítky/vybavení/popis pro víc videí najednou) a jedním klikem ji zapiš.</p>
-    </div>
-    <div id="adminPendingSection" class="hidden" style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line);">
-      <h3 style="font-size:14px;font-family:var(--font-body);font-weight:700;color:var(--ink-soft);margin:0 0 8px;">Čekají na schválení<span id="pendingInlineCount" class="pending-inline-count hidden"></span></h3>
-      <div id="pendingApprovalsList"></div>
-    </div>
-    <div id="adminTipsSection" class="hidden" style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line);">
-      <button type="button" class="btn btn-sm" id="openVideoTipsAdminBtn" style="margin-bottom:0;"><i class="fa-solid fa-inbox"></i> Tipy<span id="tipsInlineCount" class="pending-inline-count hidden"></span></button>
-    </div>
-    <div id="adminMembersSection" class="hidden" style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line);">
-      <button type="button" class="btn btn-sm" id="openAdminActivityBtn" style="margin-bottom:14px;"><i class="fa-solid fa-chart-simple"></i> Kdo je online a co dělá</button>
-      <h3 style="font-size:14px;font-family:var(--font-body);font-weight:700;color:var(--ink-soft);margin:0 0 8px;">Trenéři a jejich role</h3>
-      <p style="font-size:11.5px;color:var(--ink-faint);margin:0 0 8px;">Editor smí přidávat/upravovat videa. Prohlížeč jen vidí knihovnu a tvoří vlastní tréninky.</p>
-      <div id="membersRoleList"></div>
-    </div>
-    <div id="adminPartsSection" class="hidden" style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line);">
-      <h3 style="font-size:14px;font-family:var(--font-body);font-weight:700;color:var(--ink-soft);margin:0 0 8px;">Části tréninku</h3>
-      <p style="font-size:11.5px;color:var(--ink-faint);margin:0 0 8px;">Ovlivňuje úplně všechny trenéry najednou — pořadí, barvy a název částí ve výběru i v PDF.</p>
-      <button type="button" class="btn btn-ghost btn-block" id="openPartsFromProfileBtn"><i class="fa-solid fa-sliders"></i> Spravovat části tréninku</button>
-    </div>
-    <div id="adminDriveKeySection" class="hidden" style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line);">
-      <h3 style="font-size:14px;font-family:var(--font-body);font-weight:700;color:var(--ink-soft);margin:0 0 8px;">Google Drive API klíč</h3>
-      <div class="field">
-        <input type="text" id="driveApiKeyInput" placeholder="AIzaSy…">
-      </div>
-      <button type="button" class="btn btn-primary btn-sm" id="saveDriveApiKeyBtn">Uložit klíč</button>
-      <p style="font-size:11.5px;color:var(--ink-faint);margin:6px 0 0;">Používá se pro přímé přehrávání videí z Disku. Vidíš jen ty jako admin.</p>
-    </div>
-    <div style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line);">
+    <div style="margin-top:26px;padding-top:16px;border-top:1px solid var(--line);">
       <button type="button" class="btn btn-danger btn-block" id="deleteAccountBtn"><i class="fa-solid fa-user-xmark"></i> Smazat účet natrvalo</button>
       <p style="font-size:11.5px;color:var(--ink-faint);margin:6px 0 0;">Smaže tvůj profil, tréninky a tvoje hodnocení/poznámky ve sdílené knihovně. Nevratné.</p>
     </div>
@@ -2986,7 +3028,7 @@ function sharedFingerprint() {
       state.trainingFocus, state.focusLibraryMap]);
   } catch (e) { return null; }
 }
-const APP_VERSION = "2026-09-21 20:50";
+const APP_VERSION = "2026-09-21 21:59";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -7644,8 +7686,8 @@ function subscribeToPendingRequests() {
   pendingRequestsUnsub = onSnapshot(collection(db, "pendingRequests"), (snap) => {
     pendingRequestsCount = snap.size;
     renderPendingBadge();
-    // Když je profil zrovna otevřený, rovnou obnov i seznam pod nadpisem.
-    if (!document.getElementById("profileModalBackdrop").classList.contains("hidden")) {
+    // Když je Správa zrovna otevřená, rovnou obnov i seznam žádostí v ní.
+    if (!document.getElementById("spravaModalBackdrop").classList.contains("hidden")) {
       renderPendingApprovals();
     }
   }, (err) => console.warn("Sledování čekajících žádostí selhalo:", err));
@@ -7657,20 +7699,23 @@ function unsubscribeFromPendingRequests() {
 }
 function renderPendingBadge() {
   const badge = document.getElementById("pendingBadge");
-  const inline = document.getElementById("pendingInlineCount");
   const n = pendingRequestsCount;
-  // Kolečko na profilovce sčítá VŠECHNO, co v profilu čeká na admina — žádosti o přístup
-  // i došlé tipy. Schválně jedno číslo: dvě kolečka vedle sebe by se na avataru nevešla
-  // a stejně obě vedou do téhož okna. Rozpad je vidět až uvnitř, u obou sekcí zvlášť.
+  // Kolečko na profilovce i štít Správy v hlavičce profilu sčítají VŠECHNO, co čeká na admina —
+  // žádosti o přístup i došlé tipy. Schválně jedno číslo: dvě kolečka vedle sebe by se na
+  // avataru nevešla a stejně obě vedou do téhož okna. Rozpad je vidět až ve Správě.
   const total = n + videoTipsWaiting.length;
+  const totalText = total > 9 ? "9+" : String(total);
   if (badge) {
     badge.classList.toggle("hidden", total === 0);
-    badge.textContent = total > 9 ? "9+" : String(total);
+    badge.textContent = totalText;
   }
-  if (inline) {
-    inline.classList.toggle("hidden", n === 0);
-    inline.textContent = String(n);
+  const spravaBadge = document.getElementById("spravaBadge");
+  if (spravaBadge) {
+    spravaBadge.classList.toggle("hidden", total === 0);
+    spravaBadge.textContent = totalText;
   }
+  const spravaBtn = document.getElementById("openSpravaBtn");
+  if (spravaBtn) spravaBtn.setAttribute("aria-label", total ? `Správa — čeká ${total}` : "Správa");
   const tipsInline = document.getElementById("tipsInlineCount");
   if (tipsInline) {
     tipsInline.classList.toggle("hidden", videoTipsWaiting.length === 0);
@@ -7739,13 +7784,9 @@ function unsubscribeFromVideoTips() {
   myTips = [];
   renderPendingBadge();
 }
-/** Tlačítka v profilu — admin vidí došlé tipy, tipující svoje. Obě jen když je co ukázat. */
+/** Tlačítko „Moje tipy“ v profilu — jen když tipující nějaký tip opravdu má. Došlé tipy
+    admina jsou od fáze 4 ve Správě (řádek Tipy, počet hlídá renderPendingBadge). */
 function applyTipsSectionsVisibility() {
-  const isAdmin = uidCurrent === ADMIN_UID;
-  document.getElementById("adminTipsSection").classList.toggle("hidden", !isAdmin);
-  const tipsCount = document.getElementById("tipsInlineCount");
-  tipsCount.classList.toggle("hidden", videoTipsWaiting.length === 0);
-  tipsCount.textContent = String(videoTipsWaiting.length);
   const myBtn = document.getElementById("openMyTipsBtn");
   myBtn.classList.toggle("hidden", myTips.length === 0);
   const waitingMine = myTips.filter(t => (t.status || "waiting") === "waiting").length;
@@ -13002,26 +13043,83 @@ function openProfileModal() {
   const prev = document.getElementById("avatarPreview");
   if (p.avatarUrl) { prev.style.backgroundImage = `url('${p.avatarUrl}')`; prev.textContent = ""; }
   else { prev.style.backgroundImage = "none"; prev.textContent = "bez fotky"; }
-  const adminSection = document.getElementById("adminPendingSection");
-  const isAdmin = uidCurrent === ADMIN_UID;
-  document.getElementById("adminSectionHeading").classList.toggle("hidden", !isAdmin);
-  adminSection.classList.toggle("hidden", !isAdmin);
-  document.getElementById("adminMembersSection").classList.toggle("hidden", !isAdmin);
-  document.getElementById("adminPartsSection").classList.toggle("hidden", !isAdmin);
-  document.getElementById("adminDriveKeySection").classList.toggle("hidden", !isAdmin);
-  document.getElementById("bulkImportSection").classList.toggle("hidden", !isAdmin);
-  document.getElementById("driveApiKeyInput").value = state.driveApiKey || "";
-  if (isAdmin) {
-    renderPendingApprovals();
-    renderMembersRoleList();
-  }
+  // Štít Správy vidí jen admin; všechno ostatní adminské je až v ní (fáze 4).
+  document.getElementById("openSpravaBtn").classList.toggle("hidden", uidCurrent !== ADMIN_UID);
+  renderPendingBadge();
   applyTipsSectionsVisibility();
   renderCommentActivityPanel();
   markCommentsSeen();
   profileModalBackdrop.classList.remove("hidden");
 }
-document.getElementById("saveDriveApiKeyBtn").addEventListener("click", async () => {
-  const key = document.getElementById("driveApiKeyInput").value.trim();
+/* =========================================================
+   SPRÁVA — jen admin (fáze 4, Mekova rozhodnutí 21. 9. 2026)
+   Všechno adminské pohromadě v jednom okně, otevírá se štítem v hlavičce profilu.
+   Rozcestník jako nastavení v telefonu: skupiny Čeká na tebe / Lidé / Knihovna / Nastavení
+   a záloha. Žádosti o přístup jsou rovnou v okně (jako dřív v profilu), zbytek jsou řádky,
+   které otevřou původní okna beze změny. Složky, štítky a části tréninku zůstávají i na
+   svých dřívějších místech (panel složek v Knihovně, editor tréninku).
+   ========================================================= */
+const spravaModalBackdrop = document.getElementById("spravaModalBackdrop");
+function openSpravaModal() {
+  if (uidCurrent !== ADMIN_UID) return;
+  renderPendingApprovals();
+  renderPendingBadge();
+  updateDriveKeyStatus();
+  spravaModalBackdrop.classList.remove("hidden");
+  resetModalScroll(spravaModalBackdrop);
+}
+document.getElementById("openSpravaBtn").addEventListener("click", openSpravaModal);
+document.getElementById("closeSpravaModalBtn").addEventListener("click", () => spravaModalBackdrop.classList.add("hidden"));
+
+/** Okna s domovem jinde (panel složek, editor tréninku) mají z-index 50 a otevřená ze Správy
+    by vyjela POD ní i pod profilem. Dostanou proto dočasně třídu above-sprava (z-index 70)
+    a po zavření ji zase ztratí — z původních míst se tak chovají přesně jako dřív. */
+function openAboveSprava(backdropId, open) {
+  const backdrop = document.getElementById(backdropId);
+  backdrop.classList.add("above-sprava");
+  open();
+  if (backdrop.classList.contains("hidden")) { backdrop.classList.remove("above-sprava"); return; }
+  const obs = new MutationObserver(() => {
+    if (!backdrop.classList.contains("hidden")) return;
+    obs.disconnect();
+    backdrop.classList.remove("above-sprava");
+  });
+  obs.observe(backdrop, { attributes: true, attributeFilter: ["class"] });
+}
+// Stejná tlačítka, jaká otevírají tahle okna na jejich původních místech — ať se spustí
+// úplně totéž (vykreslení seznamu apod.), jen navrch nad Správou.
+document.getElementById("spravaFoldersBtn").addEventListener("click", () =>
+  openAboveSprava("foldersModalBackdrop", () => document.getElementById("manageFoldersBtn").click()));
+document.getElementById("spravaTagsBtn").addEventListener("click", () =>
+  openAboveSprava("mergeModalBackdrop", () => document.getElementById("manageTagsBtn").click()));
+document.getElementById("spravaPartsBtn").addEventListener("click", () =>
+  openAboveSprava("partsModalBackdrop", () => document.getElementById("managePartsBtn").click()));
+
+// Trenéři a role — dřív seznam rovnou v profilu, teď vlastní okno nad Správou.
+const membersModalBackdrop = document.getElementById("membersModalBackdrop");
+document.getElementById("openMembersBtn").addEventListener("click", () => {
+  if (uidCurrent !== ADMIN_UID) return;
+  renderMembersRoleList();
+  membersModalBackdrop.classList.remove("hidden");
+  resetModalScroll(membersModalBackdrop);
+});
+document.getElementById("closeMembersModalBtn").addEventListener("click", () => membersModalBackdrop.classList.add("hidden"));
+
+/* Google Drive API klíč — dřív celá sekce s polem v profilu, teď řádek ve Správě a malé
+   okénko (promptDialog) s předvyplněným klíčem. Vymazané pole a Uložit klíč smaže (jako dřív). */
+function updateDriveKeyStatus() {
+  const el = document.getElementById("driveKeyStatus");
+  if (el) el.textContent = state.driveApiKey ? "Nastavený" : "Nenastavený";
+}
+document.getElementById("openDriveKeyBtn").addEventListener("click", async () => {
+  if (uidCurrent !== ADMIN_UID) return;
+  const entered = await promptDialog(
+    "Používá se pro přímé přehrávání videí z Disku. Když pole vymažeš a dáš Uložit klíč, klíč se smaže.",
+    { title: "Google Drive API klíč", defaultValue: state.driveApiKey || "", confirmLabel: "Uložit klíč" }
+  );
+  if (entered === null) return;                 // Zrušit
+  const key = entered.trim();
+  if (key === (state.driveApiKey || "")) return; // beze změny — zbytečně nezvedat revizi
   state.driveApiKey = key;
   try {
     const sharedRef = doc(db, "shared", "data");
@@ -13038,22 +13136,25 @@ document.getElementById("saveDriveApiKeyBtn").addEventListener("click", async ()
     state.knownRevision = novaRevize;
     toast("API klíč uložen.");
   } catch (e) { console.error(e); toast("Uložení klíče selhalo.", 2200, "err"); }
+  updateDriveKeyStatus();
 });
 
 
 async function renderPendingApprovals() {
   const wrap = document.getElementById("pendingApprovalsList");
-  wrap.innerHTML = `<p style="font-size:12.5px;color:var(--ink-faint);">Načítám…</p>`;
+  // Ve Správě je seznam ve stejné skupině jako řádek Tipy. Když nikdo nečeká (živý počet
+  // z odběru), neukazuje se nic — ani „Načítám…“, ať řádek Tipy zbytečně neposkakuje.
+  wrap.innerHTML = pendingRequestsCount > 0 ? `<p style="color:var(--ink-faint);">Načítám…</p>` : "";
   let docs = [];
   try {
     const snap = await getDocs(collection(db, "pendingRequests"));
     docs = snap.docs;
   } catch (e) {
     console.error("Nepodařilo se načíst žádosti:", e);
-    wrap.innerHTML = `<p style="font-size:12.5px;color:var(--danger);">Nepodařilo se načíst žádosti.</p>`;
+    wrap.innerHTML = `<p style="color:var(--danger);">Nepodařilo se načíst žádosti.</p>`;
     return;
   }
-  if (!docs.length) { wrap.innerHTML = `<p style="font-size:12.5px;color:var(--ink-faint);">Nikdo aktuálně nečeká.</p>`; return; }
+  if (!docs.length) { wrap.innerHTML = ""; return; } // nikdo nečeká — ve Správě zůstane jen řádek Tipy
   wrap.innerHTML = docs.map(d => `
     <div class="pending-approval-row" data-uid="${esc(d.id)}">
       <span class="pending-approval-email">${esc(d.data().email || d.id)}</span>
@@ -13315,18 +13416,41 @@ document.getElementById("confirmCropBtn").addEventListener("click", () => {
   toast("Ořez použit — nezapomeň dole uložit profil.");
 });
 
-document.getElementById("backupLibraryBtn").addEventListener("click", () => {
+/* Záloha (fáze 4, 21. 9. 2026): jen pro admina ve Správě a nově i s tréninky všech trenérů.
+   Tréninky se dotahují stejným hromadným dotazem jako Tržiště (ensureOthersTrainingsLoaded) —
+   jsou to věci, které trenéři tvoří sami a které by se nejhůř dávaly dohromady. Náhledy videí
+   a profily trenérů v záloze pořád nejsou. Nahrát zálohu zpátky appka neumí, obnova je ruční. */
+const BACKUP_STATUS_TEXT = "Knihovna a tréninky všech trenérů";
+document.getElementById("backupLibraryBtn").addEventListener("click", async () => {
+  if (uidCurrent !== ADMIN_UID) return;
+  const btn = document.getElementById("backupLibraryBtn");
+  const status = document.getElementById("backupStatus");
+  if (btn.disabled) return;
+  btn.disabled = true;
+  status.textContent = "Stahuji tréninky všech trenérů…";
+  let trainingsOk = true;
+  try { await ensureOthersTrainingsLoaded(); }
+  catch (e) { trainingsOk = false; logDebug("[záloha] tréninky ostatních se nenačetly:", (e && (e.code || e.message)) || e); }
+  btn.disabled = false;
+  status.textContent = BACKUP_STATUS_TEXT;
+  if (!trainingsOk) {
+    toast("Tréninky ostatních trenérů se nepodařilo načíst, záloha se nestáhla. Zkus to prosím znovu.", 5000, "err");
+    return;
+  }
   const backup = {
     exportedAt: new Date().toISOString(),
     library: state.library,
     folders: state.folders,
     tagPool: state.tagPool,
     equipmentPool: state.equipmentPool,
-    parts: state.parts
+    parts: state.parts,
+    trainings: state.trainings
   };
   const dateStr = new Date().toISOString().slice(0, 10);
   downloadTextFile(`trener-zaloha-${dateStr}.json`, JSON.stringify(backup, null, 2), "application/json");
-  toast("Záloha stažena.");
+  const nV = Object.keys(state.library || {}).length;
+  const nT = Object.keys(state.trainings || {}).length;
+  toast(`Záloha stažena — ${nV} ${czPlural(nV, "video", "videa", "videí")}, ${nT} ${czPlural(nT, "trénink", "tréninky", "tréninků")}.`);
 });
 
 /* ---- Hromadná úprava videí přes vloženou tabulku (ID / název / štítky / vybavení / popis) ----
@@ -13365,16 +13489,16 @@ function applyPoolList(raw, pool) {
   });
   return [...new Set(list)];
 }
+// Od fáze 4 se otevírá ze Správy a vyjede nad ní (openAboveSprava) — profil ani Správa se
+// kvůli tomu nezavírají, po zavření je admin zpátky ve Správě.
 document.getElementById("openBulkImportBtn").addEventListener("click", () => {
   if (uidCurrent !== ADMIN_UID) return;
   document.getElementById("bulkImportTextarea").value = "";
   document.getElementById("bulkImportPreview").textContent = "";
-  profileModalBackdrop.classList.add("hidden");
-  document.getElementById("bulkImportModalBackdrop").classList.remove("hidden");
+  openAboveSprava("bulkImportModalBackdrop", () => document.getElementById("bulkImportModalBackdrop").classList.remove("hidden"));
 });
 document.getElementById("closeBulkImportModalBtn").addEventListener("click", () => {
   document.getElementById("bulkImportModalBackdrop").classList.add("hidden");
-  profileModalBackdrop.classList.remove("hidden");
 });
 document.getElementById("bulkImportApplyBtn").addEventListener("click", async () => {
   const { rows, unknownIds } = parseBulkImportText(document.getElementById("bulkImportTextarea").value);
@@ -13398,7 +13522,6 @@ document.getElementById("bulkImportApplyBtn").addEventListener("click", async ()
     if (row.shortDesc) item.shortDesc = row.shortDesc;
   });
   document.getElementById("bulkImportModalBackdrop").classList.add("hidden");
-  profileModalBackdrop.classList.remove("hidden");
   renderLibrary();
   const ok2 = await saveUserData();
   if (ok2) toast(`Hromadně upraveno ${rows.length} ${czPlural(rows.length, "video", "videa", "videí")}.`);
@@ -13758,24 +13881,8 @@ document.getElementById("addFolderBtn").addEventListener("click", async () => {
 const partsModalBackdrop = document.getElementById("partsModalBackdrop");
 document.getElementById("managePartsBtn").addEventListener("click", () => { renderPartsManageList(); partsModalBackdrop.classList.remove("hidden"); });
 document.getElementById("closePartsModalBtn").addEventListener("click", () => partsModalBackdrop.classList.add("hidden"));
-// Stejná funkce, jen druhý (přehlednější) vstupní bod — přímo z profilu, ať admin nemusí kvůli
-// správě částí tréninku otevírat zrovna nějaký konkrétní trénink v Editoru (viz #105). Aplikace
-// schválně nejdřív počká na dokončení zavření profilu (viz "SYSTÉMOVÉ TLAČÍTKO ZPĚT" níž — to
-// zavření si samo tiše upraví historii přes history.back()) a TEPRVE PAK otevře okno s částmi —
-// volat history.back() a hned nato pushState() nad sebou bez čekání je nespolehlivé (prohlížeč
-// nemusí stihnout tu první změnu dokončit) a mohlo by to tlačítku Zpět rozhodit pořadí kroků.
-document.getElementById("openPartsFromProfileBtn").addEventListener("click", () => {
-  let opened = false;
-  const openParts = () => {
-    if (opened) return;
-    opened = true;
-    window.removeEventListener("popstate", openParts);
-    document.getElementById("managePartsBtn").click();
-  };
-  window.addEventListener("popstate", openParts);
-  document.getElementById("closeProfileModalBtn").click();
-  setTimeout(openParts, 300); // pojistka, kdyby z nějakého důvodu popstate nepřišel
-});
+// Druhý vstupní bod (mimo editor tréninku) je od fáze 4 řádek „Části tréninku“ ve Správě —
+// okno se otevře nad ní (openAboveSprava), profil se kvůli tomu už nezavírá.
 
 function renderPartsManageList() {
   const wrap = document.getElementById("partsManageList");
@@ -14073,7 +14180,7 @@ const HELP_DATA = [
     { title: "Přihlášení a role", icon: "fa-solid fa-key", qa: [
       { q: "Jak se přihlásím do aplikace poprvé?", a: "Na úvodní obrazovce zadej e-mail a heslo a klikni na „Přihlásit se“. Pokud ještě nemáš účet, přepni se přes odkaz „Založit účet“ pod formulářem — po založení počkáš, až tě schválí admin (viz další otázka)." },
       { q: "Jaký je rozdíl mezi rolí Editor a Prohlížeč?", a: "Editor smí přidávat a upravovat videa v knihovně i vytvářet a upravovat tréninky. Prohlížeč vidí celou sdílenou knihovnu, ale nemůže do ní zasahovat — může si ale volně skládat a upravovat vlastní tréninky z toho, co v knihovně najde.", kw: "role prohlizec editor" },
-      { q: "Kdo je admin a co může navíc?", a: "Admin je jeden konkrétní účet se správou aplikace navíc — schvaluje nové trenéry, mění jim role a spravuje pár nastavení, která platí pro všechny (třeba „Části tréninku“). Běžný trenér tyhle nástroje v aplikaci vůbec nevidí." },
+      { q: "Kdo je admin a co může navíc?", a: "Admin je jeden konkrétní účet se správou aplikace navíc — schvaluje nové trenéry, mění jim role a spravuje pár nastavení, která platí pro všechny (třeba „Části tréninku“). Všechno to má pohromadě v okně „Správa“ (štít v hlavičce profilu) — běžný trenér ho v aplikaci vůbec nevidí.", kw: "sprava stit admin nastroje" },
       { q: "Co se stane po založení nového účtu?", a: "Aplikace účet rovnou založí, ale přepne tě na obrazovku „čeká na schválení“ — dokud tě admin neschválí, dovnitř se nedostaneš. Stačí pak aplikaci znovu otevřít, nebo dát tlačítko „Zkontrolovat znovu“.", kw: "cekani schvaleni pending registrace" },
       { q: "Zapomněl jsem heslo, co teď?", a: "Na přihlašovací obrazovce klikni na „Zapomenuté heslo?“. Aplikace se zeptá, na jakou adresu odkaz poslat — musí to být přesně ta, kterou máš u účtu zaregistrovanou. Pak ti přijde e-mail s odkazem na nastavení nového hesla (mrkni i do spamu).", kw: "zapomenute heslo obnova reset" },
       { q: "Odkaz na nové heslo mi nepřišel. Proč?", a: "Skoro jistě proto, že máš účet na české schránce. Seznam, Centrum, Volný a spol. e-maily z aplikace tiše zahazují — nedorazí ani do spamu, prostě zmizí cestou. Řešení je mít účet na Gmailu: přihlas se (heslo zatím znáš) a v profilu si přes „Změnit e-mail“ přepni adresu. Když už se přihlásit nemůžeš, ozvi se adminovi, ten to umí přepnout za tebe.", kw: "seznam centrum volny email nedorazil nechodi spam" }
@@ -14101,7 +14208,9 @@ const HELP_DATA = [
       { q: "Můžu poslat jako tip i video, které v knihovně už je?", a: "Aplikace tě na to upozorní ještě ve formuláři — když odkaz pozná, ukáže žlutou hlášku s názvem videa, které už v knihovně je. Tip pak nemá smysl posílat.", kw: "duplicita tip uz v knihovne" }
     ]},
     { title: "Profil", icon: "fa-solid fa-user", qa: [
-      { q: "Jak se odhlásím?", a: "V profilu (kolečko s tvojí iniciálou vpravo nahoře) je tlačítko „Odhlásit“ — hned vedle „Změnit heslo“ a „Změnit e-mail“.", kw: "odhlasit odhlaseni logout" },
+      { q: "Jak se odhlásím?", a: "V profilu (kolečko s tvojí iniciálou vpravo nahoře) je dole v části „Účet“ tlačítko „Odhlásit“ — spolu se „Změnit heslo“ a „Změnit e-mail“.", kw: "odhlasit odhlaseni logout" },
+      { q: "Proč se mi změna barev nebo jména neuložila?", a: "Jméno, kategorie, klub, fotka a barvy se uloží až tlačítkem „Uložit profil“ pod částí Vzhled. Tmavý režim se ukládá hned sám, stejně jako tlačítka v části Účet pod ním (heslo, e-mail, odhlášení).", kw: "ulozit profil barvy jmeno neulozilo neulozila" },
+      { q: "Kam zmizelo tlačítko „Stáhnout zálohu knihovny“?", a: "Zálohu teď stahuje admin — nově i s tréninky všech trenérů, takže je úplnější než dřív. Ty ji stahovat nemusíš.", kw: "zaloha zalohu stahnout knihovna zmizelo" },
       { q: "Jak si změním přezdívku, klub nebo fotku?", a: "Klikni na kolečko se svou iniciálou vpravo nahoře — v profilu jde upravit přezdívka, kategorie, klub i profilová fotka (včetně oříznutí)." },
       { q: "K čemu jsou barvy nastavené v profilu?", a: "Nastaví barevné ladění celé aplikace jen pro tebe — každý trenér si tak může mít svůj vlastní vzhled, aniž by to ovlivnilo, jak aplikaci vidí kolegové." },
       { q: "Jak si změním heslo?", a: "V profilu najdeš tlačítko „Změnit heslo“ — aplikace tě požádá o současné heslo a pak o nové (aspoň 6 znaků)." },
@@ -14408,6 +14517,8 @@ document.getElementById("helpSearchInput").addEventListener("input", (e) => rend
     bulkImportModalBackdrop: "closeBulkImportModalBtn",
     mergeModalBackdrop: "closeMergeModalBtn",
     profileModalBackdrop: "closeProfileModalBtn",
+    spravaModalBackdrop: "closeSpravaModalBtn",
+    membersModalBackdrop: "closeMembersModalBtn",
     exerciseInfoModalBackdrop: "closeExerciseInfoModalBtn",
     cropModalBackdrop: "closeCropModalBtn",
     helpModalBackdrop: "closeHelpModalBtn",
