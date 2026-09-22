@@ -3122,7 +3122,7 @@ function sharedFingerprint() {
       state.trainingFocus, state.focusLibraryMap]);
   } catch (e) { return null; }
 }
-const APP_VERSION = "2026-09-22 17:56";
+const APP_VERSION = "2026-09-22 18:51";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -4661,6 +4661,7 @@ onAuthStateChanged(auth, async (user) => {
     unsubscribeFromGoneReports();
     if (autoCheckTimer) { clearTimeout(autoCheckTimer); autoCheckTimer = null; }
     stopHeartbeat();
+    closeAllModalsAfterLogout();
     document.getElementById("app").classList.add("hidden");
     document.getElementById("pendingScreen").classList.add("hidden");
     document.getElementById("loginScreen").classList.remove("hidden");
@@ -4668,6 +4669,17 @@ onAuthStateChanged(auth, async (user) => {
     hideLoginLoading();
   }
 });
+
+/** Po odhlášení nesmí zůstat otevřené žádné okno. Mek 22. 9.: po „Odhlásit“ zůstala karta
+    profilu viset nad přihlašovací obrazovkou (tlačítko jen volá signOut a profil nikdo
+    nezavřel). Zavírá se všechno, ne jen profil — nad profilem může být Správa, Trenéři a role,
+    Nahlášená videa, okénko klíče… Karta videa se zavírá vlastní funkcí, ať se zastaví
+    přehrávání; ostatním stačí třída "hidden" (historii pro tlačítko Zpět srovná
+    setupBackButtonNav sám). Při startu bez přihlášení je všechno zavřené, nic se nestane. */
+function closeAllModalsAfterLogout() {
+  if (!document.getElementById("detailModalBackdrop").classList.contains("hidden")) closeDetailModal();
+  document.querySelectorAll(".modal-backdrop:not(.hidden)").forEach(el => el.classList.add("hidden"));
+}
 
 async function checkMembershipAndProceed() {
   const isAdmin = uidCurrent === ADMIN_UID;
@@ -8619,6 +8631,10 @@ async function buildShareSnapshot(t) {
       url: item.url || "", timestamp: item.timestamp || null, aspectRatio: item.aspectRatio || "16/9",
       shortDesc: item.shortDesc || "", longDesc: item.longDesc || "",
       brokenAt: item.brokenAt || item.goneAt || null,
+      // Zmizelé video (22. 9.): t.html podle goneAt ukáže vodoznak „Video zmizelo“ a nedá odkaz
+      // na zdroj, stejně jako appka. brokenAt výš ho zahrnuje dál, ať se zmizelé video
+      // i na stránce, která goneAt nezná, aspoň nepokouší přehrát.
+      goneAt: item.goneAt || null,
       // Přehled potřebuje nářadí (proužky "PŘIPRAV" a souhrn v hlavičce) a náhled na kartě.
       // U náhledu je tady schválně resolveThumbnailUrl, ne item.thumbnail: vlastní nahrané
       // náhledy jsou odkaz "local:ID" na kolekci, do které nepřihlášený nevidí, takže se do

@@ -361,6 +361,11 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
 #detailShortDesc{font-size:14px;font-weight:600;color:#216321;margin-bottom:10px;}
 #detailMoreBtn{width:100%;background:#F4F5F2;border:1px solid #DCDFD9;border-radius:10px;padding:9px;font-family:var(--font-display);font-size:16px;letter-spacing:.04em;color:#1B2430;cursor:pointer;}
 #detailMoreBtn.hidden{display:none;}
+/* Nefunkční video v kartě — stejný tichý vodoznak jako karta v aplikaci (.detail-broken-thumb),
+   náhled vždy 16/9 jako tam. V Přehledu a v prezentaci ho drží stejný strop výšky jako video. */
+.detail-broken-thumb{width:100%;aspect-ratio:16/9;background-color:#2b2f36;background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;border-radius:10px;margin-bottom:6px;}
+#detailModalBackdrop.tmf-sheet .detail-broken-thumb{max-height:var(--ov-vidcap);}
+.detail-broken-watermark{font-family:var(--font-display);font-size:14px;letter-spacing:.05em;color:rgba(255,255,255,.88);background:rgba(20,22,20,.38);padding:6px 16px;border-radius:999px;}
 </style>
 </head>
 <body>
@@ -624,8 +629,18 @@ function openDetailModal(libId) {
   currentDetailId = libId;
   document.getElementById("detailTitle").textContent = item.title || "(bez názvu)";
   const wrap = document.getElementById("detailEmbed");
-  wrap.innerHTML = renderEmbedHtml(item, { autoplay: false }) + platformDirectLinkHtml(item, "Otevřít přímo: ");
-  setupDriveVideoPlayback(wrap, item, { autoplay: false });
+  if (item.brokenAt || item.goneAt) {
+    // Video označené v aplikaci jako nefunkční, nebo zmizelé u zdroje (snímek nese goneAt) —
+    // stejně jako karta v aplikaci se ho ani nesnaží přehrát: náhled s jemným vodoznakem.
+    // U nefunkčního je pod ním přímý odkaz na zdroj, u zmizelého ne (vedl by do prázdna).
+    // Mek 22. 9.: karta tu dřív zkoušela embed („Není k dispozici“ od Facebooku).
+    const thumbUrl = resolveThumbnailUrl(item);
+    wrap.innerHTML = `<div class="detail-broken-thumb"${thumbUrl ? ` style="background-image:url('${esc(thumbUrl)}')"` : ""}><span class="detail-broken-watermark">${item.goneAt ? "Video zmizelo" : "Video nevideuje"}</span></div>`
+      + (item.goneAt ? "" : platformDirectLinkHtml(item, "Otevřít přímo: "));
+  } else {
+    wrap.innerHTML = renderEmbedHtml(item, { autoplay: false }) + platformDirectLinkHtml(item, "Otevřít přímo: ");
+    setupDriveVideoPlayback(wrap, item, { autoplay: false });
+  }
   const chips = document.getElementById("detailChips");
   chips.innerHTML = (item.equipment || []).map(e => `<span class="chip-equip">${esc(e)}</span>`).join("");
   chips.classList.toggle("hidden", !(item.equipment || []).length);
@@ -646,12 +661,19 @@ document.getElementById("closeDetailModalBtn").addEventListener("click", closeDe
 document.getElementById("detailModalBackdrop").addEventListener("click", (e) => {
   if (e.target.id === "detailModalBackdrop") closeDetailModal();
 });
+/** „Více info“ v kartě. Okno s popisem bydlí uvnitř prezentace (#trainingModeView, kvůli
+    fullscreenu). Když je karta otevřená z Přehledu, je prezentace schovaná a popis se otevřel
+    v ní — nebylo nic vidět (Mek 22. 9.). Proto se zjistí, odkud je karta otevřená (dokud je
+    ještě zaparkovaná tam, kam ji fazeOpenLibraryCard přestěhoval), a z Přehledu se popis
+    otevře stejnou cestou jako u textového cvičení. */
 document.getElementById("detailMoreBtn").addEventListener("click", () => {
   const item = state.library[currentDetailId];
   if (!item) return;
+  const fromOverview = !!document.getElementById("detailModalBackdrop").closest("#overviewView");
   tmCurrentInfoData = { title: item.title || "", shortDesc: item.shortDesc || "", longDesc: item.longDesc || "" };
   closeDetailModal();
-  openExerciseInfoModal();
+  if (fromOverview) openExerciseInfoOverOverview();
+  else openExerciseInfoModal();
 });
 
 /* ---- přehrávače videí (z původního t.html, beze změny) ---- */
@@ -1024,9 +1046,10 @@ function showTrainingModeVideo(lib, textItem) {
   // to jen prázdný/rozbitý embed). Chová se jako textové cvičení (dlouhý popis na místě videa),
   // ale navíc — na rozdíl od skutečného textového cvičení — pořád zůstane i přímý odkaz na
   // zdroj, protože tady je to jediná cesta, jak se k videu vůbec dostat.
-  if (lib && lib.brokenAt) {
+  if (lib && (lib.brokenAt || lib.goneAt)) {
     wrap.classList.add("hidden"); wrap.innerHTML = "";
-    const directLink = platformDirectLinkHtml(lib, "Otevřít přímo — ");
+    // U videa, které zmizelo u zdroje, by odkaz vedl do prázdna — nedává se (jako v appce).
+    const directLink = lib.goneAt ? "" : platformDirectLinkHtml(lib, "Otevřít přímo — ");
     fbEl.innerHTML = directLink;
     fbEl.classList.toggle("hidden", !directLink);
     const textHtml = richHasContent(lib.longDesc) ? richValueToHtml(lib.longDesc) : "";
@@ -1104,7 +1127,7 @@ function getTmCurrentInfo() {
       longDesc: v.isText ? (v.longDesc || "") : (lib ? lib.longDesc : ""),
       // Rozbité video se v "?" tlačítku neřeší stejně jako textové cvičení — dlouhý popis je
       // vidět rovnou na místě videa (viz showTrainingModeVideo), tlačítko by ho jen duplikovalo.
-      isText: !!v.isText || !!(lib && lib.brokenAt)
+      isText: !!v.isText || !!(lib && (lib.brokenAt || lib.goneAt))
     };
   }
   const lib = row.isText ? null : state.library[row.videoId];
@@ -1112,7 +1135,7 @@ function getTmCurrentInfo() {
     title: row.isText ? (row.title || "(bez názvu)") : (lib ? lib.title : "(video smazáno z knihovny)"),
     shortDesc: row.isText ? (row.shortDesc || "") : (lib ? lib.shortDesc : ""),
     longDesc: row.isText ? (row.longDesc || "") : (lib ? lib.longDesc : ""),
-    isText: !!row.isText || !!(lib && lib.brokenAt)
+    isText: !!row.isText || !!(lib && (lib.brokenAt || lib.goneAt))
   };
 }
 function refreshTmInfoBtn() {
@@ -1694,7 +1717,7 @@ function getFazeCurrentEntry() {
       shortDesc: v.isText ? (v.shortDesc || "") : (lib ? lib.shortDesc : ""),
       longDesc: v.isText ? (v.longDesc || "") : (lib ? lib.longDesc : ""),
       equipment: v.isText ? (v.equipment || []) : [...new Set([...((lib && lib.equipment) || []), ...(v.extraEquipment || [])])],
-      isText: !!v.isText, broken: !!(lib && lib.brokenAt), lib, videoId: v.isText ? null : v.videoId
+      isText: !!v.isText, broken: !!(lib && (lib.brokenAt || lib.goneAt)), gone: !!(lib && lib.goneAt), lib, videoId: v.isText ? null : v.videoId
     };
   }
   const lib = row.isText ? null : state.library[row.videoId];
@@ -1706,7 +1729,7 @@ function getFazeCurrentEntry() {
     shortDesc: row.isText ? (row.shortDesc || "") : (lib ? lib.shortDesc : ""),
     longDesc: row.isText ? (row.longDesc || "") : (lib ? lib.longDesc : ""),
     equipment: row.isText ? (row.equipment || []) : [...new Set([...((lib && lib.equipment) || []), ...(row.extraEquipment || [])])],
-    isText: !!row.isText, broken: !!(lib && lib.brokenAt), lib, videoId: row.isText ? null : row.videoId
+    isText: !!row.isText, broken: !!(lib && (lib.brokenAt || lib.goneAt)), gone: !!(lib && lib.goneAt), lib, videoId: row.isText ? null : row.videoId
   };
 }
 /** Stejná větvící logika jako getUpNextLabel/getUpNextColor výš (další video ve skupině →
@@ -1907,7 +1930,7 @@ function renderFazeVideoArea(entry) {
     // jen tichý náhledový obrázek se stejným jemným vodoznakem jako karta v Knihovně
     // (viz openDetailModal výš). Klik na něj otevře tu samou kartu.
     const thumbUrl = resolveThumbnailUrl(lib);
-    wrap.innerHTML = `<div class="tmf-thumb-broken"${thumbUrl ? ` style="background-image:url('${esc(thumbUrl)}')"` : ""}><span class="tmf-thumb-watermark">Video nevideuje</span></div>`;
+    wrap.innerHTML = `<div class="tmf-thumb-broken"${thumbUrl ? ` style="background-image:url('${esc(thumbUrl)}')"` : ""}><span class="tmf-thumb-watermark">${entry.gone ? "Video zmizelo" : "Video nevideuje"}</span></div>`;
     const fit = fitBoxForRatio(lib.aspectRatio, box.maxW, box.maxH);
     wrap.style.width = fit.w + "px";
     wrap.style.height = fit.h + "px";
@@ -1944,7 +1967,7 @@ function renderFazeBrief(main, entry) {
         <div class="tmf-title">${esc(entry.title)}</div>
         ${entry.reps ? `<div class="tmf-reps-chip">${esc(entry.reps)}</div>` : ""}
         ${hasDetail ? `<button type="button" class="tmf-detail-btn" id="tmfDetailBtn">${hasVid ? '<i class="fa-solid fa-circle-play"></i>' : '<i class="fa-regular fa-circle-question"></i>'} Detail cvičení ${tmfDetailSeen ? "" : '<span class="tmf-dot"></span>'}</button>` : ""}
-        ${entry.broken ? `<span class="tmf-direct-link">${platformDirectLinkHtml(entry.lib, "Otevřít přímo — ")}</span>` : ""}
+        ${entry.broken && !entry.gone ? `<span class="tmf-direct-link">${platformDirectLinkHtml(entry.lib, "Otevřít přímo — ")}</span>` : ""}
       </div>
     </div>`;
   const detailBtn = document.getElementById("tmfDetailBtn");
@@ -2391,6 +2414,11 @@ function ovOpenTextInfo(itemId, memberId) {
   const src = memberId ? (row.videos || []).find(v => v.memberId === memberId) : row;
   if (!src) return;
   tmCurrentInfoData = { title: src.title || "(bez názvu)", shortDesc: src.shortDesc || "", longDesc: src.longDesc || "" };
+  openExerciseInfoOverOverview();
+}
+/** Otevře okno s popisem (tmCurrentInfoData) nad Přehledem: na dobu otevření ho přestěhuje
+    do #overviewView a po zavření vrátí zpátky. Používá textové cvičení i „Více info“ v kartě. */
+function openExerciseInfoOverOverview() {
   const backdrop = document.getElementById("exerciseInfoModalBackdrop");
   const home = { parent: backdrop.parentElement, next: backdrop.nextSibling };
   document.getElementById("overviewView").appendChild(backdrop);
