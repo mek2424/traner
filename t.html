@@ -4,6 +4,24 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Trénink — Trenér</title>
+<link rel="manifest" href="sdilena-stranka.webmanifest">
+<script>
+/* Nainstalovaný Trenér (22. 9. 2026): telefon umí poslat sdílený odkaz rovnou do appky,
+   protože leží na stejné adrese. Když stránka běží uvnitř nainstalované appky, nemá smysl
+   ukazovat veřejnou kopii — přepne se rovnou do appky na Přehled tréninku. Pozná se to podle režimu
+   zobrazení (standalone) a děje se to před vykreslením, ať to neproblikne. */
+(function () {
+  try {
+    var jeAppka = (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true;
+    if (!jeAppka) return;
+    var cil = (function () {
+      var p = new URLSearchParams(location.search), u = p.get("u"), id = p.get("id");
+      return (u && id) ? "index.html?open=training&u=" + encodeURIComponent(u) + "&id=" + encodeURIComponent(id) : "";
+    })();
+    if (cil) location.replace(cil);
+  } catch (e) { /* když se to nepovede, zůstane obyčejná sdílená stránka */ }
+})();
+</script>
 <!-- =====================================================================
      VEŘEJNÁ STRÁNKA SDÍLENÉHO TRÉNINKU
 
@@ -304,6 +322,10 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
 <style>
 /* Obecné třídy z index.html, na kterých ported kód stojí. POZOR hlavně na .hidden — bez něj
    se nic neschová a Přehled by ukazoval rozbalené poznámky, otevřená okna a tak dál. */
+.open-in-app{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 0 10px;padding:11px 16px;border-radius:var(--radius-sm);background:var(--court);color:#fff;text-decoration:none;font-weight:600;font-size:14px;}
+.open-in-app.hidden{display:none;}
+.open-in-app-hint{display:block;text-align:center;margin:10px 0 2px;font-size:12px;color:#6B7684;text-decoration:underline;}
+.open-in-app-hint.hidden{display:none;}
 .hidden{display:none !important;}
 @keyframes viewFadeIn{from{opacity:0;}to{opacity:1;}}
 .view-anim-in{animation:viewFadeIn .18s ease;}
@@ -388,10 +410,12 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
       <span class="ov-badge" id="ovEnd"></span>
     </div>
     <div class="ov-equip hidden" id="ovEquip"></div>
+    <a class="open-in-app hidden" id="openInAppBtn" href="#"><i class="fa-solid fa-up-right-from-square"></i> Otevřít v Trenérovi</a>
   </div>
   <div class="ov-list" id="ovList"></div>
   <div class="ov-foot">
     <button type="button" class="ov-go" id="ovStartPresBtn">Spustit prezentaci</button>
+    <a class="open-in-app-hint hidden" id="openInAppHint" href="#">Máš Trenéra? Otevřít v aplikaci</a>
   </div>
 </div>
 <div id="ovAskBackdrop" class="modal-backdrop hidden">
@@ -516,6 +540,25 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
   </div>
 </div>
 
+<script>
+/* Tlačítko „Otevřít v Trenérovi“ (Mekova varianta B, 22. 9. 2026): ukáže se jen tomu, u koho
+   prohlížeč potvrdí, že appku nainstalovanou má (umí to Chrome na Androidu). Kde se to zjistit
+   nedá (iPhone, jiné prohlížeče), zůstane dole nenápadný řádek. Kdo appku nemá, nevidí nic. */
+(function () {
+  var cil = (function () {
+      var p = new URLSearchParams(location.search), u = p.get("u"), id = p.get("id");
+      return (u && id) ? "index.html?open=training&u=" + encodeURIComponent(u) + "&id=" + encodeURIComponent(id) : "";
+    })();
+  var btn = document.getElementById("openInAppBtn");
+  var hint = document.getElementById("openInAppHint");
+  if (!cil || !btn || !hint) return;
+  btn.href = cil; hint.href = cil;
+  if (!navigator.getInstalledRelatedApps) { hint.classList.remove("hidden"); return; }
+  navigator.getInstalledRelatedApps()
+    .then(function (apps) { if (apps && apps.length) btn.classList.remove("hidden"); })
+    .catch(function () { hint.classList.remove("hidden"); });
+})();
+</script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
 import { initializeFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";

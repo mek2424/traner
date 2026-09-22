@@ -386,6 +386,9 @@ body.bulk-bar-active .scroll-top-btn{display:none;}
 #loginError{color:var(--danger);font-size:13px;margin:8px 0 0;min-height:16px;}
 .login-switch{text-align:center;margin-top:16px;font-size:13px;color:var(--ink-soft);}
 .login-switch button{background:none;border:none;color:var(--court);font-weight:600;padding:0;text-decoration:underline;}
+/* Odkaz zpátky na sdílenou stránku — ukáže se jen tomu, kdo do appky přišel ze sdíleného
+   odkazu a není (zatím) přihlášený nebo čeká na schválení (viz sharedDeepLinkTarget). */
+.login-shared-link{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:14px;padding:10px 14px;border-radius:var(--radius-sm);background:var(--paper);border:1px solid var(--line);color:var(--ink-soft);text-decoration:none;font-weight:600;font-size:13px;}
 .login-help{text-align:center;margin-top:10px;}
 .login-help button{background:none;border:none;color:var(--ink-faint);font-size:12.5px;padding:4px;cursor:pointer;}
 .pass-field-wrap{position:relative;}
@@ -1700,6 +1703,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
       <span id="loginSwitchText">Ještě nemáš účet?</span>
       <button type="button" id="loginSwitchBtn">Založit účet</button>
     </div>
+    <a class="login-shared-link hidden" id="loginSharedPageLink" href="#"><i class="fa-solid fa-up-right-from-square"></i> Zobrazit sdílenou stránku</a>
     <div class="login-help">
       <button type="button" id="openHelpLoginBtn"><i class="fa-solid fa-circle-question"></i> Nápověda</button>
     </div>
@@ -1719,6 +1723,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
     </p>
     <button type="button" class="btn btn-primary btn-block" id="pendingRecheckBtn"><i class="fa-solid fa-rotate"></i> Zkontrolovat znovu</button>
     <button type="button" class="btn btn-ghost btn-block" id="pendingLogoutBtn" style="margin-top:8px;">Odhlásit</button>
+    <a class="login-shared-link hidden" id="pendingSharedPageLink" href="#"><i class="fa-solid fa-up-right-from-square"></i> Zobrazit sdílenou stránku</a>
   </div>
 </div>
 
@@ -3122,7 +3127,7 @@ function sharedFingerprint() {
       state.trainingFocus, state.focusLibraryMap]);
   } catch (e) { return null; }
 }
-const APP_VERSION = "2026-09-22 18:51";
+const APP_VERSION = "2026-09-22 21:49";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -4749,6 +4754,10 @@ async function checkMembershipAndProceed() {
   if (window.requestIdleCallback) requestIdleCallback(prefetchOthers, { timeout: 8000 });
   else setTimeout(prefetchOthers, 3000);
   handlePopoutDeepLink();
+  handleSharedDeepLink().catch(err => {
+    console.error("Otevření sdíleného odkazu selhalo:", err);
+    logDebug(`[sdílený odkaz] otevření selhalo — ${(err && err.message) || String(err)}`);
+  });
   handleShareTarget().catch(err => {
     console.error("Příjem sdílení selhal:", err);
     logDebug(`[sdílení] příjem selhal — ${(err && err.message) || String(err)}`);
@@ -5504,6 +5513,78 @@ function handlePopoutDeepLink() {
     else if (type === "help") openHelpModal();
   } catch (e) { console.error("Otevření z popoutu selhalo:", e); }
 }
+/* =========================================================
+   SDÍLENÝ ODKAZ OTEVŘENÝ ROVNOU V APPCE (22. 9. 2026)
+   Sdílené stránky (t.html, v.html) leží na stejné adrese jako appka, takže je telefon umí
+   poslat do nainstalovaného Trenéra. Stránka pak pozná, že běží v appce, a přesměruje sem
+   s ?open=… (viz její hlavička). Totéž dělá tlačítko „Otevřít v Trenérovi“ na stránce.
+   - trénink: ?open=training&u=<majitel>&id=<trénink> → Přehled tréninku (Mekova varianta A)
+   - video:   ?open=video&id=<video>                  → karta videa v Knihovně
+   Kdo není přihlášený nebo čeká na schválení, uvidí přihlašovací obrazovku a pod ní odkaz
+   zpátky na sdílenou stránku (Mekova varianta A) — parametry zůstávají v adrese, takže se
+   cíl otevře hned po přihlášení.
+   ========================================================= */
+/** Cíl ze sdíleného odkazu, nebo null. Čte se z adresy, nikam se neukládá — dokud se cíl
+    neotevře, zůstává v adrese, a to je i paměť pro přihlášení. */
+function sharedDeepLinkTarget() {
+  const p = new URLSearchParams(location.search);
+  const type = p.get("open");
+  const id = p.get("id") || "";
+  const u = p.get("u") || "";
+  if (type === "training" && u && id) return { type, u, id };
+  if (type === "video" && id) return { type, id };
+  return null;
+}
+/** Adresa sdílené stránky pro daný cíl — záchrana pro toho, kdo se do appky nedostane. */
+function sharedPageUrlFor(t) {
+  return t.type === "training"
+    ? `./t.html?u=${encodeURIComponent(t.u)}&id=${encodeURIComponent(t.id)}`
+    : `./v.html?id=${encodeURIComponent(t.id)}`;
+}
+function updateSharedDeepLinkFallback() {
+  const t = sharedDeepLinkTarget();
+  ["loginSharedPageLink", "pendingSharedPageLink"].forEach(elId => {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    el.classList.toggle("hidden", !t);
+    if (t) el.href = sharedPageUrlFor(t);
+  });
+}
+updateSharedDeepLinkFallback();
+/** Volá se až po přihlášení a načtení dat (konec checkMembershipAndProceed). */
+async function handleSharedDeepLink() {
+  const target = sharedDeepLinkTarget();
+  if (!target) return;
+  // Adresa se uklidí hned — cíl se otvírá jen jednou, ne znovu po obnovení stránky.
+  history.replaceState(null, "", location.pathname);
+  updateSharedDeepLinkFallback();
+  if (target.type === "video") {
+    const item = state.library[target.id];
+    if (!item || item.deletedAt) { toast("Tohle video už v knihovně není.", 6000, "warn"); return; }
+    switchView("library");
+    openDetailModal(target.id);
+    return;
+  }
+  // Tréninky ostatních trenérů se dotahují na pozadí, takže se na ně počká (i soukromé —
+  // appka je stahuje všechny, Tržiště z nich jen zobrazuje zveřejněné).
+  try { await ensureOthersTrainingsLoaded(); }
+  catch (e) { toast("Trénink se nepodařilo načíst — zkontroluj připojení.", 6000, "err"); return; }
+  const t = state.trainings[target.id];
+  if (!t || !(t.items || []).length) { toast("Tenhle trénink se nepodařilo najít — možná už neexistuje.", 6000, "warn"); return; }
+  currentTrainingId = target.id;
+  // Kam se trenér dostane, až Přehled zavře (Mekova varianta B): veřejný trénink na Tržiště,
+  // kde ho má po ruce ke zkopírování, soukromý do Knihovny — na Tržišti by ho nenašel.
+  if (t.public) {
+    switchView("trainings");
+    // Kliknutí na skutečné tlačítko záložky, ne jen přepnutí proměnné — projde tím i
+    // překreslení seznamu a případné dotažení Tržiště, stejně jako když na něj klikne trenér.
+    document.querySelector('.subtab-btn[data-subtab="others"]').click();
+  } else {
+    switchView("library");
+  }
+  openOverview();
+}
+
 /* =========================================================
    PŘÍJEM SDÍLENÍ ZE SYSTÉMU (Web Share Target)
    V manifest.json je blok share_target, takže se nainstalovaný Trenér objeví v systémové
@@ -15006,6 +15087,7 @@ const HELP_DATA = [
       { q: "Aplikace píše, že se nenačetla knihovna pro PDF. Co s tím?", a: "PDF a přetahování pořadí si aplikace stahuje z internetu při každém otevření. Když je zrovna mizerné připojení nebo je stahování něčím blokované, tyhle dvě věci nefungují — všechno ostatní ano, včetně vedení tréninku. Připoj se a obnov stránku.", kw: "pdf nejde knihovna offline pretahovani poradi" }
     ]},
     { title: "Sdílení a Tržiště tréninků", icon: "fa-solid fa-store", qa: [
+      { q: "Jde sdílený odkaz otevřít rovnou v aplikaci?", a: "Ano, na Androidu. Kdo má Trenéra nainstalovaného, může si v telefonu povolit, aby odkazy z Trenéra otevírala rovnou aplikace: Nastavení telefonu → Aplikace → Trenér → Nastavit jako výchozí → Otevřít podporované odkazy, a tam zapnout mek2424.github.io. Názvy se podle telefonu liší. Trénink se pak otevře jako Přehled tréninku přímo v aplikaci, video jako karta videa. Kdo nastavení nemá, uvidí na sdílené stránce tlačítko „Otevřít v Trenérovi“. Na iPhonu tohle zatím nejde, tam zůstává sdílená stránka.", kw: "sdileny odkaz aplikace otevrit primo android nastaveni podporovane odkazy" },
       { q: "Jak sdílím trénink s konkrétním kolegou?", a: "V přehledu tréninků otevři nabídku u tréninku (⋮) a vyber „Sdílet odkazem“ — vygeneruje se odkaz, který jde poslat komukoli, i bez přístupu do aplikace." },
       { q: "Co je Tržiště a jak tam trénink zveřejním?", a: "Tržiště je záložka, kde vidíš tréninky ostatních trenérů, které se rozhodli zveřejnit. Vlastní trénink tam dáš tlačítkem v hlavičce editoru — píše se na něm, jak na tom trénink teď je („Soukromé“ nebo „Na Tržišti“) a vedle toho, co se stane po kliknutí. Aplikace se ještě jednou zeptá, než ho zveřejní nebo zase skryje. Dokud to neuděláš, trénink je jen tvůj a nikdo jiný ho neuvidí.", kw: "trziste zverejnit sdilet soukrome" },
       { q: "Jaký je rozdíl mezi veřejným a soukromým tréninkem?", a: "Soukromý vidíš jen ty — hodí se i na rozpracované nápady, co ještě nejsou hotové k ukázání. Veřejný (na Tržišti) vidí a může si zkopírovat kdokoli z ostatních trenérů. Rozhodnutí jde kdykoli změnit oběma směry." },

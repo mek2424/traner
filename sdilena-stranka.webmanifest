@@ -1,0 +1,12 @@
+{
+  "name": "Trenér — sdílená stránka",
+  "short_name": "Trenér",
+  "start_url": "./t.html",
+  "display": "browser",
+  "background_color": "#F4F5F2",
+  "theme_color": "#339933",
+  "prefer_related_applications": false,
+  "related_applications": [
+    { "platform": "webapp", "url": "https://mek2424.github.io/traner/manifest.json" }
+  ]
+}

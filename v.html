@@ -4,6 +4,24 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Video — Trenér</title>
+<link rel="manifest" href="sdilena-stranka.webmanifest">
+<script>
+/* Nainstalovaný Trenér (22. 9. 2026): telefon umí poslat sdílený odkaz rovnou do appky,
+   protože leží na stejné adrese. Když stránka běží uvnitř nainstalované appky, nemá smysl
+   ukazovat veřejnou kopii — přepne se rovnou do appky na kartu videa. Pozná se to podle režimu
+   zobrazení (standalone) a děje se to před vykreslením, ať to neproblikne. */
+(function () {
+  try {
+    var jeAppka = (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true;
+    if (!jeAppka) return;
+    var cil = (function () {
+      var id = new URLSearchParams(location.search).get("id");
+      return id ? "index.html?open=video&id=" + encodeURIComponent(id) : "";
+    })();
+    if (cil) location.replace(cil);
+  } catch (e) { /* když se to nepovede, zůstane obyčejná sdílená stránka */ }
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
@@ -50,6 +68,10 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
 .v-fallback-link{display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:999px;background:var(--court);color:#fff;text-decoration:none;font-weight:600;font-size:14.5px;}
 .v-open-source-link{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:8px;padding:9px 14px;border-radius:var(--radius-sm);background:var(--paper);border:1px solid var(--line);color:var(--ink-soft);text-decoration:none;font-weight:600;font-size:13px;}
 .v-open-source-link.hidden{display:none;}
+.open-in-app{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 0 10px;padding:11px 16px;border-radius:var(--radius-sm);background:var(--court);color:#fff;text-decoration:none;font-weight:600;font-size:14px;}
+.open-in-app.hidden{display:none;}
+.open-in-app-hint{display:block;text-align:center;margin:10px 0 2px;font-size:12px;color:#6B7684;text-decoration:underline;}
+.open-in-app-hint.hidden{display:none;}
 /* Video ručně označené jako nefunkční (viz appka #91/#94) — odkaz na zdroj je tu jediná cesta
    k videu, ne jen záchrana po chybě, proto dostane výraznější, "primární" vzhled. */
 .v-open-source-link.primary{background:var(--court);border-color:var(--court);color:#fff;font-size:14.5px;padding:12px 18px;}
@@ -68,6 +90,7 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
 <div id="stateView" class="state-view"></div>
 
 <div id="videoView">
+  <a class="open-in-app hidden" id="openInAppBtn" href="#"><i class="fa-solid fa-up-right-from-square"></i> Otevřít v Trenérovi</a>
   <div class="v-embed-wrap hidden" id="vEmbedWrap"></div>
   <a href="#" target="_blank" rel="noopener" class="v-open-source-link hidden" id="vOpenSourceLink">Otevřít na Facebooku <i class="fa-solid fa-up-right-from-square"></i></a>
   <div class="v-part-row" id="vChips"></div>
@@ -79,8 +102,28 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
     <div class="v-notes-label">KOMENTÁŘE</div>
     <div id="commentThread" class="comment-thread"></div>
   </div>
+  <a class="open-in-app-hint hidden" id="openInAppHint" href="#">Máš Trenéra? Otevřít v aplikaci</a>
 </div>
 
+<script>
+/* Tlačítko „Otevřít v Trenérovi“ (Mekova varianta B, 22. 9. 2026): ukáže se jen tomu, u koho
+   prohlížeč potvrdí, že appku nainstalovanou má (umí to Chrome na Androidu). Kde se to zjistit
+   nedá (iPhone, jiné prohlížeče), zůstane dole nenápadný řádek. Kdo appku nemá, nevidí nic. */
+(function () {
+  var cil = (function () {
+      var id = new URLSearchParams(location.search).get("id");
+      return id ? "index.html?open=video&id=" + encodeURIComponent(id) : "";
+    })();
+  var btn = document.getElementById("openInAppBtn");
+  var hint = document.getElementById("openInAppHint");
+  if (!cil || !btn || !hint) return;
+  btn.href = cil; hint.href = cil;
+  if (!navigator.getInstalledRelatedApps) { hint.classList.remove("hidden"); return; }
+  navigator.getInstalledRelatedApps()
+    .then(function (apps) { if (apps && apps.length) btn.classList.remove("hidden"); })
+    .catch(function () { hint.classList.remove("hidden"); });
+})();
+</script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
 import { initializeFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
