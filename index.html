@@ -576,6 +576,23 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .debug-btn-off{background:#5B2B2B;color:#fff;}
 .debug-btn:disabled{opacity:.6;cursor:wait;}
 #debugLogContent{padding:12px 14px;white-space:pre-wrap;}
+/* Video zmizelo u zdroje (22. 9. 2026) — pruh s hlášením v kartě (kontrola adminem),
+   blok jen pro admina u zmizelého videa, štítky v seznamu nahlášených a volba náhrady. */
+.report-review{background:var(--warn-bg);border:1px solid var(--warn-border);border-radius:var(--radius-sm);padding:12px;margin:0 0 12px;color:var(--ink);font-size:13.5px;}
+.report-review-title{font-weight:700;margin-bottom:2px;}
+.report-review-hint{font-size:12px;color:var(--warn-ink);margin-bottom:10px;}
+.report-review-acts{display:flex;gap:8px;}
+.report-review-acts .btn{flex:1;margin:0;}
+.report-review .comment-input{margin-bottom:8px;}
+.gone-admin{border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px;margin-bottom:12px;background:var(--paper);}
+.gone-admin-hint{font-size:11.5px;color:var(--ink-faint);margin:6px 0 8px;line-height:1.4;}
+.gone-orig-link{font-size:11.5px;color:var(--ink-faint);text-decoration:underline;}
+.report-pill{display:inline-block;font-size:10px;font-weight:700;border-radius:999px;padding:2px 8px;margin:0 4px 2px 0;}
+.report-pill-warn{background:var(--warn-bg);border:1px solid var(--warn-border);color:var(--warn-ink);}
+.report-pill-ok{background:#E8F3EA;border:1px solid #A9CFB6;color:#2A6B41;}
+.replace-choice{display:flex;align-items:center;gap:10px;padding:8px;border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:8px;font-size:13.5px;font-weight:600;cursor:pointer;}
+.replace-choice-thumb{width:64px;aspect-ratio:16/9;border-radius:6px;flex:0 0 auto;background:var(--paper) center/cover no-repeat;border:1px solid var(--line);}
+.replace-choice:has(input:checked){border-color:var(--court);background:var(--paper);}
 .comment-activity-list{display:flex;flex-direction:column;gap:2px;max-height:60vh;overflow-y:auto;}
 .comment-activity-item{
   display:flex;gap:10px;align-items:flex-start;padding:10px 4px;border-bottom:1px solid var(--line);
@@ -679,7 +696,10 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 /* Správa (fáze 4, 21. 9. 2026) se otevírá ze štítu v hlavičce profilu, takže musí být nad ním.
    Trenéři a role, Kdo je online i Tipy se otvírají ze Správy — v DOM jsou až za ní, a se stejným
    z-indexem 60 tak vyjedou nad ní. */
-#spravaModalBackdrop,#membersModalBackdrop{z-index:60;}
+#spravaModalBackdrop,#membersModalBackdrop,#videoReportsModalBackdrop{z-index:60;}
+/* Video zmizelo u zdroje (22. 9. 2026): okno s otázkou po vlaječce a nabídka náhrady musí být
+   nad kartou videa (z-index 210), ale pod potvrzovacími okny (700). */
+#reportVideoModalBackdrop,#replaceVideoModalBackdrop{z-index:650;}
 /* Okna, která mají domov jinde (panel složek, editor tréninku) a běžně z-index 50, dostanou
    tuhle třídu jen na dobu, co jsou otevřená ze Správy — viz openAboveSprava(). */
 .modal-backdrop.above-sprava{z-index:70;}
@@ -2055,6 +2075,9 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
       <h2 style="font-size:20px;">Detail</h2>
       <button class="btn btn-icon btn-ghost" id="closeDetailModalBtn"><i class="fa-solid fa-xmark"></i></button>
     </div>
+    <!-- Pruh s hlášením „zmizelo u zdroje“ — jen když admin kartu otevře ze Správy
+         (Nahlášená videa → Prohlédnout). Rozhoduje se až tady, po vyzkoušení videa. -->
+    <div class="report-review hidden" id="detailReviewPanel"></div>
     <div class="embed-wrap" id="detailEmbedWrap"></div>
     <div id="detailTimestampHint" class="embed-timestamp-hint hidden"></div>
     <!-- ROZPADACÍ ŘÁDEK (17. 9.)  [#detailSrcBig]
@@ -2070,9 +2093,17 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
       <div class="detail-title-acts" id="detailTitleActs">
         <a class="ghost-ico hidden" id="detailSrcSmall" target="_blank" rel="noopener"></a>
         <button type="button" class="ghost-ico hidden" id="detailBrokenToggleBtn"></button>
+        <button type="button" class="ghost-ico hidden" id="detailReportBtn"></button>
       </div>
     </div>
     <div class="report-thanks hidden" id="detailReportThanks"></div>
+    <!-- Jen admin a jen u videa, které zmizelo u zdroje: nahrát náhradu a původní odkaz,
+         kdyby se video zase rozběhlo. Ostatní trenéři tu nevidí nic. -->
+    <div class="gone-admin hidden" id="detailGoneAdmin">
+      <a class="btn btn-primary btn-block" id="detailYtUploadLink" target="_blank" rel="noopener"></a>
+      <p class="gone-admin-hint" id="detailYtUploadHint"></p>
+      <a class="gone-orig-link" id="detailGoneOrigLink" target="_blank" rel="noopener"><i class="fa-solid fa-link"></i> Původní odkaz ↗</a>
+    </div>
     <div class="detail-row" id="detailChips"></div>
     <div class="detail-row" id="detailMyRatingRow">
       <div class="detail-label">Tvoje obtížnost a hodnocení</div>
@@ -2325,6 +2356,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
     <div class="admin-group">
       <div id="pendingApprovalsList"></div>
       <button type="button" class="admin-row" id="openVideoTipsAdminBtn"><i class="fa-solid fa-inbox"></i><span class="admin-row-label">Tipy</span><span id="tipsInlineCount" class="pending-inline-count hidden"></span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
+      <button type="button" class="admin-row" id="openVideoReportsBtn"><i class="fa-solid fa-flag"></i><span class="admin-row-label">Nahlášená videa<span class="admin-row-sub">Zmizela u zdroje, nebo se zase objevila</span></span><span id="videoReportsInlineCount" class="pending-inline-count hidden"></span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
     </div>
     <p class="panel-group-title">Lidé</p>
     <div class="admin-group">
@@ -2355,6 +2387,50 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
     </div>
     <p style="font-size:12.5px;color:var(--ink-soft);margin-top:0;">Editor smí přidávat/upravovat videa. Prohlížeč jen vidí knihovnu a tvoří vlastní tréninky.</p>
     <div id="membersRoleList"></div>
+  </div>
+</div>
+
+<!-- ===================== NAHLÁŠENÁ VIDEA (jen admin, otevírá se ze Správy) ===================== -->
+<!-- Videa, která podle hlášení trenérů nebo automatické kontroly zmizela u zdroje (nebo se
+     zase objevila). V DOM hned za Správou, se stejným z-indexem 60 vyjede nad ní. -->
+<div id="videoReportsModalBackdrop" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 style="font-size:22px;">Nahlášená videa</h2>
+      <button class="btn btn-icon btn-ghost" id="closeVideoReportsModalBtn" aria-label="Zavřít"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="videoReportsList"></div>
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line);">
+      <button type="button" class="btn btn-block" id="runVideoCheckBtn"><i class="fa-solid fa-magnifying-glass"></i> Zkontrolovat videa</button>
+      <p id="videoCheckStatus" style="font-size:11.5px;color:var(--ink-faint);margin:6px 0 0;"></p>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== NAHLÁSIT VIDEO (vlaječka v kartě, pro všechny) ===================== -->
+<div id="reportVideoModalBackdrop" class="modal-backdrop hidden">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-head"><h2 style="font-size:20px;">Nahlásit video</h2></div>
+    <p id="reportVideoQuestion" style="color:var(--ink-soft);line-height:1.5;margin:0 0 12px;"></p>
+    <a class="src-big" id="reportVideoTryLink" target="_blank" rel="noopener" style="margin-bottom:14px;"></a>
+    <div class="modal-actions" style="flex-direction:column;gap:8px;margin-top:0;">
+      <button type="button" class="btn btn-block" id="reportVideoWorksBtn">Ano, tam jde</button>
+      <button type="button" class="btn btn-danger btn-block" id="reportVideoGoneBtn">Ne, nejde ani tam</button>
+      <button type="button" class="btn btn-ghost btn-block" id="reportVideoCancelBtn">Zrušit</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== NAHRADIT VIDEO? (sdílení → Trenér, jen admin) ===================== -->
+<div id="replaceVideoModalBackdrop" class="modal-backdrop hidden">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-head"><h2 style="font-size:20px;">Nahradit video?</h2></div>
+    <p id="replaceVideoLead" style="color:var(--ink-soft);line-height:1.5;margin:0 0 10px;"></p>
+    <div id="replaceVideoChoices"></div>
+    <div class="modal-actions" style="flex-direction:column;gap:8px;">
+      <button type="button" class="btn btn-primary btn-block" id="replaceVideoConfirmBtn">Nahradit</button>
+      <button type="button" class="btn btn-ghost btn-block" id="replaceVideoNewBtn">Ne, přidat jako nové video</button>
+    </div>
   </div>
 </div>
 
@@ -3041,7 +3117,7 @@ function sharedFingerprint() {
       state.trainingFocus, state.focusLibraryMap]);
   } catch (e) { return null; }
 }
-const APP_VERSION = "2026-09-21 22:38";
+const APP_VERSION = "2026-09-22 17:13";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -3053,6 +3129,9 @@ async function ensurePdfFonts() {
   return pdfFonts;
 }
 const DEFAULT_COLORS = { primary: "#339933", accent: "#E8622C" };
+// YouTube kanál pro vlastní natočená cvičení (Mek ho založil 22. 9. 2026). Tlačítko „Nahrát na
+// YouTube“ u videa, které zmizelo u zdroje, otevírá nahrávání právě na něm.
+const TRENER_YT_CHANNEL_ID = "UCWhtcMPsppsqweoSVyoTS3Q";
 let currentView = "library";
 let editingLinkId = null;       // id knihovní položky, když se edituje
 /* Režim formuláře "Přidat odkaz". Formulář je jediný, ale používají ho tři různé cesty:
@@ -3348,12 +3427,28 @@ function fetchImageAsDataUrl(url) {
    jedno „Opravit náhledy“ v panelu 🐞 — a totéž se samo zkusí hned po hromadném přidání
    z Disku, kdy jsou adresy čerstvé a stažení má největší šanci.
    ========================================================= */
-/** Videa, jejichž náhled má smysl uložit natrvalo: ne smazaná, ne YouTube, náhled je adresa
-    (http/https) — a u Disku i video úplně bez náhledu (čerstvou adresu jde zjistit přes klíč). */
+/** Videa, jejichž náhled má smysl uložit natrvalo: ne smazaná, náhled je adresa (http/https) —
+    a u Disku i YouTube i video úplně bez náhledu (adresu jde zjistit: Disk přes klíč, YouTube
+    podle ID videa). Od 22. 9. 2026 i YouTube: dřív se schválně vynechávalo („tamní adresy
+    vydrží“), jenže když autor video smaže, zmizí i náhled — a u videa, které zmizelo u zdroje,
+    má náhled spolu s popisem připomínat, o jaké cvičení šlo (Mek). */
 function thumbsToFix(items) {
-  return items.filter(it => it && !it.deletedAt && it.platform !== "youtube" &&
+  return items.filter(it => it && !it.deletedAt &&
     ((typeof it.thumbnail === "string" && /^https?:\/\//.test(it.thumbnail)) ||
-     (it.platform === "drive" && it.videoId && !it.thumbnail)));
+     ((it.platform === "drive" || it.platform === "youtube") && it.videoId && !it.thumbnail)));
+}
+/** YouTube místo náhledu smazaného videa vrací šedý zástupný obrázek 120×90 (ověřeno 22. 9.
+    v Chromu). Ten se natrvalo ukládat nesmí — přepsal by poslední dobrý náhled šedou plochou. */
+function isYouTubePlaceholderThumb(url) {
+  return new Promise(resolve => {
+    if (!/ytimg\.com\//.test(url)) { resolve(false); return; }
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    const t = setTimeout(() => resolve(false), 10000);
+    img.onload = () => { clearTimeout(t); resolve(img.naturalWidth <= 120 && img.naturalHeight <= 90); };
+    img.onerror = () => { clearTimeout(t); resolve(false); };
+    img.src = url;
+  });
 }
 /** Projde videa po jednom, podle id — objekt v knihovně se mezitím může vyměnit živou
     synchronizací, takže se po každém čekání bere znovu ze state.library. U Disku nejdřív
@@ -3367,6 +3462,7 @@ async function saveThumbsPermanently(ids, { refreshDrive = false, onProgress = n
     if (item) {
       const title = item.title || id;
       let url = (typeof item.thumbnail === "string" && /^https?:\/\//.test(item.thumbnail)) ? item.thumbnail : "";
+      if (!url && item.platform === "youtube" && item.videoId) url = `https://i.ytimg.com/vi/${item.videoId}/hqdefault.jpg`;
       if ((refreshDrive || !url) && item.platform === "drive" && item.videoId && state.driveApiKey) {
         try {
           const res = await fetch(`https://www.googleapis.com/drive/v3/files/${item.videoId}?fields=thumbnailLink&key=${state.driveApiKey}`);
@@ -3381,6 +3477,8 @@ async function saveThumbsPermanently(ids, { refreshDrive = false, onProgress = n
       }
       if (!url) {
         logDebug(`[náhledy] „${title}“ — žádná adresa náhledu`);
+      } else if (await isYouTubePlaceholderThumb(url)) {
+        logDebug(`[náhledy] „${title}“ — YouTube vrací šedý zástupný obrázek (video nejspíš zmizelo), neukládám`);
       } else {
         const dataUrl = await fetchImageAsDataUrl(url);
         if (!dataUrl) {
@@ -3407,8 +3505,8 @@ document.getElementById("fixThumbsBtn").addEventListener("click", async () => {
   if (btn.disabled) return;
   const ids = thumbsToFix(Object.values(state.library)).map(it => it.id);
   if (!ids.length) {
-    logDebug("[náhledy] nic k opravě — žádný náhled uložený jen jako adresa (YouTube se schválně vynechává)");
-    toast("Aplikace nenašla žádný náhled, který by šel uložit natrvalo (YouTube náhledy schválně nechává být, ty vydrží samy).", 6000, "warn");
+    logDebug("[náhledy] nic k opravě — všechny náhledy už jsou uložené natrvalo");
+    toast("Aplikace nenašla žádný náhled, který by ještě nebyl uložený natrvalo.", 6000, "warn");
     return;
   }
   const driveCount = ids.filter(id => state.library[id].platform === "drive").length;
@@ -4555,6 +4653,8 @@ onAuthStateChanged(auth, async (user) => {
     unsubscribeFromOwnMembership();
     unsubscribeFromPendingRequests();
     unsubscribeFromVideoTips();
+    unsubscribeFromGoneReports();
+    if (autoCheckTimer) { clearTimeout(autoCheckTimer); autoCheckTimer = null; }
     stopHeartbeat();
     document.getElementById("app").classList.add("hidden");
     document.getElementById("pendingScreen").classList.add("hidden");
@@ -4619,6 +4719,8 @@ async function checkMembershipAndProceed() {
   subscribeToPendingRequests();
   subscribeToVideoTips();
   subscribeToMyTips();
+  subscribeToGoneReports();
+  scheduleAutoVideoCheck();
   if (isEditor()) purgeOldTrash().catch(err => console.warn("Úklid koše selhal:", err));
   // Tréninky ostatních trenérů se dotáhnou na pozadí, až když má prohlížeč chvilku klidu —
   // appka je potřebuje jen pro údaj "v tréninku N×" na kartách a pro Tržiště, takže nemají
@@ -5004,6 +5106,7 @@ function subscribeToVideos() {
     });
     if (!changed) return;
     logDebug("[sync] knihovna: přišla změna, videí celkem", Object.keys(state.library).length);
+    if (uidCurrent === ADMIN_UID) renderPendingBadge(); // nahlášená videa se počítají z knihovny
     // Stejná opatrnost jako u applyRemoteSharedUpdate: dokud má člověk otevřený formulář,
     // jen se nepřekresluje — data v paměti jsou i tak aktuální.
     const modalOpen = !linkModalBackdrop.classList.contains("hidden")
@@ -5419,6 +5522,16 @@ async function handleShareTarget() {
   if (!sharedUrl) {
     toast("Ze sdíleného obsahu se nepodařilo vytáhnout odkaz — zkus ho prosím vložit ručně.", 8000, "warn");
     return;
+  }
+  // Admin: když nějaká karta čeká na náhradu (video zmizelo u zdroje), nejdřív nabídnout,
+  // že sdílené video patří do ní (Mek, 22. 9.). „Ne, přidat jako nové“ = dosavadní cesta.
+  if (uidCurrent === ADMIN_UID) {
+    const zmizela = Object.values(state.library).filter(it => it.goneAt && !it.deletedAt)
+      .sort((a, b) => (b.goneAt || 0) - (a.goneAt || 0));
+    if (zmizela.length) {
+      const vybrane = await askReplaceGoneVideo(zmizela);
+      if (vybrane) { await replaceGoneVideo(vybrane, sharedUrl); return; }
+    }
   }
   const mode = isEditor() ? "normal" : "tip";
   openLinkModal(null, { mode, prefillUrl: sharedUrl });
@@ -6082,6 +6195,8 @@ const DESC_PLACEHOLDER_EXAMPLES = [
 ];
 const DESC_PLACEHOLDER_MOTIVATIONAL = [
   "Pár slov teď ušetří vysvětlování příště.",
+  "Když video jednou zmizí, zůstane z cvičení jen tenhle popis.",
+  "Video může zmizet, popis zůstane.",
   "Za půl roku si přesně tohle budeš chtít přečíst.",
   "I jedna věta pomůže dalšímu trenérovi pochopit cvičení.",
   "Krátká poznámka teď, žádné hádání později.",
@@ -6199,6 +6314,13 @@ function openLinkModal(id, opts) {
     }
   });
   viewerLockNotice.classList.toggle("hidden", allowEdit);
+  // Video, které zmizelo u zdroje, nahrazuje jen admin (Mek, 22. 9.) — ostatním se pole
+  // s odkazem zamkne, aby změnou odkazu omylem „nenahradili“ cvičení.
+  const upravovane = id ? state.library[id] : null;
+  if (upravovane && upravovane.goneAt && uidCurrent !== ADMIN_UID) {
+    document.getElementById("linkUrl").disabled = true;
+    document.getElementById("fetchMetaBtn").disabled = true;
+  }
 
   updateFolderHiddenHint();
   updateFbShareWarning();
@@ -6946,6 +7068,19 @@ linkForm.addEventListener("submit", async (e) => {
     addedBy: editingLinkId ? (state.library[editingLinkId].addedBy || null)
       : (linkModalMode === "approve" && approvingTip ? approvingTip.fromUid : uidCurrent)
   };
+  /* CHYBA C (nalezena 21. 9., opravena 22. 9.): formulář video sestaví znovu a pole, která sám
+     neukazuje, by se uložením tiše smazala (setDoc bez merge) — třeba označení „nefunkční“.
+     Přenáší se proto z původního videa. */
+  const replacedGone = !!(existing && existing.goneAt && (existing.url || "") !== url && uidCurrent === ADMIN_UID);
+  if (existing) {
+    ["brokenAt", "goneAt", "goneResolvedAt", "autoCheck", "autoCheckIgnoreUrl"].forEach(f => {
+      if (existing[f] !== undefined && existing[f] !== null) state.library[id][f] = existing[f];
+    });
+  }
+  // Admin změnil odkaz u zmizelého videa = náhrada (stejně jako přes sdílení).
+  if (replacedGone) {
+    Object.assign(state.library[id], { goneAt: null, goneResolvedAt: Date.now(), autoCheck: null, autoCheckIgnoreUrl: null });
+  }
   /* Tip se schválně NEMAŽE, jen se mu přepne stav — tipující se pak v „Mých tipech" dozví,
      jak to dopadlo, a u zařazeného se dostane rovnou na video. Adminovi z Došlých tipů zmizí
      tím, že se ukazují jen ty se stavem "waiting".
@@ -6964,6 +7099,18 @@ linkForm.addEventListener("submit", async (e) => {
   closeLinkModal();
   renderLibrary();
   if (currentView === "editor") renderPickerList();
+  if (replacedGone) {
+    renderPendingBadge();
+    deleteGoneReportComments(id).catch(() => {});
+  }
+  // Náhled uložený jen jako adresa (i YouTube, Mek 22. 9.) se zkusí hned uložit natrvalo —
+  // na pozadí, formulář už je zavřený a video uložené.
+  if (state.library[id] && thumbsToFix([state.library[id]]).length) {
+    const uidPriUlozeni = uidCurrent;
+    saveThumbsPermanently([id]).then(r => {
+      if (uidCurrent === uidPriUlozeni && (r.saved || r.refreshed)) { scheduleSave(); renderLibrary(); }
+    }).catch(err => console.warn("Náhled se nepodařilo uložit natrvalo:", err));
+  }
   // Uložení DO skryté složky (nové video, nebo přesun z jiné) se ohlásí zvlášť a na déle —
   // video v hlavním seznamu vidět nebude a bez vysvětlení to vypadá, že se neuložilo.
   // Úprava videa, které ve skryté složce už bylo, se znovu neohlašuje.
@@ -7004,6 +7151,7 @@ document.getElementById("deleteLinkBtn").addEventListener("click", async () => {
    ========================================================= */
 const detailModalBackdrop = document.getElementById("detailModalBackdrop");
 function closeDetailModal() {
+  reviewingVideoId = null; // pruh kontroly hlášení patří jen k tomuhle otevření karty
   detailModalBackdrop.classList.add("hidden");
   document.getElementById("detailEmbedWrap").innerHTML = ""; // zastaví přehrávání na pozadí
   unsubscribeFromComments();
@@ -7070,6 +7218,508 @@ async function nahlasNefunkcniVideo(id) {
   }
 }
 
+/* =========================================================
+   VIDEO ZMIZELO U ZDROJE (Mekova rozhodnutí 22. 9. 2026, viz claude/trener-nefunkcni-videa.md)
+   Dva různé stavy, nepléct:
+   - brokenAt = nefunkční EMBED: video u zdroje existuje, jen nejde vložit do appky. Nastavuje
+     editor přeškrtnutou kamerou, beze změny.
+   - goneAt   = video u zdroje NEEXISTUJE (nebo nejde přehrát ani přes odkaz). Nahlásit může
+     kdokoli (vlaječka → otázka), potvrzuje JEN admin. Pak se cvičení chová jako textové:
+     náhled s vodoznakem „Video zmizelo“ + popis, bez odkazu na zdroj (vedl by do prázdna).
+   Hlášení = komentář u videa (isGoneReport) + záznam v commentActivity (goneEvent "report").
+   Stav hlášení se nikam nezapisuje; počítá se z videa: goneResolvedAt = čas posledního
+   rozhodnutí admina, hlášení starší než tohle je vyřízené.
+   Automatická kontrola (jen u admina) zapisuje nález do videa (autoCheck), sama nic nemění.
+   ========================================================= */
+const PLATFORM_NA = { youtube: "na YouTube", drive: "na Disku", facebook: "na Facebooku",
+  instagram: "na Instagramu", tiktok: "na TikToku" };
+let reportDialogVideoId = null;
+function openReportVideoDialog(id) {
+  const item = state.library[id];
+  if (!item || item.goneAt) return;
+  if (mojeHlaseniNefunkcnosti()) return;
+  reportDialogVideoId = id;
+  const na = PLATFORM_NA[item.platform] || "přes odkaz";
+  document.getElementById("reportVideoQuestion").textContent = `Zkusil jsi ho pustit přímo ${na}? Jde tam?`;
+  const tryLink = document.getElementById("reportVideoTryLink");
+  const ikona = platformIconHtml(item);
+  tryLink.classList.toggle("hidden", !item.url);
+  if (item.url) {
+    tryLink.href = item.url;
+    tryLink.innerHTML = `${ikona || '<i class="fa-solid fa-up-right-from-square"></i>'} <span>Zkusit ${esc(na)}</span> <span style="opacity:.7">↗</span>`;
+  }
+  document.getElementById("reportVideoModalBackdrop").classList.remove("hidden");
+}
+function closeReportVideoDialog() {
+  reportDialogVideoId = null;
+  document.getElementById("reportVideoModalBackdrop").classList.add("hidden");
+}
+document.getElementById("reportVideoCancelBtn").addEventListener("click", closeReportVideoDialog);
+document.getElementById("reportVideoWorksBtn").addEventListener("click", () => {
+  const id = reportDialogVideoId;
+  closeReportVideoDialog();
+  if (id) nahlasNefunkcniVideo(id);        // jde u zdroje, jen ne v appce → dnešní hlášení
+});
+document.getElementById("reportVideoGoneBtn").addEventListener("click", () => {
+  const id = reportDialogVideoId;
+  closeReportVideoDialog();
+  if (id) nahlasZmizeleVideo(id);          // nejde ani u zdroje → do Správy k ověření
+});
+async function nahlasZmizeleVideo(id) {
+  const item = state.library[id];
+  if (!item) return;
+  if (mojeHlaseniNefunkcnosti()) return;
+  const text = "Nahlásil(a), že video nejde přehrát ani přes odkaz — nejspíš zmizelo u zdroje.";
+  try {
+    const ref = await addDoc(commentsColRef(id), {
+      text, authorUid: uidCurrent, authorLabel: myLabel(),
+      createdAt: Date.now(), parentId: null, mentions: [],
+      isGoneReport: true
+    });
+    await addDoc(collection(db, "commentActivity"), {
+      videoId: id, videoTitle: item.title || "",
+      videoOwnerUid: item.addedBy || null,
+      commentId: ref.id, authorUid: uidCurrent, authorLabel: myLabel(), text,
+      createdAt: Date.now(), isTopLevel: true, mentions: [],
+      isGoneReport: true, goneEvent: "report"
+    });
+    logDebug(`[zmizelo] nahlášeno: „${item.title}“`);
+    toast("Díky, admin o tom ví.", 4000, "info");
+    renderDetailVideoControls(item);
+  } catch (e) {
+    console.error("Hlášení se nepodařilo odeslat:", e);
+    toast("Hlášení se nepodařilo odeslat. Zkus to prosím znovu.", 6000, "err");
+  }
+}
+
+/* ---- Admin: co čeká na rozhodnutí ---- */
+function subscribeToGoneReports() {
+  if (goneEventsUnsub) { goneEventsUnsub(); goneEventsUnsub = null; }
+  if (uidCurrent !== ADMIN_UID) { goneEvents = []; renderPendingBadge(); return; }
+  goneEventsUnsub = onSnapshot(
+    query(collection(db, "commentActivity"), where("goneEvent", "in", ["report", "retract"])),
+    (snap) => {
+      goneEvents = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderPendingBadge();
+    },
+    (err) => {
+      console.warn("Sledování nahlášených videí selhalo:", err);
+      logDebug(`[zmizelo] sledování hlášení selhalo (${(err && err.code) || "?"})`);
+    });
+}
+function unsubscribeFromGoneReports() {
+  if (goneEventsUnsub) { goneEventsUnsub(); goneEventsUnsub = null; }
+  goneEvents = [];
+}
+/** Jeden záznam na video: { id, kind: "missing" | "back", reports: [...], auto }.
+    Hlášení je vyřízené, když je starší než poslední rozhodnutí admina (goneResolvedAt),
+    když ho hlásící stáhl (smazal), nebo když už video zmizelé je. */
+function computeVideoReports() {
+  const stazena = new Set(goneEvents.filter(e => e.goneEvent === "retract").map(e => e.commentId));
+  const byVideo = new Map();
+  goneEvents.forEach(e => {
+    if (e.goneEvent !== "report" || stazena.has(e.commentId)) return;
+    const it = state.library[e.videoId];
+    if (!it || it.deletedAt || it.goneAt) return;
+    if ((e.createdAt || 0) <= (it.goneResolvedAt || 0)) return;
+    const r = byVideo.get(e.videoId) || { id: e.videoId, kind: "missing", reports: [], auto: null };
+    r.reports.push(e);
+    byVideo.set(e.videoId, r);
+  });
+  Object.values(state.library).forEach(it => {
+    const a = it.autoCheck;
+    if (it.deletedAt || !a || !a.result) return;
+    if (a.result === "missing" && it.goneAt) return;
+    if (a.result === "back" && !it.goneAt) return;
+    const r = byVideo.get(it.id) || { id: it.id, kind: a.result, reports: [], auto: null };
+    r.auto = a;
+    byVideo.set(it.id, r);
+  });
+  const nejnovejsi = r => Math.max(0, ...r.reports.map(e => e.createdAt || 0), (r.auto && r.auto.at) || 0);
+  return [...byVideo.values()].sort((a, b) => nejnovejsi(b) - nejnovejsi(a));
+}
+const videoReportsModalBackdrop = document.getElementById("videoReportsModalBackdrop");
+function reportWhen(ts) {
+  return ts ? new Date(ts).toLocaleString("cs-CZ", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+}
+function renderVideoReportsList() {
+  const wrap = document.getElementById("videoReportsList");
+  const list = computeVideoReports();
+  if (!list.length) {
+    wrap.innerHTML = `<p style="font-size:12.5px;color:var(--ink-faint);margin:6px 0 0;">Nic nečeká.</p>`;
+  } else {
+    wrap.innerHTML = list.map(r => {
+      const it = state.library[r.id] || {};
+      const thumbUrl = resolveThumbnailUrl(it);
+      const thumb = `<div style="width:84px;aspect-ratio:16/9;border-radius:6px;flex:0 0 auto;border:1px solid var(--line);background:var(--paper) center/cover no-repeat${thumbUrl ? ` url('${esc(thumbUrl)}')` : ""};"></div>`;
+      const kdo = [...new Set(r.reports.map(e => e.authorLabel || "neznámý trenér"))];
+      const metaLines = [];
+      if (kdo.length) metaLines.push(`${esc(kdo.join(", "))} · ${reportWhen(Math.max(...r.reports.map(e => e.createdAt || 0)))}`);
+      if (r.auto) metaLines.push(`<i class="fa-solid fa-robot"></i> Automatická kontrola · ${reportWhen(r.auto.at)}`);
+      const zdroj = { youtube: "YouTube", drive: "Disk" }[it.platform] || "zdroj";
+      const pills = [];
+      if (r.kind === "back") pills.push(`<span class="report-pill report-pill-ok">zase existuje</span>`);
+      else {
+        if (r.reports.length) pills.push(`<span class="report-pill report-pill-warn">nejde ani přes odkaz</span>`);
+        if (r.auto) pills.push(`<span class="report-pill report-pill-warn">${zdroj}: video neexistuje</span>`);
+      }
+      return `<div style="display:flex;gap:9px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line);">
+        ${thumb}
+        <div style="min-width:0;flex:1;">
+          <div style="font-size:12.5px;font-weight:600;line-height:1.3;">${esc(it.title || "(bez názvu)")}</div>
+          ${metaLines.map(m => `<div style="font-size:10.5px;color:var(--ink-faint);margin:2px 0 3px;">${m}</div>`).join("")}
+          <div>${pills.join("")}</div>
+          <div style="margin-top:6px;"><button type="button" class="btn btn-primary btn-sm" data-review="${esc(r.id)}" style="margin:0;">Prohlédnout</button></div>
+        </div>
+      </div>`;
+    }).join("");
+  }
+  renderVideoCheckStatus();
+}
+document.getElementById("videoReportsList").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-review]");
+  if (!b) return;
+  reviewingVideoId = b.dataset.review;
+  openDetailModal(b.dataset.review);
+});
+document.getElementById("openVideoReportsBtn").addEventListener("click", () => {
+  if (uidCurrent !== ADMIN_UID) return;
+  renderVideoReportsList();
+  videoReportsModalBackdrop.classList.remove("hidden");
+  resetModalScroll(videoReportsModalBackdrop);
+});
+document.getElementById("closeVideoReportsModalBtn").addEventListener("click", () => videoReportsModalBackdrop.classList.add("hidden"));
+
+/* ---- Pruh kontroly v kartě (jen admin, jen po „Prohlédnout“) ---- */
+function renderDetailReviewPanel(item) {
+  const panel = document.getElementById("detailReviewPanel");
+  const r = (reviewingVideoId === item.id && uidCurrent === ADMIN_UID)
+    ? computeVideoReports().find(x => x.id === item.id) : null;
+  panel.classList.toggle("hidden", !r);
+  if (!r) { panel.innerHTML = ""; return; }
+  if (r.kind === "back") {
+    panel.innerHTML = `
+      <div class="report-review-title"><i class="fa-solid fa-robot"></i> Automatická kontrola: video zase existuje</div>
+      <div class="report-review-hint">Zkus ho přes „Původní odkaz“ níž a rozhodni.</div>
+      <div class="report-review-acts">
+        <button type="button" class="btn btn-primary btn-sm" data-review-act="back">Vrátit do provozu</button>
+        <button type="button" class="btn btn-sm" data-review-act="keep">Nechat zmizelé</button>
+      </div>`;
+    return;
+  }
+  const kdo = [...new Set(r.reports.map(e => e.authorLabel || "neznámý trenér"))];
+  const radky = [];
+  if (kdo.length) radky.push(`<div class="report-review-title"><i class="fa-solid fa-flag"></i> ${esc(kdo.join(", "))}: nejde ani přes odkaz</div>`);
+  if (r.auto) radky.push(`<div class="report-review-title"><i class="fa-solid fa-robot"></i> Automatická kontrola: ${esc({ youtube: "YouTube", drive: "Disk" }[item.platform] || "zdroj")} hlásí, že video neexistuje</div>`);
+  panel.innerHTML = `${radky.join("")}
+    <div class="report-review-hint">Zkus video níž a rozhodni.</div>
+    ${kdo.length ? `<input type="text" class="comment-input" id="reviewRejectNote" placeholder="Vzkaz pro ${esc(kdo.join(", "))} (nepovinné, jen při zamítnutí)" autocomplete="off">` : ""}
+    <div class="report-review-acts">
+      <button type="button" class="btn btn-danger btn-sm" data-review-act="confirm"><i class="fa-solid fa-ghost"></i> Potvrdit: zmizelo</button>
+      <button type="button" class="btn btn-sm" data-review-act="reject">Zamítnout</button>
+    </div>`;
+}
+document.getElementById("detailReviewPanel").addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-review-act]");
+  if (!b || !currentDetailId || uidCurrent !== ADMIN_UID) return;
+  const id = currentDetailId;
+  const act = b.dataset.reviewAct;
+  const noteEl = document.getElementById("reviewRejectNote");
+  const note = noteEl ? noteEl.value.trim() : "";
+  const r = computeVideoReports().find(x => x.id === id);
+  closeDetailModal();
+  if (act === "confirm") await confirmVideoGone(id, r);
+  else if (act === "reject") await rejectVideoReport(id, r, note);
+  else if (act === "back") restoreGoneVideo(id);
+  else if (act === "keep") keepVideoGone(id);
+});
+/** Odpověď pod každé čekající hlášení, se zmínkou hlásícího — tím se mu rozsvítí zvoneček
+    a uvidí ji v „Co je nového“ (zmínky se ukazují vždycky, viz isRelevantCommentActivity). */
+async function replyToGoneReports(videoId, reports, text) {
+  const it = state.library[videoId] || {};
+  for (const e of reports) {
+    try {
+      const ref = await addDoc(commentsColRef(videoId), {
+        text, authorUid: uidCurrent, authorLabel: myLabel(),
+        createdAt: Date.now(), parentId: e.commentId, mentions: [e.authorUid]
+      });
+      await addDoc(collection(db, "commentActivity"), {
+        videoId, videoTitle: it.title || "", videoOwnerUid: it.addedBy || null,
+        commentId: ref.id, authorUid: uidCurrent, authorLabel: myLabel(), text,
+        createdAt: Date.now(), isTopLevel: false, mentions: [e.authorUid]
+      });
+    } catch (err) {
+      console.warn("Odpověď na hlášení se nepodařilo uložit:", err);
+      logDebug(`[zmizelo] odpověď hlásícímu (${e.authorLabel}) se neuložila — ${(err && err.code) || err}`);
+    }
+  }
+}
+async function confirmVideoGone(id, r) {
+  const it = state.library[id];
+  if (!it) return;
+  const ted = Date.now();
+  it.goneAt = ted;
+  it.goneResolvedAt = ted;
+  it.autoCheck = null;
+  scheduleSave();
+  renderPendingBadge();
+  prekresliPoZmeneNefunkcnosti(id);
+  logDebug(`[zmizelo] potvrzeno: „${it.title}“`);
+  toast("Potvrzeno — cvičení se teď ukazuje jako „Video zmizelo“.", 4000);
+  if (r && r.reports.length) await replyToGoneReports(id, r.reports, "Potvrzeno, video zmizelo. Díky za nahlášení.");
+}
+async function rejectVideoReport(id, r, note) {
+  const it = state.library[id];
+  if (!it) return;
+  it.goneResolvedAt = Date.now();
+  // Zamítnutý nález automatické kontroly se u tohohle odkazu už znovu nehlásí.
+  if (it.autoCheck && it.autoCheck.result === "missing") { it.autoCheck = null; it.autoCheckIgnoreUrl = it.url || ""; }
+  scheduleSave();
+  renderPendingBadge();
+  logDebug(`[zmizelo] zamítnuto: „${it.title}“`);
+  toast("Zamítnuto.", 2500);
+  if (r && r.reports.length) await replyToGoneReports(id, r.reports, `Zamítnuto: video jde přehrát přes odkaz.${note ? " " + note : ""}`);
+}
+function restoreGoneVideo(id) {
+  const it = state.library[id];
+  if (!it) return;
+  it.goneAt = null;
+  it.goneResolvedAt = Date.now();
+  it.autoCheck = null;
+  scheduleSave();
+  renderPendingBadge();
+  prekresliPoZmeneNefunkcnosti(id);
+  logDebug(`[zmizelo] vráceno do provozu: „${it.title}“`);
+  toast("Video je zase v provozu.", 3000);
+}
+function keepVideoGone(id) {
+  const it = state.library[id];
+  if (!it) return;
+  it.autoCheck = null;
+  it.autoCheckIgnoreUrl = it.url || "";   // „zase existuje“ u tohohle odkazu už nehlásit
+  scheduleSave();
+  renderPendingBadge();
+  toast("Nechávám jako zmizelé.", 2500);
+}
+
+/* ---- Automatická kontrola (jen admin; Mek: A + D) ----
+   A: po každém přihlášení na pozadí dávka 30 videí, příště dalších 30, po projití celé
+      knihovny znovu od začátku (pozice v kole je v tomhle prohlížeči, localStorage).
+   D: tlačítko „Zkontrolovat videa“ projde všechno hned.
+   Umí jen YouTube (veřejné oEmbed, 404 = neexistuje; ověřeno 22. 9. v Chromu, chyby čitelné)
+   a Disk (API s klíčem, 404). Facebook, Instagram ani TikTok z appky zjistit nejde (CORS /
+   zeď sítí). 401 u YouTube (soukromé nebo zakázané vkládání) NENÍ „zmizelo“ — nehlásí se.
+   Sama nic nemění, jen zapíše nález do videa (autoCheck) a ten se objeví ve Správě. */
+const AUTOCHECK_BATCH = 30;
+const AUTOCHECK_KEY = "trener_autocheck_round";
+let autoCheckRunning = false;
+let autoCheckTimer = null;
+function autoCheckCandidates() {
+  return Object.values(state.library)
+    .filter(it => !it.deletedAt && it.videoId &&
+      (it.platform === "youtube" || (it.platform === "drive" && state.driveApiKey)))
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+}
+function readAutoCheckRound() {
+  try { return JSON.parse(localStorage.getItem(AUTOCHECK_KEY) || "{}") || {}; } catch (e) { return {}; }
+}
+function writeAutoCheckRound(v) {
+  try { localStorage.setItem(AUTOCHECK_KEY, JSON.stringify(v)); } catch (e) { /* jen pozice v kole */ }
+}
+/** true = existuje, false = neexistuje (404), null = nejde říct (síť, soukromé, kvóta…). */
+async function videoExistsAtSource(it) {
+  try {
+    if (it.platform === "youtube") {
+      const res = await fetch(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent("https://www.youtube.com/watch?v=" + it.videoId)}`);
+      if (res.status === 200) return true;
+      if (res.status === 404) return false;
+      return null;
+    }
+    if (it.platform === "drive" && state.driveApiKey) {
+      const res = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(it.videoId)}?fields=id&key=${state.driveApiKey}`);
+      if (res.status === 200) return true;
+      if (res.status === 404) return false;
+      return null;
+    }
+  } catch (e) { return null; }
+  return null;
+}
+/** Zkontroluje jedno video a zapíše/smaže nález. Vrací true, když se nález změnil. */
+async function autoCheckOne(id) {
+  const before = state.library[id];
+  if (!before || before.deletedAt) return false;
+  if (before.autoCheckIgnoreUrl && before.autoCheckIgnoreUrl === (before.url || "")) return false;
+  const exists = await videoExistsAtSource(before);
+  if (exists === null) return false;
+  const it = state.library[id];          // mohlo se mezitím vyměnit živou synchronizací
+  if (!it || it.deletedAt) return false;
+  let want = null;
+  if (it.goneAt && exists) want = "back";
+  else if (!it.goneAt && !exists) want = "missing";
+  const have = (it.autoCheck && it.autoCheck.result) || null;
+  if (want === have) return false;
+  it.autoCheck = want ? { result: want, at: Date.now() } : null;
+  logDebug(`[kontrola] „${it.title}“ — ${want === "missing" ? "u zdroje NEEXISTUJE" : want === "back" ? "zmizelé video ZASE EXISTUJE" : "nález zrušen, video je v pořádku"}`);
+  return true;
+}
+async function runAutoCheck(ids, onProgress) {
+  let zmeny = 0, done = 0;
+  for (const id of ids) {
+    if (uidCurrent !== ADMIN_UID) break;   // mezitím odhlášení
+    if (await autoCheckOne(id)) zmeny++;
+    done++;
+    if (onProgress) onProgress(done, ids.length);
+    await new Promise(r => setTimeout(r, 250));
+  }
+  if (zmeny && uidCurrent === ADMIN_UID) { scheduleSave(); renderPendingBadge(); }
+  return { checked: done, changed: zmeny };
+}
+async function runAutoCheckBatch() {
+  autoCheckTimer = null;
+  if (uidCurrent !== ADMIN_UID || autoCheckRunning) return;
+  const all = autoCheckCandidates();
+  if (!all.length) return;
+  const round = readAutoCheckRound();
+  let from = Number.isInteger(round.done) && round.done < all.length ? round.done : 0;
+  const ids = all.slice(from, from + AUTOCHECK_BATCH).map(it => it.id);
+  autoCheckRunning = true;
+  try {
+    const r = await runAutoCheck(ids);
+    let done = from + r.checked;
+    if (done >= all.length) { done = 0; writeAutoCheckRound({ done, roundAt: Date.now() }); }
+    else writeAutoCheckRound({ ...round, done });
+    logDebug(`[kontrola] dávka: ${r.checked} videí, změněných nálezů ${r.changed}, v kole ${done || all.length} z ${all.length}`);
+  } finally {
+    autoCheckRunning = false;
+    renderVideoCheckStatus();
+  }
+}
+function scheduleAutoVideoCheck() {
+  if (autoCheckTimer) { clearTimeout(autoCheckTimer); autoCheckTimer = null; }
+  if (uidCurrent !== ADMIN_UID) return;
+  autoCheckTimer = setTimeout(runAutoCheckBatch, 20000); // až appka po přihlášení doběhne
+}
+function renderVideoCheckStatus() {
+  const el = document.getElementById("videoCheckStatus");
+  if (!el) return;
+  const total = autoCheckCandidates().length;
+  const round = readAutoCheckRound();
+  const done = Math.min(Number.isInteger(round.done) ? round.done : 0, total);
+  el.textContent = `Samo se kontroluje po ${AUTOCHECK_BATCH} videích při každém tvém přihlášení (jen YouTube a Disk). V tomhle kole hotovo ${done} z ${total}.`;
+}
+document.getElementById("runVideoCheckBtn").addEventListener("click", async () => {
+  if (uidCurrent !== ADMIN_UID) return;
+  const btn = document.getElementById("runVideoCheckBtn");
+  if (btn.disabled || autoCheckRunning) { toast("Kontrola už běží.", 2500, "warn"); return; }
+  const ids = autoCheckCandidates().map(it => it.id);
+  if (!ids.length) { toast("Není co kontrolovat (umí jen YouTube a Disk).", 4000, "warn"); return; }
+  const puvodni = btn.innerHTML;
+  btn.disabled = true;
+  autoCheckRunning = true;
+  let r;
+  try {
+    r = await runAutoCheck(ids, (d, n) => { btn.textContent = `Kontroluji… ${d}/${n}`; });
+  } finally {
+    autoCheckRunning = false;
+    btn.disabled = false;
+    btn.innerHTML = puvodni;
+  }
+  logDebug(`[kontrola] ruční: ${r.checked} videí, změněných nálezů ${r.changed}`);
+  toast(`Zkontrolováno ${r.checked} ${czPlural(r.checked, "video", "videa", "videí")}. ${r.changed ? `Nových nálezů: ${r.changed}.` : "Nic nového."}`, 6000);
+});
+
+/* ---- Náhrada zmizelého videa (jen admin; Mek: zatím A) ---- */
+/** Smaže u videa všechna hlášení „zmizelo u zdroje“ i odpovědi pod nimi — po náhradě se
+    týkají videa, které už v kartě není (Mek, 22. 9.: C). */
+async function deleteGoneReportComments(videoId) {
+  try {
+    const snap = await getDocs(commentsColRef(videoId));
+    const vsechny = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const hlaseni = new Set(vsechny.filter(c => c.isGoneReport).map(c => c.id));
+    const smazat = vsechny.filter(c => hlaseni.has(c.id) || hlaseni.has(c.parentId));
+    for (const c of smazat) {
+      try { await deleteDoc(doc(db, "videoComments", videoId, "items", c.id)); }
+      catch (e) { console.warn("Hlášení se nepodařilo smazat:", e); }
+    }
+    if (smazat.length) logDebug(`[zmizelo] po náhradě smazáno hlášení a odpovědí: ${smazat.length}`);
+  } catch (e) {
+    console.warn("Hlášení po náhradě se nepodařilo načíst:", e);
+  }
+}
+/** Nový odkaz do STEJNÉ karty: hodnocení, obtížnost, poznámky, komentáře i místa v trénincích
+    zůstávají (Mek: A). Název a popis taky — cvičení je pořád stejné. */
+async function replaceGoneVideo(id, rawUrl) {
+  const it = state.library[id];
+  if (!it || uidCurrent !== ADMIN_UID) return;
+  let url = (rawUrl || "").trim();
+  if (url.includes("facebook.com")) url = normalizeFacebookUrl(url);
+  else if (url.includes("instagram.com")) url = normalizeInstagramUrl(url);
+  const platform = detectPlatform(url);
+  let videoId = null;
+  if (platform === "youtube") videoId = extractYouTubeId(url);
+  else if (platform === "drive") videoId = extractDriveId(url);
+  else if (platform === "instagram") videoId = extractInstagramId(url);
+  else if (platform === "tiktok") videoId = extractTikTokId(url);
+  let thumbnail = "";
+  let aspectRatio = it.aspectRatio || "16/9";
+  if (platform === "youtube") {
+    const meta = await fetchYouTubeMeta(url);
+    if (meta) { thumbnail = meta.thumbnail || ""; aspectRatio = meta.portrait ? "9/16" : "16/9"; }
+    if (!thumbnail && videoId) thumbnail = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+  }
+  const cur = state.library[id];
+  if (!cur) return;
+  Object.assign(cur, {
+    url, platform, videoId, thumbnail, aspectRatio, timestamp: null,
+    brokenAt: null, goneAt: null, goneResolvedAt: Date.now(), autoCheck: null, autoCheckIgnoreUrl: null
+  });
+  scheduleSave();
+  renderPendingBadge();
+  renderLibrary();
+  logDebug(`[zmizelo] nahrazeno: „${cur.title}“ → ${url}`);
+  toast("Video nahrazeno. Hodnocení, poznámky i tréninky zůstaly.", 5000);
+  openDetailModal(id);
+  await deleteGoneReportComments(id);
+  if (thumbsToFix([state.library[id]]).length) {
+    const r = await saveThumbsPermanently([id]);
+    if (r.saved || r.refreshed) { scheduleSave(); renderLibrary(); }
+  }
+}
+/** Po sdílení do Trenéra: když něco čeká na náhradu, zeptá se, kam video patří.
+    Vrací id vybrané karty, nebo null (= přidat jako nové video, jako dřív). */
+function askReplaceGoneVideo(goneItems) {
+  return new Promise((resolve) => {
+    const backdrop = document.getElementById("replaceVideoModalBackdrop");
+    const n = goneItems.length;
+    document.getElementById("replaceVideoLead").textContent =
+      `Na náhradu ${n === 1 ? "čeká 1 cvičení" : (n < 5 ? `čekají ${n} cvičení` : `čeká ${n} cvičení`)}. Kam patří tohle video?`;
+    document.getElementById("replaceVideoChoices").innerHTML = goneItems.map((it, i) => {
+      const t = resolveThumbnailUrl(it);
+      return `<label class="replace-choice">
+        <input type="radio" name="replaceVideoChoice" value="${esc(it.id)}"${i === 0 ? " checked" : ""}>
+        <div class="replace-choice-thumb"${t ? ` style="background-image:url('${esc(t)}')"` : ""}></div>
+        <span>${esc(it.title || "(bez názvu)")}</span>
+      </label>`;
+    }).join("");
+    const okBtn = document.getElementById("replaceVideoConfirmBtn");
+    const newBtn = document.getElementById("replaceVideoNewBtn");
+    const finish = (val) => {
+      backdrop.classList.add("hidden");
+      okBtn.removeEventListener("click", onOk);
+      newBtn.removeEventListener("click", onNew);
+      resolve(val);
+    };
+    const onOk = () => {
+      const sel = document.querySelector('input[name="replaceVideoChoice"]:checked');
+      finish(sel ? sel.value : null);
+    };
+    const onNew = () => finish(null);
+    okBtn.addEventListener("click", onOk);
+    newBtn.addEventListener("click", onNew);
+    backdrop.classList.remove("hidden");
+  });
+}
+
 /** Nefunkčnost se propisuje na víc míst najednou, tak ať se na žádné nezapomene: karta
     v Knihovně, otevřený detail (pokud je zrovna ten samý) a sekvence v editoru tréninku,
     kde má položka vlastní náhled. */
@@ -7112,13 +7762,16 @@ function platformIconHtml(item) {
 }
 
 function renderDetailVideoControls(item) {
-  const jeRozbite = !!item.brokenAt;
+  const jeZmizele = !!item.goneAt;                 // zmizelo u zdroje, potvrdil admin
+  const jeRozbite = !!item.brokenAt && !jeZmizele; // nefunkční embed (u zdroje jde)
   const jeEditor = isEditor();
+  const jeAdmin = uidCurrent === ADMIN_UID;
   const url = item.url || "";
   const ikona = platformIconHtml(item);
   const maOdkaz = !!(url && ikona);
 
-  // velký odkaz (jen u rozbitého) vs. malá ikonka (jen u funkčního)
+  // velký odkaz (jen u rozbitého) vs. malá ikonka (jen u funkčního). U zmizelého ani jedno:
+  // vedl by do prázdna. Původní odkaz má jen admin v bloku níž (Mek, 22. 9.).
   const big = document.getElementById("detailSrcBig");
   big.classList.toggle("hidden", !(jeRozbite && maOdkaz));
   if (jeRozbite && maOdkaz) {
@@ -7126,43 +7779,61 @@ function renderDetailVideoControls(item) {
     big.innerHTML = `${ikona} <span>Otevřít video</span> <span style="opacity:.7">↗</span>`;
   }
   const small = document.getElementById("detailSrcSmall");
-  small.classList.toggle("hidden", !(!jeRozbite && maOdkaz));
-  if (!jeRozbite && maOdkaz) {
+  small.classList.toggle("hidden", !(!jeRozbite && !jeZmizele && maOdkaz));
+  if (!jeRozbite && !jeZmizele && maOdkaz) {
     small.href = url;
     small.className = "ghost-ico src-yt";
     small.innerHTML = ikona;
     small.title = "Otevřít video u zdroje ↗";
   }
 
-  // vrácení zpět — jen trenér a jen u označeného videa
+  // vrácení zpět — jen trenér a jen u označeného (nefunkční embed) videa
   const undo = document.getElementById("detailUndoBrokenBtn");
   undo.classList.toggle("hidden", !(jeRozbite && jeEditor));
   undo.innerHTML = '<i class="fa-solid fa-check"></i> Video zase funguje';
 
-  // ikonka vpravo u názvu
+  // přeškrtnutá kamera — jen editor, jen u funkčního videa (nefunkční embed, beze změny)
   const btn = document.getElementById("detailBrokenToggleBtn");
+  btn.classList.toggle("hidden", !jeEditor || jeRozbite || jeZmizele);
+  btn.innerHTML = '<i class="fa-solid fa-video-slash"></i>';
+  btn.title = "Označit jako nefunkční — místo videa se bude ukazovat náhled a odkaz na zdroj";
+
+  // vlaječka — od 22. 9. pro VŠECHNY (i editor a admin). Po ťuknutí se appka zeptá, jestli
+  // video jde aspoň u zdroje (viz openReportVideoDialog). U zmizelého videa už není co hlásit.
   const jsemNahlasil = mojeHlaseniNefunkcnosti();
-  const skryt = jeEditor ? jeRozbite : false;   // trenér má u rozbitého videa „vrátit zpět"
-  btn.classList.toggle("hidden", skryt);
-  btn.classList.toggle("done", !jeEditor && jsemNahlasil);
-  btn.disabled = !jeEditor && jsemNahlasil;
-  btn.innerHTML = jeEditor
-    ? '<i class="fa-solid fa-video-slash"></i>'
-    : (jsemNahlasil ? '<i class="fa-solid fa-check"></i>' : '<i class="fa-solid fa-flag"></i>');
-  btn.title = jeEditor
-    ? "Označit jako nefunkční — místo videa se bude ukazovat náhled a odkaz na zdroj"
-    : (jsemNahlasil ? "Tohle video už jsi nahlásil" : "Nahlásit adminovi, že video nejde přehrát");
+  const flag = document.getElementById("detailReportBtn");
+  flag.classList.toggle("hidden", jeZmizele);
+  flag.classList.toggle("done", jsemNahlasil);
+  flag.disabled = jsemNahlasil;
+  flag.innerHTML = jsemNahlasil ? '<i class="fa-solid fa-check"></i>' : '<i class="fa-solid fa-flag"></i>';
+  flag.title = jsemNahlasil ? "Tohle video už jsi nahlásil" : "Nahlásit adminovi, že video nejde přehrát";
 
   const thanks = document.getElementById("detailReportThanks");
-  thanks.classList.toggle("hidden", !(!jeEditor && jsemNahlasil));
+  thanks.classList.toggle("hidden", !(jsemNahlasil && !jeZmizele));
   thanks.innerHTML = '<i class="fa-solid fa-check"></i> Díky, admin o tom ví.';
+
+  // blok jen pro admina u zmizelého videa: nahrát náhradu + původní odkaz
+  const goneAdmin = document.getElementById("detailGoneAdmin");
+  goneAdmin.classList.toggle("hidden", !(jeZmizele && jeAdmin));
+  if (jeZmizele && jeAdmin) {
+    const naTelefonu = navigator.maxTouchPoints > 0 && isMobileViewport();
+    const up = document.getElementById("detailYtUploadLink");
+    up.href = naTelefonu ? `https://www.youtube.com/channel/${TRENER_YT_CHANNEL_ID}` : `https://studio.youtube.com/channel/${TRENER_YT_CHANNEL_ID}/videos/upload?d=ud`;
+    up.innerHTML = naTelefonu ? '<i class="fa-brands fa-youtube"></i> Otevřít YouTube' : '<i class="fa-brands fa-youtube"></i> Nahrát na YouTube';
+    document.getElementById("detailYtUploadHint").textContent = naTelefonu
+      ? "V aplikaci YouTube ťukni na + a nahraj video jako Neveřejné, u otázky na děti „Ne, není určeno dětem“. Pak ho přes Sdílet pošli do Trenéra — nabídne, že ho sem dá místo zmizelého."
+      : "Otevře nahrávání na kanálu Trenéra. Nahraj jako Neveřejné, u otázky na děti „Ne, není určeno dětem“. Pak odkaz na nové video vlož sem přes Upravit (pole Odkaz), nebo ho v telefonu sdílej do Trenéra.";
+    const orig = document.getElementById("detailGoneOrigLink");
+    orig.classList.toggle("hidden", !url);
+    if (url) orig.href = url;
+  }
 }
 
 /** Nahlásil jsem tohle video já sám? Pozná se podle komentáře, který appka při hlášení
     zakládá — žádný další stav se nikam neukládá. Vlákno je v tu chvíli živě načtené
     (subscribeToComments běží, dokud je detail otevřený). */
 function mojeHlaseniNefunkcnosti() {
-  return commentsList.some(c => c.isBrokenReport && c.authorUid === uidCurrent);
+  return commentsList.some(c => (c.isBrokenReport || c.isGoneReport) && c.authorUid === uidCurrent);
 }
 
 function openDetailModal(id) {
@@ -7173,7 +7844,7 @@ function openDetailModal(id) {
   embedWrap.style.height = ""; // reset z případného předchozího otevření
   embedWrap.style.maxHeight = "";
   embedWrap.style.aspectRatio = item.aspectRatio || "16/9";
-  if (item.brokenAt) {
+  if (item.brokenAt || item.goneAt) {
     // Video ručně označené jako nefunkční (#91/#95) — appka se ho ani nesnaží přehrát (byl by
     // to jen prázdný/rozbitý embed). Místo něj jen náhledový obrázek s jemným vodoznakem —
     // schválně nenápadný, appka o téhle informaci jinak nikde nekřičí. Přímý odkaz na zdroj je
@@ -7186,7 +7857,7 @@ function openDetailModal(id) {
     const thumbUrl = resolveThumbnailUrl(item);
     embedWrap.innerHTML = `
       <div class="detail-broken-thumb" style="${thumbUrl ? `background-image:url('${esc(thumbUrl)}')` : ""}">
-        <span class="detail-broken-watermark">Video nevideuje</span>
+        <span class="detail-broken-watermark">${item.goneAt ? "Video zmizelo" : "Video nevideuje"}</span>
       </div>`;
   } else {
     embedWrap.innerHTML = renderEmbedHtml(item);
@@ -7213,6 +7884,7 @@ function openDetailModal(id) {
   if (item.timestamp) { hint.textContent = `Cvičení začíná v ${secondsToTimestamp(item.timestamp)}`; hint.classList.remove("hidden"); }
   else { hint.classList.add("hidden"); }
   renderDetailVideoControls(item);
+  renderDetailReviewPanel(item);
   document.getElementById("detailTitle").textContent = item.title;
   renderDetailChips(item);
   document.getElementById("detailShortDesc").textContent = item.shortDesc;
@@ -7232,7 +7904,9 @@ function openDetailModal(id) {
 document.getElementById("detailBrokenToggleBtn").addEventListener("click", () => {
   if (!currentDetailId) return;
   if (isEditor()) prepniNefunkcniVideo(currentDetailId);
-  else nahlasNefunkcniVideo(currentDetailId);
+});
+document.getElementById("detailReportBtn").addEventListener("click", () => {
+  if (currentDetailId) openReportVideoDialog(currentDetailId);
 });
 document.getElementById("detailUndoBrokenBtn").addEventListener("click", () => {
   if (currentDetailId) prepniNefunkcniVideo(currentDetailId);
@@ -7349,13 +8023,13 @@ function renderCommentThread() {
       <div class="comment-item">
         <div class="comment-avatar" data-author="${esc(c.authorUid || "")}">${esc(commentInitials(c.authorLabel))}</div>
         <div class="comment-body">
-          <div class="comment-meta"><span class="comment-author">${esc(c.authorLabel || "?")}</span> · ${commentTimeLabel(c.createdAt)}${c.isBrokenReport ? ' <span class="comment-report-tag">hlášení</span>' : ""}</div>
+          <div class="comment-meta"><span class="comment-author">${esc(c.authorLabel || "?")}</span> · ${commentTimeLabel(c.createdAt)}${(c.isBrokenReport || c.isGoneReport) ? ' <span class="comment-report-tag">hlášení</span>' : ""}</div>
           <div class="comment-text">${renderCommentText(c.text || "", members)}</div>
           <div class="comment-actions">
             <button type="button" class="comment-reply-btn" data-id="${esc(c.id)}" data-parent="${esc(parentForReply)}" data-mention="${esc(mentionPrefill)}">Odpovědět</button>
             ${/* Mazat smí autor — a u HLÁŠENÍ i admin: je adresované jemu a po opravě videa
                   nemá co v kartě dělat. U běžných komentářů se tím nic nemění. */
-              (c.authorUid === uidCurrent || (c.isBrokenReport && uidCurrent === ADMIN_UID))
+              (c.authorUid === uidCurrent || ((c.isBrokenReport || c.isGoneReport) && uidCurrent === ADMIN_UID))
                 ? `<button type="button" class="comment-delete-btn" data-id="${esc(c.id)}">Smazat</button>` : ""}
           </div>
           <div class="comment-reply-input" data-for="${esc(c.id)}">
@@ -7417,6 +8091,8 @@ async function postComment(text, parentId) {
 }
 async function deleteComment(id) {
   if (!currentDetailId) return;
+  // Kopie PŘED smazáním — živý odběr komentářů ho po deleteDoc ze seznamu hned vyhodí.
+  const smazany = commentsList.find(c => c.id === id);
   // Vlákno je jen jednu úroveň hluboké (viz renderCommentThread) — odpovědi na tenhle
   // komentář tedy poznáme prostě podle parentId === id, žádná rekurze netřeba.
   const children = commentsList.filter(c => c.parentId === id);
@@ -7433,6 +8109,16 @@ async function deleteComment(id) {
       catch (e) { console.warn("Odpověď se nepodařilo smazat spolu s komentářem:", e); }
     }
     await deleteDoc(doc(db, "videoComments", currentDetailId, "items", id));
+    // Hlášení „zmizelo u zdroje“ čte admin ze záznamů commentActivity, a ty smazat nejde
+    // (pravidla). Smazání hlášení (hlásící se ukliknul, nebo ho admin uklidil) se tam proto
+    // zapíše jako „stažení“ — seznam Nahlášených videí ho pak přeskočí.
+    if (smazany && smazany.isGoneReport) {
+      addDoc(collection(db, "commentActivity"), {
+        goneEvent: "retract", commentId: id, videoId: currentDetailId,
+        authorUid: uidCurrent, authorLabel: myLabel(), text: "",
+        createdAt: Date.now(), isTopLevel: false, mentions: []
+      }).catch(e => console.warn("Stažení hlášení se nepodařilo zapsat:", e));
+    }
   } catch (e) { console.error("Komentář se nepodařilo smazat:", e); toast("Smazání se nepovedlo.", 3000, "err"); }
 }
 
@@ -7562,6 +8248,10 @@ document.getElementById("commentThread").addEventListener("click", e => {
    vlastního videa, notifikaci nevyvolá. */
 function isRelevantCommentActivity(a) {
   if (a.authorUid === uidCurrent) return false;
+  // Hlášení „zmizelo u zdroje“ má admin ve Správě (Nahlášená videa), ne v „Co je nového“.
+  // Záznam o stažení hlášení není komentář a nepatří nikomu.
+  if (a.goneEvent === "retract") return false;
+  if (a.goneEvent === "report" && uidCurrent === ADMIN_UID) return false;
   if ((a.mentions || []).includes(uidCurrent)) return true;
   // Hlášení „video nejde přehrát" míří na ADMINA, ne na toho, kdo video kdysi nahrál —
   // opravit ho stejně může jen admin. Majiteli videa se ukáže taky, řádek níž.
@@ -7595,8 +8285,15 @@ function renderPendingBadge() {
   // Kolečko na profilovce i štít Správy v hlavičce profilu sčítají VŠECHNO, co čeká na admina —
   // žádosti o přístup i došlé tipy. Schválně jedno číslo: dvě kolečka vedle sebe by se na
   // avataru nevešla a stejně obě vedou do téhož okna. Rozpad je vidět až ve Správě.
-  const total = n + videoTipsWaiting.length;
+  const reportsWaiting = uidCurrent === ADMIN_UID ? computeVideoReports().length : 0;
+  const total = n + videoTipsWaiting.length + reportsWaiting;
   const totalText = total > 9 ? "9+" : String(total);
+  const reportsInline = document.getElementById("videoReportsInlineCount");
+  if (reportsInline) {
+    reportsInline.classList.toggle("hidden", reportsWaiting === 0);
+    reportsInline.textContent = String(reportsWaiting);
+  }
+  if (!document.getElementById("videoReportsModalBackdrop").classList.contains("hidden")) renderVideoReportsList();
   if (badge) {
     badge.classList.toggle("hidden", total === 0);
     badge.textContent = totalText;
@@ -7618,6 +8315,7 @@ function renderPendingBadge() {
     const parts = [];
     if (n) parts.push(`${n} ${n === 1 ? "člověk čeká" : (n < 5 ? "lidé čekají" : "lidí čeká")} na schválení`);
     if (videoTipsWaiting.length) parts.push(`${videoTipsWaiting.length} ${videoTipsWaiting.length === 1 ? "tip čeká" : "tipů čeká"} na vyřízení`);
+    if (reportsWaiting) parts.push(`${reportsWaiting} ${reportsWaiting === 1 ? "nahlášené video" : "nahlášených videí"}`);
     profileBtn.setAttribute("aria-label", parts.length ? `Profil — ${parts.join(", ")}` : "Profil, nové komentáře");
   }
 }
@@ -7633,6 +8331,9 @@ function renderPendingBadge() {
    ========================================================= */
 let videoTipsUnsub = null;
 let videoTipsWaiting = [];   // jen tipy se stavem "waiting" — to, co má admin vyřídit
+let goneEvents = [];         // commentActivity s goneEvent (hlášení / stažení) — jen admin
+let goneEventsUnsub = null;
+let reviewingVideoId = null; // karta otevřená ze Správy ke kontrole hlášení (pruh nahoře)
 let myTipsUnsub = null;
 let myTips = [];             // vlastní odeslané tipy, všechny stavy
 function subscribeToVideoTips() {
@@ -7902,7 +8603,7 @@ async function buildShareSnapshot(t) {
       title: item.title || "", platform: item.platform || "", videoId: item.videoId || "",
       url: item.url || "", timestamp: item.timestamp || null, aspectRatio: item.aspectRatio || "16/9",
       shortDesc: item.shortDesc || "", longDesc: item.longDesc || "",
-      brokenAt: item.brokenAt || null,
+      brokenAt: item.brokenAt || item.goneAt || null,
       // Přehled potřebuje nářadí (proužky "PŘIPRAV" a souhrn v hlavičce) a náhled na kartě.
       // U náhledu je tady schválně resolveThumbnailUrl, ne item.thumbnail: vlastní nahrané
       // náhledy jsou odkaz "local:ID" na kolekci, do které nepřihlášený nevidí, takže se do
@@ -8017,7 +8718,7 @@ async function buildVideoShareSnapshot(item) {
     timestamp: item.timestamp || null, aspectRatio: item.aspectRatio || "16/9",
     driveApiKey: state.driveApiKey || "", comments,
     expiresAt: (item.share && item.share.expiresAt) || null,
-    brokenAt: item.brokenAt || null
+    brokenAt: item.brokenAt || item.goneAt || null
   };
 }
 function videoShareUrlFor(item) {
@@ -9196,9 +9897,10 @@ function showTrainingModeVideo(lib, textItem) {
   // to jen prázdný/rozbitý embed). Chová se jako textové cvičení (dlouhý popis na místě videa),
   // ale navíc — na rozdíl od skutečného textového cvičení — pořád zůstane i přímý odkaz na
   // zdroj, protože tady je to jediná cesta, jak se k videu vůbec dostat.
-  if (lib && lib.brokenAt) {
+  if (lib && (lib.brokenAt || lib.goneAt)) {
     wrap.classList.add("hidden"); wrap.innerHTML = "";
-    const directLink = platformDirectLinkHtml(lib, "Otevřít přímo — ");
+    // U videa, které zmizelo u zdroje, by odkaz vedl do prázdna — nedává se.
+    const directLink = lib.goneAt ? "" : platformDirectLinkHtml(lib, "Otevřít přímo — ");
     fbEl.innerHTML = directLink;
     fbEl.classList.toggle("hidden", !directLink);
     const textHtml = richHasContent(lib.longDesc) ? richValueToHtml(lib.longDesc) : "";
@@ -9276,7 +9978,7 @@ function getTmCurrentInfo() {
       longDesc: v.isText ? (v.longDesc || "") : (lib ? lib.longDesc : ""),
       // Rozbité video se v "?" tlačítku neřeší stejně jako textové cvičení — dlouhý popis je
       // vidět rovnou na místě videa (viz showTrainingModeVideo), tlačítko by ho jen duplikovalo.
-      isText: !!v.isText || !!(lib && lib.brokenAt)
+      isText: !!v.isText || !!(lib && (lib.brokenAt || lib.goneAt))
     };
   }
   const lib = row.isText ? null : state.library[row.videoId];
@@ -9284,7 +9986,7 @@ function getTmCurrentInfo() {
     title: row.isText ? (row.title || "(bez názvu)") : (lib ? lib.title : "(video smazáno z knihovny)"),
     shortDesc: row.isText ? (row.shortDesc || "") : (lib ? lib.shortDesc : ""),
     longDesc: row.isText ? (row.longDesc || "") : (lib ? lib.longDesc : ""),
-    isText: !!row.isText || !!(lib && lib.brokenAt)
+    isText: !!row.isText || !!(lib && (lib.brokenAt || lib.goneAt))
   };
 }
 function refreshTmInfoBtn() {
@@ -9932,7 +10634,7 @@ function getFazeCurrentEntry() {
       shortDesc: v.isText ? (v.shortDesc || "") : (lib ? lib.shortDesc : ""),
       longDesc: v.isText ? (v.longDesc || "") : (lib ? lib.longDesc : ""),
       equipment: v.isText ? (v.equipment || []) : [...new Set([...((lib && lib.equipment) || []), ...(v.extraEquipment || [])])],
-      isText: !!v.isText, broken: !!(lib && lib.brokenAt), lib, videoId: v.isText ? null : v.videoId
+      isText: !!v.isText, broken: !!(lib && (lib.brokenAt || lib.goneAt)), gone: !!(lib && lib.goneAt), lib, videoId: v.isText ? null : v.videoId
     };
   }
   const lib = row.isText ? null : state.library[row.videoId];
@@ -9944,7 +10646,7 @@ function getFazeCurrentEntry() {
     shortDesc: row.isText ? (row.shortDesc || "") : (lib ? lib.shortDesc : ""),
     longDesc: row.isText ? (row.longDesc || "") : (lib ? lib.longDesc : ""),
     equipment: row.isText ? (row.equipment || []) : [...new Set([...((lib && lib.equipment) || []), ...(row.extraEquipment || [])])],
-    isText: !!row.isText, broken: !!(lib && lib.brokenAt), lib, videoId: row.isText ? null : row.videoId
+    isText: !!row.isText, broken: !!(lib && (lib.brokenAt || lib.goneAt)), gone: !!(lib && lib.goneAt), lib, videoId: row.isText ? null : row.videoId
   };
 }
 /** Stejná větvící logika jako getUpNextLabel/getUpNextColor výš (další video ve skupině →
@@ -10145,7 +10847,7 @@ function renderFazeVideoArea(entry) {
     // jen tichý náhledový obrázek se stejným jemným vodoznakem jako karta v Knihovně
     // (viz openDetailModal výš). Klik na něj otevře tu samou kartu.
     const thumbUrl = resolveThumbnailUrl(lib);
-    wrap.innerHTML = `<div class="tmf-thumb-broken"${thumbUrl ? ` style="background-image:url('${esc(thumbUrl)}')"` : ""}><span class="tmf-thumb-watermark">Video nevideuje</span></div>`;
+    wrap.innerHTML = `<div class="tmf-thumb-broken"${thumbUrl ? ` style="background-image:url('${esc(thumbUrl)}')"` : ""}><span class="tmf-thumb-watermark">${entry.gone ? "Video zmizelo" : "Video nevideuje"}</span></div>`;
     const fit = fitBoxForRatio(lib.aspectRatio, box.maxW, box.maxH);
     wrap.style.width = fit.w + "px";
     wrap.style.height = fit.h + "px";
@@ -10182,7 +10884,7 @@ function renderFazeBrief(main, entry) {
         <div class="tmf-title">${esc(entry.title)}</div>
         ${entry.reps ? `<div class="tmf-reps-chip">${esc(entry.reps)}</div>` : ""}
         ${hasDetail ? `<button type="button" class="tmf-detail-btn" id="tmfDetailBtn">${hasVid ? '<i class="fa-solid fa-circle-play"></i>' : '<i class="fa-regular fa-circle-question"></i>'} Detail cvičení ${tmfDetailSeen ? "" : '<span class="tmf-dot"></span>'}</button>` : ""}
-        ${entry.broken ? `<span class="tmf-direct-link">${platformDirectLinkHtml(entry.lib, "Otevřít přímo — ")}</span>` : ""}
+        ${entry.broken && !entry.gone ? `<span class="tmf-direct-link">${platformDirectLinkHtml(entry.lib, "Otevřít přímo — ")}</span>` : ""}
       </div>
     </div>`;
   const detailBtn = document.getElementById("tmfDetailBtn");
@@ -14093,7 +14795,7 @@ const HELP_DATA = [
     { title: "Přihlášení a role", icon: "fa-solid fa-key", qa: [
       { q: "Jak se přihlásím do aplikace poprvé?", a: "Na úvodní obrazovce zadej e-mail a heslo a klikni na „Přihlásit se“. Pokud ještě nemáš účet, přepni se přes odkaz „Založit účet“ pod formulářem — po založení počkáš, až tě schválí admin (viz další otázka)." },
       { q: "Jaký je rozdíl mezi rolí Editor a Prohlížeč?", a: "Editor smí přidávat a upravovat videa v knihovně i vytvářet a upravovat tréninky. Prohlížeč vidí celou sdílenou knihovnu, ale nemůže do ní zasahovat — může si ale volně skládat a upravovat vlastní tréninky z toho, co v knihovně najde.", kw: "role prohlizec editor" },
-      { q: "Kdo je admin a co může navíc?", a: "Admin je jeden konkrétní účet se správou aplikace navíc — schvaluje nové trenéry, mění jim role a spravuje pár nastavení, která platí pro všechny (třeba „Části tréninku“). Všechno to má pohromadě v okně „Správa“ (štít v hlavičce profilu) — běžný trenér ho v aplikaci vůbec nevidí.", kw: "sprava stit admin nastroje" },
+      { q: "Kdo je admin a co může navíc?", a: "Admin je jeden konkrétní účet se správou aplikace navíc — schvaluje nové trenéry, mění jim role a spravuje pár nastavení, která platí pro všechny (třeba „Části tréninku“). Taky ověřuje nahlášená videa, která zmizela u zdroje. Všechno to má pohromadě v okně „Správa“ (štít v hlavičce profilu) — běžný trenér ho v aplikaci vůbec nevidí.", kw: "sprava stit admin nastroje nahlasena videa" },
       { q: "Co se stane po založení nového účtu?", a: "Aplikace účet rovnou založí, ale přepne tě na obrazovku „čeká na schválení“ — dokud tě admin neschválí, dovnitř se nedostaneš. Stačí pak aplikaci znovu otevřít, nebo dát tlačítko „Zkontrolovat znovu“.", kw: "cekani schvaleni pending registrace" },
       { q: "Zapomněl jsem heslo, co teď?", a: "Na přihlašovací obrazovce klikni na „Zapomenuté heslo?“. Aplikace se zeptá, na jakou adresu odkaz poslat — musí to být přesně ta, kterou máš u účtu zaregistrovanou. Pak ti přijde e-mail s odkazem na nastavení nového hesla (mrkni i do spamu).", kw: "zapomenute heslo obnova reset" },
       { q: "Odkaz na nové heslo mi nepřišel. Proč?", a: "Skoro jistě proto, že máš účet na české schránce. Seznam, Centrum, Volný a spol. e-maily z aplikace tiše zahazují — nedorazí ani do spamu, prostě zmizí cestou. Řešení je mít účet na Gmailu: přihlas se (heslo zatím znáš) a v profilu si přes „Změnit e-mail“ přepni adresu. Když už se přihlásit nemůžeš, ozvi se adminovi, ten to umí přepnout za tebe.", kw: "seznam centrum volny email nedorazil nechodi spam" }
@@ -14144,7 +14846,8 @@ const HELP_DATA = [
     { title: "Jak napsat popis cvičení, aby byl k něčemu", icon: "fa-solid fa-pen-nib", qa: [
       { q: "Proč se snažit psát dlouhý a přesný popis, když já sám cvičení chápu i z krátkého?", a: "Ty ho chápeš, protože jsi cvičení možná sám vymyslel nebo viděl naživo. Kolega, co ho jen otevře v knihovně, žádný takový kontext nemá — čím přesnější popis, tím míň se musí ptát nebo hádat, jak přesně cvičení vést." },
       { q: "Jak vypadá dobrý popis cvičení?", a: "Ideálně popisuje rozestavění hráček, co přesně dělají (v pořadí, jak jde cvičení za sebou), a případně na co si dát pozor nebo jak cvičení ztížit/zlehčit. Konkrétní čísla a role („trojice“, „hráčka v poli“, „trenér hází“) fungují líp než obecné „trénink přihrávky“ — podobně jako u ukázkových textů, co aplikace nabízí přímo v poli popisu." },
-      { q: "Co když fakt nevím, jak popis sepsat?", a: "V prázdném poli popisu se zobrazuje šedý ukázkový text (placeholder), co zmizí, jakmile začneš psát — klidně se jím inspiruj, i formou (krátké věty, konkrétní čísla a role místo obecných pojmů)." }
+      { q: "Co když fakt nevím, jak popis sepsat?", a: "V prázdném poli popisu se zobrazuje šedý ukázkový text (placeholder), co zmizí, jakmile začneš psát — klidně se jím inspiruj, i formou (krátké věty, konkrétní čísla a role místo obecných pojmů)." },
+      { q: "Proč psát popis, když je u cvičení video?", a: "Protože video může u zdroje kdykoli zmizet — autor ho smaže a appka s tím nic neudělá. Z cvičení pak zůstane jen náhled a tvůj popis. Podle něj ho ostatní trenéři pořád poznají a můžou dál používat.", kw: "popis video zmizi smazane proc psat" }
     ]},
     { title: "Poctivost u hodnocení a označování", icon: "fa-solid fa-scale-balanced", qa: [
       { q: "Proč záleží na tom, jak přesně obtížnost ohodnotím?", a: "Barevný pruh u videa je průměr hodnocení všech trenérů — pomáhá při výběru cvičení podle úrovně týmu. Náhodné nebo nepromyšlené hodnocení (třeba pořád „3“, aby to bylo z krku) dělá tenhle nástroj zbytečný pro všechny, ne jen pro tebe." },
@@ -14199,18 +14902,19 @@ const HELP_DATA = [
       { q: "Jak upravím název, popis, štítky nebo vybavení u už přidaného videa?", a: "Otevři video (klikni na kartu v knihovně) a v detailu najdeš tlačítko úpravy — otevře se stejný formulář jako při přidávání." },
       { q: "Jak funguje obtížnost (barevný pruh) u videa?", a: "Obtížnost si u každého videa hodnotí každý trenér sám (1–5 hvězdiček), aplikace pak v knihovně ukazuje barevný pruh podle průměru ze všech hodnocení — není to tedy jedno pevné číslo, ale společný odhad." },
       { q: "Jak video smažu a dá se to vrátit zpátky?", a: "Smazané video putuje do Koše (najdeš ho v Knihovně), kde zůstane 14 dní a dá se kdykoli obnovit. Po 14 dnech ho aplikace sama nadobro smaže. Jde ho z Koše i rovnou smazat natrvalo dřív. Koš má každý editor — na rozdíl od správy složek a slučování štítků, které zůstávají adminovi.", kw: "kos smazat obnovit" },
-      { q: "Video se nedá přehrát (zdroj ho smazal nebo zprivátnil). Co s tím?", a: "V otevřené kartě videa jsou vedle názvu dvě malé ikonky: logo zdroje (YouTube, Disk…) a přeškrtnutá kamera. Tou kamerou video označíš jako nefunkční. Totéž je i v Knihovně v nabídce (⋮) u karty. Do otevřené karty se dostaneš i z tréninku — stačí ťuknout na náhled u cvičení, takže to jde vyřešit při přípravě tréninku.", kw: "nefunkcni video oznacit nejde prehrat ikonka" },
-      { q: "Jsem prohlížeč a video mi nejde. Co mám dělat?", a: "Vedle názvu videa máš vlaječku — ťukni na ni a aplikace o tom dá vědět adminovi. Dostaneš „Díky, admin o tom ví“ a vlaječka zešedne. Video se ti dál tváří normálně, protože to klidně může být jen tvoje připojení a ostatním hraje; jestli je vážně rozbité, posoudí trenér.", kw: "prohlizec nahlasit video vlajecka" },
-      { q: "Kam se moje hlášení dostane?", a: "Napíše se jako komentář přímo k tomu videu, označený štítkem „hlášení“ — adminovi se rozsvítí zvoneček a uvidí ho v „Co je nového“. Dá se pod ním normálně odpovídat a admin ho po opravě smaže.", kw: "hlaseni komentar zvonecek" },
+      { q: "Video se nedá přehrát. Co s tím?", a: "Záleží, jestli jde pustit aspoň přímo u zdroje (ikonka YouTube, Disku… vedle názvu v otevřené kartě). Když tam jde a jen tady v appce ne, označ ho přeškrtnutou kamerou jako nefunkční (umí editor; totéž je v Knihovně v nabídce ⋮ u karty). Když nejde ani u zdroje — autor ho smazal nebo zprivátnil — ťukni na vlaječku a nahlas to; admin to ověří a přepne cvičení na „Video zmizelo“. Do otevřené karty se dostaneš i z tréninku — stačí ťuknout na náhled u cvičení.", kw: "nefunkcni video oznacit nejde prehrat ikonka smazane zdroj" },
+      { q: "Video mi nejde. Jak to nahlásím?", a: "Vedle názvu videa v otevřené kartě je vlaječka (má ji každý). Ťukni na ni a appka se zeptá, jestli video jde pustit přímo u zdroje — tlačítko „Zkusit na …“ máš rovnou v okně. Podle odpovědi pošle adminovi hlášení, že video nejde jen tady v appce, nebo že nejde vůbec. Dostaneš „Díky, admin o tom ví“ a vlaječka zešedne. Video se ti dál tváří normálně, dokud to admin neověří — klidně to může být jen tvoje připojení.", kw: "prohlizec nahlasit video vlajecka zmizelo" },
+      { q: "Kam se moje hlášení dostane?", a: "Napíše se jako komentář přímo k tomu videu, označený štítkem „hlášení“. Když video nejde jen tady v appce, uvidí ho admin v „Co je nového“. Když nejde ani u zdroje, přijde mu do Správy k ověření a jakmile ho potvrdí nebo zamítne, dostaneš pod hlášením odpověď (rozsvítí se ti zvoneček). Kdyby ses ukliknul, hlášení můžeš sám smazat.", kw: "hlaseni komentar zvonecek smazat" },
       { q: "Co se s videem stane, když ho označím jako nefunkční?", a: "Místo přehrávače se všude (v Knihovně, v Tréninkovém režimu i ve sdílené prezentaci) ukáže náhledový obrázek s jemným vodoznakem. V kartě se navíc z drobné ikonky odkazu stane velké zelené tlačítko „Otevřít video“ — tehdy je to totiž jediná cesta, jak se na video podívat. Video se nijak nemaže a nemění. Označení platí pro všechny trenéry a kdykoli ho vrátíš odkazem „Video zase funguje“ pod tlačítkem.", kw: "vodoznak nefunkcni vratit zpet zelene tlacitko" },
       { q: "Proč je náhled nefunkčního videa vždycky na šířku, i když je video na výšku?", a: "Aby nezabíral půl obrazovky. Náhledové obrázky z YouTube i Vimea jsou stejně na šířku, takže ve vysokém rámu by se jen ořízly — takhle je vidět celý a karta zůstane přehledná. Je to ten samý poměr, jaký má zavřená karta v Knihovně." },
       { q: "Když video smažu, zmizí i ze všech tréninků, kde je použité?", a: "Trénink si video „pamatuje“, dokud ho z Koše definitivně nesmažeš — pokud ho ale mezitím obnovíš, v tréninku zůstane beze změny." }
     ]},
     { title: "Když video nefunguje", icon: "fa-solid fa-video-slash", qa: [
-      { q: "Co znamená „Video nevideuje“?", a: "Je to hláška u videí, která přestala fungovat (např. smazaný Facebook/Instagram příspěvek) — aplikace u nich místo přehrávání ukáže náhledový obrázek s jemným vodoznakem a odkazem přímo na zdroj." },
+      { q: "Co znamená „Video nevideuje“?", a: "Video je označené jako nefunkční: tady v appce nejde přehrát (třeba má zakázané vkládání), ale přímo u zdroje jde. Místo přehrávání se ukáže náhled s jemným vodoznakem a odkaz, kterým video pustíš přímo u zdroje." },
+      { q: "Co znamená „Video zmizelo“?", a: "Video u zdroje přestalo existovat (autor ho smazal) a admin to ověřil. Cvičení zůstává jako textové: náhled s vodoznakem „Video zmizelo“ a popis. Hodnocení, poznámky i místa v trénincích zůstávají. Až admin natočí vlastní video, nahradí ho ve stejné kartě.", kw: "video zmizelo smazane zdroj neexistuje" },
       { q: "Jak označím video jako nefunkční?", a: "V Knihovně otevři nabídku u karty videa (⋮) a vyber možnost označit jako nefunkční. Aplikace se předtím zeptá na potvrzení, protože to ovlivní, jak video uvidí úplně všichni trenéři." },
       { q: "Dá se to vrátit zpátky, když se video opraví?", a: "Ano, stejnou cestou přes nabídku u karty — označení jde kdykoli zrušit a video se vrátí k normálnímu přehrávání." },
-      { q: "Co uvidí ostatní trenéři u videa označeného jako nefunkční?", a: "V Knihovně i v Tréninkovém režimu se místo videa zobrazí popis cvičení jako u textového cvičení, ale s přímým odkazem na původní zdroj videa, kdyby ho chtěli i tak zkusit otevřít." }
+      { q: "Co uvidí ostatní trenéři u videa označeného jako nefunkční?", a: "V Knihovně i v Tréninkovém režimu se místo přehrávače ukáže náhled s vodoznakem „Video nevideuje“ a odkaz, kterým jde video pustit přímo u zdroje. Popis cvičení zůstává vidět jako vždycky." }
     ]},
     { title: "Sdílení jednoho videa mimo aplikaci", icon: "fa-solid fa-share-nodes", qa: [
       { q: "Jak pošlu odkaz na jedno konkrétní video někomu, kdo nemá do aplikace přístup?", a: "V nabídce u karty videa (⋮) je možnost „Sdílet“ — vygeneruje odkaz na samostatnou stránku s tímhle jedním videem, který jde poslat komukoli." },
@@ -14432,6 +15136,9 @@ document.getElementById("helpSearchInput").addEventListener("input", (e) => rend
     profileModalBackdrop: "closeProfileModalBtn",
     spravaModalBackdrop: "closeSpravaModalBtn",
     membersModalBackdrop: "closeMembersModalBtn",
+    videoReportsModalBackdrop: "closeVideoReportsModalBtn",
+    reportVideoModalBackdrop: "reportVideoCancelBtn",
+    replaceVideoModalBackdrop: "replaceVideoNewBtn",
     exerciseInfoModalBackdrop: "closeExerciseInfoModalBtn",
     cropModalBackdrop: "closeCropModalBtn",
     helpModalBackdrop: "closeHelpModalBtn",
