@@ -587,6 +587,8 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .gone-admin{border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px;margin-bottom:12px;background:var(--paper);}
 .gone-admin-hint{font-size:11.5px;color:var(--ink-faint);margin:6px 0 8px;line-height:1.4;}
 .gone-orig-link{font-size:11.5px;color:var(--ink-faint);text-decoration:underline;}
+.gone-hint{font-size:13px;line-height:1.45;color:var(--ink-soft);}
+.gone-hint i{color:var(--court);margin-right:4px;}
 .report-pill{display:inline-block;font-size:10px;font-weight:700;border-radius:999px;padding:2px 8px;margin:0 4px 2px 0;}
 .report-pill-warn{background:var(--warn-bg);border:1px solid var(--warn-border);color:var(--warn-ink);}
 .report-pill-ok{background:#E8F3EA;border:1px solid #A9CFB6;color:#2A6B41;}
@@ -2104,6 +2106,9 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
       <p class="gone-admin-hint" id="detailYtUploadHint"></p>
       <a class="gone-orig-link" id="detailGoneOrigLink" target="_blank" rel="noopener"><i class="fa-solid fa-link"></i> Původní odkaz ↗</a>
     </div>
+    <!-- Ostatní trenéři u zmizelého videa (Mek, 22. 9.: varianta C — jen hláška, bez odkazu;
+         kartu k náhradě Mekovi appka nabídne sama, až video ze svého YouTube nasdílí). -->
+    <div class="gone-admin gone-hint hidden" id="detailGoneHint"></div>
     <div class="detail-row" id="detailChips"></div>
     <div class="detail-row" id="detailMyRatingRow">
       <div class="detail-label">Tvoje obtížnost a hodnocení</div>
@@ -3117,7 +3122,7 @@ function sharedFingerprint() {
       state.trainingFocus, state.focusLibraryMap]);
   } catch (e) { return null; }
 }
-const APP_VERSION = "2026-09-22 17:13";
+const APP_VERSION = "2026-09-22 17:56";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -7787,9 +7792,10 @@ function renderDetailVideoControls(item) {
     small.title = "Otevřít video u zdroje ↗";
   }
 
-  // vrácení zpět — jen trenér a jen u označeného (nefunkční embed) videa
+  // vrácení zpět — u nefunkčního embedu trenér, u zmizelého videa jen admin (Mek, 22. 9.:
+  // po potvrzení „zmizelo“ to dřív nešlo vrátit, když se video zase rozběhlo)
   const undo = document.getElementById("detailUndoBrokenBtn");
-  undo.classList.toggle("hidden", !(jeRozbite && jeEditor));
+  undo.classList.toggle("hidden", !((jeRozbite && jeEditor) || (jeZmizele && jeAdmin)));
   undo.innerHTML = '<i class="fa-solid fa-check"></i> Video zase funguje';
 
   // přeškrtnutá kamera — jen editor, jen u funkčního videa (nefunkční embed, beze změny)
@@ -7815,6 +7821,11 @@ function renderDetailVideoControls(item) {
   // blok jen pro admina u zmizelého videa: nahrát náhradu + původní odkaz
   const goneAdmin = document.getElementById("detailGoneAdmin");
   goneAdmin.classList.toggle("hidden", !(jeZmizele && jeAdmin));
+  const goneHint = document.getElementById("detailGoneHint");
+  goneHint.classList.toggle("hidden", !(jeZmizele && !jeAdmin));
+  if (jeZmizele && !jeAdmin) {
+    goneHint.innerHTML = `<i class="fa-solid fa-video"></i>Máš vlastní natočené video tohohle cvičení? Pošli ho Mekovi (třeba přes WhatsApp) a napiš mu, že jde o „${esc(item.title || "")}“. Nahraje ho sem místo zmizelého.`;
+  }
   if (jeZmizele && jeAdmin) {
     const naTelefonu = navigator.maxTouchPoints > 0 && isMobileViewport();
     const up = document.getElementById("detailYtUploadLink");
@@ -7909,7 +7920,11 @@ document.getElementById("detailReportBtn").addEventListener("click", () => {
   if (currentDetailId) openReportVideoDialog(currentDetailId);
 });
 document.getElementById("detailUndoBrokenBtn").addEventListener("click", () => {
-  if (currentDetailId) prepniNefunkcniVideo(currentDetailId);
+  if (!currentDetailId) return;
+  const it = state.library[currentDetailId];
+  // Zmizelé video vrací jen admin (tlačítko nikdo jiný nevidí), nefunkční embed trenér.
+  if (it && it.goneAt) { if (uidCurrent === ADMIN_UID) restoreGoneVideo(currentDetailId); return; }
+  prepniNefunkcniVideo(currentDetailId);
 });
 document.getElementById("editFromDetailBtn").addEventListener("click", () => {
   closeDetailModal();
@@ -14911,7 +14926,8 @@ const HELP_DATA = [
     ]},
     { title: "Když video nefunguje", icon: "fa-solid fa-video-slash", qa: [
       { q: "Co znamená „Video nevideuje“?", a: "Video je označené jako nefunkční: tady v appce nejde přehrát (třeba má zakázané vkládání), ale přímo u zdroje jde. Místo přehrávání se ukáže náhled s jemným vodoznakem a odkaz, kterým video pustíš přímo u zdroje." },
-      { q: "Co znamená „Video zmizelo“?", a: "Video u zdroje přestalo existovat (autor ho smazal) a admin to ověřil. Cvičení zůstává jako textové: náhled s vodoznakem „Video zmizelo“ a popis. Hodnocení, poznámky i místa v trénincích zůstávají. Až admin natočí vlastní video, nahradí ho ve stejné kartě.", kw: "video zmizelo smazane zdroj neexistuje" },
+      { q: "Co znamená „Video zmizelo“?", a: "Video u zdroje přestalo existovat (autor ho smazal) a admin to ověřil. Cvičení zůstává jako textové: náhled s vodoznakem „Video zmizelo“ a popis. Hodnocení, poznámky i místa v trénincích zůstávají. Máš-li vlastní natočené video toho cvičení, pošli ho Mekovi (třeba přes WhatsApp) — nahraje ho a nahradí zmizelé ve stejné kartě.", kw: "video zmizelo smazane zdroj neexistuje vlastni natocene poslat" },
+      { q: "Co když se zmizelé video zase objeví?", a: "Admin ho v kartě vrátí tlačítkem „Video zase funguje“ a cvičení se zase normálně přehrává. U YouTube a Disku mu to navíc sama ohlásí automatická kontrola.", kw: "zmizele video zase funguje vratit objevi" },
       { q: "Jak označím video jako nefunkční?", a: "V Knihovně otevři nabídku u karty videa (⋮) a vyber možnost označit jako nefunkční. Aplikace se předtím zeptá na potvrzení, protože to ovlivní, jak video uvidí úplně všichni trenéři." },
       { q: "Dá se to vrátit zpátky, když se video opraví?", a: "Ano, stejnou cestou přes nabídku u karty — označení jde kdykoli zrušit a video se vrátí k normálnímu přehrávání." },
       { q: "Co uvidí ostatní trenéři u videa označeného jako nefunkční?", a: "V Knihovně i v Tréninkovém režimu se místo přehrávače ukáže náhled s vodoznakem „Video nevideuje“ a odkaz, kterým jde video pustit přímo u zdroje. Popis cvičení zůstává vidět jako vždycky." }
