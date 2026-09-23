@@ -155,6 +155,22 @@ body.dark-mode{
 .theme-toggle.active .theme-toggle-knob{left:28px;}
 .theme-toggle.active .theme-toggle-knob i:first-child{opacity:0;}
 .theme-toggle.active .theme-toggle-knob i:last-child{opacity:1;}
+.theme-toggle:disabled{opacity:.5;cursor:default;}
+/* ---------- Notifikace (23. 9. 2026) ----------
+   Řádek v profilu má schválně stejný tvar jako řádky ve Správě (.admin-row), jen bez čáry
+   pod sebou — v profilu stojí sám, ne v seznamu. */
+.notif-row{display:flex;align-items:center;gap:12px;width:100%;padding:12px 0;border:none;background:none;color:var(--ink);font:inherit;text-align:left;cursor:pointer;}
+.notif-row>i:first-child{width:20px;text-align:center;color:var(--court);font-size:15px;flex-shrink:0;}
+.notif-dot{width:8px;height:8px;border-radius:50%;background:var(--ok);flex-shrink:0;}
+.notif-dot.off{background:var(--line);}
+.notif-switch-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);}
+.notif-switch-row:last-of-type{border-bottom:none;}
+.notif-switch-row .lbl{flex:1;min-width:0;font-size:14px;font-weight:600;}
+.notif-switch-row .sub{display:block;font-size:11.5px;font-weight:400;color:var(--ink-faint);margin-top:2px;}
+.notif-state{display:flex;gap:9px;align-items:flex-start;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px 12px;font-size:12.5px;color:var(--ink-soft);line-height:1.5;}
+.notif-state i{color:var(--court);margin-top:2px;}
+.notif-state.warn{border-color:var(--warn);}
+.notif-state.warn i{color:var(--warn);}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{margin:0;padding:0;}
 html{overflow-x:hidden;}
@@ -701,7 +717,7 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 /* Správa (fáze 4, 21. 9. 2026) se otevírá ze štítu v hlavičce profilu, takže musí být nad ním.
    Trenéři a role, Kdo je online i Tipy se otvírají ze Správy — v DOM jsou až za ní, a se stejným
    z-indexem 60 tak vyjedou nad ní. */
-#spravaModalBackdrop,#membersModalBackdrop,#videoReportsModalBackdrop{z-index:60;}
+#spravaModalBackdrop,#membersModalBackdrop,#videoReportsModalBackdrop,#notifyModalBackdrop{z-index:60;}
 /* Video zmizelo u zdroje (22. 9. 2026): okno s otázkou po vlaječce a nabídka náhrady musí být
    nad kartou videa (z-index 210), ale pod potvrzovacími okny (700). */
 #reportVideoModalBackdrop,#replaceVideoModalBackdrop{z-index:650;}
@@ -2382,6 +2398,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
     </div>
     <p class="panel-group-title">Nastavení a záloha</p>
     <div class="admin-group">
+      <button type="button" class="admin-row" id="openNotifyKeyBtn"><i class="fa-solid fa-bell"></i><span class="admin-row-label">Klíč pro notifikace<span class="admin-row-sub" id="notifyKeyStatus"></span></span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
       <button type="button" class="admin-row" id="openDriveKeyBtn"><i class="fa-brands fa-google-drive"></i><span class="admin-row-label">Google Drive API klíč<span class="admin-row-sub" id="driveKeyStatus"></span></span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
       <button type="button" class="admin-row" id="backupLibraryBtn"><i class="fa-solid fa-download"></i><span class="admin-row-label">Stáhnout zálohu<span class="admin-row-sub" id="backupStatus">Knihovna a tréninky všech trenérů</span></span></button>
     </div>
@@ -2445,6 +2462,43 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
 </div>
 
 <!-- ===================== ZMĚNA HESLA ===================== -->
+<!-- ===================== NOTIFIKACE (fáze 1, 23. 9. 2026) =====================
+     Otevírá se z profilu. Nahoře vypínač pro tohle zařízení (povolení dává prohlížeč, takže
+     se nastavuje na každém zvlášť), pod ním tři skupiny, noční klid jen jako informace. -->
+<div id="notifyModalBackdrop" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Notifikace</h2>
+      <button class="btn btn-icon btn-ghost" id="closeNotifyModalBtn" aria-label="Zavřít"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="notif-switch-row" style="border-bottom:none;padding-top:0;">
+      <span class="lbl">Na tomhle zařízení<span class="sub" id="notifyDeviceLabel"></span></span>
+      <button type="button" class="theme-toggle" id="notifyDeviceToggle" role="switch" aria-checked="false" aria-label="Notifikace na tomhle zařízení">
+        <span class="theme-toggle-knob"><i class="fa-solid fa-bell-slash"></i><i class="fa-solid fa-bell"></i></span>
+      </button>
+    </div>
+    <div class="notif-state" id="notifyStateBox"><i class="fa-solid fa-circle-info"></i><span id="notifyStateText"></span></div>
+    <p class="panel-group-title">Co mi má chodit</p>
+    <div class="notif-switch-row">
+      <span class="lbl">Knihovna a tréninky<span class="sub">Přidané a smazané video, složky, štítky, tréninky ostatních, kopie tvého tréninku</span></span>
+      <button type="button" class="theme-toggle" id="notifyGroupLibrary" role="switch" aria-checked="true" data-group="library"><span class="theme-toggle-knob"><i class="fa-solid fa-xmark"></i><i class="fa-solid fa-check"></i></span></button>
+    </div>
+    <div class="notif-switch-row">
+      <span class="lbl">Lidé<span class="sub">Žádosti o přístup, první příchod trenéra za den</span></span>
+      <button type="button" class="theme-toggle" id="notifyGroupPeople" role="switch" aria-checked="true" data-group="people"><span class="theme-toggle-knob"><i class="fa-solid fa-xmark"></i><i class="fa-solid fa-check"></i></span></button>
+    </div>
+    <div class="notif-switch-row">
+      <span class="lbl">Videa a zpětná vazba<span class="sub">Zmizelá videa a nálezy kontroly, tipy, komentáře a zmínky</span></span>
+      <button type="button" class="theme-toggle" id="notifyGroupVideos" role="switch" aria-checked="true" data-group="videos"><span class="theme-toggle-knob"><i class="fa-solid fa-xmark"></i><i class="fa-solid fa-check"></i></span></button>
+    </div>
+    <div class="notif-state" style="margin-top:14px;"><i class="fa-regular fa-moon"></i><span><b>Noční klid 22:00–8:00.</b> V tu dobu nic nepípne. Nic se neztratí, ráno to najdeš ve zvonečku.</span></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;">
+      <button type="button" class="btn btn-sm" id="notifyTestBtn" style="margin-bottom:0;"><i class="fa-solid fa-paper-plane"></i> Zkušební notifikace</button>
+      <button type="button" class="btn btn-sm btn-ghost hidden" id="notifyForgetOthersBtn" style="margin-bottom:0;"><i class="fa-solid fa-mobile-screen"></i> Odpojit ostatní zařízení</button>
+    </div>
+  </div>
+</div>
+
 <div id="changePasswordModalBackdrop" class="modal-backdrop hidden">
   <div class="modal" style="max-width:400px;">
     <div class="modal-head">
@@ -2765,6 +2819,13 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
       <button type="submit" class="btn btn-primary btn-block" style="margin-top:6px;"><i class="fa-solid fa-floppy-disk"></i> Uložit profil</button>
     </form>
     <p class="panel-group-title">Účet</p>
+    <!-- Notifikace na telefon (fáze 1, 23. 9. 2026): jeden řádek, podrobnosti až v okně. -->
+    <button type="button" class="notif-row hidden" id="openNotifyBtn">
+      <i class="fa-solid fa-bell"></i>
+      <span class="admin-row-label">Notifikace<span class="admin-row-sub" id="notifyRowSub"></span></span>
+      <span class="notif-dot off" id="notifyRowDot"></span>
+      <i class="fa-solid fa-chevron-right admin-row-chev"></i>
+    </button>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button type="button" class="btn btn-sm hidden" id="openMyTipsBtn" style="margin-bottom:0;"><i class="fa-solid fa-paper-plane"></i> Moje tipy<span id="myTipsInlineCount" class="pending-inline-count hidden"></span></button>
       <button type="button" class="btn btn-sm" id="openChangePasswordBtn" style="margin-bottom:0;"><i class="fa-solid fa-key"></i> Změnit heslo</button>
@@ -2982,7 +3043,7 @@ import {
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
   doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, collection, collectionGroup, getDocs, onSnapshot,
-  arrayUnion, addDoc, query, where, orderBy, limit, runTransaction
+  arrayUnion, arrayRemove, addDoc, query, where, orderBy, limit, runTransaction
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 
@@ -3127,7 +3188,7 @@ function sharedFingerprint() {
       state.trainingFocus, state.focusLibraryMap]);
   } catch (e) { return null; }
 }
-const APP_VERSION = "2026-09-22 21:49";
+const APP_VERSION = "2026-09-23 16:37";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -4816,6 +4877,15 @@ async function loadUserData() {
     // nenaskočí bez ptaní. Kdo ho měl zapnutý, ponechá si svůj čas.
     trainingStartTime: legacy.showClockTimes ? (legacy.trainingStartTime || "09:00") : ""
   };
+  /* Notifikace na telefon (23. 9. 2026). Nastavení bydlí ve stejném dokumentu users/{uid},
+     ale schválně mimo state.profile — profil se ukládá celý z formuláře a notifikace by se
+     tím při každém uložení jména přepsaly. Chybějící skupina znamená zapnutá. */
+  const ng = legacy.notifyGroups || {};
+  state.notify = {
+    enabled: !!legacy.notifyPushEnabled,
+    devices: Array.isArray(legacy.fcmTokens) ? legacy.fcmTokens.length : 0,
+    groups: { library: ng.library !== false, people: ng.people !== false, videos: ng.videos !== false }
+  };
   applyColorScheme();
   // Práh pro odznaky "nové od posledního přihlášení" — aplikace si čas uloží zvlášť (ne jako
   // součást profilu), ať se nesmaže při příští úpravě jména/barev/avataru ve formuláři profilu.
@@ -4851,6 +4921,7 @@ async function loadUserData() {
     state.library = shared.library || {};
     state.folders = shared.folders || [];
     state.driveApiKey = shared.driveApiKey || "";
+    state.vapidKey = shared.vapidKey || "";
     state.tagPool = shared.tagPool || [];
     state.equipmentPool = shared.equipmentPool || [];
     state.parts = (shared.parts && shared.parts.length) ? shared.parts : structuredClone(DEFAULT_PARTS);
@@ -5187,6 +5258,7 @@ function applyRemoteSharedUpdate(shared) {
     ? shared.trainingFocus : structuredClone(DEFAULT_TRAINING_FOCUS);
   state.focusLibraryMap = shared.focusLibraryMap || seedFocusLibraryMap();
   state.driveApiKey = shared.driveApiKey || "";
+  state.vapidKey = shared.vapidKey || "";
   state.knownRevision = shared.revision || 0;
   // 2/3: právě jsme převzali serverovou verzi, takže otisk teď odpovídá serveru.
   // Bez tohohle řádku by aplikace při nejbližším uložení poslala serveru zpátky jeho
@@ -5526,28 +5598,32 @@ function handlePopoutDeepLink() {
    ========================================================= */
 /** Cíl ze sdíleného odkazu, nebo null. Čte se z adresy, nikam se neukládá — dokud se cíl
     neotevře, zůstává v adrese, a to je i paměť pro přihlášení. */
-function sharedDeepLinkTarget() {
-  const p = new URLSearchParams(location.search);
+function sharedDeepLinkTarget(search) {
+  const p = new URLSearchParams(search === undefined ? location.search : search);
   const type = p.get("open");
   const id = p.get("id") || "";
   const u = p.get("u") || "";
   if (type === "training" && u && id) return { type, u, id };
   if (type === "video" && id) return { type, id };
+  // Cíle bez vlastní veřejné stránky — používají je notifikace (23. 9. 2026).
+  if (type === "sprava" || type === "tipy") return { type };
   return null;
 }
-/** Adresa sdílené stránky pro daný cíl — záchrana pro toho, kdo se do appky nedostane. */
+/** Adresa sdílené stránky pro daný cíl — záchrana pro toho, kdo se do appky nedostane.
+    Správa ani Tipy veřejnou stránku nemají, tam se odkaz neukazuje (viz níž). */
 function sharedPageUrlFor(t) {
-  return t.type === "training"
-    ? `./t.html?u=${encodeURIComponent(t.u)}&id=${encodeURIComponent(t.id)}`
-    : `./v.html?id=${encodeURIComponent(t.id)}`;
+  if (t.type === "training") return `./t.html?u=${encodeURIComponent(t.u)}&id=${encodeURIComponent(t.id)}`;
+  if (t.type === "video") return `./v.html?id=${encodeURIComponent(t.id)}`;
+  return "";
 }
 function updateSharedDeepLinkFallback() {
   const t = sharedDeepLinkTarget();
+  const url = t ? sharedPageUrlFor(t) : "";
   ["loginSharedPageLink", "pendingSharedPageLink"].forEach(elId => {
     const el = document.getElementById(elId);
     if (!el) return;
-    el.classList.toggle("hidden", !t);
-    if (t) el.href = sharedPageUrlFor(t);
+    el.classList.toggle("hidden", !url);
+    if (url) el.href = url;
   });
 }
 updateSharedDeepLinkFallback();
@@ -5558,6 +5634,12 @@ async function handleSharedDeepLink() {
   // Adresa se uklidí hned — cíl se otvírá jen jednou, ne znovu po obnovení stránky.
   history.replaceState(null, "", location.pathname);
   updateSharedDeepLinkFallback();
+  await openTarget(target);
+}
+/** Otevře cíl. Chodí sem dvě cesty: sdílený odkaz (výš) a ťuknutí na notifikaci (sw.js). */
+async function openTarget(target) {
+  if (target.type === "sprava") { openProfileModal(); openSpravaModal(); return; }
+  if (target.type === "tipy") { openProfileModal(); openSpravaModal(); openVideoTipsModal("admin"); return; }
   if (target.type === "video") {
     const item = state.library[target.id];
     if (!item || item.deletedAt) { toast("Tohle video už v knihovně není.", 6000, "warn"); return; }
@@ -5583,6 +5665,262 @@ async function handleSharedDeepLink() {
     switchView("library");
   }
   openOverview();
+}
+
+/* =========================================================
+   NOTIFIKACE NA TELEFON (fáze 1, 23. 9. 2026 — zatím jen admin)
+   Appka sama notifikaci poslat neumí, když je zavřená. Umí jen dvě věci: vyžádat si od
+   prohlížeče povolení a uložit si „adresu tohohle zařízení“ (token) do users/{uid}.fcmTokens.
+   Posílá pak Cloud Function na serveru (functions/index.js).
+   - Knihovna firebase-messaging se natahuje LÍNĚ, až když je potřeba — při startu appky se
+     nestahuje vůbec (dřív se stahovala pokaždé, viz claude/trener-refaktoring.md).
+   - Povolení dává prohlížeč každému zařízení zvlášť, takže „zapnuto“ je vždycky jen tady.
+   - Veřejný klíč (VAPID) se nastavuje ve Správě, ať se kvůli němu nemusí sahat do kódu.
+   ========================================================= */
+let fcmMod = null;          // načtený modul firebase-messaging
+let fcmMessaging = null;    // instance pro tuhle appku
+const FCM_TOKEN_KEY = "trener_fcm_token";   // token tohohle zařízení; zdroj pravdy je Firestore
+
+function notifyGroupsSafe() {
+  const g = (state.notify && state.notify.groups) || {};
+  return { library: g.library !== false, people: g.people !== false, videos: g.videos !== false };
+}
+/** Hrubý popisek zařízení do okna („Android · Chrome“). Prohlížeč o sobě víc neřekne. */
+function notifyDeviceLabel() {
+  const ua = navigator.userAgent || "";
+  const system = /Android/i.test(ua) ? "Android" : /iPhone|iPad|iPod/i.test(ua) ? "iPhone" :
+    /Windows/i.test(ua) ? "Windows" : /Mac/i.test(ua) ? "Mac" : "Tenhle přístroj";
+  const prohlizec = /Edg\//i.test(ua) ? "Edge" : /Chrome\//i.test(ua) ? "Chrome" :
+    /Firefox\//i.test(ua) ? "Firefox" : /Safari\//i.test(ua) ? "Safari" : "prohlížeč";
+  return `${system} · ${prohlizec}`;
+}
+function notifyPermission() {
+  return ("Notification" in window) ? Notification.permission : "unsupported";
+}
+function notifyOnThisDevice() {
+  return notifyPermission() === "granted" && !!localStorage.getItem(FCM_TOKEN_KEY) && !!(state.notify && state.notify.enabled);
+}
+async function ensureMessaging() {
+  if (fcmMessaging) return true;
+  if (!("Notification" in window) || !("serviceWorker" in navigator)) return false;
+  try {
+    fcmMod = await import("https://www.gstatic.com/firebasejs/12.15.0/firebase-messaging.js");
+    if (!(await fcmMod.isSupported())) { logDebug("[notifikace] prohlížeč je neumí"); return false; }
+    fcmMessaging = fcmMod.getMessaging(fbApp);
+    // Notifikace, která dorazí, když je appka zrovna otevřená: systém ji neukáže, ať trenéra
+    // nevyrušuje dvakrát — appka ji proto vypíše jako svoji hlášku.
+    fcmMod.onMessage(fcmMessaging, (payload) => {
+      const d = (payload && payload.data) || {};
+      toast(`${d.title || "Trenér"}: ${d.body || ""}`, 8000, "info");
+    });
+    return true;
+  } catch (e) {
+    console.error("Notifikace se nepodařilo připravit:", e);
+    logDebug(`[notifikace] příprava selhala — ${(e && e.message) || e}`);
+    return false;
+  }
+}
+async function zapniNotifikaceNaZarizeni() {
+  if (!state.vapidKey) { toast("Nejdřív nastav Klíč pro notifikace ve Správě.", 7000, "warn"); return; }
+  if (!(await ensureMessaging())) { toast("Tenhle prohlížeč notifikace neumí.", 6000, "warn"); return; }
+  let perm = notifyPermission();
+  if (perm === "default") perm = await Notification.requestPermission();
+  if (perm !== "granted") { renderNotifySettings(); return; }
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const token = await fcmMod.getToken(fcmMessaging, { vapidKey: state.vapidKey, serviceWorkerRegistration: reg });
+    if (!token) { toast("Prohlížeč nevydal adresu pro notifikace. Zkus to prosím znovu.", 7000, "err"); return; }
+    await setDoc(doc(db, "users", uidCurrent), {
+      fcmTokens: arrayUnion(token), notifyPushEnabled: true, notifyGroups: notifyGroupsSafe()
+    }, { merge: true });
+    localStorage.setItem(FCM_TOKEN_KEY, token);
+    state.notify.enabled = true;
+    state.notify.devices = Math.max(1, (state.notify.devices || 0) + 1);
+    toast("Notifikace zapnuté. Zkus si poslat zkušební.", 5000);
+    logDebug("[notifikace] zapnuto na tomhle zařízení");
+  } catch (e) {
+    console.error("Zapnutí notifikací selhalo:", e);
+    logDebug(`[notifikace] zapnutí selhalo — ${(e && e.message) || e}`);
+    toast("Zapnutí notifikací selhalo. Detail v 🐞.", 7000, "err");
+  }
+  renderNotifySettings();
+}
+async function vypniNotifikaceNaZarizeni() {
+  const token = localStorage.getItem(FCM_TOKEN_KEY);
+  try {
+    if (token) {
+      // Nejdřív z Firestore, teprve pak u prohlížeče: kdyby druhý krok selhal, server už na
+      // tohle zařízení stejně neposílá. Opačné pořadí by nechalo mrtvý token v seznamu.
+      await setDoc(doc(db, "users", uidCurrent), { fcmTokens: arrayRemove(token) }, { merge: true });
+      if (await ensureMessaging()) { try { await fcmMod.deleteToken(fcmMessaging); } catch (e) { /* už neplatil */ } }
+    }
+    localStorage.removeItem(FCM_TOKEN_KEY);
+    state.notify.devices = Math.max(0, (state.notify.devices || 1) - 1);
+    // Vypínač v dokumentu shodíme, jen když to bylo poslední zařízení — jinak by se vypnuly
+    // notifikace i na ostatních.
+    if (state.notify.devices === 0) {
+      await setDoc(doc(db, "users", uidCurrent), { notifyPushEnabled: false }, { merge: true });
+      state.notify.enabled = false;
+    }
+    toast("Notifikace na tomhle zařízení vypnuté.");
+    logDebug("[notifikace] vypnuto na tomhle zařízení");
+  } catch (e) {
+    console.error("Vypnutí notifikací selhalo:", e);
+    toast("Vypnutí se nepovedlo, zkus to prosím znovu.", 6000, "err");
+  }
+  renderNotifySettings();
+}
+/** Řádek v profilu — stav na první pohled. */
+function renderNotifyRow() {
+  const btn = document.getElementById("openNotifyBtn");
+  btn.classList.toggle("hidden", uidCurrent !== ADMIN_UID);   // fáze 1: jen admin
+  if (uidCurrent !== ADMIN_UID) return;
+  const zapnuto = notifyOnThisDevice();
+  const pocetSkupin = Object.values(notifyGroupsSafe()).filter(Boolean).length;
+  document.getElementById("notifyRowDot").classList.toggle("off", !zapnuto);
+  document.getElementById("notifyRowSub").textContent = zapnuto
+    ? `Zapnuté na tomhle zařízení · ${pocetSkupin === 3 ? "všechny druhy" : pocetSkupin + " ze 3 druhů"}`
+    : (notifyPermission() === "denied" ? "Blokuje je prohlížeč" : "Vypnuté na tomhle zařízení");
+}
+function renderNotifySettings() {
+  const zapnuto = notifyOnThisDevice();
+  const perm = notifyPermission();
+  const toggle = document.getElementById("notifyDeviceToggle");
+  toggle.classList.toggle("active", zapnuto);
+  toggle.setAttribute("aria-checked", zapnuto ? "true" : "false");
+  toggle.disabled = perm === "denied" || perm === "unsupported";
+  document.getElementById("notifyDeviceLabel").textContent = notifyDeviceLabel();
+  const box = document.getElementById("notifyStateBox");
+  const text = document.getElementById("notifyStateText");
+  const ikona = box.querySelector("i");
+  box.classList.remove("warn");
+  ikona.className = "fa-solid fa-circle-info";
+  if (perm === "unsupported") {
+    box.classList.add("warn"); ikona.className = "fa-solid fa-triangle-exclamation";
+    text.textContent = "Tenhle prohlížeč notifikace neumí. Na iPhonu chodí jen appce přidané na plochu.";
+  } else if (perm === "denied") {
+    box.classList.add("warn"); ikona.className = "fa-solid fa-triangle-exclamation";
+    text.textContent = "Notifikace má zablokované prohlížeč, appka je sama zapnout nemůže. V Chromu ťukni na zámeček vedle adresy, dej Oprávnění a povol Notifikace. Pak se sem vrať.";
+  } else if (!state.vapidKey) {
+    box.classList.add("warn"); ikona.className = "fa-solid fa-triangle-exclamation";
+    text.textContent = "Chybí Klíč pro notifikace — nastav ho ve Správě, v části Nastavení a záloha.";
+  } else if (zapnuto) {
+    ikona.className = "fa-solid fa-circle-check";
+    const ostatni = Math.max(0, (state.notify.devices || 1) - 1);
+    text.textContent = ostatni
+      ? `Prohlížeč notifikace povolil. Chodí ti i na další ${ostatni === 1 ? "1 zařízení" : ostatni + " zařízení"}.`
+      : "Prohlížeč notifikace povolil. Tohle je zatím jediné zařízení.";
+  } else {
+    text.textContent = "Notifikace na tomhle zařízení nechodí. Zapni je přepínačem nahoře — prohlížeč se pak zeptá na povolení.";
+  }
+  const g = notifyGroupsSafe();
+  [["notifyGroupLibrary", "library"], ["notifyGroupPeople", "people"], ["notifyGroupVideos", "videos"]].forEach(([id, key]) => {
+    const el = document.getElementById(id);
+    el.classList.toggle("active", !!g[key]);
+    el.setAttribute("aria-checked", g[key] ? "true" : "false");
+    el.disabled = !zapnuto;
+    el.closest(".notif-switch-row").style.opacity = zapnuto ? "" : ".5";
+  });
+  document.getElementById("notifyTestBtn").disabled = !zapnuto;
+  document.getElementById("notifyForgetOthersBtn").classList.toggle("hidden", !(zapnuto && (state.notify.devices || 0) > 1));
+  renderNotifyRow();
+}
+document.getElementById("openNotifyBtn").addEventListener("click", () => {
+  renderNotifySettings();
+  document.getElementById("notifyModalBackdrop").classList.remove("hidden");
+  resetModalScroll(document.getElementById("notifyModalBackdrop"));
+});
+document.getElementById("closeNotifyModalBtn").addEventListener("click", () => {
+  document.getElementById("notifyModalBackdrop").classList.add("hidden");
+});
+document.getElementById("notifyDeviceToggle").addEventListener("click", async () => {
+  if (notifyOnThisDevice()) await vypniNotifikaceNaZarizeni();
+  else await zapniNotifikaceNaZarizeni();
+});
+["notifyGroupLibrary", "notifyGroupPeople", "notifyGroupVideos"].forEach(id => {
+  document.getElementById(id).addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    if (btn.disabled) return;
+    const key = btn.dataset.group;
+    const g = notifyGroupsSafe();
+    g[key] = !g[key];
+    state.notify.groups = g;
+    renderNotifySettings();
+    try {
+      await setDoc(doc(db, "users", uidCurrent), { notifyGroups: g }, { merge: true });
+    } catch (err) {
+      console.error("Uložení nastavení notifikací selhalo:", err);
+      toast("Změnu se nepodařilo uložit.", 5000, "err");
+    }
+  });
+});
+document.getElementById("notifyTestBtn").addEventListener("click", async (e) => {
+  const btn = e.currentTarget;
+  btn.disabled = true;
+  try {
+    const mod = await import("https://www.gstatic.com/firebasejs/12.15.0/firebase-functions.js");
+    const fns = mod.getFunctions(fbApp, "europe-west1");
+    await mod.httpsCallable(fns, "sendTestNotification")();
+    toast("Zkušební notifikace odeslána. Zamkni telefon a chvilku počkej.", 6000);
+  } catch (err) {
+    console.error("Zkušební notifikace selhala:", err);
+    logDebug(`[notifikace] zkouška selhala — ${(err && err.message) || err}`);
+    toast("Zkušební notifikaci se nepodařilo poslat. Detail v 🐞.", 7000, "err");
+  }
+  btn.disabled = false;
+  renderNotifySettings();
+});
+document.getElementById("notifyForgetOthersBtn").addEventListener("click", async () => {
+  const token = localStorage.getItem(FCM_TOKEN_KEY);
+  if (!token) return;
+  if (!(await confirmDialog("Ostatním zařízením notifikace přestanou chodit. Tomuhle zůstanou.", { title: "Odpojit ostatní zařízení?", confirmLabel: "Odpojit" }))) return;
+  try {
+    await setDoc(doc(db, "users", uidCurrent), { fcmTokens: [token] }, { merge: true });
+    state.notify.devices = 1;
+    toast("Ostatní zařízení odpojena.");
+  } catch (e) { console.error(e); toast("Nepovedlo se to, zkus to znovu.", 5000, "err"); }
+  renderNotifySettings();
+});
+/* Klíč pro notifikace (veřejný VAPID klíč z Firebase konzole) — stejná cesta jako u klíče
+   k Disku: řádek ve Správě, okénko s předvyplněnou hodnotou, uložení transakcí do sdílených
+   dat. Je to veřejný klíč, takže na něm není co tajit. */
+function updateNotifyKeyStatus() {
+  const el = document.getElementById("notifyKeyStatus");
+  if (el) el.textContent = state.vapidKey ? "Nastavený" : "Nenastavený";
+}
+document.getElementById("openNotifyKeyBtn").addEventListener("click", async () => {
+  if (uidCurrent !== ADMIN_UID) return;
+  const entered = await promptDialog(
+    "Veřejný klíč pro notifikace z Firebase konzole (Nastavení projektu → Cloud Messaging → Web Push certificates). Bez něj se notifikace nedají zapnout.",
+    { title: "Klíč pro notifikace", defaultValue: state.vapidKey || "", confirmLabel: "Uložit klíč" }
+  );
+  if (entered === null) return;
+  const key = entered.trim();
+  if (key === (state.vapidKey || "")) return;
+  state.vapidKey = key;
+  try {
+    const sharedRef = doc(db, "shared", "data");
+    let novaRevize = null;
+    await runTransaction(db, async (tx) => {
+      const snap = await tx.get(sharedRef);
+      novaRevize = ((snap.exists() ? snap.data().revision : 0) || 0) + 1;
+      tx.set(sharedRef, { vapidKey: key, revision: novaRevize }, { merge: true });
+    });
+    state.knownRevision = novaRevize;
+    toast("Klíč pro notifikace uložen.");
+  } catch (e) { console.error(e); toast("Uložení klíče selhalo.", 2200, "err"); }
+  updateNotifyKeyStatus();
+});
+/* Ťuknutí na notifikaci: sw.js najde otevřené okno appky, přepne se do něj a pošle sem
+   adresu. Appka pak otevře, co k notifikaci patří, BEZ načtení stránky znovu — jinak by
+   trenér uprostřed tréninkového režimu přišel o časomíru. */
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.addEventListener("message", (event) => {
+    const d = event.data || {};
+    if (d.type !== "trener-notifikace" || !d.url) return;
+    const target = sharedDeepLinkTarget("?" + (String(d.url).split("?")[1] || ""));
+    if (target) openTarget(target).catch(err => console.error("Otevření z notifikace selhalo:", err));
+  });
 }
 
 /* =========================================================
@@ -9085,7 +9423,11 @@ function openTrainingRowMenu(trainingId, anchorBtn) {
     const src = state.trainings[trainingId];
     const id = uid();
     const label = (state.profile && state.profile.username) || (auth.currentUser && auth.currentUser.email) || uidCurrent;
-    state.trainings[id] = { ...structuredClone(src), id, name: src.name + " (kopie)", dateCreated: Date.now(), dateModified: Date.now(), ownerUid: uidCurrent, ownerLabel: label, archived: false, public: false, visibilityDecided: false };
+    /* clonedFrom* = odkud se kopírovalo. Kvůli notifikaci „někdo si zkopíroval tvůj trénink“
+       (23. 9. 2026) — u klonu vlastního tréninku se nezapisuje, tam není komu dávat vědět. */
+    const cizi = src.ownerUid && src.ownerUid !== uidCurrent;
+    state.trainings[id] = { ...structuredClone(src), id, name: src.name + " (kopie)", dateCreated: Date.now(), dateModified: Date.now(), ownerUid: uidCurrent, ownerLabel: label, archived: false, public: false, visibilityDecided: false,
+      clonedFromOwnerUid: cizi ? src.ownerUid : null, clonedFromName: cizi ? (src.name || "") : null };
     scheduleSave();
     renderTrainingsList();
     toast("Naklonováno.");
@@ -12114,7 +12456,9 @@ document.getElementById("cloneFromReadOnlyBtn").addEventListener("click", () => 
   const src = state.trainings[currentTrainingId];
   const id = uid();
   const label = (state.profile && state.profile.username) || (auth.currentUser && auth.currentUser.email) || uidCurrent;
-  state.trainings[id] = { ...structuredClone(src), id, name: src.name + " (kopie)", dateCreated: Date.now(), dateModified: Date.now(), ownerUid: uidCurrent, ownerLabel: label, public: false, visibilityDecided: false };
+  const ciziZdroj = src.ownerUid && src.ownerUid !== uidCurrent;
+  state.trainings[id] = { ...structuredClone(src), id, name: src.name + " (kopie)", dateCreated: Date.now(), dateModified: Date.now(), ownerUid: uidCurrent, ownerLabel: label, public: false, visibilityDecided: false,
+    clonedFromOwnerUid: ciziZdroj ? src.ownerUid : null, clonedFromName: ciziZdroj ? (src.name || "") : null };
   scheduleSave();
   toast("Naklonováno do tvých tréninků.");
   openEditor(id);
@@ -13751,6 +14095,7 @@ function openProfileModal() {
   else { prev.style.backgroundImage = "none"; prev.textContent = "bez fotky"; }
   // Štít Správy vidí jen admin; všechno ostatní adminské je až v ní (fáze 4).
   document.getElementById("openSpravaBtn").classList.toggle("hidden", uidCurrent !== ADMIN_UID);
+  renderNotifyRow();
   renderPendingBadge();
   applyTipsSectionsVisibility();
   renderCommentActivityPanel();
@@ -13771,6 +14116,7 @@ function openSpravaModal() {
   renderPendingApprovals();
   renderPendingBadge();
   updateDriveKeyStatus();
+  updateNotifyKeyStatus();
   spravaModalBackdrop.classList.remove("hidden");
   resetModalScroll(spravaModalBackdrop);
 }
@@ -14935,6 +15281,8 @@ const HELP_DATA = [
       { q: "Můžu poslat jako tip i video, které v knihovně už je?", a: "Aplikace tě na to upozorní ještě ve formuláři — když odkaz pozná, ukáže žlutou hlášku s názvem videa, které už v knihovně je. Tip pak nemá smysl posílat.", kw: "duplicita tip uz v knihovne" }
     ]},
     { title: "Profil", icon: "fa-solid fa-user", qa: [
+      { q: "Co jsou Notifikace v profilu?", a: "Upozornění, která ti přijdou na telefon, i když máš aplikaci zavřenou: změny v knihovně, tréninky ostatních, žádosti o přístup, tipy, komentáře a nahlášená zmizelá videa. V profilu v části Účet je řádek Notifikace — přepínačem nahoře je zapneš na tom zařízení, kde zrovna jsi (prohlížeč se zeptá na povolení), a pod ním si vybereš ze tří druhů. Zatím je má k dispozici jen admin.", kw: "notifikace push upozorneni telefon zapnout" },
+      { q: "Proč mi notifikace nechodí, i když je mám zapnuté?", a: "Tři nejčastější důvody. Za prvé noční klid: mezi 22:00 a 8:00 se nic neposílá, ale nic se neztratí — ráno to najdeš ve zvonečku v aplikaci. Za druhé povolení: když ho prohlížeč zablokoval, aplikace to v okně Notifikace napíše a poradí, kde se vrací zpátky. Za třetí nastavení telefonu: Trenér musí mít povolená oznámení i v nastavení systému. Ověřit se to dá tlačítkem „Zkušební notifikace“ v tom samém okně.", kw: "notifikace nechodi nefunguje nocni klid povoleni" },
       { q: "Jak se odhlásím?", a: "V profilu (kolečko s tvojí iniciálou vpravo nahoře) je dole v části „Účet“ tlačítko „Odhlásit“ — spolu se „Změnit heslo“ a „Změnit e-mail“.", kw: "odhlasit odhlaseni logout" },
       { q: "Proč se mi změna barev nebo jména neuložila?", a: "Jméno, kategorie, klub, fotka a barvy se uloží až tlačítkem „Uložit profil“ pod částí Vzhled. Tmavý režim se ukládá hned sám, stejně jako tlačítka v části Účet pod ním (heslo, e-mail, odhlášení).", kw: "ulozit profil barvy jmeno neulozilo neulozila" },
       { q: "Kam zmizelo tlačítko „Stáhnout zálohu knihovny“?", a: "Zálohu teď stahuje admin — nově i s tréninky všech trenérů, takže je úplnější než dřív. Ty ji stahovat nemusíš.", kw: "zaloha zalohu stahnout knihovna zmizelo" },
@@ -15248,6 +15596,7 @@ document.getElementById("helpSearchInput").addEventListener("input", (e) => rend
     bulkImportModalBackdrop: "closeBulkImportModalBtn",
     mergeModalBackdrop: "closeMergeModalBtn",
     profileModalBackdrop: "closeProfileModalBtn",
+    notifyModalBackdrop: "closeNotifyModalBtn",
     spravaModalBackdrop: "closeSpravaModalBtn",
     membersModalBackdrop: "closeMembersModalBtn",
     videoReportsModalBackdrop: "closeVideoReportsModalBtn",
