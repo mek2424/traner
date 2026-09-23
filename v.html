@@ -68,6 +68,11 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
 .v-fallback-link{display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:999px;background:var(--court);color:#fff;text-decoration:none;font-weight:600;font-size:14.5px;}
 .v-open-source-link{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:8px;padding:9px 14px;border-radius:var(--radius-sm);background:var(--paper);border:1px solid var(--line);color:var(--ink-soft);text-decoration:none;font-weight:600;font-size:13px;}
 .v-open-source-link.hidden{display:none;}
+/* Zmizelé video (23. 9. 2026) — stejný tichý vodoznak jako karta v aplikaci a ve sdíleném
+   tréninku. Odkaz na zdroj se u něj nedává, vedl by do prázdna. */
+.v-gone-thumb{width:100%;aspect-ratio:16/9;background-color:#2b2f36;background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;border-radius:var(--radius);box-shadow:var(--shadow);}
+.v-gone-thumb.hidden{display:none;}
+.v-gone-watermark{font-family:var(--font-display);font-size:15px;letter-spacing:.05em;color:rgba(255,255,255,.88);background:rgba(20,22,20,.38);padding:7px 18px;border-radius:999px;}
 .open-in-app{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 0 10px;padding:11px 16px;border-radius:var(--radius-sm);background:var(--court);color:#fff;text-decoration:none;font-weight:600;font-size:14px;}
 .open-in-app.hidden{display:none;}
 .open-in-app-hint{display:block;text-align:center;margin:10px 0 2px;font-size:12px;color:#6B7684;text-decoration:underline;}
@@ -91,6 +96,7 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
 
 <div id="videoView">
   <a class="open-in-app hidden" id="openInAppBtn" href="#"><i class="fa-solid fa-up-right-from-square"></i> Otevřít v Trenérovi</a>
+  <div class="v-gone-thumb hidden" id="vGoneThumb"><span class="v-gone-watermark">Video zmizelo</span></div>
   <div class="v-embed-wrap hidden" id="vEmbedWrap"></div>
   <a href="#" target="_blank" rel="noopener" class="v-open-source-link hidden" id="vOpenSourceLink">Otevřít na Facebooku <i class="fa-solid fa-up-right-from-square"></i></a>
   <div class="v-part-row" id="vChips"></div>
@@ -282,6 +288,18 @@ function showVideoEmbed(item) {
   // by to jen prázdný/rozbitý embed), na jeho místě zůstane rovnou jen přímý odkaz na zdroj.
   // Dlouhý popis (a krátký popis) se zobrazují beze změny, appka je na týhle stránce ukazuje
   // vždycky, ne jen po kliknutí na "?" jako v prezentacích appky.
+  // Video, které zmizelo u zdroje: náhled s vodoznakem a ŽÁDNÝ odkaz — ten by vedl na
+  // neexistující video (Mek 23. 9.). Starší snímek bez goneAt se chová jako dřív.
+  if (item.goneAt) {
+    wrap.classList.add("hidden");
+    wrap.innerHTML = "";
+    openLink.classList.add("hidden");
+    const thumb = document.getElementById("vGoneThumb");
+    thumb.classList.remove("hidden");
+    if (item.thumbnail) thumb.style.backgroundImage = `url('${item.thumbnail}')`;
+    return;
+  }
+  document.getElementById("vGoneThumb").classList.add("hidden");
   if (item.brokenAt) {
     wrap.classList.add("hidden");
     wrap.innerHTML = "";
