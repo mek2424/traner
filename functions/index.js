@@ -51,12 +51,19 @@ const TYPE_GROUP = {
   trainingCloned: "library", // někdo si zkopíroval Mekův trénink
   access: "people",          // žádost o přístup
   online: "people",          // první příchod trenéra za den
+  rating: "videos",          // hodnocení videa hvězdičkami
+  difficulty: "videos",      // nastavená obtížnost
+  note: "videos",            // poznámka trenéra u videa
   tip: "videos",             // tip na video od prohlížeče
   comment: "videos",         // komentáře a zmínky
   goneReport: "videos",      // hlášení „video zmizelo u zdroje“
   autoCheck: "videos"        // nález automatické kontroly videí
 };
 
+/** „jednou hvězdičkou“ / „4 hvězdičkami“ — ať to není „1 hvězdičkami“. */
+function hvezdicky(n) {
+  return n === 1 ? "jednou hvězdičkou" : `${n} hvězdičkami`;
+}
 /** České množné číslo bez psaní „1 změn(a)“. */
 function pocet(n, jedna, dve, pet) {
   return n === 1 ? `1 ${jedna}` : (n >= 2 && n <= 4 ? `${n} ${dve}` : `${n} ${pet}`);
@@ -181,6 +188,50 @@ exports.onSharedDataChange = onDocumentUpdated("shared/data", async (event) => {
 
   const kdo = await jmeno(editorUid);
 
+  /* ZPĚTNÁ VAZBA (23. 9. 2026, po Mekově testu). Hodnocení, obtížnost i poznámka trenéra
+     bydlí uvnitř knihovny, takže tahle funkce je vidí jako „něco se změnilo“ — a dřív z toho
+     vypadla matoucí hláška „upravil knihovnu (popis, štítky nebo pořadí)“. Teď se porovnají
+     jmenovitě a pojmenují pravým jménem. Kouká se JEN na hodnoty toho, kdo změnu uložil.
+     Když se to týká jednoho videa, hláška ho pojmenuje a ťuknutí ho otevře; u víc videí
+     najednou se pošle jedna souhrnná, ať se druhá a třetí neztratí v tlumení. */
+  const zpetnaVazba = { rating: [], difficulty: [], note: [] };
+  Object.keys(libAfter).forEach(id => {
+    const a = libAfter[id], b = libBefore[id];
+    if (!a || !b) return;
+    const nazev = a.title || "video";
+    const hodA = (a.ratings || {})[editorUid], hodB = (b.ratings || {})[editorUid];
+    if (hodA !== hodB) zpetnaVazba.rating.push({ id, nazev, hodnota: hodA });
+    const obtA = (a.difficulties || {})[editorUid], obtB = (b.difficulties || {})[editorUid];
+    if (obtA !== obtB) zpetnaVazba.difficulty.push({ id, nazev, hodnota: obtA });
+    const poznA = JSON.stringify((a.notesByCoach || {})[editorUid] || null);
+    const poznB = JSON.stringify((b.notesByCoach || {})[editorUid] || null);
+    if (poznA !== poznB) zpetnaVazba.note.push({ id, nazev, hodnota: poznA !== "null" });
+  });
+  const textZpetneVazby = {
+    rating: (v) => v.hodnota ? `ohodnotil(a) „${v.nazev}“ ${hvezdicky(v.hodnota)}` : `zrušil(a) svoje hodnocení u „${v.nazev}“`,
+    difficulty: (v) => v.hodnota ? `nastavil(a) obtížnost u „${v.nazev}“ na ${v.hodnota}` : `zrušil(a) svoje hodnocení obtížnosti u „${v.nazev}“`,
+    note: (v) => v.hodnota ? `napsal(a) poznámku u „${v.nazev}“` : `smazal(a) svoji poznámku u „${v.nazev}“`
+  };
+  const nadpisZpetneVazby = { rating: "Trenér — hodnocení", difficulty: "Trenér — obtížnost", note: "Trenér — poznámka u videa" };
+  const souhrnZpetneVazby = {
+    rating: (n) => `ohodnotil(a) ${pocet(n, "video", "videa", "videí")}`,
+    difficulty: (n) => `nastavil(a) obtížnost u ${pocet(n, "videa", "videí", "videí")}`,
+    note: (n) => `napsal(a) poznámku u ${pocet(n, "videa", "videí", "videí")}`
+  };
+  let byloZpetneVazby = false;
+  for (const typ of ["rating", "difficulty", "note"]) {
+    const seznam = zpetnaVazba[typ];
+    if (!seznam.length) continue;
+    byloZpetneVazby = true;
+    const jedno = seznam.length === 1;
+    await notifikuj({
+      type: typ,
+      title: nadpisZpetneVazby[typ],
+      body: `${kdo} ${jedno ? textZpetneVazby[typ](seznam[0]) : souhrnZpetneVazby[typ](seznam.length)}.`,
+      url: jedno ? `${APP_URL}?open=video&id=${encodeURIComponent(seznam[0].id)}` : APP_URL
+    });
+  }
+
   if (ubylo.length) {
     const nazvy = ubylo.slice(0, 2).map(id => `„${(libBefore[id] && libBefore[id].title) || "bez názvu"}“`).join(", ");
     const zbytek = ubylo.length > 2 ? ` a ${pocet(ubylo.length - 2, "další", "další", "dalších")}` : "";
@@ -204,7 +255,8 @@ exports.onSharedDataChange = onDocumentUpdated("shared/data", async (event) => {
   if (dVybaveni > 0) casti.push("přidal(a) nové vybavení");
 
   if (!casti.length) {
-    if (ubylo.length) return;   // mazání už odešlo výš, druhou hlášku o tomtéž neposíláme
+    // Mazání i zpětná vazba už odešly výš — druhou hlášku o tomtéž neposíláme.
+    if (ubylo.length || byloZpetneVazby) return;
     casti.push("upravil(a) knihovnu (popis, štítky nebo pořadí)");
   }
   await notifikuj({
