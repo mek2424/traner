@@ -1,0 +1,11 @@
+{
+  "name": "functions",
+  "description": "Cloud Functions pro appku Trenér — posílají adminovi notifikace o změnách v knihovně, trénincích ostatních, žádostech o přístup, tipech, komentářích a nahlášených zmizelých videích (fáze 1, 23. 9. 2026).",
+  "engines": { "node": "22" },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^12.6.0",
+    "firebase-functions": "^5.1.0"
+  },
+  "private": true
+}
