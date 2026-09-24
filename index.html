@@ -3255,7 +3255,7 @@ function sharedFingerprint() {
       state.trainingFocus, state.focusLibraryMap]);
   } catch (e) { return null; }
 }
-const APP_VERSION = "2026-09-24 20:43";
+const APP_VERSION = "2026-09-24 21:31";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -5229,11 +5229,50 @@ function subscribeToSharedData() {
     }
     if (!snap.exists()) return;
     const shared = snap.data();
-    logDebug("[sync] přišla potvrzená aktualizace, počet videí v knihovně:", Object.keys(shared.library || {}).length, new Date().toISOString());
-    applyRemoteSharedUpdate(shared);
+    /* Během ukládání se aktualizace jen odloží a vyřídí se, až uložení doběhne (runSaveUserData).
+       Dřív mohla přepsat seznamy uprostřed ukládání — a transakce pak zapsala cizí data jako
+       svoje, místní úprava se tiše ztratila (24. 9. 2026, Mek: varianta A). */
+    if (saveInFlight) {
+      odlozenaAktualizace = shared;
+      logDebug("[sync] aktualizace přišla během ukládání (revize", (shared.revision || 0) + ") — počká, až uložení doběhne");
+      return;
+    }
+    zpracujAktualizaciSdilenych(shared);
   }, (err) => {
     console.error("Živá synchronizace sdílených dat selhala:", err);
   });
+}
+/** Aktualizace sdílených dat ze serveru (24. 9. 2026).
+    OZVĚNA: zápis transakcí se neukládá do místní cache jako rozepsaný, takže se vlastní uložení
+    vrací ze serveru jako „potvrzená aktualizace“ — asi vteřinu po zápisu. Dřív ji aplikace
+    brala jako cizí změnu a přepsala seznamy tím, co se právě uložilo: složka nebo štítek
+    přidaný v té vteřině tiše zmizel. Revize se zvedá s každým zápisem (hlídají to pravidla),
+    takže revize, kterou aplikace už zná, nenese nic nového.
+    CIZÍ ZMĚNA přes rozdělanou úpravu seznamů: aplikace ji převezme (jako dřív), ale nově to
+    řekne stejnou hláškou jako při souběhu u ukládání — úprava se musí zopakovat (Mek: A). */
+let odlozenaAktualizace = null;
+function zpracujAktualizaciSdilenych(shared) {
+  const revize = shared.revision || 0;
+  if (state.knownRevision !== undefined && revize <= state.knownRevision) {
+    logDebug("[sync] revize", revize, "už v aplikaci je (vlastní uložení nebo první načtení) — nic se nepřepisuje");
+    return;
+  }
+  const prepiseRozdelane = maNeulozeneSeznamy();
+  logDebug("[sync] přišla potvrzená aktualizace, počet videí v knihovně:", Object.keys(shared.library || {}).length, new Date().toISOString());
+  applyRemoteSharedUpdate(shared);
+  if (prepiseRozdelane) {
+    logDebug("[sync] cizí změna přepsala neuloženou úpravu seznamů");
+    toast("Mezitím se aplikace změnila jinde (možná zapomenuté okno) — aplikace se obnovila na nejnovější verzi. Zkus svou poslední změnu prosím zopakovat.", 10000, "warn");
+  }
+}
+/** Liší se seznamy v aplikaci (složky, štítky, vybavení, části, zaměření) od posledně
+    uložených? Knihovna se nepočítá — tu drží kolekce videos zvlášť. */
+function maNeulozeneSeznamy() {
+  if (!savedSharedFingerprint) return false;
+  try {
+    const ulozene = JSON.parse(savedSharedFingerprint).slice(1);
+    return JSON.stringify(ulozene) !== JSON.stringify([state.folders, state.tagPool, state.equipmentPool, state.parts, state.trainingFocus, state.focusLibraryMap]);
+  } catch (e) { return false; }
 }
 function unsubscribeFromSharedData() {
   if (sharedDataUnsubscribe) { sharedDataUnsubscribe(); sharedDataUnsubscribe = null; }
@@ -5393,6 +5432,11 @@ async function runSaveUserData() {
     console.error("Uložení skončilo neočekávanou chybou:", e);
   } finally {
     saveInFlight = null;
+    // Aktualizace, která přišla během ukládání (viz subscribeToSharedData), se vyřídí teď —
+    // dřív než případné další uložení, ať to pracuje s aktuální revizí.
+    const odlozena = odlozenaAktualizace;
+    odlozenaAktualizace = null;
+    if (odlozena) zpracujAktualizaciSdilenych(odlozena);
     const dalsi = saveQueued;
     saveQueued = null;
     if (dalsi) saveUserData().then(dalsi.resolve, () => dalsi.resolve(false));
@@ -5411,6 +5455,10 @@ async function saveUserDataNow() {
        Čekající mazání zápis vynutí vždycky: to je jediná operace, kde by chyba znamenala,
        že se smazané video vrátí zpátky. */
     const sharedFp = sharedFingerprint();
+    // Revize, ke které se tahle data vztahují — zachytit HNED, spolu s otiskem. Dřív se četla
+    // až po zápisu videí (await níž) a cizí změna, která mezitím přišla, ji posunula: transakce
+    // pak nepoznala souběh a místní úprava seznamů se tiše ztratila (24. 9. 2026).
+    const revizeNaZacatku = state.knownRevision;
     const sharedZmeneno = pendingLibraryDeletions.size > 0
       || sharedFp === null
       || sharedFp !== savedSharedFingerprint;
@@ -5444,7 +5492,7 @@ async function saveUserDataNow() {
        to tak není, ty se ukládají po starém a frontu mají. */
     let konfliktSeServerem = null;   // { serverRevize, data } — vyřídí se AŽ ZA transakcí
     let zapsanaRevize = null;
-    let ocekavanaRevize = state.knownRevision;   // undefined = ještě nevíme, pak se nekontroluje
+    let ocekavanaRevize = revizeNaZacatku;   // undefined = ještě nevíme, pak se nekontroluje
 
     async function zapisSdilena(zmeny) {
       await runTransaction(db, async (tx) => {
