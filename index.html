@@ -2408,7 +2408,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
     <div class="admin-group">
       <button type="button" class="admin-row" id="openNotifyKeyBtn"><i class="fa-solid fa-bell"></i><span class="admin-row-label">Klíč pro notifikace<span class="admin-row-sub" id="notifyKeyStatus"></span></span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
       <button type="button" class="admin-row" id="openDriveKeyBtn"><i class="fa-brands fa-google-drive"></i><span class="admin-row-label">Google Drive API klíč<span class="admin-row-sub" id="driveKeyStatus"></span></span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
-      <button type="button" class="admin-row" id="backupLibraryBtn"><i class="fa-solid fa-download"></i><span class="admin-row-label">Stáhnout zálohu<span class="admin-row-sub" id="backupStatus">Knihovna, náhledy, tréninky všech trenérů a nastavení</span></span></button>
+      <button type="button" class="admin-row" id="backupLibraryBtn"><i class="fa-solid fa-download"></i><span class="admin-row-label">Stáhnout zálohu<span class="admin-row-sub" id="backupStatus">Knihovna, náhledy, tréninky, komentáře, tipy a nastavení</span></span></button>
       <button type="button" class="admin-row" id="openRestoreBtn"><i class="fa-solid fa-clock-rotate-left"></i><span class="admin-row-label">Obnovit ze zálohy<span class="admin-row-sub">Porovná zálohu s dneškem, vrátí se jen to, co vybereš</span></span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
       <button type="button" class="admin-row" id="openAutoBackupBtn"><i class="fa-solid fa-folder-open"></i><span class="admin-row-label">Automatická záloha<span class="admin-row-sub" id="autoBackupStatus"></span></span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
     </div>
@@ -3255,7 +3255,7 @@ function sharedFingerprint() {
       state.trainingFocus, state.focusLibraryMap]);
   } catch (e) { return null; }
 }
-const APP_VERSION = "2026-09-24 21:31";
+const APP_VERSION = "2026-09-24 22:16";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -14741,22 +14741,55 @@ document.getElementById("confirmCropBtn").addEventListener("click", () => {
    (Mekova rozhodnutí v claude/trener-obnova-dat.md) je v ní všechno, co jde obnovou i vrátit:
    navíc zaměření, klíče, náhledy, členové a role a adminův profil. Přibyla obnova, automatická
    záloha do složky na počítači a připomínka po 7 dnech bez zálohy.
-   Tréninky ostatních, komentáře, tipy a profily ostatních obnova zatím nevrací — to je
-   2. kolo (potřebuje úpravu pravidel Firestore s razítkem obnovy).
+   2. kolo (24. 9. večer): i tréninky ostatních, komentáře, tipy a profily ostatních. Zápis do
+   cizích věcí pravidla Firestore dovolí adminovi jen s novým razítkem obnovy (restoredAt).
    ========================================================= */
 const ZALOHA_FORMAT = "trener-zaloha";
-const ZALOHA_VERZE = 2;          // 1 = záloha z 21. 9. (jen knihovna, seznamy a tréninky)
+const ZALOHA_VERZE = 3;          // 1 = 21. 9. (knihovna, seznamy, tréninky); 2 = 1. kolo obnovy; 3 = komentáře, tipy, profily
 const PRIPOMINKA_ZALOHY_DNI = 7;
 /** Pole profilu, která záloha nese a obnova umí vrátit. Adresy zařízení pro notifikace ani
     nastavení notifikací se nezálohují — patří k telefonu, ne k účtu. */
 const OBNOVA_PROFIL_POLE = ["username", "category", "club", "avatarUrl", "colorPrimary", "colorAccent", "darkMode", "trainingStartTime"];
 
-/** Sestaví zálohu ze současného stavu aplikace. Tréninky ostatních a seznam členů se musí
-    načíst — když se to nepovede, vyletí chyba a záloha nevznikne (radši žádná než neúplná). */
+/** Profil trenéra tak, jak ho záloha nese: pole OBNOVA_PROFIL_POLE a oblíbené tréninky. */
+function vyberProfil(d) {
+  const p = {};
+  OBNOVA_PROFIL_POLE.forEach(k => { if (d && d[k] !== undefined) p[k] = d[k]; });
+  p.favoriteTrainings = Array.isArray(d && d.favoriteTrainings) ? d.favoriteTrainings.slice() : [];
+  return p;
+}
+/** Komentáře všech videí jedním dotazem (collectionGroup „items“ — potřebuje pravidlo pro
+    čtení přes skupinu, 2. kolo) → { videoId: { commentId: data } }. Rovnou ze serveru: záloha
+    z neúplné místní cache by tvrdila, že komentáře chybí. */
+async function nactiKomentareVsechVidei() {
+  const snap = await getDocsFromServer(collectionGroup(db, "items"));
+  const out = {};
+  snap.forEach(d => {
+    const video = d.ref.parent.parent;
+    if (!video || !video.parent || video.parent.id !== "videoComments") return;
+    (out[video.id] = out[video.id] || {})[d.id] = d.data();
+  });
+  return out;
+}
+async function nactiTipy() {
+  const snap = await getDocsFromServer(collection(db, "videoTips"));
+  const out = {};
+  snap.forEach(d => { out[d.id] = d.data(); });
+  return out;
+}
+/** Sestaví zálohu ze současného stavu aplikace. Tréninky ostatních, seznam členů, komentáře,
+    tipy a profily se musí načíst — když se to nepovede, vyletí chyba a záloha nevznikne
+    (radši žádná než neúplná). */
 async function sestavZalohu() {
   await ensureOthersTrainingsLoaded();
   const snap = await getDoc(doc(db, "shared", "members"));
   const approved = (snap.exists() ? snap.data().approved : null) || {};
+  const [comments, tips] = await Promise.all([nactiKomentareVsechVidei(), nactiTipy()]);
+  const profiles = {};
+  await Promise.all(Object.keys(approved).filter(u => u !== uidCurrent).map(async u => {
+    const s = await getDoc(doc(db, "users", u));
+    if (s.exists()) profiles[u] = vyberProfil(s.data());
+  }));
   // Jména k uid, ať obnova umí trenéra pojmenovat, i kdyby jeho profil mezitím zmizel.
   const memberNames = {};
   await Promise.all(Object.keys(approved).map(async u => {
@@ -14785,7 +14818,10 @@ async function sestavZalohu() {
     members: { approved },
     memberNames,
     profile,
-    favoriteTrainings: [...(state.favoriteTrainings || [])]
+    favoriteTrainings: [...(state.favoriteTrainings || [])],
+    comments,
+    tips,
+    profiles
   };
 }
 /** trener-zaloha-2026-09-24.json (ruční), trener-zaloha-auto-2026-09-24.json (automatická —
@@ -14805,7 +14841,7 @@ function zapisCasZalohy() {
     .catch(e => console.warn("Uložení času zálohy selhalo:", e));
 }
 
-const BACKUP_STATUS_TEXT = "Knihovna, náhledy, tréninky všech trenérů a nastavení";
+const BACKUP_STATUS_TEXT = "Knihovna, náhledy, tréninky, komentáře, tipy a nastavení";
 document.getElementById("backupLibraryBtn").addEventListener("click", async () => {
   if (uidCurrent !== ADMIN_UID) return;
   const btn = document.getElementById("backupLibraryBtn");
@@ -14813,13 +14849,15 @@ document.getElementById("backupLibraryBtn").addEventListener("click", async () =
   if (btn.disabled) return;
   btn.disabled = true;
   status.textContent = "Připravuju zálohu…";
-  let zaloha = null;
+  let zaloha = null, chyba = null;
   try { zaloha = await sestavZalohu(); }
-  catch (e) { logDebug("[záloha] nepodařilo se sestavit:", (e && (e.code || e.message)) || e); }
+  catch (e) { chyba = e; logDebug("[záloha] nepodařilo se sestavit:", (e && (e.code || e.message)) || e); }
   btn.disabled = false;
   status.textContent = BACKUP_STATUS_TEXT;
   if (!zaloha) {
-    toast("Tréninky ostatních trenérů nebo seznam členů se nepodařilo načíst, záloha se nestáhla. Zkus to prosím znovu.", 5000, "err");
+    toast(chyba && chyba.code === "permission-denied"
+      ? "Záloha se nestáhla — Firestore nedovolil načíst komentáře. Jsou ve Firebase konzoli nasazená nová pravidla?"
+      : "Něco se nepodařilo načíst (tréninky, komentáře, tipy…), záloha se nestáhla. Zkontroluj připojení a zkus to znovu.", 8000, "err");
     return;
   }
   downloadTextFile(nazevZalohy("rucni"), JSON.stringify(zaloha, null, 2), "application/json");
@@ -14860,8 +14898,12 @@ const OBNOVA_OBLASTI = [
   { id: "casti", nazev: "Části tréninku", tvary: ["část tréninku", "části tréninku", "částí tréninku"] },
   { id: "zamereni", nazev: "Zaměření tréninků", tvary: ["zaměření", "zaměření", "zaměření"] },
   { id: "treninky", nazev: "Tvoje tréninky", tvary: ["trénink", "tréninky", "tréninků"] },
+  { id: "treninkyOstatnich", nazev: "Tréninky ostatních", tvary: ["cizí trénink", "cizí tréninky", "cizích tréninků"] },
+  { id: "komentare", nazev: "Komentáře", tvary: ["komentář", "komentáře", "komentářů"] },
+  { id: "tipy", nazev: "Tipy", tvary: ["tip", "tipy", "tipů"] },
   { id: "clenove", nazev: "Trenéři a role", tvary: ["trenér", "trenéři", "trenérů"] },
   { id: "profil", nazev: "Tvůj profil", tvary: ["profil", "profily", "profilů"] },
+  { id: "profily", nazev: "Profily ostatních", tvary: ["profil kolegy", "profily kolegů", "profilů kolegů"] },
   { id: "klice", nazev: "Klíče", tvary: ["klíč", "klíče", "klíčů"] }
 ];
 
@@ -15026,25 +15068,77 @@ function sestavPlanObnovy(zaloha, dnes) {
   porovnejTexty("stitky", zaloha.tagPool, dnes.tagPool);
   porovnejTexty("vybaveni", zaloha.equipmentPool, dnes.equipmentPool);
 
-  // --- Tréninky: v 1. kole jen vlastní ---
+  // --- Tréninky: vlastní, a od 2. kola i ostatních trenérů ---
+  // Cizí věci nejsou nikdy předem zaškrtnuté (Mek, 2. kolo otázka 1: B) — kdo si něco smazal
+  // schválně, nesmí to dostat zpátky jedním potvrzením. U každé položky je jméno trenéra.
+  const jmenoTrenera = (u, nahradni) => (dnes.jmena && dnes.jmena[u]) || (zaloha.memberNames && zaloha.memberNames[u]) || nahradni || "neznámý trenér";
   const zTr = zaloha.trainings || {}, dTr = dnes.trainings || {};
-  let cizich = 0;
   Object.keys(zTr).forEach(id => {
     const z = zTr[id];
-    if (!z) return;
-    if (z.ownerUid !== dnes.uid) { cizich++; return; }
+    if (!z || !z.ownerUid) return;
+    const moje = z.ownerUid === dnes.uid;
+    const oblast = moje ? "treninky" : "treninkyOstatnich";
+    const kdo = moje ? "" : `${jmenoTrenera(z.ownerUid, z.ownerLabel)} · `;
+    const extra = moje ? {} : { vychozi: false, vlastnik: z.ownerUid };
     const d = dTr[id];
     const n = (z.items || []).length;
-    if (!d) { pridej("treninky", id, "chybi", z.name, `${n} ${czPlural(n, "položka", "položky", "položek")}`); return; }
+    if (!d) { pridej(oblast, id, "chybi", z.name, `${kdo}${n} ${czPlural(n, "položka", "položky", "položek")}`, extra); return; }
     const pole = obnovaRozdilnaPole(z, d, OBNOVA_TRENINK_IGNOROVAT);
     if (!pole.length) return;
     const casti = [];
     if (pole.includes("name")) casti.push(`název (dnes „${d.name || ""}“)`);
     casti.push(...obnovaPopisky(pole.filter(k => k !== "name"), OBNOVA_TRENINK_POPISKY));
-    pridej("treninky", id, "zmeneno", z.name, casti.join(" · "));
+    pridej(oblast, id, "zmeneno", z.name, kdo + casti.join(" · "), extra);
   });
   pribylo.treninky = Object.keys(dTr).filter(id => dTr[id] && dTr[id].ownerUid === dnes.uid && !zTr[id]).length;
-  if (cizich) poznamky.treninky = `Tréninky ostatních trenérů obnova zatím nevrací (v záloze jich je ${cizich}).`;
+  pribylo.treninkyOstatnich = Object.keys(dTr).filter(id => dTr[id] && dTr[id].ownerUid && dTr[id].ownerUid !== dnes.uid && !zTr[id]).length;
+
+  // --- Komentáře (2. kolo) ---
+  // Hlášení „video zmizelo“ a „nefunguje“ (a odpovědi na ně) se nevracejí: jsou to vyřízené
+  // věci a vrátily by se jako nevyřízené. Vrácený komentář se objeví jen pod videem — do
+  // zvonečku „Co je nového“ se nic nezapisuje.
+  if (zaloha.comments) {
+    const zK = zaloha.comments, dK = dnes.comments || {};
+    const jeHlaseni = c => !!(c && (c.isGoneReport || c.isBrokenReport));
+    Object.keys(zK).forEach(vid => {
+      const zv = zK[vid] || {}, dv = dK[vid] || {};
+      const video = dLib[vid] || zLib[vid];
+      if (!video) return;   // komentáře k videu, které není ani dnes, ani v záloze, nemají kam
+      Object.keys(zv).forEach(cid => {
+        const z = zv[cid];
+        if (!z || jeHlaseni(z) || (z.parentId && jeHlaseni(zv[z.parentId]))) return;
+        const text = (z.text || "").replace(/\s+/g, " ").trim();
+        const ukazka = text.length > 70 ? text.slice(0, 70) + "…" : (text || "(bez textu)");
+        const detail = `u „${video.title || "bez názvu"}“ · ${z.authorLabel || jmenoTrenera(z.authorUid)}${z.parentId ? " · odpověď" : ""}`;
+        const extra = { videoId: vid, parentId: z.parentId || null, vychozi: z.authorUid === dnes.uid };
+        const d = dv[cid];
+        if (!d) { pridej("komentare", `${vid}/${cid}`, "chybi", ukazka, detail, extra); return; }
+        const pole = obnovaRozdilnaPole(z, d, ["restoredAt"]);
+        if (pole.length) pridej("komentare", `${vid}/${cid}`, "zmeneno", ukazka, `${detail} · ${pole.includes("text") ? `dnes jiný text` : "jiné údaje"}`, Object.assign(extra, { vychozi: false }));
+      });
+    });
+    let noveKomentare = 0;
+    Object.keys(dK).forEach(vid => Object.keys(dK[vid] || {}).forEach(cid => {
+      if (!jeHlaseni(dK[vid][cid]) && !((zK[vid] || {})[cid])) noveKomentare++;
+    }));
+    pribylo.komentare = noveKomentare;
+  }
+
+  // --- Tipy (2. kolo) --- posílají je prohlížeči, takže nikdy nejsou předem zaškrtnuté.
+  if (zaloha.tips) {
+    const zTp = zaloha.tips, dTp = dnes.tips || {};
+    const stav = st => ({ waiting: "čeká", approved: "zařazený", rejected: "nezařazený" }[st] || st || "?");
+    Object.keys(zTp).forEach(id => {
+      const z = zTp[id];
+      if (!z) return;
+      const detail = `od: ${z.fromLabel || jmenoTrenera(z.fromUid)} · v záloze ${stav(z.status)}`;
+      const d = dTp[id];
+      if (!d) { pridej("tipy", id, "chybi", z.title || z.url, detail, { vychozi: false }); return; }
+      const pole = obnovaRozdilnaPole(z, d, ["restoredAt"]);
+      if (pole.length) pridej("tipy", id, "zmeneno", z.title || z.url, pole.includes("status") ? `${detail}, dnes ${stav(d.status)}` : `${detail} · jiné údaje`);
+    });
+    pribylo.tipy = Object.keys(dTp).filter(id => dTp[id] && !zTp[id]).length;
+  }
 
   // --- Trenéři a role ---
   if (zaloha.members && dnes.members) {
@@ -15080,6 +15174,23 @@ function sestavPlanObnovy(zaloha, dnes) {
     }
   }
 
+  // --- Profily ostatních (2. kolo) --- jen u trenérů, kteří profil dnes mají (obnova účty nezakládá).
+  if (zaloha.profiles) {
+    const dPr = dnes.profiles || {};
+    Object.keys(zaloha.profiles).forEach(u => {
+      const zp = zaloha.profiles[u], dp = dPr[u];
+      if (!zp || !dp || u === dnes.uid) return;
+      const pole = OBNOVA_PROFIL_POLE.filter(k => k in zp && obnovaNorm(zp[k]) !== obnovaNorm(dp[k]));
+      const dFav = new Set(dp.favoriteTrainings || []);
+      const chybiFav = (zp.favoriteTrainings || []).filter(id => !dFav.has(id));
+      if (!pole.length && !chybiFav.length) return;
+      const casti = obnovaPopisky(pole, OBNOVA_PROFIL_POPISKY);
+      if (pole.includes("username")) casti[casti.indexOf("jméno")] = `jméno (dnes „${dp.username || ""}“)`;
+      if (chybiFav.length) casti.push(`chybí ${chybiFav.length} ${czPlural(chybiFav.length, "oblíbený trénink", "oblíbené tréninky", "oblíbených tréninků")}`);
+      pridej("profily", u, "zmeneno", zp.username || jmenoTrenera(u), casti.join(" · "));
+    });
+  }
+
   // --- Klíče ---
   [["driveApiKey", "Klíč k Disku"], ["vapidKey", "Klíč pro notifikace"]].forEach(([k, n]) => {
     if (!zaloha[k]) return;
@@ -15094,6 +15205,9 @@ function sestavPlanObnovy(zaloha, dnes) {
   if (!("driveApiKey" in zaloha)) chybiVZaloze.push("klíče");
   if (!zaloha.members) chybiVZaloze.push("trenéři a role");
   if (!zaloha.profile) chybiVZaloze.push("profil");
+  if (!zaloha.comments) chybiVZaloze.push("komentáře");
+  if (!zaloha.tips) chybiVZaloze.push("tipy");
+  if (!zaloha.profiles) chybiVZaloze.push("profily ostatních");
   return { polozky, pribylo, poznamky, chybiVZaloze };
 }
 
@@ -15117,12 +15231,18 @@ function zavislostiObnovy(plan, vybrane, zaloha) {
       const z = (zaloha.library || {})[p.id];
       const slozka = z && z.folderId ? podleKlice.get(`slozky:${z.folderId}`) : null;
       if (slozka && slozka.skupina === "chybi") vynut(slozka.key);
-    } else if (p.oblast === "treninky") {
+    } else if (p.oblast === "treninky" || p.oblast === "treninkyOstatnich") {
       const t = (zaloha.trainings || {})[p.id];
       if (t) getTrainingVideoIds(t).forEach(vid => {
         const v = podleKlice.get(`videa:${vid}`);
         if (v && (v.skupina === "chybi" || v.vKosi)) vynut(v.key);
       });
+    } else if (p.oblast === "komentare") {
+      // Odpověď bez komentáře, na který odpovídá, by visela ve vzduchu; komentář bez videa taky.
+      const rodic = p.parentId ? podleKlice.get(`komentare:${p.videoId}/${p.parentId}`) : null;
+      if (rodic && rodic.skupina === "chybi") vynut(rodic.key);
+      const v = podleKlice.get(`videa:${p.videoId}`);
+      if (v && (v.skupina === "chybi" || v.vKosi)) vynut(v.key);
     }
   }
   return povinne;
@@ -15131,9 +15251,12 @@ function zavislostiObnovy(plan, vybrane, zaloha) {
 /** Přenese vybrané položky ze zálohy do dat aplikace (st = state). Do Firestore nezapisuje
     nic: knihovnu, seznamy a tréninky pak zapíše běžné saveUserData() (transakce s revizí,
     obě místa knihovny, otisky), zbytek vrací k zápisu zvlášť. Vrácená videa a tréninky
-    dostanou razítko restoredAt — podle něj funkce na serveru poznají obnovu a nehlásí ji. */
-function prenesObnovuDoStavu(klice, zaloha, st, uidJa, razitko) {
-  const vysl = { pocty: {}, nahledy: {}, clenove: {}, profil: null, klice: {}, doplnenoDoNabidky: 0 };
+    dostanou razítko restoredAt — podle něj funkce na serveru poznají obnovu a nehlásí ji.
+    Cizí věci (2. kolo) se do stavu nepřenášejí vůbec — jdou k zápisu zvlášť a do aplikace
+    se promítnou až po úspěšném zápisu. dnes = čerstvá data ze serveru (sdílení, oblíbené). */
+function prenesObnovuDoStavu(klice, zaloha, st, uidJa, razitko, dnes) {
+  const vysl = { pocty: {}, nahledy: {}, clenove: {}, profil: null, klice: {}, doplnenoDoNabidky: 0,
+    ciziTreninky: {}, komentare: [], tipy: {}, profily: {} };
   const vraceneVidea = [];
   const nahradVSeznamu = (seznam, z) => {
     const i = seznam.findIndex(x => x && x.key === z.key);
@@ -15183,6 +15306,32 @@ function prenesObnovuDoStavu(klice, zaloha, st, uidJa, razitko) {
         if (d) { t.share = d.share || null; t.shareSnapshot = d.shareSnapshot || null; }
         t.restoredAt = razitko;
         st.trainings[id] = t;
+        hotovo = true;
+      }
+    } else if (oblast === "treninkyOstatnich") {
+      const z = (zaloha.trainings || {})[id];
+      if (z && z.ownerUid && z.ownerUid !== uidJa) {
+        const d = (dnes && dnes.trainings && dnes.trainings[id]) || st.trainings[id];
+        const t = structuredClone(z);
+        if (d) { t.share = d.share || null; t.shareSnapshot = d.shareSnapshot || null; }   // viz vlastní tréninky
+        t.restoredAt = razitko;
+        vysl.ciziTreninky[id] = t;
+        hotovo = true;
+      }
+    } else if (oblast === "komentare") {
+      const [vid, cid] = id.split("/");
+      const z = ((zaloha.comments || {})[vid] || {})[cid];
+      if (z) { vysl.komentare.push({ vid, cid, data: Object.assign(structuredClone(z), { restoredAt: razitko }) }); hotovo = true; }
+    } else if (oblast === "tipy") {
+      const z = (zaloha.tips || {})[id];
+      if (z) { vysl.tipy[id] = Object.assign(structuredClone(z), { restoredAt: razitko }); hotovo = true; }
+    } else if (oblast === "profily") {
+      const zp = (zaloha.profiles || {})[id];
+      if (zp && id !== uidJa) {
+        const pole = {};
+        OBNOVA_PROFIL_POLE.forEach(k => { if (k in zp) pole[k] = zp[k]; });
+        const dnesni = ((dnes && dnes.profiles && dnes.profiles[id]) || {}).favoriteTrainings || [];
+        vysl.profily[id] = { pole, oblibene: [...new Set([...dnesni, ...(zp.favoriteTrainings || [])])] };
         hotovo = true;
       }
     } else if (oblast === "clenove") {
@@ -15281,37 +15430,56 @@ document.getElementById("closeRestoreModalBtn").addEventListener("click", () => 
 /** Než se začne porovnávat, musí být data v aplikaci úplná — jinak by obnova považovala za
     „chybějící“ něco, co na serveru je, a přepsala by to starší verzí ze zálohy. Neúplný seznam
     z místní cache už jednou potichu přišel („mých: 2“, 16. 9.), proto kontrola přímo proti serveru. */
-async function nactiDnesniStavProObnovu() {
+async function nactiDnesniStavProObnovu(zaloha) {
   if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
   if (!(await saveUserData())) throw new Error("Nepodařilo se uložit rozdělané změny. Zkontroluj připojení a zkus to znovu.");
   try { await ensureOthersTrainingsLoaded(); }
   catch (e) { throw new Error("Nepodařilo se načíst tréninky. Zkontroluj připojení a zkus to znovu."); }
-  let vSnap = null, tSnap;
+  /* Cizí věci (2. kolo) se porovnávají s čerstvým stavem ze serveru, ne s tím, co aplikace
+     načetla při přihlášení — kolega mezitím mohl trénink upravit nebo smazat. */
+  let vSnap = null, trSnap, komentare, tipy;
   try {
-    vSnap = libraryFromCollection ? await getDocsFromServer(collection(db, "videos")) : null;
-    tSnap = await getDocsFromServer(collection(db, "users", uidCurrent, "trainings"));
+    [vSnap, trSnap, komentare, tipy] = await Promise.all([
+      libraryFromCollection ? getDocsFromServer(collection(db, "videos")) : Promise.resolve(null),
+      getDocsFromServer(collectionGroup(db, "trainings")),
+      nactiKomentareVsechVidei(),
+      nactiTipy()
+    ]);
   } catch (e) {
+    if (e && e.code === "permission-denied") throw new Error("Firestore nedovolil načíst komentáře nebo tréninky. Jsou ve Firebase konzoli nasazená nová pravidla?");
     throw new Error("Nejde se spojit se serverem. Obnova potřebuje spojení — zkus to, až budeš online.");
   }
+  const vlastnik = d => (d.ref.parent.parent && d.ref.parent.parent.id) || (d.data() || {}).ownerUid;
   const chybiVidei = vSnap ? vSnap.docs.filter(d => !state.library[d.id]).length : 0;
-  const chybiTreninku = tSnap.docs.filter(d => !state.trainings[d.id]).length;
+  const chybiTreninku = trSnap.docs.filter(d => vlastnik(d) === uidCurrent && !state.trainings[d.id]).length;
   if (chybiVidei || chybiTreninku) {
     logDebug(`[obnova] data v aplikaci nejsou úplná — oproti serveru chybí videí ${chybiVidei}, tréninků ${chybiTreninku}`);
     throw new Error("Data v aplikaci nejsou úplná (server má víc, než aplikace načetla). Zavři aplikaci, otevři ji znovu a zkus to ještě jednou.");
   }
+  // Vlastní tréninky z aplikace (můžou být čerstvější než server — rozdělané se uložily výš),
+  // cizí přímo ze serveru.
+  const trainings = {};
+  Object.values(state.trainings).forEach(t => { if (t && t.ownerUid === uidCurrent) trainings[t.id] = t; });
+  trSnap.docs.forEach(d => { if (vlastnik(d) !== uidCurrent) trainings[d.id] = d.data(); });
   const mSnap = await getDoc(doc(db, "shared", "members"));
   const approved = (mSnap.exists() ? mSnap.data().approved : null) || {};
   const jmena = {};
   await Promise.all(Object.keys(approved).map(async u => { jmena[u] = ((await getCoachProfile(u)) || {}).username || ""; }));
+  const profiles = {};
+  await Promise.all(Object.keys((zaloha && zaloha.profiles) || {}).filter(u => u !== uidCurrent).map(async u => {
+    try { const snap = await getDoc(doc(db, "users", u)); if (snap.exists()) profiles[u] = vyberProfil(snap.data()); }
+    catch (e) { /* profil, který nejde přečíst, obnova nenabídne */ }
+  }));
   return {
     uid: uidCurrent,
     library: state.library, thumbnails: state.thumbnails || {},
     folders: state.folders, tagPool: state.tagPool, equipmentPool: state.equipmentPool, parts: state.parts,
     trainingFocus: state.trainingFocus, focusLibraryMap: state.focusLibraryMap || {},
-    trainings: state.trainings,
+    trainings,
     members: { approved }, jmena,
     profile: state.profile || {}, favoriteTrainings: [...(state.favoriteTrainings || [])],
-    driveApiKey: state.driveApiKey || "", vapidKey: state.vapidKey || ""
+    driveApiKey: state.driveApiKey || "", vapidKey: state.vapidKey || "",
+    comments: komentare, tips: tipy, profiles
   };
 }
 
@@ -15324,14 +15492,14 @@ document.getElementById("restoreFileInput").addEventListener("change", async (e)
   try {
     zaloha = precistZalohu(await soubor.text());
     stav.textContent = "Porovnávám s dnešními daty…";
-    dnes = await nactiDnesniStavProObnovu();
+    dnes = await nactiDnesniStavProObnovu(zaloha);
   } catch (err) {
     stav.textContent = (err && err.message) || "Soubor se nepodařilo zpracovat.";
     e.target.value = "";
     return;
   }
   const plan = sestavPlanObnovy(zaloha, dnes);
-  obnova = { zaloha, plan, vybrane: new Set(plan.polozky.filter(p => p.vychozi).map(p => p.key)), nazevSouboru: soubor.name };
+  obnova = { zaloha, dnes, plan, vybrane: new Set(plan.polozky.filter(p => p.vychozi).map(p => p.key)), nazevSouboru: soubor.name };
   logDebug(`[obnova] soubor ${soubor.name}: chybí ${plan.polozky.filter(p => p.skupina === "chybi").length}, změněno ${plan.polozky.filter(p => p.skupina === "zmeneno").length}`);
   stav.textContent = "";
   vykresliObnovu();
@@ -15396,7 +15564,7 @@ function aktualizujVyberObnovy() {
   btn.innerHTML = `<i class="fa-solid fa-clock-rotate-left"></i> ${n ? `Vrátit ${n} ${czPlural(n, "položku", "položky", "položek")}` : "Vrátit vybrané"}`;
   const vybranaVidea = [...obnova.vybrane, ...povinne].some(k => k.startsWith("videa:"));
   const texty = [];
-  if (navic) texty.push(`Spolu s vybraným se vrátí ${navic} ${czPlural(navic, "položka", "položky", "položek")}, bez kterých by to nedávalo smysl (složka vraceného videa, video vraceného tréninku).`);
+  if (navic) texty.push(`Spolu s vybraným se vrátí ${navic} ${czPlural(navic, "položka", "položky", "položek")}, bez kterých by to nedávalo smysl (složka vraceného videa, video vraceného tréninku, komentář, na který vracená odpověď odpovídá).`);
   if (povinne.size) texty.push("Položky označené „jde s vybraným“ nejdou odškrtnout, dokud je vybrané něco, co je potřebuje.");
   if (vybranaVidea) texty.push("Vracená videa si s sebou vezmou i svůj náhled a štítky nebo vybavení, které dnes v nabídce chybí.");
   document.getElementById("restoreAutoText").textContent = texty.join(" ");
@@ -15456,14 +15624,14 @@ async function ulozZalohuPredObnovou() {
 /** Samotná obnova. Pořadí: záloha dnešního stavu → přenesení do dat aplikace a hned běžné
     uložení (mezi nimi není žádné čekání, takže do toho nemůže vstoupit živá aktualizace
     zvenku) → náhledy → klíče → členové → profil → kontrola, že se vybrané opravdu zapsalo. */
-async function provedObnovu(klice, zaloha, hlas) {
+async function provedObnovu(klice, zaloha, hlas, dnes) {
   const razitko = Date.now();
   const problemy = [];
   hlas("Ukládám zálohu dnešního stavu…");
   const pred = await ulozZalohuPredObnovou();
 
   hlas("Zapisuju knihovnu a tréninky…");
-  const vysl = prenesObnovuDoStavu(klice, zaloha, state, uidCurrent, razitko);
+  const vysl = prenesObnovuDoStavu(klice, zaloha, state, uidCurrent, razitko, dnes);
   const okUlozeni = await saveUserData();
   if (!okUlozeni) problemy.push("Knihovnu a tréninky se nepodařilo zapsat (výpadek spojení nebo souběžná změna odjinud).");
 
@@ -15521,6 +15689,38 @@ async function provedObnovu(klice, zaloha, hlas) {
     } catch (e) { console.error(e); problemy.push("Profil se nepodařilo zapsat."); }
   }
 
+  /* 2. kolo: cizí věci. Každý zápis nese nové razítko — jen s ním je pravidla adminovi
+     dovolí. Když Firestore odmítne (permission-denied), skoro jistě ještě nejsou nasazená
+     nová pravidla; zbytek obnovy tím neutrpí. */
+  let odmitnuto = false;
+  const zapisVse = async (popis, polozky, zapis) => {
+    if (!polozky.length) return;
+    hlas(`Zapisuju ${popis} (${polozky.length})…`);
+    let chyb = 0;
+    for (let i = 0; i < polozky.length; i += 8) {
+      await Promise.all(polozky.slice(i, i + 8).map(async x => {
+        try { await zapis(x); }
+        catch (e) { chyb++; if (e && e.code === "permission-denied") odmitnuto = true; console.error(`Obnova (${popis}) selhala:`, e); }
+      }));
+    }
+    if (chyb) problemy.push(`Nepodařilo se zapsat: ${popis} (${chyb}).`);
+  };
+  await zapisVse("tréninky ostatních", Object.entries(vysl.ciziTreninky), async ([id, t]) => {
+    await setDoc(doc(db, "users", t.ownerUid, "trainings", id), t);
+    state.trainings[id] = t;
+  });
+  await zapisVse("komentáře", vysl.komentare, async ({ vid, cid, data }) => {
+    await setDoc(doc(db, "videoComments", vid, "items", cid), data);
+  });
+  await zapisVse("tipy", Object.entries(vysl.tipy), async ([id, t]) => {
+    await setDoc(doc(db, "videoTips", id), t);
+  });
+  await zapisVse("profily ostatních", Object.entries(vysl.profily), async ([u, p]) => {
+    await setDoc(doc(db, "users", u), { ...p.pole, favoriteTrainings: p.oblibene, restoredAt: razitko }, { merge: true });
+    delete profileCache[u];   // jméno a fotka se příště načtou znovu
+  });
+  if (odmitnuto) problemy.push("Firestore část zápisů odmítl — nejspíš ještě nejsou ve Firebase konzoli nasazená nová pravidla (2. kolo obnovy).");
+
   /* Kontrola, že vybrané seznamy a tréninky v datech aplikace po uložení opravdu jsou. Když
      do ukládání vstoupila změna odjinud, seznamy mohla přepsat — obnova to pak musí říct,
      ne tvrdit, že je hotovo. Zopakovaná obnova ukáže, co ještě chybí. */
@@ -15557,7 +15757,7 @@ document.getElementById("restoreApplyBtn").addEventListener("click", async () =>
   aktualizujVyberObnovy();
   const stav = document.getElementById("restoreApplyStatus");
   let vysledek = null, chyba = null;
-  try { vysledek = await provedObnovu(klice, obnova.zaloha, t => { stav.textContent = t; }); }
+  try { vysledek = await provedObnovu(klice, obnova.zaloha, t => { stav.textContent = t; }, obnova.dnes); }
   catch (e) { chyba = e; console.error("Obnova selhala:", e); }
   obnovaBezi = false;
   stav.textContent = "";
