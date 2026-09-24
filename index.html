@@ -2478,19 +2478,24 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
       </button>
     </div>
     <div class="notif-state" id="notifyStateBox"><i class="fa-solid fa-circle-info"></i><span id="notifyStateText"></span></div>
-    <p class="panel-group-title">Co mi má chodit</p>
-    <div class="notif-switch-row">
-      <span class="lbl">Knihovna a tréninky<span class="sub">Přidané a smazané video, složky, štítky, tréninky ostatních, kopie tvého tréninku</span></span>
-      <button type="button" class="theme-toggle" id="notifyGroupLibrary" role="switch" aria-checked="true" data-group="library"><span class="theme-toggle-knob"><i class="fa-solid fa-xmark"></i><i class="fa-solid fa-check"></i></span></button>
+    <!-- Skupiny k vypnutí má jen admin. Ostatní trenéři mají jediný vypínač (Mek 23. 9.,
+         fáze 2) — chodí jim jen to, co se týká přímo jich, a toho je pár za týden. -->
+    <div id="notifyGroupsSection" class="hidden">
+      <p class="panel-group-title">Co mi má chodit</p>
+      <div class="notif-switch-row">
+        <span class="lbl">Knihovna a tréninky<span class="sub">Přidané a smazané video, složky, štítky, tréninky ostatních, kopie tvého tréninku</span></span>
+        <button type="button" class="theme-toggle" id="notifyGroupLibrary" role="switch" aria-checked="true" data-group="library"><span class="theme-toggle-knob"><i class="fa-solid fa-xmark"></i><i class="fa-solid fa-check"></i></span></button>
+      </div>
+      <div class="notif-switch-row">
+        <span class="lbl">Lidé<span class="sub">Žádosti o přístup, první příchod trenéra za den</span></span>
+        <button type="button" class="theme-toggle" id="notifyGroupPeople" role="switch" aria-checked="true" data-group="people"><span class="theme-toggle-knob"><i class="fa-solid fa-xmark"></i><i class="fa-solid fa-check"></i></span></button>
+      </div>
+      <div class="notif-switch-row">
+        <span class="lbl">Videa a zpětná vazba<span class="sub">Zmizelá videa a nálezy kontroly, tipy, komentáře a zmínky</span></span>
+        <button type="button" class="theme-toggle" id="notifyGroupVideos" role="switch" aria-checked="true" data-group="videos"><span class="theme-toggle-knob"><i class="fa-solid fa-xmark"></i><i class="fa-solid fa-check"></i></span></button>
+      </div>
     </div>
-    <div class="notif-switch-row">
-      <span class="lbl">Lidé<span class="sub">Žádosti o přístup, první příchod trenéra za den</span></span>
-      <button type="button" class="theme-toggle" id="notifyGroupPeople" role="switch" aria-checked="true" data-group="people"><span class="theme-toggle-knob"><i class="fa-solid fa-xmark"></i><i class="fa-solid fa-check"></i></span></button>
-    </div>
-    <div class="notif-switch-row">
-      <span class="lbl">Videa a zpětná vazba<span class="sub">Zmizelá videa a nálezy kontroly, tipy, komentáře a zmínky</span></span>
-      <button type="button" class="theme-toggle" id="notifyGroupVideos" role="switch" aria-checked="true" data-group="videos"><span class="theme-toggle-knob"><i class="fa-solid fa-xmark"></i><i class="fa-solid fa-check"></i></span></button>
-    </div>
+    <div class="notif-state hidden" id="notifyWhatBox" style="margin-top:14px;"><i class="fa-solid fa-list-check"></i><span>Přijde ti, když někdo napíše ke tvému videu, zmíní tě v komentáři, ohodnotí tvoje video nebo si zkopíruje tvůj trénink z Tržiště. A když Mek vyřídí tvůj tip.</span></div>
     <div class="notif-state" style="margin-top:14px;"><i class="fa-regular fa-moon"></i><span><b>Noční klid 22:00–8:00.</b> V tu dobu nic nepípne. Nic se neztratí, ráno to najdeš ve zvonečku.</span></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;">
       <button type="button" class="btn btn-sm" id="notifyTestBtn" style="margin-bottom:0;"><i class="fa-solid fa-paper-plane"></i> Zkušební notifikace</button>
@@ -3188,7 +3193,7 @@ function sharedFingerprint() {
       state.trainingFocus, state.focusLibraryMap]);
   } catch (e) { return null; }
 }
-const APP_VERSION = "2026-09-23 18:39";
+const APP_VERSION = "2026-09-24 15:24";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -5606,7 +5611,7 @@ function sharedDeepLinkTarget(search) {
   if (type === "training" && u && id) return { type, u, id };
   if (type === "video" && id) return { type, id };
   // Cíle bez vlastní veřejné stránky — používají je notifikace (23. 9. 2026).
-  if (type === "sprava" || type === "tipy") return { type };
+  if (type === "sprava" || type === "tipy" || type === "mojetipy") return { type };
   return null;
 }
 /** Adresa sdílené stránky pro daný cíl — záchrana pro toho, kdo se do appky nedostane.
@@ -5640,6 +5645,8 @@ async function handleSharedDeepLink() {
 async function openTarget(target) {
   if (target.type === "sprava") { openProfileModal(); openSpravaModal(); return; }
   if (target.type === "tipy") { openProfileModal(); openSpravaModal(); openVideoTipsModal("admin"); return; }
+  // Vyřízený tip (fáze 2) vede trenéra do jeho vlastního přehledu tipů, ne do adminského.
+  if (target.type === "mojetipy") { openProfileModal(); openVideoTipsModal("mine"); return; }
   if (target.type === "video") {
     const item = state.library[target.id];
     if (!item || item.deletedAt) { toast("Tohle video už v knihovně není.", 6000, "warn"); return; }
@@ -5773,13 +5780,16 @@ async function vypniNotifikaceNaZarizeni() {
 /** Řádek v profilu — stav na první pohled. */
 function renderNotifyRow() {
   const btn = document.getElementById("openNotifyBtn");
-  btn.classList.toggle("hidden", uidCurrent !== ADMIN_UID);   // fáze 1: jen admin
-  if (uidCurrent !== ADMIN_UID) return;
+  btn.classList.remove("hidden");   // fáze 2 (23. 9.): notifikace má každý trenér
   const zapnuto = notifyOnThisDevice();
   const pocetSkupin = Object.values(notifyGroupsSafe()).filter(Boolean).length;
   document.getElementById("notifyRowDot").classList.toggle("off", !zapnuto);
+  // Podtitulek se skupinami dává smysl jen adminovi — ostatní mají jediný vypínač.
+  const druhy = uidCurrent === ADMIN_UID
+    ? ` · ${pocetSkupin === 3 ? "všechny druhy" : pocetSkupin + " ze 3 druhů"}`
+    : "";
   document.getElementById("notifyRowSub").textContent = zapnuto
-    ? `Zapnuté na tomhle zařízení · ${pocetSkupin === 3 ? "všechny druhy" : pocetSkupin + " ze 3 druhů"}`
+    ? `Zapnuté na tomhle zařízení${druhy}`
     : (notifyPermission() === "denied" ? "Blokuje je prohlížeč" : "Vypnuté na tomhle zařízení");
 }
 function renderNotifySettings() {
@@ -5813,6 +5823,10 @@ function renderNotifySettings() {
   } else {
     text.textContent = "Notifikace na tomhle zařízení nechodí. Zapni je přepínačem nahoře — prohlížeč se pak zeptá na povolení.";
   }
+  // Skupiny vidí jen admin; trenérům se místo nich ukáže věta, co jim vlastně přijde.
+  const jsemAdmin = uidCurrent === ADMIN_UID;
+  document.getElementById("notifyGroupsSection").classList.toggle("hidden", !jsemAdmin);
+  document.getElementById("notifyWhatBox").classList.toggle("hidden", jsemAdmin);
   const g = notifyGroupsSafe();
   [["notifyGroupLibrary", "library"], ["notifyGroupPeople", "people"], ["notifyGroupVideos", "videos"]].forEach(([id, key]) => {
     const el = document.getElementById(id);
@@ -15287,8 +15301,11 @@ const HELP_DATA = [
       { q: "Můžu poslat jako tip i video, které v knihovně už je?", a: "Aplikace tě na to upozorní ještě ve formuláři — když odkaz pozná, ukáže žlutou hlášku s názvem videa, které už v knihovně je. Tip pak nemá smysl posílat.", kw: "duplicita tip uz v knihovne" }
     ]},
     { title: "Profil", icon: "fa-solid fa-user", qa: [
-      { q: "Co jsou Notifikace v profilu?", a: "Upozornění, která ti přijdou na telefon, i když máš aplikaci zavřenou: změny v knihovně, tréninky ostatních, žádosti o přístup, tipy, komentáře a nahlášená zmizelá videa. V profilu v části Účet je řádek Notifikace — přepínačem nahoře je zapneš na tom zařízení, kde zrovna jsi (prohlížeč se zeptá na povolení), a pod ním si vybereš ze tří druhů. Zatím je má k dispozici jen admin.", kw: "notifikace push upozorneni telefon zapnout" },
-      { q: "Proč mi notifikace nechodí, i když je mám zapnuté?", a: "Tři nejčastější důvody. Za prvé noční klid: mezi 22:00 a 8:00 se nic neposílá, ale nic se neztratí — ráno to najdeš ve zvonečku v aplikaci. Za druhé povolení: když ho prohlížeč zablokoval, aplikace to v okně Notifikace napíše a poradí, kde se vrací zpátky. Za třetí nastavení telefonu: Trenér musí mít povolená oznámení i v nastavení systému. Ověřit se to dá tlačítkem „Zkušební notifikace“ v tom samém okně.", kw: "notifikace nechodi nefunguje nocni klid povoleni" },
+      { q: "Co jsou Notifikace a co mi bude chodit?", a: "Upozornění na telefon, která přijdou, i když máš aplikaci zavřenou. Tobě jako trenérovi chodí jen to, co se týká přímo tebe: někdo napsal komentář ke tvému videu, někdo tě zmínil v komentáři, někdo ohodnotil tvoje video (hvězdičky nebo obtížnost), někdo si zkopíroval tvůj trénink z Tržiště, a když pošleš tip na video, dozvíš se, jestli ho Mek zařadil. Nic jiného ti nechodí — o dění v knihovně ani o trénincích ostatních ti aplikace nepíše. Mezi 22:00 a 8:00 je noční klid a nepípne nic. Nic se tím ale neztratí: všechno zůstává ve zvonečku v aplikaci a ráno to tam najdeš.", kw: "notifikace push upozorneni telefon co chodi" },
+      { q: "Jak si zapnu notifikace na Androidu? (podrobně)", a: "1) Nejdřív si dej Trenéra na plochu telefonu: v Chromu otevři aplikaci, nahoře ťukni na ikonu se šipkou, nebo v nabídce (tři tečky) vyber „Přidat na plochu“. Není to povinné, ale notifikace pak fungují spolehlivěji a otevírají se rovnou v aplikaci. 2) Otevři Trenéra a ťukni na kolečko se svou iniciálou vpravo nahoře. 3) V části Účet ťukni na řádek „Notifikace“. 4) Přepni vypínač „Na tomhle zařízení“. 5) Prohlížeč se zeptá, jestli povolíš oznámení — dej Povolit. Když se nezeptá a aplikace hlásí, že je blokuje prohlížeč, ťukni v Chromu na zámeček vedle adresy, dej Oprávnění a Notifikace přepni na Povolit. 6) Ještě zkontroluj systém: Nastavení telefonu → Aplikace → Trenér → Oznámení a nech je zapnutá. Na Samsungu se to jmenuje „Povolit oznámení“. 7) Zpátky v aplikaci ťukni na „Zkušební notifikace“, zamkni telefon a do pár vteřin má pípnout. Ťuknutím na ni se otevře to, čeho se týká.", kw: "android notifikace zapnout navod chrome opravneni oznameni samsung" },
+      { q: "Jak si zapnu notifikace na iPhonu? (podrobně)", a: "Na iPhonu je jedna podmínka navíc: notifikace chodí jen aplikaci přidané na plochu, v Safari na kartě nefungují. 1) Otevři Trenéra v Safari (v Chromu na iPhonu to nejde). 2) Dole ťukni na Sdílet (čtvereček se šipkou nahoru; podle verze iOS může být pod třemi tečkami) a vyber „Přidat na plochu“, pak Přidat. 3) Trenéra od téhle chvíle otevírej ikonou z plochy, ne ze Safari. 4) V aplikaci ťukni na kolečko se svou iniciálou vpravo nahoře, v části Účet na řádek „Notifikace“ a přepni vypínač „Na tomhle zařízení“. 5) iPhone se zeptá na povolení — dej Povolit. 6) Zkontroluj Nastavení → Oznámení → Trenér, že jsou zapnutá. 7) Ťukni na „Zkušební notifikace“ a zamkni telefon. Pozor: potřebuješ novější iOS (zhruba 16.4 a výš). Když v okně Notifikace svítí, že to prohlížeč neumí, znamená to nejčastěji, že máš Trenéra otevřeného ze Safari, ne z plochy.", kw: "iphone ios notifikace zapnout navod safari plocha pridat" },
+      { q: "Notifikace mi nechodí. Co zkusit?", a: "Postupně: 1) Noční klid — mezi 22:00 a 8:00 se schválně neposílá nic. 2) Ťukni v profilu na Notifikace a podívej se na řádek pod vypínačem; aplikace tam píše, co je špatně (blokované povolení, vypnuté zařízení). 3) Zkus „Zkušební notifikace“. Když přijde a ostatní ne, znamená to, že se prostě nic nestalo — chodí jen věci, které se týkají přímo tebe. 4) Zkontroluj oznámení v nastavení telefonu (Android: Nastavení → Aplikace → Trenér → Oznámení; iPhone: Nastavení → Oznámení → Trenér). 5) Na iPhonu musíš mít Trenéra spuštěného z plochy. 6) Zkus vypínač vypnout a zase zapnout, aplikace si tím vyžádá novou adresu pro tvůj telefon. 7) Když si telefon šetří baterii do krajnosti, může notifikace zdržet — u Trenéra vypni omezení baterie.", kw: "notifikace nechodi nefunguje nocni klid povoleni baterie" },
+      { q: "Notifikace mi chodí na dvě zařízení, nebo je chci vypnout. Jak na to?", a: "Notifikace se zapínají na každém zařízení zvlášť, takže když si Trenéra otevřeš na telefonu i na počítači, můžeš je mít na obou. V profilu → Notifikace uvidíš, na kolika zařízeních chodí, a tlačítkem „Odpojit ostatní zařízení“ je necháš jen tady. Úplné vypnutí je stejný přepínač, kterým jsi je zapnul — vypne se jen tohle zařízení, ostatní běží dál.", kw: "notifikace vypnout zarizeni odpojit pocitac telefon" },
       { q: "Jak se odhlásím?", a: "V profilu (kolečko s tvojí iniciálou vpravo nahoře) je dole v části „Účet“ tlačítko „Odhlásit“ — spolu se „Změnit heslo“ a „Změnit e-mail“.", kw: "odhlasit odhlaseni logout" },
       { q: "Proč se mi změna barev nebo jména neuložila?", a: "Jméno, kategorie, klub, fotka a barvy se uloží až tlačítkem „Uložit profil“ pod částí Vzhled. Tmavý režim se ukládá hned sám, stejně jako tlačítka v části Účet pod ním (heslo, e-mail, odhlášení).", kw: "ulozit profil barvy jmeno neulozilo neulozila" },
       { q: "Kam zmizelo tlačítko „Stáhnout zálohu knihovny“?", a: "Zálohu teď stahuje admin — nově i s tréninky všech trenérů, takže je úplnější než dřív. Ty ji stahovat nemusíš.", kw: "zaloha zalohu stahnout knihovna zmizelo" },
