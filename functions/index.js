@@ -24,6 +24,9 @@
  * POZOR NA SMYČKU: žádná z těchhle funkcí nesmí zapisovat do kolekce, kterou sama hlídá.
  * Stav tlumení proto bydlí v samostatné kolekci notifyState, kam nikdo jiný nesahá.
  *
+ * RAZÍTKO OBNOVY (24. 9. 2026): co vrací obnova ze zálohy, nese pole restoredAt. Takový zápis
+ * není práce trenéra, takže se nehlásí — viz jeObnova() níž (Mekovo rozhodnutí A, otázka 7).
+ *
  * NASAZENÍ (dělá Mek z počítače):
  *   cd functions && npm install
  *   firebase deploy --only functions
@@ -66,6 +69,17 @@ const TYPE_GROUP = {
   goneReport: "videos",      // hlášení „video zmizelo u zdroje“
   autoCheck: "videos"        // nález automatické kontroly videí
 };
+
+/** RAZÍTKO OBNOVY (24. 9. 2026). Obnova ze zálohy (jen admin, Správa → Obnovit ze zálohy)
+    připíše ke každému dokumentu, který vrací, pole restoredAt s časem obnovy. Zápis, který
+    razítko PŘINESL (před ním nebylo, nebo bylo jiné), je obnova — nehlásí se, jinak by
+    trenérům chodily falešné hlášky („zkopíroval tvůj trénink“, „video zmizelo“…).
+    Pozdější běžné úpravy téhož dokumentu nesou razítko dál beze změny, takže se hlásí
+    normálně. Dokument, který vznikl rovnou s razítkem (pred = null), je taky obnova. */
+function jeObnova(pred, po) {
+  if (!po || !po.restoredAt) return false;
+  return !pred || pred.restoredAt !== po.restoredAt;
+}
 
 /** „jednou hvězdičkou“ / „4 hvězdičkami“ — ať to není „1 hvězdičkami“. */
 function hvezdicky(n) {
@@ -191,6 +205,7 @@ async function notifikuj(uid, { type, title, body, url, key }) {
 exports.onSharedDataChange = onDocumentUpdated("shared/data", async (event) => {
   const before = event.data.before.data() || {};
   const after = event.data.after.data() || {};
+  if (jeObnova(before, after)) return;
   const editorUid = after.lastEditedBy;
   if (!editorUid || editorUid === ADMIN_UID) return;
 
@@ -324,6 +339,8 @@ exports.onTrainingChange = onDocumentWritten("users/{uid}/trainings/{trainingId}
 
   const bylo = event.data.before.exists;
   const je = event.data.after.exists;
+  // Vrácení tréninku ze zálohy (i smazaného) není práce trenéra — nehlásí se.
+  if (je && jeObnova(bylo ? event.data.before.data() : null, event.data.after.data())) return;
   const src = je ? event.data.after.data() : (event.data.before.data() || {});
   const nazev = src.name || "trénink";
   const kdo = await jmeno(uid);
@@ -362,6 +379,7 @@ exports.onUserHeartbeat = onDocumentWritten("users/{uid}", async (event) => {
 
   const before = event.data.before.exists ? (event.data.before.data() || {}) : {};
   const after = event.data.after.data() || {};
+  if (jeObnova(event.data.before.exists ? before : null, after)) return;
   if (!after.heartbeatAt || after.heartbeatAt === before.heartbeatAt) return;
 
   const den = prazskyDen(after.heartbeatAt);
@@ -399,6 +417,7 @@ exports.onAccessRequest = onDocumentCreated("pendingRequests/{uid}", async (even
    ========================================================= */
 exports.onVideoTip = onDocumentCreated("videoTips/{tipId}", async (event) => {
   const d = (event.data && event.data.data()) || {};
+  if (d.restoredAt) return;   // tip vrácený ze zálohy, ne nový
   if (!d.fromUid || d.fromUid === ADMIN_UID) return;
   const kdo = d.fromLabel || await jmeno(d.fromUid);
   await notifikuj(ADMIN_UID, {
@@ -417,6 +436,7 @@ exports.onVideoTip = onDocumentCreated("videoTips/{tipId}", async (event) => {
    ========================================================= */
 exports.onCommentActivity = onDocumentCreated("commentActivity/{id}", async (event) => {
   const d = (event.data && event.data.data()) || {};
+  if (d.restoredAt) return;   // záznam vrácený ze zálohy, ne nový komentář
   if (!d.authorUid || d.authorUid === ADMIN_UID) return;
   if (d.isBrokenReport) return;
   if (d.goneEvent === "retract") return;   // stažené hlášení: počet ve Správě se sníží sám
@@ -474,6 +494,7 @@ exports.onCommentActivity = onDocumentCreated("commentActivity/{id}", async (eve
 exports.onVideoTipResolved = onDocumentUpdated("videoTips/{tipId}", async (event) => {
   const before = event.data.before.data() || {};
   const after = event.data.after.data() || {};
+  if (jeObnova(before, after)) return;
   if (before.status === after.status) return;
   if (after.status !== "approved" && after.status !== "rejected") return;
   if (!after.fromUid || after.fromUid === ADMIN_UID) return;
@@ -500,6 +521,8 @@ exports.onVideoTipResolved = onDocumentUpdated("videoTips/{tipId}", async (event
    kdo u sebe Trenéra už někdy měl.
    ========================================================= */
 exports.onMembersChange = onDocumentUpdated("shared/members", async (event) => {
+  // Trenér vrácený do seznamu obnovou ze zálohy nedostane „Mek ti schválil přístup“.
+  if (jeObnova(event.data.before.data() || {}, event.data.after.data() || {})) return;
   const pred = ((event.data.before.data() || {}).approved) || {};
   const po = ((event.data.after.data() || {}).approved) || {};
   const pribyli = Object.keys(po).filter(uid => !pred[uid] && uid !== ADMIN_UID);
@@ -521,6 +544,7 @@ exports.onMembersChange = onDocumentUpdated("shared/members", async (event) => {
 exports.onVideoAutoCheck = onDocumentUpdated("videos/{videoId}", async (event) => {
   const before = event.data.before.data() || {};
   const after = event.data.after.data() || {};
+  if (jeObnova(before, after)) return;
   const a = after.autoCheck, b = before.autoCheck;
   if (!a || !a.result) return;
   if (b && b.result === a.result && b.at === a.at) return;
