@@ -2497,6 +2497,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
     </div>
     <div class="notif-state hidden" id="notifyWhatBox" style="margin-top:14px;"><i class="fa-solid fa-list-check"></i><span>Přijde ti, když někdo napíše ke tvému videu, zmíní tě v komentáři, ohodnotí tvoje video nebo si zkopíruje tvůj trénink z Tržiště. A když Mek vyřídí tvůj tip.</span></div>
     <div class="notif-state" style="margin-top:14px;"><i class="fa-regular fa-moon"></i><span><b>Noční klid 22:00–8:00.</b> V tu dobu nic nepípne. Nic se neztratí, ráno to najdeš ve zvonečku.</span></div>
+    <div class="notif-state hidden" id="notifyTestHintBox" style="margin-top:14px;"><i class="fa-solid fa-circle-info"></i><span id="notifyTestHint"></span></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;">
       <button type="button" class="btn btn-sm" id="notifyTestBtn" style="margin-bottom:0;"><i class="fa-solid fa-paper-plane"></i> Zkušební notifikace</button>
       <button type="button" class="btn btn-sm btn-ghost hidden" id="notifyForgetOthersBtn" style="margin-bottom:0;"><i class="fa-solid fa-mobile-screen"></i> Odpojit ostatní zařízení</button>
@@ -3193,7 +3194,7 @@ function sharedFingerprint() {
       state.trainingFocus, state.focusLibraryMap]);
   } catch (e) { return null; }
 }
-const APP_VERSION = "2026-09-24 18:40";
+const APP_VERSION = "2026-09-24 19:35";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -5715,11 +5716,41 @@ function notifyPermission() {
 function notifyOnThisDevice() {
   return notifyPermission() === "granted" && !!localStorage.getItem(FCM_TOKEN_KEY) && !!(state.notify && state.notify.enabled);
 }
+/* Čekání s limitem (24. 9. 2026). Bez něj se zapínání umí zaseknout napůl cesty a neřekne
+   ani ň: na Mekově počítači ťuknutí na přepínač neudělalo vůbec nic a v 🐞 nebyl jediný řádek.
+   Typicky visí navigator.serviceWorker.ready (žádný service worker se nerozběhl) nebo getToken.
+   Radši ať to po chvíli poctivě selže a řekne kde, než aby to mlčky čekalo do zavření appky. */
+function sCasovymLimitem(slib, ms, hlaska) {
+  return Promise.race([slib, new Promise((_, zamitni) => setTimeout(() => zamitni(new Error(hlaska)), ms))]);
+}
+
+/* Systémová notifikace i tehdy, když je appka zrovna otevřená (Mek 24. 9. 2026: „klidně bych
+   i rušil dvakrát, hlavně ať přijde“). Otevřené stránce FCM zprávu doručí přímo a sw.js ji
+   vůbec nedostane, takže by se jinak ukázala jen hláška v appce — a u zkušební notifikace to
+   vypadá, jako by notifikace nefungovaly. Vykresluje se přes service worker, protože stránka
+   sama notifikaci ukázat nesmí. */
+async function zobrazSystemovouNotifikaci(d) {
+  try {
+    if (notifyPermission() !== "granted" || !("serviceWorker" in navigator)) return;
+    const reg = await sCasovymLimitem(navigator.serviceWorker.ready, 5000, "service worker se neozval");
+    await reg.showNotification(d.title || "Trenér", {
+      body: d.body || "",
+      icon: d.icon || "./icon-192.png",
+      badge: "./icon-192.png",
+      tag: d.type || "trener",
+      renotify: true,
+      data: { url: d.url || "./index.html" }
+    });
+  } catch (e) {
+    logDebug(`[notifikace] systémovou notifikaci se nepodařilo ukázat — ${(e && e.message) || e}`);
+  }
+}
+
 async function ensureMessaging() {
   if (fcmMessaging) return true;
   if (!("Notification" in window) || !("serviceWorker" in navigator)) return false;
   try {
-    fcmMod = await import("https://www.gstatic.com/firebasejs/12.15.0/firebase-messaging.js");
+    fcmMod = await sCasovymLimitem(import("https://www.gstatic.com/firebasejs/12.15.0/firebase-messaging.js"), 20000, "knihovnu notifikací se nepodařilo stáhnout včas");
     if (!(await fcmMod.isSupported())) { logDebug("[notifikace] prohlížeč je neumí"); return false; }
     fcmMessaging = fcmMod.getMessaging(fbApp);
     // Notifikace, která dorazí, když je appka zrovna otevřená: systém ji neukáže, ať trenéra
@@ -5727,6 +5758,7 @@ async function ensureMessaging() {
     fcmMod.onMessage(fcmMessaging, (payload) => {
       const d = (payload && payload.data) || {};
       toast(`${d.title || "Trenér"}: ${d.body || ""}`, 8000, "info");
+      zobrazSystemovouNotifikaci(d);
     });
     return true;
   } catch (e) {
@@ -5736,7 +5768,8 @@ async function ensureMessaging() {
   }
 }
 async function zapniNotifikaceNaZarizeni() {
-  if (!state.vapidKey) { toast("Nejdřív nastav Klíč pro notifikace ve Správě.", 7000, "warn"); return; }
+  logDebug("[notifikace] zapínám na tomhle zařízení…");
+  if (!state.vapidKey) { toast("Nejdřív nastav Klíč pro notifikace ve Správě.", 7000, "warn"); logDebug("[notifikace] zapnutí zastaveno — chybí klíč"); return; }
   if (!(await ensureMessaging())) { toast("Tenhle prohlížeč notifikace neumí.", 6000, "warn"); return; }
   let perm = notifyPermission();
   if (perm === "default") perm = await Notification.requestPermission();
@@ -5752,9 +5785,16 @@ async function zapniNotifikaceNaZarizeni() {
     return;
   }
   try {
-    const reg = await navigator.serviceWorker.ready;
-    const token = await fcmMod.getToken(fcmMessaging, { vapidKey: state.vapidKey, serviceWorkerRegistration: reg });
-    if (!token) { toast("Prohlížeč nevydal adresu pro notifikace. Zkus to prosím znovu.", 7000, "err"); return; }
+    /* Každý krok se hlásí do 🐞. Když se zapínání někde zasekne, musí být vidět KDE —
+       na Mekově počítači 24. 9. ťuknutí na přepínač neudělalo vůbec nic a v záznamu nebyl
+       jediný řádek, takže se nedalo poznat, jestli vůbec něco proběhlo. */
+    const reg = await sCasovymLimitem(navigator.serviceWorker.ready, 15000,
+      "service worker se neozval — zkus obnovit stránku (Ctrl+F5) a zapnout to znovu");
+    logDebug("[notifikace] service worker připraven, žádám prohlížeč o adresu");
+    const token = await sCasovymLimitem(
+      fcmMod.getToken(fcmMessaging, { vapidKey: state.vapidKey, serviceWorkerRegistration: reg }),
+      20000, "prohlížeč adresu nevydal včas");
+    if (!token) { toast("Prohlížeč nevydal adresu pro notifikace. Zkus to prosím znovu.", 7000, "err"); logDebug("[notifikace] zapnutí zastaveno — prázdná adresa"); return; }
     await setDoc(doc(db, "users", uidCurrent), {
       fcmTokens: arrayUnion(token), notifyPushEnabled: true, notifyGroups: notifyGroupsSafe()
     }, { merge: true });
@@ -5768,7 +5808,7 @@ async function zapniNotifikaceNaZarizeni() {
   } catch (e) {
     console.error("Zapnutí notifikací selhalo:", e);
     logDebug(`[notifikace] zapnutí selhalo — ${(e && e.message) || e}`);
-    toast("Zapnutí notifikací selhalo. Detail v 🐞.", 7000, "err");
+    toast(`Zapnutí notifikací selhalo: ${(e && e.message) || e}`, 10000, "err");
   }
   renderNotifySettings();
 }
@@ -5817,8 +5857,10 @@ async function srovnejTokenNaZarizeni() {
     if (!state.notify || !state.notify.enabled) return; // tenhle účet notifikace nechce
     if (notifyPermission() !== "granted") return;       // bez svolení prohlížeče není co srovnávat
     if (!(await ensureMessaging())) return;
-    const reg = await navigator.serviceWorker.ready;
-    const token = await fcmMod.getToken(fcmMessaging, { vapidKey: state.vapidKey, serviceWorkerRegistration: reg });
+    const reg = await sCasovymLimitem(navigator.serviceWorker.ready, 15000, "service worker se neozval");
+    const token = await sCasovymLimitem(
+      fcmMod.getToken(fcmMessaging, { vapidKey: state.vapidKey, serviceWorkerRegistration: reg }),
+      20000, "prohlížeč adresu nevydal včas");
     if (!token) { logDebug("[notifikace] prohlížeč adresu nevydal, srovnání přeskočeno"); return; }
     const stary = localStorage.getItem(FCM_TOKEN_KEY);
     const ulozene = Array.isArray(state.notify.tokens) ? state.notify.tokens : [];
@@ -5899,7 +5941,13 @@ function renderNotifySettings() {
     el.disabled = !zapnuto;
     el.closest(".notif-switch-row").style.opacity = zapnuto ? "" : ".5";
   });
+  /* Neaktivní tlačítko nic neřekne a ťuknutí na něj nevyvolá vůbec nic — Mek 24. 9. tak na
+     počítači půl hodiny zkoušel něco, co se stát nemělo. Teď je pod ním vidět důvod. */
   document.getElementById("notifyTestBtn").disabled = !zapnuto;
+  document.getElementById("notifyTestHintBox").classList.toggle("hidden", zapnuto);
+  document.getElementById("notifyTestHint").textContent = perm === "denied"
+    ? "Zkušební notifikaci pošleš, až notifikace povolí prohlížeč."
+    : "Zkušební notifikaci pošleš, až zapneš přepínač „Na tomhle zařízení“ nahoře.";
   document.getElementById("notifyForgetOthersBtn").classList.toggle("hidden", !(zapnuto && (state.notify.devices || 0) > 1));
   renderNotifyRow();
 }
@@ -15382,11 +15430,11 @@ const HELP_DATA = [
       { q: "Můžu poslat jako tip i video, které v knihovně už je?", a: "Aplikace tě na to upozorní ještě ve formuláři — když odkaz pozná, ukáže žlutou hlášku s názvem videa, které už v knihovně je. Tip pak nemá smysl posílat.", kw: "duplicita tip uz v knihovne" }
     ]},
     { title: "Profil", icon: "fa-solid fa-user", qa: [
-      { q: "Co jsou Notifikace a co mi bude chodit?", a: "Upozornění na telefon, která přijdou, i když máš aplikaci zavřenou. Tobě jako trenérovi chodí jen to, co se týká přímo tebe: někdo napsal komentář ke tvému videu, někdo tě zmínil v komentáři, někdo ohodnotil tvoje video (hvězdičky nebo obtížnost), někdo si zkopíroval tvůj trénink z Tržiště, a když pošleš tip na video, dozvíš se, jestli ho Mek zařadil. Nic jiného ti nechodí — o dění v knihovně ani o trénincích ostatních ti aplikace nepíše. Mezi 22:00 a 8:00 je noční klid a nepípne nic. Nic se tím ale neztratí: všechno zůstává ve zvonečku v aplikaci a ráno to tam najdeš.", kw: "notifikace push upozorneni telefon co chodi" },
+      { q: "Co jsou Notifikace a co mi bude chodit?", a: "Upozornění na telefon, která přijdou, i když máš aplikaci zavřenou. Tobě jako trenérovi chodí jen to, co se týká přímo tebe: někdo napsal komentář ke tvému videu, někdo tě zmínil v komentáři, někdo ohodnotil tvoje video (hvězdičky nebo obtížnost), někdo si zkopíroval tvůj trénink z Tržiště, a když pošleš tip na video, dozvíš se, jestli ho Mek zařadil. Nic jiného ti nechodí — o dění v knihovně ani o trénincích ostatních ti aplikace nepíše. Notifikace přijde i ve chvíli, kdy máš aplikaci zrovna otevřenou — kromě hlášky v aplikaci se ukáže i normální notifikace na liště. Mezi 22:00 a 8:00 je noční klid a nepípne nic. Nic se tím ale neztratí: všechno zůstává ve zvonečku v aplikaci a ráno to tam najdeš.", kw: "notifikace push upozorneni telefon co chodi" },
       { q: "Jak si zapnu notifikace na Androidu? (podrobně)", a: "1) Nejdřív si dej Trenéra na plochu telefonu: v Chromu otevři aplikaci, nahoře ťukni na ikonu se šipkou, nebo v nabídce (tři tečky) vyber „Přidat na plochu“. Není to povinné, ale notifikace pak fungují spolehlivěji a otevírají se rovnou v aplikaci. 2) Otevři Trenéra a ťukni na kolečko se svou iniciálou vpravo nahoře. 3) V části Účet ťukni na řádek „Notifikace“. 4) Přepni vypínač „Na tomhle zařízení“. 5) Prohlížeč se zeptá, jestli povolíš oznámení — dej Povolit. Když se nezeptá a aplikace hlásí, že je blokuje prohlížeč, ťukni v Chromu na zámeček vedle adresy, dej Oprávnění a Notifikace přepni na Povolit. 6) Ještě zkontroluj systém: Nastavení telefonu → Aplikace → Trenér → Oznámení a nech je zapnutá. Na Samsungu se to jmenuje „Povolit oznámení“. 7) Zpátky v aplikaci ťukni na „Zkušební notifikace“, zamkni telefon a do pár vteřin má pípnout. Ťuknutím na ni se otevře to, čeho se týká.", kw: "android notifikace zapnout navod chrome opravneni oznameni samsung" },
       { q: "Jak si zapnu notifikace na iPhonu? (podrobně)", a: "Na iPhonu je jedna podmínka navíc: notifikace chodí jen aplikaci přidané na plochu, v Safari na kartě nefungují. 1) Otevři Trenéra v Safari (v Chromu na iPhonu to nejde). 2) Dole ťukni na Sdílet (čtvereček se šipkou nahoru; podle verze iOS může být pod třemi tečkami) a vyber „Přidat na plochu“, pak Přidat. 3) Trenéra od téhle chvíle otevírej ikonou z plochy, ne ze Safari. 4) V aplikaci ťukni na kolečko se svou iniciálou vpravo nahoře, v části Účet na řádek „Notifikace“ a přepni vypínač „Na tomhle zařízení“. 5) iPhone se zeptá na povolení — dej Povolit. 6) Zkontroluj Nastavení → Oznámení → Trenér, že jsou zapnutá. 7) Ťukni na „Zkušební notifikace“ a zamkni telefon. Pozor: potřebuješ novější iOS (zhruba 16.4 a výš). Když v okně Notifikace svítí, že to prohlížeč neumí, znamená to nejčastěji, že máš Trenéra otevřeného ze Safari, ne z plochy.", kw: "iphone ios notifikace zapnout navod safari plocha pridat" },
       { q: "Notifikace mi nechodí. Co zkusit?", a: "Postupně: 1) Noční klid — mezi 22:00 a 8:00 se schválně neposílá nic. 2) Ťukni v profilu na Notifikace a podívej se na řádek pod vypínačem; aplikace tam píše, co je špatně (blokované povolení, zařízení není zapsané). 3) Zkus „Zkušební notifikace“. Aplikace ti od 24. 9. napíše, jestli ji Firebase opravdu přijal, nebo odmítl — když ji odmítl, je to na naší straně a napiš Mekovi. Když přijde a ostatní ne, znamená to, že se prostě nic nestalo — chodí jen věci, které se týkají přímo tebe. 4) Zkontroluj oznámení v nastavení telefonu (Android: Nastavení → Aplikace → Trenér → Oznámení; iPhone: Nastavení → Oznámení → Trenér). 5) Na iPhonu musíš mít Trenéra spuštěného z plochy. 6) Zkus vypínač vypnout a zase zapnout, aplikace si tím vyžádá novou adresu pro tvůj telefon. 7) Když si telefon šetří baterii do krajnosti, může notifikace zdržet — u Trenéra vypni omezení baterie.", kw: "notifikace nechodi nefunguje nocni klid povoleni baterie" },
-      { q: "Přepínač notifikací se nehne a nic se neděje. Proč?", a: "Zapnout notifikace může jenom prohlížeč, aplikace si to nařídit nesmí. Když se přepínač nehne, aplikace ti od 24. 9. vždycky napíše důvod — jsou dva. Za prvé: prohlížeč se na povolení zeptal a okénko se zavřelo, nebo jsi ho odklikl pryč. Pak stačí ťuknout na přepínač znovu a dát Povolit. Za druhé: prohlížeč má notifikace pro Trenéra zablokované natrvrdo. To aplikace sama nespraví — v Chromu ťukni na zámeček (nebo ikonu vedle adresy), dej Oprávnění a Notifikace přepni na Povolit, pak se vrať a zkus to znovu. Na počítači bývá okénko s dotazem malé a schované hned pod adresním řádkem, takže je snadné ho přehlédnout.", kw: "prepinac notifikace nejde zapnout nehne se povoleni chrome zamecek" },
+      { q: "Přepínač notifikací se nehne a nic se neděje. Proč?", a: "Zapnout notifikace může jenom prohlížeč, aplikace si to nařídit nesmí. Když se přepínač nehne, aplikace ti od 24. 9. vždycky napíše důvod — jsou dva. Za prvé: prohlížeč se na povolení zeptal a okénko se zavřelo, nebo jsi ho odklikl pryč. Pak stačí ťuknout na přepínač znovu a dát Povolit. Za druhé: prohlížeč má notifikace pro Trenéra zablokované natrvrdo. To aplikace sama nespraví — v Chromu ťukni na zámeček (nebo ikonu vedle adresy), dej Oprávnění a Notifikace přepni na Povolit, pak se vrať a zkus to znovu. Na počítači bývá okénko s dotazem malé a schované hned pod adresním řádkem, takže je snadné ho přehlédnout. Pozor taky na to, že tlačítko „Zkušební notifikace“ je neaktivní, dokud přepínač nahoře nezapneš — ťuknutí na něj proto neudělá nic. A když se po ťuknutí na přepínač nestane vůbec nic, počkej pár vteřin — aplikace po chvíli sama napíše, kde se zapínání zaseklo.", kw: "prepinac notifikace nejde zapnout nehne se povoleni chrome zamecek" },
       { q: "Střídáme na jednom telefonu dva účty. Nebudou si notifikace překážet?", a: "Nebudou, ale je dobré vědět, jak to funguje. Adresu pro notifikace vydává prohlížeč telefonu, ne účet — takže oba účty na jednom telefonu sdílejí jednu a tu samou. Aplikace si proto při každém přihlášení ověří, že adresa uložená u právě přihlášeného účtu je opravdu ta, kterou telefon má, a když ne, tiše ji opraví. Vypnutí přepínače navíc od 24. 9. odhlásí jen ten účet, který je zrovna přihlášený — druhému účtu notifikace běží dál. Do 24. 9. to tak nebylo a vypnutí u jednoho účtu tiše shodilo notifikace i tomu druhému.", kw: "dva ucty jeden telefon notifikace adresa token sdilene zarizeni" },
       { q: "Notifikace mi chodí na dvě zařízení, nebo je chci vypnout. Jak na to?", a: "Notifikace se zapínají na každém zařízení zvlášť, takže když si Trenéra otevřeš na telefonu i na počítači, můžeš je mít na obou. V profilu → Notifikace uvidíš, na kolika zařízeních chodí, a tlačítkem „Odpojit ostatní zařízení“ je necháš jen tady. Úplné vypnutí je stejný přepínač, kterým jsi je zapnul — vypne se jen tohle zařízení, ostatní běží dál.", kw: "notifikace vypnout zarizeni odpojit pocitac telefon" },
       { q: "Jak se odhlásím?", a: "V profilu (kolečko s tvojí iniciálou vpravo nahoře) je dole v části „Účet“ tlačítko „Odhlásit“ — spolu se „Změnit heslo“ a „Změnit e-mail“.", kw: "odhlasit odhlaseni logout" },
