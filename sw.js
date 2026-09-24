@@ -1,8 +1,8 @@
-const CACHE_NAME = "trener-v30";
+const CACHE_NAME = "trener-v31";
 const APP_SHELL = ["./", "./index.html", "./training-mode.css", "./manifest.json", "./icon-192.png", "./icon-512.png", "./icon-512-maskable.png", "./club-logo.png", "./raptor-sound.mp3", "./Boxing%20Bell%20Sound%20Effect.mp3"];
 
 /* =========================================================
-   NOTIFIKACE (23. 9. 2026)
+   NOTIFIKACE (23. 9. 2026, doplněno 24. 9. 2026)
    Server posílá DATOVÉ zprávy (functions/index.js), takže notifikaci vykresluje tenhle
    soubor sám a sám si řídí i ťuknutí na ni: když je appka otevřená, jen se do ní přepne
    a pošle jí adresu — appka pak otevře, co k notifikaci patří, BEZ načtení stránky znovu
@@ -26,6 +26,23 @@ self.addEventListener("notificationclick", (event) => {
   })());
 });
 
+/* Vykreslení notifikace z datové zprávy. Používají ji obě cesty níž, ať vypadají stejně.
+   renotify: true je tu schválně — notifikace se stejným štítkem (tag) se jinak tiše vymění
+   za tu, co už visí v liště: nezavibruje, nepípne, nevyskočí. Pro nás je každá zpráva nová
+   událost, takže chceme upozornit i při výměně. */
+function zobrazNotifikaci(d) {
+  const data = d || {};
+  return self.registration.showNotification(data.title || "Trenér", {
+    body: data.body || "",
+    icon: data.icon || "./icon-192.png",
+    badge: "./icon-192.png",
+    tag: data.type || "trener",
+    renotify: true,
+    data: { url: data.url || "./index.html" }
+  });
+}
+
+let fcmPripraveno = false;
 try {
   importScripts("https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js");
   importScripts("https://www.gstatic.com/firebasejs/12.15.0/firebase-messaging-compat.js");
@@ -37,20 +54,29 @@ try {
     messagingSenderId: "796712714371",
     appId: "1:796712714371:web:740d1c4c73f9319f509bb6"
   });
-  firebase.messaging().onBackgroundMessage((payload) => {
-    const d = (payload && payload.data) || {};
-    return self.registration.showNotification(d.title || "Trenér", {
-      body: d.body || "",
-      icon: d.icon || "./icon-192.png",
-      badge: "./icon-192.png",
-      tag: d.type || "trener",
-      data: { url: d.url || "./index.html" }
-    });
-  });
+  firebase.messaging().onBackgroundMessage((payload) => zobrazNotifikaci((payload && payload.data) || {}));
+  fcmPripraveno = true;
 } catch (e) {
   // Bez notifikací appka funguje dál — ukládání do mezipaměti níž na tomhle nezávisí.
-  console.warn("[sw] notifikace se nepodařilo zapnout:", e);
+  console.warn("[sw] knihovnu pro notifikace se nepodařilo natáhnout:", e);
 }
+
+/* Záchranná síť (24. 9. 2026). Když se knihovna výš nenatáhne — výpadek gstatic, síť za
+   firewallem, starší prohlížeč — notifikaci by nevykreslil nikdo a zpráva by tiše zmizela,
+   protože ten catch je mlčenlivý. Datová zpráva z FCM je ale obyčejná push událost, takže
+   si ji umíme vykreslit sami. Když knihovna jede, tahle větev se hned vrátí, ať notifikace
+   není dvakrát. */
+self.addEventListener("push", (event) => {
+  if (fcmPripraveno) return;
+  let d = {};
+  try {
+    const j = event.data ? event.data.json() : {};
+    d = j.data || j.notification || j || {};
+  } catch (e) {
+    d = { body: (event.data && event.data.text()) || "" };
+  }
+  event.waitUntil(zobrazNotifikaci(d));
+});
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
