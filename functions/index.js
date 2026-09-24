@@ -1,10 +1,16 @@
 /**
- * Cloud Functions pro appku Trenér — notifikace pro admina (fáze 1, 23. 9. 2026).
+ * Cloud Functions pro appku Trenér — notifikace (fáze 1 a 2, 23. 9. 2026).
  *
  * Appka sama neumí poslat notifikaci, když je zavřená nebo je telefon zamčený — na to je
  * potřeba tenhle serverový kousek, který hlídá Firestore a posílá push přes Firebase Cloud
- * Messaging. Posílá se JEN adminovi (natvrdo ADMIN_UID níž), na všechna zařízení, která si
- * uložil (users/{ADMIN_UID}.fcmTokens — ukládá je appka, viz zapniNotifikace v index.html).
+ * Messaging. Posílá se na zařízení uložená v users/{uid}.fcmTokens (ukládá je appka).
+ *
+ * KOMU SE POSÍLÁ:
+ *  - adminovi (ADMIN_UID) všechno z fáze 1 — dění v knihovně, tréninky, lidé, zpětná vazba,
+ *    s možností vypnout tři skupiny (notifyGroups),
+ *  - ostatním trenérům jen to, co se týká přímo jich (fáze 2, Mekova varianta A: jediný
+ *    vypínač, žádné skupiny): komentář u jejich videa, zmínka, hodnocení jejich videa,
+ *    zkopírování jejich tréninku, vyřízený tip, schválený přístup.
  *
  * Mekova rozhodnutí 23. 9. 2026, podle kterých je to postavené:
  *  - fáze 1 = jen admin (trenéři přijdou v dalším kole),
@@ -55,6 +61,7 @@ const TYPE_GROUP = {
   difficulty: "videos",      // nastavená obtížnost
   note: "videos",            // poznámka trenéra u videa
   tip: "videos",             // tip na video od prohlížeče
+  tipResolved: "videos",     // vyřízený tip (chodí tomu, kdo tip poslal — fáze 2)
   comment: "videos",         // komentáře a zmínky
   goneReport: "videos",      // hlášení „video zmizelo u zdroje“
   autoCheck: "videos"        // nález automatické kontroly videí
@@ -81,14 +88,15 @@ function prazskyDen(ms) {
   return new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Prague" }).format(new Date(ms));
 }
 
-async function adminNastaveni() {
-  const snap = await db.collection("users").doc(ADMIN_UID).get();
+async function nastaveni(uid) {
+  const snap = await db.collection("users").doc(uid).get();
   const d = snap.exists ? snap.data() : {};
   const g = d.notifyGroups || {};
   return {
     enabled: !!d.notifyPushEnabled,
     tokens: Array.isArray(d.fcmTokens) ? d.fcmTokens : [],
     // Chybějící skupina = zapnutá. Vypnutá je jen ta, u které je výslovně false.
+    // Skupiny má v appce jen admin; ostatním trenérům se neuplatňují (jediný vypínač).
     groups: { library: g.library !== false, people: g.people !== false, videos: g.videos !== false }
   };
 }
@@ -108,7 +116,7 @@ async function jmeno(uid) {
     (odhlášení, smazaná data prohlížeče, přeinstalace). Posílá se DATOVÁ zpráva, ne
     „notification“ — notifikaci vykresluje sw.js (onBackgroundMessage), díky čemuž si
     appka může sama ošetřit i ťuknutí (otevřít, co k notifikaci patří, bez načtení znovu). */
-async function posliAdminovi(tokens, { title, body, url, type }) {
+async function posli(uid, tokens, { title, body, url, type }) {
   if (!tokens.length) return;
   const resp = await messaging.sendEachForMulticast({
     tokens,
@@ -123,7 +131,7 @@ async function posliAdminovi(tokens, { title, body, url, type }) {
     }
   });
   if (mrtve.length) {
-    await db.collection("users").doc(ADMIN_UID).update({
+    await db.collection("users").doc(uid).update({
       fcmTokens: admin.firestore.FieldValue.arrayRemove(...mrtve)
     });
   }
@@ -134,17 +142,19 @@ async function posliAdminovi(tokens, { title, body, url, type }) {
  * a nakonec tlumení podle typu — když stejný typ odešel před méně než deseti minutami,
  * událost se jen připočte a text se přilepí k nejbližší další hlášce téhož typu.
  */
-async function notifikuj({ type, title, body, url, key }) {
-  const prefs = await adminNastaveni();
+async function notifikuj(uid, { type, title, body, url, key }) {
+  if (!uid) return;
+  const prefs = await nastaveni(uid);
   if (!prefs.enabled || !prefs.tokens.length) return;
-  if (prefs.groups[TYPE_GROUP[type] || "library"] === false) return;
+  // Skupiny se týkají jen admina — ostatní mají v appce jediný vypínač (Mek 23. 9.).
+  if (uid === ADMIN_UID && prefs.groups[TYPE_GROUP[type] || "library"] === false) return;
   if (jeNocniKlid()) return;
 
   /* Klíč tlumení je normálně typ. Výjimka je „někdo je online“: tam se tlumí zvlášť pro
      každého trenéra (key = online:uid), jinak by se při dvou příchodech za sebou ztratilo
      jméno toho druhého. Že to nezahltí, hlídá už pravidlo „jednou denně na trenéra“. */
   const stavKlic = key || type;
-  const ref = db.collection("notifyState").doc("admin");
+  const ref = db.collection("notifyState").doc(uid);
   const now = Date.now();
   let cekajici = null;
   await db.runTransaction(async (tx) => {
@@ -162,7 +172,7 @@ async function notifikuj({ type, title, body, url, key }) {
   if (cekajici === null) return;   // utlumeno, pošle se to s příští hláškou téhož typu
 
   const dovetek = cekajici > 0 ? ` (a mezitím ${pocet(cekajici, "další změna", "další změny", "dalších změn")})` : "";
-  await posliAdminovi(prefs.tokens, { title, body: body + dovetek, url, type });
+  await posli(uid, prefs.tokens, { title, body: body + dovetek, url, type });
 }
 
 /* =========================================================
@@ -213,6 +223,17 @@ exports.onSharedDataChange = onDocumentUpdated("shared/data", async (event) => {
     note: (v) => v.hodnota ? `napsal(a) poznámku u „${v.nazev}“` : `smazal(a) svoji poznámku u „${v.nazev}“`
   };
   const nadpisZpetneVazby = { rating: "Trenér — hodnocení", difficulty: "Trenér — obtížnost", note: "Trenér — poznámka u videa" };
+  // Texty pro majitele videa (fáze 2) — vlastní, ne poskládané z těch adminských, ať to zní česky.
+  const textMajiteli = {
+    rating: (v) => v.hodnota ? `ohodnotil(a) tvoje video „${v.nazev}“ ${hvezdicky(v.hodnota)}` : `zrušil(a) hodnocení u tvého videa „${v.nazev}“`,
+    difficulty: (v) => v.hodnota ? `nastavil(a) obtížnost u tvého videa „${v.nazev}“ na ${v.hodnota}` : `zrušil(a) hodnocení obtížnosti u tvého videa „${v.nazev}“`,
+    note: (v) => v.hodnota ? `napsal(a) poznámku u tvého videa „${v.nazev}“` : `smazal(a) poznámku u tvého videa „${v.nazev}“`
+  };
+  const souhrnMajiteli = {
+    rating: (n) => `ohodnotil(a) ${pocet(n, "tvoje video", "tvoje videa", "tvých videí")}`,
+    difficulty: (n) => `nastavil(a) obtížnost u ${pocet(n, "tvého videa", "tvých videí", "tvých videí")}`,
+    note: (n) => `napsal(a) poznámku u ${pocet(n, "tvého videa", "tvých videí", "tvých videí")}`
+  };
   const souhrnZpetneVazby = {
     rating: (n) => `ohodnotil(a) ${pocet(n, "video", "videa", "videí")}`,
     difficulty: (n) => `nastavil(a) obtížnost u ${pocet(n, "videa", "videí", "videí")}`,
@@ -224,18 +245,35 @@ exports.onSharedDataChange = onDocumentUpdated("shared/data", async (event) => {
     if (!seznam.length) continue;
     byloZpetneVazby = true;
     const jedno = seznam.length === 1;
-    await notifikuj({
+    await notifikuj(ADMIN_UID, {
       type: typ,
       title: nadpisZpetneVazby[typ],
       body: `${kdo} ${jedno ? textZpetneVazby[typ](seznam[0]) : souhrnZpetneVazby[typ](seznam.length)}.`,
       url: jedno ? `${APP_URL}?open=video&id=${encodeURIComponent(seznam[0].id)}` : APP_URL
     });
+    /* Fáze 2: zpětná vazba patří i tomu, kdo video do knihovny přidal — je to jeho video.
+       Adminovi se neposílá podruhé (má ji z hlášky výš) a sobě samému taky ne. */
+    const podleMajitele = {};
+    seznam.forEach(v => {
+      const majitel = (libAfter[v.id] || {}).addedBy;
+      if (!majitel || majitel === editorUid || majitel === ADMIN_UID) return;
+      (podleMajitele[majitel] = podleMajitele[majitel] || []).push(v);
+    });
+    for (const [majitel, moje] of Object.entries(podleMajitele)) {
+      const jedine = moje.length === 1;
+      await notifikuj(majitel, {
+        type: typ,
+        title: nadpisZpetneVazby[typ],
+        body: `${kdo} ${jedine ? textMajiteli[typ](moje[0]) : souhrnMajiteli[typ](moje.length)}.`,
+        url: jedine ? `${APP_URL}?open=video&id=${encodeURIComponent(moje[0].id)}` : APP_URL
+      });
+    }
   }
 
   if (ubylo.length) {
     const nazvy = ubylo.slice(0, 2).map(id => `„${(libBefore[id] && libBefore[id].title) || "bez názvu"}“`).join(", ");
     const zbytek = ubylo.length > 2 ? ` a ${pocet(ubylo.length - 2, "další", "další", "dalších")}` : "";
-    await notifikuj({
+    await notifikuj(ADMIN_UID, {
       type: "videoDeleted",
       title: "Trenér — smazané video",
       body: `${kdo} smazal(a) ${nazvy}${zbytek}.`,
@@ -259,7 +297,7 @@ exports.onSharedDataChange = onDocumentUpdated("shared/data", async (event) => {
     if (ubylo.length || byloZpetneVazby) return;
     casti.push("upravil(a) knihovnu (popis, štítky nebo pořadí)");
   }
-  await notifikuj({
+  await notifikuj(ADMIN_UID, {
     type: "library",
     title: "Trenér — změna v knihovně",
     body: `${kdo} ${casti.join(", ")}.`,
@@ -284,21 +322,24 @@ exports.onTrainingChange = onDocumentWritten("users/{uid}/trainings/{trainingId}
   const kdo = await jmeno(uid);
   const url = `${APP_URL}?open=training&u=${encodeURIComponent(uid)}&id=${encodeURIComponent(event.params.trainingId)}`;
 
-  if (!bylo && je && src.clonedFromOwnerUid === ADMIN_UID) {
-    await notifikuj({
+  // Kopie cizího tréninku: dá se vědět tomu, od koho se kopírovalo (fáze 2 — nejen adminovi).
+  if (!bylo && je && src.clonedFromOwnerUid && src.clonedFromOwnerUid !== uid) {
+    await notifikuj(src.clonedFromOwnerUid, {
       type: "trainingCloned",
       title: "Trenér — kopie tvého tréninku",
       body: `${kdo} si zkopíroval(a) tvůj trénink „${src.clonedFromName || nazev}“.`,
       url
     });
-    return;
+    // Když se kopírovalo od admina, má z toho hlášku a druhá („vytvořil nový trénink“) by
+    // byla o tomtéž. Když se kopírovalo od někoho jiného, admin se o novém tréninku dozví níž.
+    if (src.clonedFromOwnerUid === ADMIN_UID) return;
   }
 
   let co;
   if (!bylo) co = `vytvořil(a) nový trénink „${nazev}“`;
   else if (!je) co = `smazal(a) trénink „${nazev}“`;
   else co = `upravil(a) trénink „${nazev}“`;
-  await notifikuj({ type: "training", title: "Trenér — trénink", body: `${kdo} ${co}.`, url: je ? url : APP_URL });
+  await notifikuj(ADMIN_UID, { type: "training", title: "Trenér — trénink", body: `${kdo} ${co}.`, url: je ? url : APP_URL });
 });
 
 /* =========================================================
@@ -329,7 +370,7 @@ exports.onUserHeartbeat = onDocumentWritten("users/{uid}", async (event) => {
   if (!poprve) return;
 
   const kdo = after.username || before.username || "Trenér";
-  await notifikuj({ type: "online", key: `online:${uid}`, title: "Trenér — online", body: `${kdo} je dneska poprvé v appce.`, url: APP_URL });
+  await notifikuj(ADMIN_UID, { type: "online", key: `online:${uid}`, title: "Trenér — online", body: `${kdo} je dneska poprvé v appce.`, url: APP_URL });
 });
 
 /* =========================================================
@@ -338,7 +379,7 @@ exports.onUserHeartbeat = onDocumentWritten("users/{uid}", async (event) => {
 exports.onAccessRequest = onDocumentCreated("pendingRequests/{uid}", async (event) => {
   const d = (event.data && event.data.data()) || {};
   if (event.params.uid === ADMIN_UID) return;
-  await notifikuj({
+  await notifikuj(ADMIN_UID, {
     type: "access",
     title: "Trenér — žádost o přístup",
     body: `${d.email || "Někdo nový"} čeká na schválení.`,
@@ -353,7 +394,7 @@ exports.onVideoTip = onDocumentCreated("videoTips/{tipId}", async (event) => {
   const d = (event.data && event.data.data()) || {};
   if (!d.fromUid || d.fromUid === ADMIN_UID) return;
   const kdo = d.fromLabel || await jmeno(d.fromUid);
-  await notifikuj({
+  await notifikuj(ADMIN_UID, {
     type: "tip",
     title: "Trenér — tip na video",
     body: `${kdo} poslal(a) tip: ${d.title || d.url || "nové video"}`,
@@ -377,7 +418,7 @@ exports.onCommentActivity = onDocumentCreated("commentActivity/{id}", async (eve
   const url = d.videoId ? `${APP_URL}?open=video&id=${encodeURIComponent(d.videoId)}` : APP_URL;
 
   if (d.isGoneReport || d.goneEvent === "report") {
-    await notifikuj({
+    await notifikuj(ADMIN_UID, {
       type: "goneReport",
       title: "Trenér — nahlášené video",
       body: `${d.authorLabel || "Trenér"}: „${nazev}“ nejde přehrát ani u zdroje.`,
@@ -386,13 +427,83 @@ exports.onCommentActivity = onDocumentCreated("commentActivity/{id}", async (eve
     return;
   }
 
-  const zminka = Array.isArray(d.mentions) && d.mentions.includes(ADMIN_UID);
-  await notifikuj({
+  const zminky = Array.isArray(d.mentions) ? d.mentions : [];
+  const autor = d.authorLabel || "Trenér";
+  const text = (d.text || "").slice(0, 120);
+  await notifikuj(ADMIN_UID, {
     type: "comment",
-    title: zminka ? "Trenér — zmínka v komentáři" : "Trenér — nový komentář",
-    body: `${d.authorLabel || "Trenér"} u „${nazev}“: ${(d.text || "").slice(0, 120)}`,
+    title: zminky.includes(ADMIN_UID) ? "Trenér — zmínka v komentáři" : "Trenér — nový komentář",
+    body: `${autor} u „${nazev}“: ${text}`,
     url
   });
+  /* Fáze 2: komentář patří i tomu, kdo video přidal, a každému, koho komentář zmiňuje.
+     Admin má svoji hlášku výš, autor komentáře si psát sám sobě nemusí, a kdo je zároveň
+     majitel i zmíněný, dostane jednu hlášku (hotovo drží, komu už to odešlo). */
+  const hotovo = new Set([ADMIN_UID, d.authorUid]);
+  if (d.videoOwnerUid && !hotovo.has(d.videoOwnerUid)) {
+    hotovo.add(d.videoOwnerUid);
+    await notifikuj(d.videoOwnerUid, {
+      type: "comment",
+      title: "Trenér — komentář u tvého videa",
+      body: `${autor} u „${nazev}“: ${text}`,
+      url
+    });
+  }
+  for (const kdoZminen of zminky) {
+    if (hotovo.has(kdoZminen)) continue;
+    hotovo.add(kdoZminen);
+    await notifikuj(kdoZminen, {
+      type: "comment",
+      title: "Trenér — zmínka v komentáři",
+      body: `${autor} tě zmínil(a) u „${nazev}“: ${text}`,
+      url
+    });
+  }
+});
+
+/* =========================================================
+   8) VYŘÍZENÝ TIP — fáze 2. Prohlížeč, který tip poslal, se dozví, jak dopadl.
+   ========================================================= */
+exports.onVideoTipResolved = onDocumentUpdated("videoTips/{tipId}", async (event) => {
+  const before = event.data.before.data() || {};
+  const after = event.data.after.data() || {};
+  if (before.status === after.status) return;
+  if (after.status !== "approved" && after.status !== "rejected") return;
+  if (!after.fromUid || after.fromUid === ADMIN_UID) return;
+
+  const nazev = after.title || after.url || "tvůj tip";
+  const zarazeno = after.status === "approved";
+  const duvod = (after.rejectReason || "").trim();
+  await notifikuj(after.fromUid, {
+    type: "tipResolved",
+    title: zarazeno ? "Trenér — tip zařazen" : "Trenér — tip nezařazen",
+    body: zarazeno
+      ? `„${nazev}“ je v knihovně. Díky!`
+      : `„${nazev}“ se do knihovny nedostal.${duvod ? " Důvod: " + duvod.slice(0, 120) : ""}`,
+    url: zarazeno && after.libraryId
+      ? `${APP_URL}?open=video&id=${encodeURIComponent(after.libraryId)}`
+      : `${APP_URL}?open=mojetipy`
+  });
+});
+
+/* =========================================================
+   9) SCHVÁLENÝ PŘÍSTUP — fáze 2. Seznam schválených je jeden dokument shared/members,
+   takže se porovná, čí uid v něm nově přibylo. Pozn.: nový trenér notifikace zapnuté
+   většinou nemá (nemá kde — do appky se ještě nedostal), takže tohle pípne hlavně tomu,
+   kdo u sebe Trenéra už někdy měl.
+   ========================================================= */
+exports.onMembersChange = onDocumentUpdated("shared/members", async (event) => {
+  const pred = ((event.data.before.data() || {}).approved) || {};
+  const po = ((event.data.after.data() || {}).approved) || {};
+  const pribyli = Object.keys(po).filter(uid => !pred[uid] && uid !== ADMIN_UID);
+  for (const uid of pribyli) {
+    await notifikuj(uid, {
+      type: "access",
+      title: "Trenér — přístup schválen",
+      body: "Mek ti schválil přístup do Trenéra. Můžeš začít.",
+      url: APP_URL
+    });
+  }
 });
 
 /* =========================================================
@@ -408,7 +519,7 @@ exports.onVideoAutoCheck = onDocumentUpdated("videos/{videoId}", async (event) =
   if (b && b.result === a.result && b.at === a.at) return;
 
   const nazev = after.title || "video";
-  await notifikuj({
+  await notifikuj(ADMIN_UID, {
     type: "autoCheck",
     title: "Trenér — kontrola videí",
     body: a.result === "missing"
@@ -424,14 +535,15 @@ exports.onVideoAutoCheck = onDocumentUpdated("videos/{videoId}", async (event) =
    Noční klid ani tlumení se tady neuplatní, jinak by tlačítko občas „nefungovalo“.
    ========================================================= */
 exports.sendTestNotification = onCall(async (request) => {
-  if (!request.auth || request.auth.uid !== ADMIN_UID) {
-    throw new HttpsError("permission-denied", "Zkušební notifikaci může poslat jen admin.");
+  const uid = request.auth && request.auth.uid;
+  if (!uid) {
+    throw new HttpsError("permission-denied", "Zkušební notifikaci pošle jen přihlášený trenér.");
   }
-  const prefs = await adminNastaveni();
+  const prefs = await nastaveni(uid);
   if (!prefs.tokens.length) {
     throw new HttpsError("failed-precondition", "Tenhle účet nemá uložené žádné zařízení.");
   }
-  await posliAdminovi(prefs.tokens, {
+  await posli(uid, prefs.tokens, {
     title: "Trenér — zkouška",
     body: "Notifikace fungují. Ťukni a otevře se appka.",
     url: APP_URL,
