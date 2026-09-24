@@ -117,15 +117,18 @@ async function jmeno(uid) {
     „notification“ — notifikaci vykresluje sw.js (onBackgroundMessage), díky čemuž si
     appka může sama ošetřit i ťuknutí (otevřít, co k notifikaci patří, bez načtení znovu). */
 async function posli(uid, tokens, { title, body, url, type }) {
-  if (!tokens.length) return;
+  if (!tokens.length) return { sent: 0, ok: 0, fail: 0, kody: [] };
   const resp = await messaging.sendEachForMulticast({
     tokens,
     data: { title, body, url: url || APP_URL, type: type || "", icon: ICON_URL },
     webpush: { headers: { Urgency: "normal", TTL: "86400" } }
   });
   const mrtve = [];
+  const kody = [];
   resp.responses.forEach((r, i) => {
-    const code = r.success ? null : (r.error && r.error.code);
+    if (r.success) return;
+    const code = (r.error && r.error.code) || "neznámá chyba";
+    if (kody.indexOf(code) === -1) kody.push(code);
     if (code === "messaging/registration-token-not-registered" || code === "messaging/invalid-registration-token") {
       mrtve.push(tokens[i]);
     }
@@ -135,6 +138,10 @@ async function posli(uid, tokens, { title, body, url, type }) {
       fcmTokens: admin.firestore.FieldValue.arrayRemove(...mrtve)
     });
   }
+  /* Do logu Cloud Functions (24. 9. 2026). Dřív se odpověď od FCM nikam nezapisovala, takže
+     když zprávu odmítl, appka i log tvrdily „odesláno“ a nebylo se čeho chytit. */
+  console.log(`[notifikace] ${uid} typ=${type || "-"}: zařízení ${tokens.length}, přijato ${resp.successCount}, odmítnuto ${resp.failureCount}${kody.length ? ", chyby: " + kody.join(", ") : ""}${mrtve.length ? ", mrtvých adres smazáno: " + mrtve.length : ""}`);
+  return { sent: tokens.length, ok: resp.successCount, fail: resp.failureCount, kody };
 }
 
 /**
@@ -543,11 +550,13 @@ exports.sendTestNotification = onCall(async (request) => {
   if (!prefs.tokens.length) {
     throw new HttpsError("failed-precondition", "Tenhle účet nemá uložené žádné zařízení.");
   }
-  await posli(uid, prefs.tokens, {
+  /* Vrací se skutečná odpověď od FCM, ne jen počet uložených zařízení (24. 9. 2026).
+     Do té doby appka hlásila „odesláno“ i ve chvíli, kdy FCM všechno odmítl. */
+  const vysledek = await posli(uid, prefs.tokens, {
     title: "Trenér — zkouška",
     body: "Notifikace fungují. Ťukni a otevře se appka.",
     url: APP_URL,
     type: "test"
   });
-  return { sent: prefs.tokens.length };
+  return { sent: prefs.tokens.length, ok: vysledek.ok, fail: vysledek.fail, kody: vysledek.kody };
 });
