@@ -27,6 +27,10 @@
  * RAZÍTKO OBNOVY (24. 9. 2026): co vrací obnova ze zálohy, nese pole restoredAt. Takový zápis
  * není práce trenéra, takže se nehlásí — viz jeObnova() níž (Mekovo rozhodnutí A, otázka 7).
  *
+ * KNIHOVNA PO VIDEÍCH (krok 5, 25. 9. 2026): aplikace už nepíše kopii knihovny („šanon“)
+ * do shared/data. Hlášky o videích proto hlídá onVideoChange nad kolekcí videos; hlídání
+ * shared/data zůstává pro složky, štítky a vybavení a pro starou verzi aplikace v přechodu.
+ *
  * NASAZENÍ (dělá Mek z počítače):
  *   cd functions && npm install
  *   firebase deploy --only functions
@@ -55,6 +59,8 @@ const QUIET_TO = 8;                    // noční klid do (bez)
 /** Typ notifikace → skupina, kterou jde v appce vypnout (profil → Notifikace). */
 const TYPE_GROUP = {
   library: "library",        // změny knihovny
+  videoAdded: "library",     // přidané video (nebo vrácené z koše) — krok 5, po videích
+  videoEdited: "library",    // upravené video — krok 5, po videích
   videoDeleted: "library",   // smazané video (zvlášť, je to nevratné)
   training: "library",       // tréninky ostatních
   trainingCloned: "library", // někdo si zkopíroval Mekův trénink
@@ -89,6 +95,39 @@ function hvezdicky(n) {
 function pocet(n, jedna, dve, pet) {
   return n === 1 ? `1 ${jedna}` : (n >= 2 && n <= 4 ? `${n} ${dve}` : `${n} ${pet}`);
 }
+
+/* Texty zpětné vazby k JEDNOMU videu. Sdílí je hlídání šanonu (stará verze aplikace)
+   i hlídání jednotlivých videí (krok 5), ať zní hlášky v obou případech stejně.
+   v = { nazev, hodnota } */
+const NADPIS_ZPETNE_VAZBY = { rating: "Trenér — hodnocení", difficulty: "Trenér — obtížnost", note: "Trenér — poznámka u videa" };
+const TEXT_ZPETNE_VAZBY = {
+  rating: (v) => v.hodnota ? `ohodnotil(a) „${v.nazev}“ ${hvezdicky(v.hodnota)}` : `zrušil(a) svoje hodnocení u „${v.nazev}“`,
+  difficulty: (v) => v.hodnota ? `nastavil(a) obtížnost u „${v.nazev}“ na ${v.hodnota}` : `zrušil(a) svoje hodnocení obtížnosti u „${v.nazev}“`,
+  note: (v) => v.hodnota ? `napsal(a) poznámku u „${v.nazev}“` : `smazal(a) svoji poznámku u „${v.nazev}“`
+};
+// Texty pro majitele videa (fáze 2) — vlastní, ne poskládané z těch adminských, ať to zní česky.
+const TEXT_MAJITELI = {
+  rating: (v) => v.hodnota ? `ohodnotil(a) tvoje video „${v.nazev}“ ${hvezdicky(v.hodnota)}` : `zrušil(a) hodnocení u tvého videa „${v.nazev}“`,
+  difficulty: (v) => v.hodnota ? `nastavil(a) obtížnost u tvého videa „${v.nazev}“ na ${v.hodnota}` : `zrušil(a) hodnocení obtížnosti u tvého videa „${v.nazev}“`,
+  note: (v) => v.hodnota ? `napsal(a) poznámku u tvého videa „${v.nazev}“` : `smazal(a) poznámku u tvého videa „${v.nazev}“`
+};
+/** Zpětná vazba má v dokumentu videa tahle pole (mapa uid → hodnota). */
+const POLE_ZPETNE_VAZBY = { rating: "ratings", difficulty: "difficulties", note: "notesByCoach" };
+
+/** JSON se seřazenými klíči. Pořadí klíčů v mapách Firestore nezaručuje, a bez řazení by
+    stejná data mohla vypadat jako změna. */
+function stabilni(v) {
+  if (Array.isArray(v)) return "[" + v.map(stabilni).join(",") + "]";
+  if (v && typeof v === "object") {
+    return "{" + Object.keys(v).sort().map(k => JSON.stringify(k) + ":" + stabilni(v[k])).join(",") + "}";
+  }
+  return JSON.stringify(v === undefined ? null : v);
+}
+function jeMapa(o) {
+  return !!o && typeof o === "object" && !Array.isArray(o);
+}
+/** Seznamy, které v shared/data zůstaly i po kroku 5. */
+const SEZNAMY_KNIHOVNY = ["folders", "tagPool", "equipmentPool", "parts", "trainingFocus", "focusLibraryMap"];
 
 /** Je teď v Praze noční klid? Počítá se z pražského času, ne z času serveru (ten jede v UTC),
     takže to sedí i po přechodu na zimní čas. */
@@ -209,8 +248,13 @@ exports.onSharedDataChange = onDocumentUpdated("shared/data", async (event) => {
   const editorUid = after.lastEditedBy;
   if (!editorUid || editorUid === ADMIN_UID) return;
 
-  const libBefore = before.library || {};
-  const libAfter = after.library || {};
+  /* KROK 5 (25. 9. 2026): nová verze aplikace do šanonu (pole library) nepíše — jeho rozdíl
+     se počítá, JEN když ho zápis nesl před i po, tedy když ukládala stará verze aplikace.
+     Když chybí na jedné straně (admin šanon smazal, nebo ho stará verze po smazání zapsala
+     znovu), nepočítá se nic: jinak by z toho byla hláška „smazal 334 videí“ a naopak. */
+  const sanonNaObouStranach = jeMapa(before.library) && jeMapa(after.library);
+  const libBefore = sanonNaObouStranach ? before.library : {};
+  const libAfter = sanonNaObouStranach ? after.library : {};
   const zivy = (o) => Object.keys(o).filter(id => o[id] && !o[id].deletedAt);
 
   const predtim = zivy(libBefore);
@@ -239,18 +283,9 @@ exports.onSharedDataChange = onDocumentUpdated("shared/data", async (event) => {
     const poznB = JSON.stringify((b.notesByCoach || {})[editorUid] || null);
     if (poznA !== poznB) zpetnaVazba.note.push({ id, nazev, hodnota: poznA !== "null" });
   });
-  const textZpetneVazby = {
-    rating: (v) => v.hodnota ? `ohodnotil(a) „${v.nazev}“ ${hvezdicky(v.hodnota)}` : `zrušil(a) svoje hodnocení u „${v.nazev}“`,
-    difficulty: (v) => v.hodnota ? `nastavil(a) obtížnost u „${v.nazev}“ na ${v.hodnota}` : `zrušil(a) svoje hodnocení obtížnosti u „${v.nazev}“`,
-    note: (v) => v.hodnota ? `napsal(a) poznámku u „${v.nazev}“` : `smazal(a) svoji poznámku u „${v.nazev}“`
-  };
-  const nadpisZpetneVazby = { rating: "Trenér — hodnocení", difficulty: "Trenér — obtížnost", note: "Trenér — poznámka u videa" };
-  // Texty pro majitele videa (fáze 2) — vlastní, ne poskládané z těch adminských, ať to zní česky.
-  const textMajiteli = {
-    rating: (v) => v.hodnota ? `ohodnotil(a) tvoje video „${v.nazev}“ ${hvezdicky(v.hodnota)}` : `zrušil(a) hodnocení u tvého videa „${v.nazev}“`,
-    difficulty: (v) => v.hodnota ? `nastavil(a) obtížnost u tvého videa „${v.nazev}“ na ${v.hodnota}` : `zrušil(a) hodnocení obtížnosti u tvého videa „${v.nazev}“`,
-    note: (v) => v.hodnota ? `napsal(a) poznámku u tvého videa „${v.nazev}“` : `smazal(a) poznámku u tvého videa „${v.nazev}“`
-  };
+  const textZpetneVazby = TEXT_ZPETNE_VAZBY;
+  const nadpisZpetneVazby = NADPIS_ZPETNE_VAZBY;
+  const textMajiteli = TEXT_MAJITELI;
   const souhrnMajiteli = {
     rating: (n) => `ohodnotil(a) ${pocet(n, "tvoje video", "tvoje videa", "tvých videí")}`,
     difficulty: (n) => `nastavil(a) obtížnost u ${pocet(n, "tvého videa", "tvých videí", "tvých videí")}`,
@@ -317,7 +352,16 @@ exports.onSharedDataChange = onDocumentUpdated("shared/data", async (event) => {
   if (!casti.length) {
     // Mazání i zpětná vazba už odešly výš — druhou hlášku o tomtéž neposíláme.
     if (ubylo.length || byloZpetneVazby) return;
-    casti.push("upravil(a) knihovnu (popis, štítky nebo pořadí)");
+    /* Obecná hláška jen tehdy, když se opravdu něco změnilo (krok 5). Dřív šla po každém
+       zápisu — i po uložení klíče nebo smazání šanonu, a to ještě pod jménem toho, kdo
+       ukládal naposledy předtím (tyhle zápisy lastEditedBy nepřepisují). */
+    if (sanonNaObouStranach && stabilni(libBefore) !== stabilni(libAfter)) {
+      casti.push("upravil(a) knihovnu (popis, štítky nebo pořadí)");
+    } else if (SEZNAMY_KNIHOVNY.some(k => stabilni(before[k]) !== stabilni(after[k]))) {
+      casti.push("upravil(a) nastavení knihovny (složky, štítky nebo vybavení)");
+    } else {
+      return;
+    }
   }
   await notifikuj(ADMIN_UID, {
     type: "library",
@@ -325,6 +369,115 @@ exports.onSharedDataChange = onDocumentUpdated("shared/data", async (event) => {
     body: `${kdo} ${casti.join(", ")}.`,
     url: APP_URL
   });
+});
+
+/* =========================================================
+   1b) JEDNOTLIVÁ VIDEA (krok 5 přepisu knihovny, 25. 9. 2026)
+   Knihovna bydlí jen v kolekci videos (co dokument, to video), takže hlášky o videích
+   vznikají tady, po jednom videu. Kdo změnu udělal, nese video samo: aplikace ke každému
+   zápisu videa přidá lastEditedBy a čerstvý lastEditedAt.
+   ČERSTVÝ ČAS JE PODMÍNKA. Zápis, který čas nezměnil, nebyl úpravou v nové verzi aplikace:
+   buď ukládala stará verze (o razítku neví a posílá zpátky, co přečetla — její změny se
+   ještě nahlásí po staru přes šanon výš), nebo úklid po smazaném účtu. Nic tak nepřijde dvakrát.
+   Mekova volba A (25. 9.): změna víc videí najednou se nesčítá — první video se pojmenuje,
+   další spolkne tlumení („a mezitím N dalších změn“ u příští hlášky stejného druhu).
+   Automatickou kontrolu videí hlásí dál onVideoAutoCheck níž.
+   ========================================================= */
+/** Pole videa, která nejsou jeho obsahem. Jejich změna není „úprava videa“: zpětná vazba má
+    vlastní hlášky, hlášení a kontroly jiné cesty, hvězdička oblíbených je jen značka. */
+const VIDEO_NENI_OBSAH = new Set([
+  "ratings", "difficulties", "notesByCoach",
+  "goneAt", "goneResolvedAt", "brokenAt", "autoCheck", "autoCheckIgnoreUrl",
+  "share", "favorite", "deletedAt", "restoredAt",
+  "lastEditedBy", "lastEditedAt", "addedBy", "dateAdded", "id"
+]);
+function prazdne(v) {
+  return v === undefined || v === null || v === "" || (Array.isArray(v) && !v.length);
+}
+/** Která pole obsahu se mezi dvěma verzemi videa liší. Prázdné hodnoty (chybí, null, "", [])
+    se berou jako stejné — formulář je ukládá různě a úprava to není. */
+function zmenenyObsahVidea(a, b) {
+  const klice = new Set([...Object.keys(a || {}), ...Object.keys(b || {})]);
+  return [...klice].filter(k => {
+    if (VIDEO_NENI_OBSAH.has(k)) return false;
+    const x = (a || {})[k], y = (b || {})[k];
+    if (prazdne(x) && prazdne(y)) return false;
+    return stabilni(x) !== stabilni(y);
+  });
+}
+
+exports.onVideoChange = onDocumentWritten("videos/{videoId}", async (event) => {
+  const id = event.params.videoId;
+  const pred = event.data.before.exists ? event.data.before.data() : null;
+  const po = event.data.after.exists ? event.data.after.data() : null;
+  // Natrvalo smazané video (vysypaný koš) se nehlásí — hlásilo se už při přesunu do koše.
+  if (!po) return;
+  if (jeObnova(pred, po)) return;
+  const editorUid = po.lastEditedBy;
+  if (!editorUid || !po.lastEditedAt) return;
+  if (pred && pred.lastEditedAt === po.lastEditedAt) return;
+  if (editorUid === ADMIN_UID) return;
+
+  const nazev = po.title || (pred && pred.title) || "video";
+  const odkaz = `${APP_URL}?open=video&id=${encodeURIComponent(id)}`;
+  const zivePred = !!pred && !pred.deletedAt;
+  const zivePo = !po.deletedAt;
+  const kdo = await jmeno(editorUid);
+
+  if (!zivePred && zivePo) {
+    await notifikuj(ADMIN_UID, {
+      type: "videoAdded",
+      title: "Trenér — změna v knihovně",
+      body: pred ? `${kdo} vrátil(a) „${nazev}“ z koše.` : `${kdo} přidal(a) video „${nazev}“.`,
+      url: odkaz
+    });
+    return;
+  }
+  if (zivePred && !zivePo) {
+    await notifikuj(ADMIN_UID, {
+      type: "videoDeleted",
+      title: "Trenér — smazané video",
+      body: `${kdo} smazal(a) „${nazev}“.`,
+      url: APP_URL
+    });
+    return;
+  }
+  if (!zivePo) return;   // úprava videa, které leží v koši
+
+  /* Zpětná vazba: stejně jako dřív se porovnávají JEN hodnoty toho, kdo ukládal. Adminovi
+     hláška vždycky, majiteli videa (addedBy) taky — kromě admina a toho, kdo ji napsal. */
+  for (const typ of ["rating", "difficulty", "note"]) {
+    const pole = POLE_ZPETNE_VAZBY[typ];
+    // „|| null“ jako dřív u šanonu: chybějící, null i prázdná poznámka znamenají „nic“.
+    const a = (po[pole] || {})[editorUid] || null;
+    const b = (pred[pole] || {})[editorUid] || null;
+    if (stabilni(a) === stabilni(b)) continue;
+    const v = { nazev, hodnota: typ === "note" ? a !== null : a };
+    await notifikuj(ADMIN_UID, {
+      type: typ,
+      title: NADPIS_ZPETNE_VAZBY[typ],
+      body: `${kdo} ${TEXT_ZPETNE_VAZBY[typ](v)}.`,
+      url: odkaz
+    });
+    const majitel = po.addedBy;
+    if (majitel && majitel !== editorUid && majitel !== ADMIN_UID) {
+      await notifikuj(majitel, {
+        type: typ,
+        title: NADPIS_ZPETNE_VAZBY[typ],
+        body: `${kdo} ${TEXT_MAJITELI[typ](v)}.`,
+        url: odkaz
+      });
+    }
+  }
+
+  if (zmenenyObsahVidea(pred, po).length) {
+    await notifikuj(ADMIN_UID, {
+      type: "videoEdited",
+      title: "Trenér — změna v knihovně",
+      body: `${kdo} upravil(a) video „${nazev}“.`,
+      url: odkaz
+    });
+  }
 });
 
 /* =========================================================
