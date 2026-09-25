@@ -29,7 +29,7 @@
  *
  * KNIHOVNA PO VIDEÍCH (krok 5, 25. 9. 2026): aplikace už nepíše kopii knihovny („šanon“)
  * do shared/data. Hlášky o videích proto hlídá onVideoChange nad kolekcí videos; hlídání
- * shared/data zůstává pro složky, štítky a vybavení a pro starou verzi aplikace v přechodu.
+ * shared/data zůstává jen pro složky, štítky a vybavení.
  *
  * NASAZENÍ (dělá Mek z počítače):
  *   cd functions && npm install
@@ -96,8 +96,7 @@ function pocet(n, jedna, dve, pet) {
   return n === 1 ? `1 ${jedna}` : (n >= 2 && n <= 4 ? `${n} ${dve}` : `${n} ${pet}`);
 }
 
-/* Texty zpětné vazby k JEDNOMU videu. Sdílí je hlídání šanonu (stará verze aplikace)
-   i hlídání jednotlivých videí (krok 5), ať zní hlášky v obou případech stejně.
+/* Texty zpětné vazby k JEDNOMU videu (hlídání jednotlivých videí, onVideoChange).
    v = { nazev, hodnota } */
 const NADPIS_ZPETNE_VAZBY = { rating: "Trenér — hodnocení", difficulty: "Trenér — obtížnost", note: "Trenér — poznámka u videa" };
 const TEXT_ZPETNE_VAZBY = {
@@ -122,9 +121,6 @@ function stabilni(v) {
     return "{" + Object.keys(v).sort().map(k => JSON.stringify(k) + ":" + stabilni(v[k])).join(",") + "}";
   }
   return JSON.stringify(v === undefined ? null : v);
-}
-function jeMapa(o) {
-  return !!o && typeof o === "object" && !Array.isArray(o);
 }
 /** Seznamy, které v shared/data zůstaly i po kroku 5. */
 const SEZNAMY_KNIHOVNY = ["folders", "tagPool", "equipmentPool", "parts", "trainingFocus", "focusLibraryMap"];
@@ -236,10 +232,13 @@ async function notifikuj(uid, { type, title, body, url, key }) {
 }
 
 /* =========================================================
-   1) SDÍLENÁ KNIHOVNA (videa, složky, štítky, vybavení)
-   Celá knihovna je jeden dokument shared/data, do kterého appka při každém uložení píše
-   i lastEditedBy — podle toho se pozná, kdo změnu udělal, a Mekovy vlastní změny se
-   přeskočí. Mazání videa má vlastní typ: je to jediná nevratná věc, kterou editor dělá.
+   1) SEZNAMY KNIHOVNY (složky, štítky, vybavení) — dokument shared/data
+   Od kroku 5 (25. 9. 2026) v shared/data knihovna nebydlí, jen seznamy; videa hlídá
+   onVideoChange níž. Aplikace při uložení seznamů píše i lastEditedBy — podle toho se pozná,
+   kdo změnu udělal, a Mekovy vlastní změny se přeskočí.
+   ÚKLID 25. 9. (Mekova volba A): pryč je porovnávání starého šanonu (pole library), které
+   v přechodu hlídalo starou verzi aplikace. Kdyby šanon ještě zapsala zapomenutá stará
+   verze, nenahlásí se nic — horšího se stát nemůže.
    ========================================================= */
 exports.onSharedDataChange = onDocumentUpdated("shared/data", async (event) => {
   const before = event.data.before.data() || {};
@@ -248,98 +247,7 @@ exports.onSharedDataChange = onDocumentUpdated("shared/data", async (event) => {
   const editorUid = after.lastEditedBy;
   if (!editorUid || editorUid === ADMIN_UID) return;
 
-  /* KROK 5 (25. 9. 2026): nová verze aplikace do šanonu (pole library) nepíše — jeho rozdíl
-     se počítá, JEN když ho zápis nesl před i po, tedy když ukládala stará verze aplikace.
-     Když chybí na jedné straně (admin šanon smazal, nebo ho stará verze po smazání zapsala
-     znovu), nepočítá se nic: jinak by z toho byla hláška „smazal 334 videí“ a naopak. */
-  const sanonNaObouStranach = jeMapa(before.library) && jeMapa(after.library);
-  const libBefore = sanonNaObouStranach ? before.library : {};
-  const libAfter = sanonNaObouStranach ? after.library : {};
-  const zivy = (o) => Object.keys(o).filter(id => o[id] && !o[id].deletedAt);
-
-  const predtim = zivy(libBefore);
-  const potom = zivy(libAfter);
-  const pribylo = potom.filter(id => !predtim.includes(id));
-  const ubylo = predtim.filter(id => !potom.includes(id));
-
-  const kdo = await jmeno(editorUid);
-
-  /* ZPĚTNÁ VAZBA (23. 9. 2026, po Mekově testu). Hodnocení, obtížnost i poznámka trenéra
-     bydlí uvnitř knihovny, takže tahle funkce je vidí jako „něco se změnilo“ — a dřív z toho
-     vypadla matoucí hláška „upravil knihovnu (popis, štítky nebo pořadí)“. Teď se porovnají
-     jmenovitě a pojmenují pravým jménem. Kouká se JEN na hodnoty toho, kdo změnu uložil.
-     Když se to týká jednoho videa, hláška ho pojmenuje a ťuknutí ho otevře; u víc videí
-     najednou se pošle jedna souhrnná, ať se druhá a třetí neztratí v tlumení. */
-  const zpetnaVazba = { rating: [], difficulty: [], note: [] };
-  Object.keys(libAfter).forEach(id => {
-    const a = libAfter[id], b = libBefore[id];
-    if (!a || !b) return;
-    const nazev = a.title || "video";
-    const hodA = (a.ratings || {})[editorUid], hodB = (b.ratings || {})[editorUid];
-    if (hodA !== hodB) zpetnaVazba.rating.push({ id, nazev, hodnota: hodA });
-    const obtA = (a.difficulties || {})[editorUid], obtB = (b.difficulties || {})[editorUid];
-    if (obtA !== obtB) zpetnaVazba.difficulty.push({ id, nazev, hodnota: obtA });
-    const poznA = JSON.stringify((a.notesByCoach || {})[editorUid] || null);
-    const poznB = JSON.stringify((b.notesByCoach || {})[editorUid] || null);
-    if (poznA !== poznB) zpetnaVazba.note.push({ id, nazev, hodnota: poznA !== "null" });
-  });
-  const textZpetneVazby = TEXT_ZPETNE_VAZBY;
-  const nadpisZpetneVazby = NADPIS_ZPETNE_VAZBY;
-  const textMajiteli = TEXT_MAJITELI;
-  const souhrnMajiteli = {
-    rating: (n) => `ohodnotil(a) ${pocet(n, "tvoje video", "tvoje videa", "tvých videí")}`,
-    difficulty: (n) => `nastavil(a) obtížnost u ${pocet(n, "tvého videa", "tvých videí", "tvých videí")}`,
-    note: (n) => `napsal(a) poznámku u ${pocet(n, "tvého videa", "tvých videí", "tvých videí")}`
-  };
-  const souhrnZpetneVazby = {
-    rating: (n) => `ohodnotil(a) ${pocet(n, "video", "videa", "videí")}`,
-    difficulty: (n) => `nastavil(a) obtížnost u ${pocet(n, "videa", "videí", "videí")}`,
-    note: (n) => `napsal(a) poznámku u ${pocet(n, "videa", "videí", "videí")}`
-  };
-  let byloZpetneVazby = false;
-  for (const typ of ["rating", "difficulty", "note"]) {
-    const seznam = zpetnaVazba[typ];
-    if (!seznam.length) continue;
-    byloZpetneVazby = true;
-    const jedno = seznam.length === 1;
-    await notifikuj(ADMIN_UID, {
-      type: typ,
-      title: nadpisZpetneVazby[typ],
-      body: `${kdo} ${jedno ? textZpetneVazby[typ](seznam[0]) : souhrnZpetneVazby[typ](seznam.length)}.`,
-      url: jedno ? `${APP_URL}?open=video&id=${encodeURIComponent(seznam[0].id)}` : APP_URL
-    });
-    /* Fáze 2: zpětná vazba patří i tomu, kdo video do knihovny přidal — je to jeho video.
-       Adminovi se neposílá podruhé (má ji z hlášky výš) a sobě samému taky ne. */
-    const podleMajitele = {};
-    seznam.forEach(v => {
-      const majitel = (libAfter[v.id] || {}).addedBy;
-      if (!majitel || majitel === editorUid || majitel === ADMIN_UID) return;
-      (podleMajitele[majitel] = podleMajitele[majitel] || []).push(v);
-    });
-    for (const [majitel, moje] of Object.entries(podleMajitele)) {
-      const jedine = moje.length === 1;
-      await notifikuj(majitel, {
-        type: typ,
-        title: nadpisZpetneVazby[typ],
-        body: `${kdo} ${jedine ? textMajiteli[typ](moje[0]) : souhrnMajiteli[typ](moje.length)}.`,
-        url: jedine ? `${APP_URL}?open=video&id=${encodeURIComponent(moje[0].id)}` : APP_URL
-      });
-    }
-  }
-
-  if (ubylo.length) {
-    const nazvy = ubylo.slice(0, 2).map(id => `„${(libBefore[id] && libBefore[id].title) || "bez názvu"}“`).join(", ");
-    const zbytek = ubylo.length > 2 ? ` a ${pocet(ubylo.length - 2, "další", "další", "dalších")}` : "";
-    await notifikuj(ADMIN_UID, {
-      type: "videoDeleted",
-      title: "Trenér — smazané video",
-      body: `${kdo} smazal(a) ${nazvy}${zbytek}.`,
-      url: APP_URL
-    });
-  }
-
   const casti = [];
-  if (pribylo.length) casti.push(`přidal(a) ${pocet(pribylo.length, "video", "videa", "videí")}`);
   const delta = (a, b) => (b || []).length - (a || []).length;
   const dSlozky = delta(before.folders, after.folders);
   const dStitky = delta(before.tagPool, after.tagPool);
@@ -350,19 +258,13 @@ exports.onSharedDataChange = onDocumentUpdated("shared/data", async (event) => {
   if (dVybaveni > 0) casti.push("přidal(a) nové vybavení");
 
   if (!casti.length) {
-    // Mazání i zpětná vazba už odešly výš — druhou hlášku o tomtéž neposíláme.
-    if (ubylo.length || byloZpetneVazby) return;
-    /* Obecná hláška jen tehdy, když se opravdu něco změnilo (krok 5). Dřív šla po každém
-       zápisu — i po uložení klíče nebo smazání šanonu, a to ještě pod jménem toho, kdo
-       ukládal naposledy předtím (tyhle zápisy lastEditedBy nepřepisují). */
-    if (sanonNaObouStranach && stabilni(libBefore) !== stabilni(libAfter)) {
-      casti.push("upravil(a) knihovnu (popis, štítky nebo pořadí)");
-    } else if (SEZNAMY_KNIHOVNY.some(k => stabilni(before[k]) !== stabilni(after[k]))) {
-      casti.push("upravil(a) nastavení knihovny (složky, štítky nebo vybavení)");
-    } else {
-      return;
-    }
+    /* Obecná hláška jen tehdy, když se v seznamech opravdu něco změnilo. Zápisy, které
+       seznamy nemění (uložení klíče, smazání šanonu), lastEditedBy nepřepisují — dřív z nich
+       vycházela hláška pod jménem toho, kdo ukládal naposledy předtím. */
+    if (!SEZNAMY_KNIHOVNY.some(k => stabilni(before[k]) !== stabilni(after[k]))) return;
+    casti.push("upravil(a) nastavení knihovny (složky, štítky nebo vybavení)");
   }
+  const kdo = await jmeno(editorUid);
   await notifikuj(ADMIN_UID, {
     type: "library",
     title: "Trenér — změna v knihovně",
@@ -377,8 +279,8 @@ exports.onSharedDataChange = onDocumentUpdated("shared/data", async (event) => {
    vznikají tady, po jednom videu. Kdo změnu udělal, nese video samo: aplikace ke každému
    zápisu videa přidá lastEditedBy a čerstvý lastEditedAt.
    ČERSTVÝ ČAS JE PODMÍNKA. Zápis, který čas nezměnil, nebyl úpravou v nové verzi aplikace:
-   buď ukládala stará verze (o razítku neví a posílá zpátky, co přečetla — její změny se
-   ještě nahlásí po staru přes šanon výš), nebo úklid po smazaném účtu. Nic tak nepřijde dvakrát.
+   buď ukládala stará verze (o razítku neví a posílá zpátky, co přečetla; od úklidu 25. 9.
+   se její změny nehlásí vůbec), nebo úklid po smazaném účtu.
    Mekova volba A (25. 9.): změna víc videí najednou se nesčítá — první video se pojmenuje,
    další spolkne tlumení („a mezitím N dalších změn“ u příští hlášky stejného druhu).
    Automatickou kontrolu videí hlásí dál onVideoAutoCheck níž.
