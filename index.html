@@ -2544,7 +2544,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
     <div id="notifyGroupsSection" class="hidden">
       <p class="panel-group-title">Co mi má chodit</p>
       <div class="notif-switch-row">
-        <span class="lbl">Knihovna a tréninky<span class="sub">Přidané a smazané video, složky, štítky, tréninky ostatních, kopie tvého tréninku</span></span>
+        <span class="lbl">Knihovna a tréninky<span class="sub">Přidané, upravené a smazané video, složky, štítky, tréninky ostatních, kopie tvého tréninku</span></span>
         <button type="button" class="theme-toggle" id="notifyGroupLibrary" role="switch" aria-checked="true" data-group="library"><span class="theme-toggle-knob"><i class="fa-solid fa-xmark"></i><i class="fa-solid fa-check"></i></span></button>
       </div>
       <div class="notif-switch-row">
@@ -3239,23 +3239,43 @@ function trainingFingerprint(t) {
    které se neposílá (jako driveApiKey), rozešel by se se skutečností pokaždé, když se takové
    pole změní. */
 let savedSharedFingerprint = null;
-/* Odkud v téhle relaci pochází knihovna: true = ze samostatných dokumentů (kolekce videos),
-   false = ze starého pole library v dokumentu shared/data. Nastavuje se jednou při načtení
-   po přihlášení podle toho, jestli v kolekci něco je. Zapisuje se zatím pořád postaru —
-   viz komentář u načítání. */
-let libraryFromCollection = false;
+/* Podařilo se v téhle relaci načíst knihovnu (kolekci videos)? Od kroku 5 (25. 9. 2026)
+   je kolekce videos JEDINÉ místo, kde knihovna bydlí — starý „šanon“ (pole library
+   v shared/data) se už nečte ani nepíše. Když se kolekce při přihlášení nenačte, zůstane
+   false: aplikace pak do obnovení stránky nesáhne na videa ani na sdílené odkazy (s prázdnou
+   knihovnou v paměti by z nich při uložení zmizela videa). Tréninky se ukládají dál. */
+let knihovnaNactena = false;
+/* Starý šanon, jak ho admin načetl při přihlášení — jen pro kontrolu před jeho smazáním
+   (zkontrolujStarySanon). U ostatních trenérů je vždycky null. */
+let starySanonKeKontrole = null;
+let starySanonTimer = null;
+/* true = kontrola prošla a nejbližší uložení šanon smaže (smazStarySanonTed). */
+let smazatStarySanon = false;
+let pokusySmazatSanon = 0;
 /* Otisky JEDNOTLIVÝCH videí — stejný princip jako u tréninků (savedTrainingFingerprints),
    jen nad kolekcí videos: posílají se jen ta, co se doopravdy změnila. Platí tu totéž
    pravidlo: "když otisk souhlasí, server to spolehlivě má". Seřizuje se na třech místech —
    po načtení kolekce, po příchodu cizí změny a po vlastním úspěšném zápisu. */
 const savedVideoFingerprints = new Map();
 function sharedFingerprint() {
+  // Od kroku 5 bez knihovny — ta do shared/data nejde (videa mají vlastní otisky výš).
   try {
-    return JSON.stringify([state.library, state.folders, state.tagPool, state.equipmentPool, state.parts,
+    return JSON.stringify([state.folders, state.tagPool, state.equipmentPool, state.parts,
       state.trainingFocus, state.focusLibraryMap]);
   } catch (e) { return null; }
 }
-const APP_VERSION = "2026-09-25 00:31";
+/** Video tak, jak ho aplikace drží v paměti: bez razítka lastEditedBy/lastEditedAt. Razítko
+    přidává saveLibraryToCollection ke každému zápisu videa a čte ho jen Cloud Function (kdo
+    video upravil). V paměti by překáželo — dostalo by se do zálohy a obnova by ho brala jako
+    rozdíl, a stará verze aplikace by ho posílala zpátky. Používá se všude, kde video
+    přichází ze serveru do state.library. */
+function videoZeServeru(data) {
+  const v = Object.assign({}, data);
+  delete v.lastEditedBy;
+  delete v.lastEditedAt;
+  return v;
+}
+const APP_VERSION = "2026-09-25 16:16";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -3481,19 +3501,22 @@ document.getElementById("checkLibrarySizeBtn").addEventListener("click", () => {
   const kb = (n) => Math.round(n / 1024);
   const libraryJson = JSON.stringify(state.library);
   const notesJson = JSON.stringify(Object.fromEntries(Object.entries(state.library).map(([id, it]) => [id, { r: it.ratings, d: it.difficulties, n: it.notesByCoach }])));
-  const wholeDoc = JSON.stringify({ library: state.library, folders: state.folders, tagPool: state.tagPool, equipmentPool: state.equipmentPool, parts: state.parts });
+  /* Od kroku 5 (25. 9. 2026) je knihovna po videích a limit ~1 MB hlídá každé video zvlášť.
+     Sdílený dokument shared/data nese už jen seznamy, tak se měří ty. */
+  const wholeDoc = JSON.stringify({ folders: state.folders, tagPool: state.tagPool, equipmentPool: state.equipmentPool, parts: state.parts, trainingFocus: state.trainingFocus, focusLibraryMap: state.focusLibraryMap });
+  const nejvetsi = Object.values(state.library).reduce((max, it) => Math.max(max, JSON.stringify(it).length), 0);
   const separateThumbsJson = JSON.stringify(state.thumbnails);
   logDebug("[velikost] === rozpad velikosti sdílené knihovny ===");
-  logDebug(`[velikost] počet videí: ${Object.keys(state.library).length}`);
+  logDebug(`[velikost] počet videí: ${Object.keys(state.library).length}${knihovnaNactena ? "" : " — KNIHOVNA SE NENAČETLA"}`);
   logDebug(`[velikost] hodnocení+obtížnost+poznámky dohromady: ~${kb(notesJson.length)} KB`);
-  logDebug(`[velikost] celé pole "library": ~${kb(libraryJson.length)} KB`);
-  logDebug(`[velikost] HLAVNÍ dokument (library+složky+štítky+vybavení+části): ~${kb(wholeDoc.length)} KB z limitu ~1024 KB`);
+  logDebug(`[velikost] všechna videa dohromady: ~${kb(libraryJson.length)} KB (každé má svůj dokument), největší ~${kb(nejvetsi)} KB z limitu ~1024 KB`);
+  logDebug(`[velikost] HLAVNÍ dokument (složky+štítky+vybavení+části+zaměření): ~${kb(wholeDoc.length)} KB z limitu ~1024 KB`);
   logDebug(`[velikost] samostatná kolekce náhledů dohromady: ~${kb(separateThumbsJson.length)} KB (má svůj vlastní, oddělený limit na KAŽDOU fotku zvlášť)`);
   const oldStyleCount = Object.values(state.library).filter(it => it.thumbnail && it.thumbnail.startsWith("data:")).length;
   const newStyleCount = Object.values(state.library).filter(it => it.thumbnail && it.thumbnail.startsWith(LOCAL_THUMB_PREFIX)).length;
   logDebug(`[velikost] náhledy ještě uložené postaru přímo v knihovně: ${oldStyleCount}${oldStyleCount ? " — nečekané (má být 0), pošli prosím 🐞" : ""}`);
   logDebug(`[velikost] náhledy už přestěhované do samostatné kolekce: ${newStyleCount}`);
-  toast(`Hlavní dokument: ~${kb(wholeDoc.length)} KB z ~1024 KB limitu. Detaily v 🐞.`, 8000, "info");
+  toast(`Hlavní dokument: ~${kb(wholeDoc.length)} KB z ~1024 KB limitu, největší video ~${kb(nejvetsi)} KB. Detaily v 🐞.`, 8000, "info");
 });
 
 /* =========================================================
@@ -4792,7 +4815,11 @@ onAuthStateChanged(auth, async (user) => {
     unsubscribeFromSharedData();
     unsubscribeFromSharedThumbnails();
     unsubscribeFromVideos();
-    libraryFromCollection = false;   // příští přihlášený si zdroj zjistí sám
+    knihovnaNactena = false;   // příští přihlášený si knihovnu načte sám
+    starySanonKeKontrole = null;
+    smazatStarySanon = false;
+    pokusySmazatSanon = 0;
+    if (starySanonTimer) { clearTimeout(starySanonTimer); starySanonTimer = null; }
     savedVideoFingerprints.clear();
     zapomenTreninkyOstatnich();
     unsubscribeFromOwnMembership();
@@ -4871,7 +4898,7 @@ async function checkMembershipAndProceed() {
   switchView("library");
   subscribeToSharedData();
   subscribeToSharedThumbnails();
-  subscribeToVideos();   // sám se nepřipojí, dokud knihovna nepochází z kolekce
+  subscribeToVideos();   // sám se nepřipojí, když se knihovna nenačetla
   subscribeToOwnMembership();
   subscribeToCommentActivity();
   subscribeToPendingRequests();
@@ -4880,6 +4907,7 @@ async function checkMembershipAndProceed() {
   subscribeToGoneReports();
   scheduleAutoVideoCheck();
   naplanujZalohuPoPrihlaseni();   // jen admin: automatická záloha do složky a připomínka (24. 9. 2026)
+  naplanujKontroluStarehoSanonu();   // jen admin, jen dokud šanon v databázi je (krok 5, 25. 9. 2026)
   if (isEditor()) purgeOldTrash().catch(err => console.warn("Úklid koše selhal:", err));
   // Tréninky ostatních trenérů se dotáhnou na pozadí, až když má prohlížeč chvilku klidu —
   // appka je potřebuje jen pro údaj "v tréninku N×" na kartách a pro Tržiště, takže nemají
@@ -5000,7 +5028,11 @@ async function loadUserData() {
       };
       await setDoc(sharedRef, shared);
     }
-    state.library = shared.library || {};
+    // Knihovna se čte jen z kolekce videos, viz níž. Šanon (shared.library) si nechá jen
+    // admin — na kontrolu, než ho aplikace smaže (krok 5).
+    state.library = {};
+    starySanonKeKontrole = (uidCurrent === ADMIN_UID && shared.library && typeof shared.library === "object")
+      ? shared.library : null;
     state.folders = shared.folders || [];
     state.driveApiKey = shared.driveApiKey || "";
     state.vapidKey = shared.vapidKey || "";
@@ -5013,27 +5045,24 @@ async function loadUserData() {
     // čistě odvozená hodnota, takže ji spočítá stejně každý — první uložení ji pak usadí.
     state.focusLibraryMap = shared.focusLibraryMap || null;
     state.knownRevision = shared.revision || 0;
-    /* PŘECHOD NA KOLEKCI videos (krok 2 z plánu).
-       Knihovna se stěhuje z jednoho velkého pole do samostatných dokumentů. Tahle verze
-       z nich umí ČÍST, ale pořád ještě zapisuje postaru — takže dokud se nepřestěhuje,
-       nezmění se vůbec nic, a kdyby se přestěhování nepovedlo, appka běží dál ze starých dat.
-       Rozhoduje obsah: prázdná kolekce = ještě se nestěhovalo = ber staré pole. */
-    libraryFromCollection = false;
+    /* KNIHOVNA = KOLEKCE videos (krok 5, 25. 9. 2026). Dřív se při chybě nebo prázdné kolekci
+       potichu vzal starý šanon. Ten se už neudržuje, takže by to byla zastaralá data — teď je
+       chyba chybou: ukáže se v hlášce po přihlášení a do obnovení stránky se nesahá na videa
+       ani na sdílené odkazy (knihovnaNactena zůstane false). Prázdná kolekce je prostě prázdná
+       knihovna. */
+    knihovnaNactena = false;
     try {
       const videosSnap = await getDocs(collection(db, "videos"));
-      if (!videosSnap.empty) {
-        const zKolekce = {};
-        videosSnap.forEach(d => { zKolekce[d.id] = d.data(); });
-        state.library = zKolekce;
-        libraryFromCollection = true;
-        savedVideoFingerprints.clear();
-        Object.entries(zKolekce).forEach(([id, it]) => savedVideoFingerprints.set(id, trainingFingerprint(it)));
-      }
+      const zKolekce = {};
+      videosSnap.forEach(d => { zKolekce[d.id] = videoZeServeru(d.data()); });
+      state.library = zKolekce;
+      knihovnaNactena = true;
+      savedVideoFingerprints.clear();
+      Object.entries(zKolekce).forEach(([id, it]) => savedVideoFingerprints.set(id, trainingFingerprint(it)));
     } catch (e) {
-      // Nejčastější příčina: v pravidlech ve Firebase konzoli chybí blok pro "videos".
-      // Není to důvod nepustit člověka do aplikace — jede se ze starého pole dál.
-      console.error("Kolekci videos se nepodařilo načíst, beru starou knihovnu:", e);
-      logDebug("[knihovna] kolekce videos nedostupná (" + (e.code || e.message || "?") + ") — jedu ze starého pole");
+      console.error("Knihovnu (kolekci videos) se nepodařilo načíst:", e);
+      logDebug("[knihovna] ✗ kolekce videos se nenačetla (" + (e.code || e.message || "?") + ") — videa ani sdílené odkazy se do obnovení stránky neukládají");
+      loadErrors.push(`videa v knihovně (${e.code || e.message || "?"})`);
     }
     // 1/3 otisku: AŽ TEĎ, když je state.library v definitivní podobě. Kdyby se seřizoval
     // před načtením kolekce, lišil by se od ní (jiné pořadí klíčů) a hned první uložení
@@ -5042,7 +5071,7 @@ async function loadUserData() {
     if (!state.focusLibraryMap) state.focusLibraryMap = seedFocusLibraryMap();
     savedSharedFingerprint = sharedFingerprint();
     logDebug("[login] po přihlášení: počet videí", Object.keys(state.library).length,
-      "revize", state.knownRevision, libraryFromCollection ? "— zdroj: kolekce videos" : "— zdroj: staré pole library");
+      "revize", state.knownRevision, knihovnaNactena ? "— zdroj: kolekce videos" : "— KNIHOVNA SE NENAČETLA");
     sharedOk = true;
   } catch (e) {
     console.error("Nepodařilo se načíst sdílenou knihovnu:", e);
@@ -5265,7 +5294,7 @@ function zpracujAktualizaciSdilenych(shared) {
     return;
   }
   const prepiseRozdelane = maNeulozeneSeznamy();
-  logDebug("[sync] přišla potvrzená aktualizace, počet videí v knihovně:", Object.keys(shared.library || {}).length, new Date().toISOString());
+  logDebug("[sync] přišla potvrzená aktualizace sdílených seznamů, revize", revize, new Date().toISOString());
   applyRemoteSharedUpdate(shared);
   if (prepiseRozdelane) {
     logDebug("[sync] cizí změna přepsala neuloženou úpravu seznamů");
@@ -5277,7 +5306,7 @@ function zpracujAktualizaciSdilenych(shared) {
 function maNeulozeneSeznamy() {
   if (!savedSharedFingerprint) return false;
   try {
-    const ulozene = JSON.parse(savedSharedFingerprint).slice(1);
+    const ulozene = JSON.parse(savedSharedFingerprint);   // od kroku 5 v otisku jen seznamy
     return JSON.stringify(ulozene) !== JSON.stringify([state.folders, state.tagPool, state.equipmentPool, state.parts, state.trainingFocus, state.focusLibraryMap]);
   } catch (e) { return false; }
 }
@@ -5303,13 +5332,12 @@ function unsubscribeFromSharedThumbnails() {
   if (sharedThumbsUnsubscribe) { sharedThumbsUnsubscribe(); sharedThumbsUnsubscribe = null; }
 }
 /** Živá synchronizace knihovny rozdělené po videích — stejný princip jako u náhledů výš,
-    jen nad kolekcí videos. Připojuje se JEN tehdy, když knihovna z té kolekce doopravdy
-    pochází (libraryFromCollection); dokud se nepřestěhovalo, drží ji dál odběr shared/data
-    a tenhle by ji jen přepisoval prázdnotou. */
+    jen nad kolekcí videos. Připojuje se JEN tehdy, když se knihovna při přihlášení načetla
+    (knihovnaNactena) — jinak aplikace s videy do obnovení stránky nepracuje vůbec. */
 let videosUnsubscribe = null;
 function subscribeToVideos() {
   if (videosUnsubscribe) { videosUnsubscribe(); videosUnsubscribe = null; }
-  if (!libraryFromCollection) return;
+  if (!knihovnaNactena) return;
   videosUnsubscribe = onSnapshot(collection(db, "videos"), (snap) => {
     let changed = false;
     snap.docChanges().forEach(change => {
@@ -5319,7 +5347,7 @@ function subscribeToVideos() {
         savedVideoFingerprints.delete(change.doc.id);
         changed = true;
       } else {
-        const data = change.doc.data();
+        const data = videoZeServeru(change.doc.data());
         state.library[change.doc.id] = data;
         // Otisk se srovná na to, co právě přišlo ze serveru — jinak by aplikace při
         // nejbližším uložení poslala serveru zpátky jeho vlastní data.
@@ -5373,9 +5401,8 @@ function unsubscribeFromOwnMembership() {
   if (ownMembershipUnsubscribe) { ownMembershipUnsubscribe(); ownMembershipUnsubscribe = null; }
 }
 function applyRemoteSharedUpdate(shared) {
-  // Když knihovna pochází z kolekce videos, drží ji subscribeToVideos a starým polem
-  // se přepisovat NESMÍ — bylo by to zastaralé zrcadlo a přepsalo by čerstvá data.
-  if (!libraryFromCollection) state.library = shared.library || {};
+  // Knihovnu drží subscribeToVideos (kolekce videos). Starý šanon v shared/data se tu
+  // schválně nečte — je zastaralý a přepsal by čerstvá data (krok 5).
   state.folders = shared.folders || [];
   state.tagPool = shared.tagPool || [];
   state.equipmentPool = shared.equipmentPool || [];
@@ -5455,29 +5482,30 @@ async function saveUserDataNow() {
   if (!uidCurrent) return false;
   try {
     const sharedRef = doc(db, "shared", "data");
-    /* Zapisují se jen sdílená data, která se doopravdy změnila. Dřív se celá knihovna
-       (334 videí) přepisovala i tehdy, když člověk jen přejmenoval trénink — a protože
-       autosave běží po každé změně, dělalo to desítky zbytečných přenosů za minutu.
-       Viz savedSharedFingerprint nahoře.
-       Čekající mazání zápis vynutí vždycky: to je jediná operace, kde by chyba znamenala,
-       že se smazané video vrátí zpátky. */
+    /* KROK 5 (25. 9. 2026): knihovna bydlí jen v kolekci videos. Do shared/data jdou už jen
+       seznamy (složky, štítky, vybavení, části, zaměření) — a jen když se doopravdy změnily
+       (viz savedSharedFingerprint nahoře). Videa jdou po jednom, jen ta změněná, přes
+       saveLibraryToCollection. Dřív se při každé změně videa přepisovala i celá kopie
+       knihovny v shared/data („šanon“), kterou si pak stahoval každý trenér.
+
+       Starý šanon smaže u admina jednou nejbližší uložení (viz zkontrolujStarySanon). Jde to
+       PŘED otiskem a revizí níž, protože to samo revizi zvedá. */
+    if (smazatStarySanon) await smazStarySanonTed(sharedRef);
     const sharedFp = sharedFingerprint();
     // Revize, ke které se tahle data vztahují — zachytit HNED, spolu s otiskem. Dřív se četla
     // až po zápisu videí (await níž) a cizí změna, která mezitím přišla, ji posunula: transakce
     // pak nepoznala souběh a místní úprava seznamů se tiše ztratila (24. 9. 2026).
     const revizeNaZacatku = state.knownRevision;
-    const sharedZmeneno = pendingLibraryDeletions.size > 0
-      || sharedFp === null
-      || sharedFp !== savedSharedFingerprint;
+    const sharedZmeneno = sharedFp === null || sharedFp !== savedSharedFingerprint;
+    /* Videa jdou PRVNÍ a bez transakce — každé je samostatný dokument. Když se knihovna při
+       přihlášení nenačetla, nesahá se na ně vůbec (v paměti by byla prázdná). */
+    let zapsanoVidei = 0;
+    if (knihovnaNactena) zapsanoVidei = await saveLibraryToCollection();
     if (!sharedZmeneno) {
-      logDebug("[save] knihovna beze změny, nezapisuje se (revize zůstává", state.knownRevision + ")");
+      if (zapsanoVidei) await obnovSdilenaVidea();
+      else logDebug("[save] knihovna beze změny, nezapisuje se (revize zůstává", state.knownRevision + ")");
       return await saveMyTrainings();
     }
-    /* Když knihovna žije v samostatných dokumentech, jdou JEDNOTLIVÁ VIDEA jako PRVNÍ —
-       od přestěhování jsou to ta pravá data. Teprve pak se obnoví staré pole v shared/data
-       (zápis níž), které je po dobu zabíhání už jen záloha. Pořadí je schválně takhle:
-       kdyby zápis zálohy selhal, pravá data už jsou v bezpečí. */
-    if (libraryFromCollection) await saveLibraryToCollection();
     /* POJISTKA PROTI TICHÉMU PŘEPSÁNÍ CIZÍ ZMĚNY.
        Dřív to fungovalo tak, že se aplikace NEJDŘÍV zeptala "jaká je na serveru revize?",
        a když seděla, TEPRVE PAK zapsala. Mezi tím uplynul jeden obrátek po síti a v té
@@ -5494,9 +5522,9 @@ async function saveUserDataNow() {
        mazání fronty, žádné sahání do state. Jediné, co si odsud odnášíme, jsou ty dvě
        proměnné níž, a ty se při každém průchodu přepočítají celé.
 
-       CENA, KTEROU TO MÁ: transakce potřebuje spojení. Bez signálu se zápis do knihovny
-       nezařadí do fronty na později (jako dřív), ale rovnou selže a řekne to. U tréninků
-       to tak není, ty se ukládají po starém a frontu mají. */
+       CENA, KTEROU TO MÁ: transakce potřebuje spojení. Bez signálu se zápis seznamů
+       nezařadí do fronty na později (jako dřív), ale rovnou selže a řekne to. U videí
+       a tréninků to tak není, ty se ukládají bez transakce a frontu mají. */
     let konfliktSeServerem = null;   // { serverRevize, data } — vyřídí se AŽ ZA transakcí
     let zapsanaRevize = null;
     let ocekavanaRevize = revizeNaZacatku;   // undefined = ještě nevíme, pak se nekontroluje
@@ -5522,22 +5550,8 @@ async function saveUserDataNow() {
       toast("Mezitím se aplikace změnila jinde (možná zapomenuté okno) — aplikace se obnovila na nejnovější verzi. Zkus svou poslední změnu prosím zopakovat.", 10000, "warn");
     }
 
-    const deletedIdsThisSave = new Set(pendingLibraryDeletions);
-    // Krok 1 (jen pokud je co mazat): samostatný zápis, který smaže konkrétní položky pomocí
-    // deleteField() na přesné cestě — odděleně od hlavního zápisu, ať si nepřekáží v jednom
-    // volání s tím, že posíláme i celé pole "library" jako celek.
-    if (deletedIdsThisSave.size) {
-      const deletePayload = {};
-      deletedIdsThisSave.forEach(id => { deletePayload[`library.${id}`] = deleteField(); });
-      await zapisSdilena(deletePayload);
-      if (konfliktSeServerem) { vyriditKonflikt(); return false; }
-      ocekavanaRevize = zapsanaRevize;   // druhý krok navazuje na revizi, kterou jsme právě zapsali
-      pendingLibraryDeletions.clear();
-    }
-    // Krok 2: běžný zápis zbytku (nová/upravená videa, složky, štítky, vybavení, části).
     await zapisSdilena({
-      library: state.library, folders: state.folders,
-      tagPool: state.tagPool, equipmentPool: state.equipmentPool, parts: state.parts,
+      folders: state.folders, tagPool: state.tagPool, equipmentPool: state.equipmentPool, parts: state.parts,
       trainingFocus: state.trainingFocus, focusLibraryMap: state.focusLibraryMap,
       // Kdo a kdy naposled uložil — čte Cloud Function pro push notifikace admina, ať mu
       // nechodí upozornění na jeho vlastní změny a ať ví, kdo změnu udělal.
@@ -5547,20 +5561,8 @@ async function saveUserDataNow() {
     const newRevision = zapsanaRevize;
     state.knownRevision = newRevision;
     savedSharedFingerprint = sharedFp;   // 3/3: teď server má přesně tohle
-    /* Dřív se tady aplikace hned znovu ptala serveru, co tam doopravdy je — řádek [verify].
-       Vzniklo to, když se nedařilo mazat videa, a od té doby to stálo jedno stažení CELÉ
-       knihovny po každém uložení. Mazání funguje, tak to stahování je pryč.
-       Řádek v 🐞 zůstává, jen říká jen to, co aplikace doopravdy ví: co právě odeslala.
-       Tvrdit "server to opravdu má", když se ho neptáme, by byla lež v záznamu. */
-    logDebug("[save] knihovna zapsána:", Object.keys(state.library).length, "videí, revize", newRevision,
-      deletedIdsThisSave.size ? `(smazáno ${deletedIdsThisSave.size})` : "");
-    // Stejný princip jako u shareSnapshot tréninků níž: dokud je sdílení videa aktivní, veřejný
-    // snímek v kolekci sharedVideos se obnoví při každém uložení knihovny, ať nikdy neukazuje
-    // starou kopii popisu/poznámek. (Když se knihovna nezměnila, sem se vůbec nedojde —
-    // snímek by z nezměněných dat vyšel stejně.)
-    const sharedVideoItems = Object.values(state.library).filter(isVideoShareActive);
-    const videoSnapshots = await Promise.all(sharedVideoItems.map(buildVideoShareSnapshot));
-    await Promise.all(sharedVideoItems.map((item, i) => setDoc(doc(db, "sharedVideos", item.id), videoSnapshots[i])));
+    logDebug("[save] seznamy zapsány, revize", newRevision);
+    await obnovSdilenaVidea();
     return await saveMyTrainings();
   } catch (e) {
     console.error("Nepodařilo se uložit data:", e);
@@ -5579,12 +5581,24 @@ async function saveUserDataNow() {
   }
 }
 
+/** Stejný princip jako u shareSnapshot tréninků: dokud je sdílení videa aktivní, veřejný snímek
+    v kolekci sharedVideos se obnoví při každém uložení, ve kterém se změnila videa nebo seznamy,
+    ať nikdy neukazuje starou kopii popisu/poznámek. Když se knihovna nenačetla, nesahá se na ně. */
+async function obnovSdilenaVidea() {
+  if (!knihovnaNactena) return;
+  const sharedVideoItems = Object.values(state.library).filter(isVideoShareActive);
+  const videoSnapshots = await Promise.all(sharedVideoItems.map(buildVideoShareSnapshot));
+  await Promise.all(sharedVideoItems.map((item, i) => setDoc(doc(db, "sharedVideos", item.id), videoSnapshots[i])));
+}
+
 /** Uloží do kolekce videos jen ta videa, která se od posledního zápisu doopravdy změnila,
     a smaže ta, co čekají ve frontě na smazání. Stejný princip jako u tréninků.
+    Vrací, kolik videí zapsala nebo smazala (0 = nic).
 
-    Frontu pendingLibraryDeletions tady SCHVÁLNĚ nevyprazdňuje — potřebuje ji ještě zápis
-    do starého pole níž. Smazat už smazaný dokument nic neudělá, takže případné zopakování
-    při dalším uložení nevadí. */
+    RAZÍTKO (krok 5): ke každému zapsanému videu se přidá lastEditedBy (kdo) a lastEditedAt
+    (čerstvý čas) — podle toho Cloud Function pozná, kdo video upravil, a pošle adminovi
+    hlášku. Jen do zapisovaného dokumentu, NE do state.library: otisk se počítá z paměti,
+    takže s razítkem v paměti by pokaždé vypadalo změněné každé video. */
 async function saveLibraryToCollection() {
   const zmenena = [];
   Object.entries(state.library).forEach(([id, it]) => {
@@ -5592,20 +5606,109 @@ async function saveLibraryToCollection() {
     if (fp === null || fp !== savedVideoFingerprints.get(id)) zmenena.push({ id, it, fp });
   });
   const smazana = [...pendingLibraryDeletions];
-  if (!zmenena.length && !smazana.length) return;
+  if (!zmenena.length && !smazana.length) return 0;
+  const razitko = { lastEditedBy: uidCurrent, lastEditedAt: Date.now() };
   await Promise.all([
-    ...zmenena.map(({ id, it }) => setDoc(doc(db, "videos", id), it)),
+    ...zmenena.map(({ id, it }) => setDoc(doc(db, "videos", id), Object.assign({}, it, razitko))),
     ...smazana.map(id => deleteDoc(doc(db, "videos", id)))
   ]);
   // Až po úspěšném zápisu. Když spadne, vyletí to do catch v saveUserDataNow a otisky
-  // zůstanou staré — takže se stejná videa pošlou při dalším pokusu znovu.
+  // zůstanou staré — takže se stejná videa pošlou při dalším pokusu znovu. Stejně tak fronta
+  // mazání: vyškrtají se jen ta, co se právě smazala (co přibylo mezitím, počká na další uložení).
   zmenena.forEach(({ id, fp }) => {
     if (fp === null) savedVideoFingerprints.delete(id);
     else savedVideoFingerprints.set(id, fp);
   });
-  smazana.forEach(id => savedVideoFingerprints.delete(id));
+  smazana.forEach(id => { savedVideoFingerprints.delete(id); pendingLibraryDeletions.delete(id); });
   logDebug("[save] knihovna po videích: zapsáno", zmenena.length, "z", Object.keys(state.library).length,
     smazana.length ? `, smazáno ${smazana.length}` : "");
+  return zmenena.length + smazana.length;
+}
+
+/** Jednorázové smazání starého šanonu (pole library v shared/data) — krok 5, Mekova volba A.
+    Volá se jen ze saveUserDataNow (tedy pod zámkem na ukládání, takže ozvěna vlastního zápisu
+    se odloží a pak přeskočí), a jen když zkontrolujStarySanon ověřil, že šanon nenese nic,
+    co by chybělo ve šuplících. Zvedá revizi o 1 jako každý zápis do shared/data.
+    Když mezitím uložil někdo jiný (revize nesedí), nesmaže nic a zkusí to znovu za chvíli —
+    nic se tím nepřepíše, jde jen o to, aby aplikace nepřeskočila cizí revizi.
+    Chyba tady nesmí shodit uložení, které za ním běží — jen se zapíše do 🐞. */
+async function smazStarySanonTed(sharedRef) {
+  let stav = "", novaRevize = null;
+  try {
+    // Obsluha transakce se může spustit víckrát — jen počítá, nic „nedělá jednou“.
+    await runTransaction(db, async (tx) => {
+      const snap = await tx.get(sharedRef);
+      const data = snap.exists() ? snap.data() : {};
+      novaRevize = null;
+      if (!data.library) { stav = "neni"; return; }
+      const serverRevize = data.revision || 0;
+      if (serverRevize !== state.knownRevision) { stav = "soubeh"; return; }
+      novaRevize = serverRevize + 1;
+      stav = "smazano";
+      tx.update(sharedRef, { library: deleteField(), revision: novaRevize, lastEditedBy: uidCurrent, lastEditedAt: Date.now() });
+    });
+  } catch (e) {
+    smazatStarySanon = false;
+    logDebug(`[šanon] ✗ smazání se nepovedlo (${(e && (e.code || e.message)) || e}) — šanon zůstává, zkusí se při dalším přihlášení`);
+    return;
+  }
+  if (stav === "soubeh") {
+    pokusySmazatSanon++;
+    if (pokusySmazatSanon >= 3) {
+      smazatStarySanon = false;
+      logDebug("[šanon] ostatní pořád ukládají — smazání šanonu se zkusí při dalším přihlášení");
+      return;
+    }
+    logDebug("[šanon] mezitím uložil někdo jiný — smazání šanonu zkusím za 5 vteřin");
+    setTimeout(() => { if (smazatStarySanon) saveUserData(); }, 5000);
+    return;
+  }
+  smazatStarySanon = false;
+  if (stav === "smazano") {
+    state.knownRevision = novaRevize;
+    logDebug(`[šanon] ✓ starý šanon (kopie knihovny v shared/data) smazán, revize ${novaRevize}`);
+  } else {
+    logDebug("[šanon] šanon už v databázi není");
+  }
+}
+
+/** KROK 5 — úklid starého šanonu (Mekova volba A, 25. 9. 2026). Jen admin, chvíli po
+    přihlášení, a jen když šanon v shared/data ještě je. Nejdřív čerstvě ze serveru ověří, že
+    každé video, které v šanonu žije (neleží v koši), má svůj šuplík v kolekci videos. Teprve
+    pak šanon smaže — přes nejbližší uložení, ať to projde zámkem na ukládání jako všechno
+    ostatní. Když kontrola nesedí, šanon nechá být a do 🐞 vypíše, co chybí.
+    Když ho po smazání zapíše znovu stará verze aplikace (někdo ji má ještě otevřenou),
+    smaže se při dalším přihlášení. */
+function naplanujKontroluStarehoSanonu() {
+  if (starySanonTimer) { clearTimeout(starySanonTimer); starySanonTimer = null; }
+  if (uidCurrent !== ADMIN_UID || !starySanonKeKontrole) return;
+  // Až po automatické záloze (ta startuje 12 s po přihlášení), ať se přihlášení nezdržuje.
+  starySanonTimer = setTimeout(() => { starySanonTimer = null; zkontrolujStarySanon(); }, 20000);
+}
+async function zkontrolujStarySanon() {
+  const sanon = starySanonKeKontrole;
+  starySanonKeKontrole = null;
+  if (!sanon || uidCurrent !== ADMIN_UID) return;
+  if (!knihovnaNactena) { logDebug("[šanon] knihovna se nenačetla — šanon nechávám"); return; }
+  let snap;
+  try { snap = await getDocsFromServer(collection(db, "videos")); }
+  catch (e) {
+    logDebug(`[šanon] kontrolu teď nejde udělat (${(e && (e.code || e.message)) || e}) — šanon zůstává, zkusí se při dalším přihlášení`);
+    return;
+  }
+  if (uidCurrent !== ADMIN_UID) return;
+  const veSuplicich = new Set(snap.docs.map(d => d.id));
+  const zive = Object.entries(sanon).filter(([, it]) => it && !it.deletedAt);
+  const chybi = zive.filter(([id]) => !veSuplicich.has(id));
+  if (chybi.length) {
+    const nazvy = chybi.slice(0, 5).map(([id, it]) => `„${it.title || id}“`).join(", ");
+    logDebug(`[šanon] ✗ ${chybi.length} ${czPlural(chybi.length, "video", "videa", "videí")} ze šanonu nemá šuplík (${nazvy}${chybi.length > 5 ? ", …" : ""}) — šanon nechávám, pošli prosím 🐞`);
+    return;
+  }
+  logDebug(`[šanon] kontrola sedí: všech ${zive.length} živých videí ze šanonu je ve šuplících — šanon se smaže`);
+  smazatStarySanon = true;
+  pokusySmazatSanon = 0;
+  saveUserData();
 }
 
 /** Uložení vlastních tréninků — druhá půlka saveUserDataNow. Je zvlášť proto, že se na ni
@@ -5618,7 +5721,8 @@ async function saveMyTrainings() {
   // netknutý. Výsledek: přidáš/upravíš cvičení v aktivně sdíleném tréninku, appka to uloží
   // (autosave funguje), ale veřejný odkaz dál ukazuje starou kopii — třeba "video smazáno" u
   // videa, co bylo přidané až PO vytvoření odkazu. Teď se snapshot obnovuje při každém uložení.
-  const activeMine = mine.filter(isShareActive);
+  // Bez načtené knihovny by snímek vyšel bez videí — pak zůstává ten starý (krok 5).
+  const activeMine = knihovnaNactena ? mine.filter(isShareActive) : [];
   const trainingSnapshots = await Promise.all(activeMine.map(buildShareSnapshot));
   activeMine.forEach((t, i) => { t.shareSnapshot = trainingSnapshots[i]; });
   // ÚKLID PO VYPRŠENÍ. Odkaz platí 3 dny, ale kopie dat pro veřejnou stránku zůstávala
@@ -9304,6 +9408,9 @@ function getTrainingPartKeys(t) {
 /** Async kvůli komentářům (viz fetchCommentsSnapshot níž) — appka je dotahuje jen v okamžiku
     stavby snímku, ne naživo, stejně jako zbytek shareSnapshot (obnoví se při dalším uložení). */
 async function buildShareSnapshot(t) {
+  // Knihovna se při přihlášení nenačetla (krok 5): nový snímek by vyšel bez videí, takže
+  // zůstává ten, co už trénink má.
+  if (!knihovnaNactena && t.shareSnapshot) return t.shareSnapshot;
   const videos = {};
   getTrainingVideoIds(t).forEach(libId => {
     if (videos[libId]) return;
@@ -15447,7 +15554,7 @@ async function nactiDnesniStavProObnovu(zaloha) {
   let vSnap = null, trSnap, komentare, tipy;
   try {
     [vSnap, trSnap, komentare, tipy] = await Promise.all([
-      libraryFromCollection ? getDocsFromServer(collection(db, "videos")) : Promise.resolve(null),
+      getDocsFromServer(collection(db, "videos")),
       getDocsFromServer(collectionGroup(db, "trainings")),
       nactiKomentareVsechVidei(),
       nactiTipy()
@@ -16252,29 +16359,25 @@ document.getElementById("deleteAccountBtn").addEventListener("click", async () =
     // 1) smazat vlastní tréninky
     const myTrainingsSnap = await getDocs(collection(db, "users", uidCurrent, "trainings"));
     await Promise.all(myTrainingsSnap.docs.map(d => deleteDoc(d.ref)));
-    // 2) odstranit svoje hodnocení/obtížnost/poznámky ze sdílené knihovny
-    /* TRANSAKCE — tady byla ta nejhorší ze všech tří děr. Kód si přečetl CELÝ sdílený dokument,
-       vyškrtal z něj své stopy a celý ho zapsal zpátky. Kdyby mezi tím čtením a zápisem uložil
-       kdokoli jiný cokoli do knihovny, jeho práce by zmizela úplně — přepsala by ji ta verze,
-       co se přečetla o vteřinu dřív.
-       Teď se čte i zapisuje v jednom nedělitelném kroku. Když někdo vstoupí do cesty, server
-       obsluhu zopakuje — a protože vždycky vychází z toho, co PRÁVĚ přečetl ze serveru, vyjde
-       z toho zas jen "čerstvá data minus moje stopy". Proto se ten průchod dá bez obav opakovat. */
-    const sharedRef = doc(db, "shared", "data");
-    await runTransaction(db, async (tx) => {
-      const snap = await tx.get(sharedRef);
-      if (!snap.exists()) return;
-      const shared = snap.data();
-      let changed = false;
-      Object.values(shared.library || {}).forEach(it => {
-        if (it.ratings && it.ratings[uidCurrent] !== undefined) { delete it.ratings[uidCurrent]; changed = true; }
-        if (it.difficulties && it.difficulties[uidCurrent] !== undefined) { delete it.difficulties[uidCurrent]; changed = true; }
-        if (it.notesByCoach && it.notesByCoach[uidCurrent] !== undefined) { delete it.notesByCoach[uidCurrent]; changed = true; }
-      });
-      if (!changed) return;
-      shared.revision = (shared.revision || 0) + 1;
-      tx.set(sharedRef, shared);
+    // 2) odstranit svoje hodnocení/obtížnost/poznámky z videí v knihovně
+    /* KROK 5 (25. 9. 2026): dřív se tohle mazalo jen ze starého šanonu v shared/data — ve
+       videích (kolekce videos, odkud aplikace knihovnu čte) hodnocení smazaného trenéra
+       zůstávalo. Teď se čte čerstvě ze serveru a u každého videa, kde trenér něco má, se smaže
+       JEN jeho položka (updateDoc na přesnou cestu, zbytek videa se nepřepisuje, takže nevadí,
+       když ho zrovna někdo jiný upravuje). Razítko lastEditedAt se schválně nemění — úklid
+       po smazaném účtu není úprava videa a notifikace z něj nechodí. */
+    const ZPETNA_VAZBA = ["ratings", "difficulties", "notesByCoach"];
+    const videaSnap = await getDocsFromServer(collection(db, "videos"));
+    const uklid = [];
+    videaSnap.forEach(d => {
+      const v = d.data() || {};
+      const zmeny = {};
+      ZPETNA_VAZBA.forEach(k => { if (v[k] && v[k][uidCurrent] !== undefined) zmeny[`${k}.${uidCurrent}`] = deleteField(); });
+      if (Object.keys(zmeny).length) uklid.push([d.ref, zmeny]);
     });
+    for (let i = 0; i < uklid.length; i += 20) {
+      await Promise.all(uklid.slice(i, i + 20).map(([ref, zmeny]) => updateDoc(ref, zmeny)));
+    }
     // 3) smazat profil
     await deleteDoc(doc(db, "users", uidCurrent));
     // 4) smazat samotný přihlašovací účet
