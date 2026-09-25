@@ -1,4 +1,4 @@
-const CACHE_NAME = "trener-v36";
+const CACHE_NAME = "trener-v37";
 const APP_SHELL = ["./", "./index.html", "./training-mode.css", "./manifest.json", "./icon-192.png", "./icon-512.png", "./icon-512-maskable.png", "./club-logo.png", "./raptor-sound.mp3", "./Boxing%20Bell%20Sound%20Effect.mp3"];
 
 /* =========================================================

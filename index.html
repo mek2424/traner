@@ -3245,13 +3245,6 @@ let savedSharedFingerprint = null;
    false: aplikace pak do obnovení stránky nesáhne na videa ani na sdílené odkazy (s prázdnou
    knihovnou v paměti by z nich při uložení zmizela videa). Tréninky se ukládají dál. */
 let knihovnaNactena = false;
-/* Starý šanon, jak ho admin načetl při přihlášení — jen pro kontrolu před jeho smazáním
-   (zkontrolujStarySanon). U ostatních trenérů je vždycky null. */
-let starySanonKeKontrole = null;
-let starySanonTimer = null;
-/* true = kontrola prošla a nejbližší uložení šanon smaže (smazStarySanonTed). */
-let smazatStarySanon = false;
-let pokusySmazatSanon = 0;
 /* Otisky JEDNOTLIVÝCH videí — stejný princip jako u tréninků (savedTrainingFingerprints),
    jen nad kolekcí videos: posílají se jen ta, co se doopravdy změnila. Platí tu totéž
    pravidlo: "když otisk souhlasí, server to spolehlivě má". Seřizuje se na třech místech —
@@ -3275,7 +3268,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-09-25 16:16";
+const APP_VERSION = "2026-09-25 23:48";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -4816,10 +4809,6 @@ onAuthStateChanged(auth, async (user) => {
     unsubscribeFromSharedThumbnails();
     unsubscribeFromVideos();
     knihovnaNactena = false;   // příští přihlášený si knihovnu načte sám
-    starySanonKeKontrole = null;
-    smazatStarySanon = false;
-    pokusySmazatSanon = 0;
-    if (starySanonTimer) { clearTimeout(starySanonTimer); starySanonTimer = null; }
     savedVideoFingerprints.clear();
     zapomenTreninkyOstatnich();
     unsubscribeFromOwnMembership();
@@ -4907,7 +4896,6 @@ async function checkMembershipAndProceed() {
   subscribeToGoneReports();
   scheduleAutoVideoCheck();
   naplanujZalohuPoPrihlaseni();   // jen admin: automatická záloha do složky a připomínka (24. 9. 2026)
-  naplanujKontroluStarehoSanonu();   // jen admin, jen dokud šanon v databázi je (krok 5, 25. 9. 2026)
   if (isEditor()) purgeOldTrash().catch(err => console.warn("Úklid koše selhal:", err));
   // Tréninky ostatních trenérů se dotáhnou na pozadí, až když má prohlížeč chvilku klidu —
   // appka je potřebuje jen pro údaj "v tréninku N×" na kartách a pro Tržiště, takže nemají
@@ -5028,11 +5016,9 @@ async function loadUserData() {
       };
       await setDoc(sharedRef, shared);
     }
-    // Knihovna se čte jen z kolekce videos, viz níž. Šanon (shared.library) si nechá jen
-    // admin — na kontrolu, než ho aplikace smaže (krok 5).
+    // Knihovna se čte jen z kolekce videos, viz níž (krok 5). Starý šanon (shared.library)
+    // admin 25. 9. 2026 smazal; aplikace ho nečte, ani kdyby se znovu objevil.
     state.library = {};
-    starySanonKeKontrole = (uidCurrent === ADMIN_UID && shared.library && typeof shared.library === "object")
-      ? shared.library : null;
     state.folders = shared.folders || [];
     state.driveApiKey = shared.driveApiKey || "";
     state.vapidKey = shared.vapidKey || "";
@@ -5486,11 +5472,7 @@ async function saveUserDataNow() {
        seznamy (složky, štítky, vybavení, části, zaměření) — a jen když se doopravdy změnily
        (viz savedSharedFingerprint nahoře). Videa jdou po jednom, jen ta změněná, přes
        saveLibraryToCollection. Dřív se při každé změně videa přepisovala i celá kopie
-       knihovny v shared/data („šanon“), kterou si pak stahoval každý trenér.
-
-       Starý šanon smaže u admina jednou nejbližší uložení (viz zkontrolujStarySanon). Jde to
-       PŘED otiskem a revizí níž, protože to samo revizi zvedá. */
-    if (smazatStarySanon) await smazStarySanonTed(sharedRef);
+       knihovny v shared/data („šanon“), kterou si pak stahoval každý trenér. */
     const sharedFp = sharedFingerprint();
     // Revize, ke které se tahle data vztahují — zachytit HNED, spolu s otiskem. Dřív se četla
     // až po zápisu videí (await níž) a cizí změna, která mezitím přišla, ji posunula: transakce
@@ -5623,92 +5605,6 @@ async function saveLibraryToCollection() {
   logDebug("[save] knihovna po videích: zapsáno", zmenena.length, "z", Object.keys(state.library).length,
     smazana.length ? `, smazáno ${smazana.length}` : "");
   return zmenena.length + smazana.length;
-}
-
-/** Jednorázové smazání starého šanonu (pole library v shared/data) — krok 5, Mekova volba A.
-    Volá se jen ze saveUserDataNow (tedy pod zámkem na ukládání, takže ozvěna vlastního zápisu
-    se odloží a pak přeskočí), a jen když zkontrolujStarySanon ověřil, že šanon nenese nic,
-    co by chybělo ve šuplících. Zvedá revizi o 1 jako každý zápis do shared/data.
-    Když mezitím uložil někdo jiný (revize nesedí), nesmaže nic a zkusí to znovu za chvíli —
-    nic se tím nepřepíše, jde jen o to, aby aplikace nepřeskočila cizí revizi.
-    Chyba tady nesmí shodit uložení, které za ním běží — jen se zapíše do 🐞. */
-async function smazStarySanonTed(sharedRef) {
-  let stav = "", novaRevize = null;
-  try {
-    // Obsluha transakce se může spustit víckrát — jen počítá, nic „nedělá jednou“.
-    await runTransaction(db, async (tx) => {
-      const snap = await tx.get(sharedRef);
-      const data = snap.exists() ? snap.data() : {};
-      novaRevize = null;
-      if (!data.library) { stav = "neni"; return; }
-      const serverRevize = data.revision || 0;
-      if (serverRevize !== state.knownRevision) { stav = "soubeh"; return; }
-      novaRevize = serverRevize + 1;
-      stav = "smazano";
-      tx.update(sharedRef, { library: deleteField(), revision: novaRevize, lastEditedBy: uidCurrent, lastEditedAt: Date.now() });
-    });
-  } catch (e) {
-    smazatStarySanon = false;
-    logDebug(`[šanon] ✗ smazání se nepovedlo (${(e && (e.code || e.message)) || e}) — šanon zůstává, zkusí se při dalším přihlášení`);
-    return;
-  }
-  if (stav === "soubeh") {
-    pokusySmazatSanon++;
-    if (pokusySmazatSanon >= 3) {
-      smazatStarySanon = false;
-      logDebug("[šanon] ostatní pořád ukládají — smazání šanonu se zkusí při dalším přihlášení");
-      return;
-    }
-    logDebug("[šanon] mezitím uložil někdo jiný — smazání šanonu zkusím za 5 vteřin");
-    setTimeout(() => { if (smazatStarySanon) saveUserData(); }, 5000);
-    return;
-  }
-  smazatStarySanon = false;
-  if (stav === "smazano") {
-    state.knownRevision = novaRevize;
-    logDebug(`[šanon] ✓ starý šanon (kopie knihovny v shared/data) smazán, revize ${novaRevize}`);
-  } else {
-    logDebug("[šanon] šanon už v databázi není");
-  }
-}
-
-/** KROK 5 — úklid starého šanonu (Mekova volba A, 25. 9. 2026). Jen admin, chvíli po
-    přihlášení, a jen když šanon v shared/data ještě je. Nejdřív čerstvě ze serveru ověří, že
-    každé video, které v šanonu žije (neleží v koši), má svůj šuplík v kolekci videos. Teprve
-    pak šanon smaže — přes nejbližší uložení, ať to projde zámkem na ukládání jako všechno
-    ostatní. Když kontrola nesedí, šanon nechá být a do 🐞 vypíše, co chybí.
-    Když ho po smazání zapíše znovu stará verze aplikace (někdo ji má ještě otevřenou),
-    smaže se při dalším přihlášení. */
-function naplanujKontroluStarehoSanonu() {
-  if (starySanonTimer) { clearTimeout(starySanonTimer); starySanonTimer = null; }
-  if (uidCurrent !== ADMIN_UID || !starySanonKeKontrole) return;
-  // Až po automatické záloze (ta startuje 12 s po přihlášení), ať se přihlášení nezdržuje.
-  starySanonTimer = setTimeout(() => { starySanonTimer = null; zkontrolujStarySanon(); }, 20000);
-}
-async function zkontrolujStarySanon() {
-  const sanon = starySanonKeKontrole;
-  starySanonKeKontrole = null;
-  if (!sanon || uidCurrent !== ADMIN_UID) return;
-  if (!knihovnaNactena) { logDebug("[šanon] knihovna se nenačetla — šanon nechávám"); return; }
-  let snap;
-  try { snap = await getDocsFromServer(collection(db, "videos")); }
-  catch (e) {
-    logDebug(`[šanon] kontrolu teď nejde udělat (${(e && (e.code || e.message)) || e}) — šanon zůstává, zkusí se při dalším přihlášení`);
-    return;
-  }
-  if (uidCurrent !== ADMIN_UID) return;
-  const veSuplicich = new Set(snap.docs.map(d => d.id));
-  const zive = Object.entries(sanon).filter(([, it]) => it && !it.deletedAt);
-  const chybi = zive.filter(([id]) => !veSuplicich.has(id));
-  if (chybi.length) {
-    const nazvy = chybi.slice(0, 5).map(([id, it]) => `„${it.title || id}“`).join(", ");
-    logDebug(`[šanon] ✗ ${chybi.length} ${czPlural(chybi.length, "video", "videa", "videí")} ze šanonu nemá šuplík (${nazvy}${chybi.length > 5 ? ", …" : ""}) — šanon nechávám, pošli prosím 🐞`);
-    return;
-  }
-  logDebug(`[šanon] kontrola sedí: všech ${zive.length} živých videí ze šanonu je ve šuplících — šanon se smaže`);
-  smazatStarySanon = true;
-  pokusySmazatSanon = 0;
-  saveUserData();
 }
 
 /** Uložení vlastních tréninků — druhá půlka saveUserDataNow. Je zvlášť proto, že se na ni
@@ -7070,7 +6966,9 @@ function openLinkModal(id, opts) {
   formEquip = item ? [...item.equipment] : [];
   renderTagPills();
   renderEquipPills();
-  setDiffPicker(item && item.difficulties && item.difficulties[uidCurrent] ? item.difficulties[uidCurrent] : 3);
+  // Bez vlastní obtížnosti je výběr prázdný (0) — dřív tu byla trojka, která se pak při
+  // uložení zapsala, i když ji trenér nevybral (Mek 25. 9. 2026).
+  setDiffPicker(item && item.difficulties && item.difficulties[uidCurrent] ? item.difficulties[uidCurrent] : 0);
   setRatingPicker(item && item.ratings && item.ratings[uidCurrent] ? item.ratings[uidCurrent] : 0);
 
   // Předvyplnění z došlého tipu (admin ho zařazuje) nebo ze sdíleného odkazu.
@@ -7624,13 +7522,20 @@ document.getElementById("thumbFileInput").addEventListener("change", async (e) =
   toast("Náhled nahrán.");
 });
 
+/** Obtížnost 0 = trenér ji ještě nezadal: nesvítí žádný dílek a nic se neukládá.
+    Kliknutí na dílek, který už je vybraný, obtížnost zruší — stejně jako u hvězdiček
+    (Mek 25. 9. 2026, varianta A). */
 function setDiffPicker(val) {
   const wrap = document.getElementById("diffPicker");
   wrap.querySelectorAll("button").forEach(b => b.classList.toggle("on", parseInt(b.dataset.val) <= val));
   wrap.dataset.value = val;
   wrap.style.setProperty("--diff-color", difficultyColor(val));
 }
-document.querySelectorAll("#diffPicker button").forEach(b => b.addEventListener("click", () => setDiffPicker(parseInt(b.dataset.val))));
+document.querySelectorAll("#diffPicker button").forEach(b => b.addEventListener("click", () => {
+  const clicked = parseInt(b.dataset.val);
+  const current = parseInt(document.getElementById("diffPicker").dataset.value || "0");
+  setDiffPicker(current === clicked ? 0 : clicked);
+}));
 function setRatingPicker(val) {
   document.querySelectorAll("#ratingPicker button").forEach(b => b.classList.toggle("on", parseInt(b.dataset.val) <= val));
   document.getElementById("ratingPicker").dataset.value = val;
@@ -7669,9 +7574,11 @@ function renderDetailChips(item) {
 async function saveDetailRatingChange() {
   const item = state.library[currentDetailId];
   if (!item) return;
-  const diffVal = parseInt(document.getElementById("detailDiffPicker").dataset.value || "3");
+  const diffVal = parseInt(document.getElementById("detailDiffPicker").dataset.value || "0");
   const ratingVal = parseInt(document.getElementById("detailRatingPicker").dataset.value || "0");
-  item.difficulties = { ...item.difficulties, [uidCurrent]: diffVal };
+  // Obtížnost jen když ji trenér opravdu vybral — dřív se s hvězdičkami potichu uložila i trojka.
+  if (diffVal) item.difficulties = { ...item.difficulties, [uidCurrent]: diffVal };
+  else { item.difficulties = { ...item.difficulties }; delete item.difficulties[uidCurrent]; }
   if (ratingVal) item.ratings = { ...item.ratings, [uidCurrent]: ratingVal };
   else { item.ratings = { ...item.ratings }; delete item.ratings[uidCurrent]; }
   renderDetailChips(item);
@@ -7679,7 +7586,9 @@ async function saveDetailRatingChange() {
   if (ok) { toast("Uloženo."); renderLibrary(); } else toast("Uložení se nepovedlo, zkus to prosím znovu.", 2200, "err");
 }
 document.querySelectorAll("#detailDiffPicker button").forEach(b => b.addEventListener("click", () => {
-  setDetailDiffPicker(parseInt(b.dataset.val));
+  const clicked = parseInt(b.dataset.val);
+  const current = parseInt(document.getElementById("detailDiffPicker").dataset.value || "0");
+  setDetailDiffPicker(current === clicked ? 0 : clicked);
   saveDetailRatingChange();
 }));
 document.querySelectorAll("#detailRatingPicker button").forEach(b => b.addEventListener("click", () => {
@@ -7774,9 +7683,11 @@ linkForm.addEventListener("submit", async (e) => {
   // notesByCoach appka už nově needituje ("Moje poznámka" nahradily Komentáře) — pole se jen
   // beze změny přenáší dál kvůli jednorázové migraci na komentáře (viz migrateMyNoteToComment).
   const notesByCoach = { ...(existing ? existing.notesByCoach : {}) };
-  const myDiff = parseInt(document.getElementById("diffPicker").dataset.value || "3");
+  const myDiff = parseInt(document.getElementById("diffPicker").dataset.value || "0");
   const myRating = parseInt(document.getElementById("ratingPicker").dataset.value || "0");
-  difficulties[uidCurrent] = myDiff;
+  // Obtížnost i hodnocení jen to, co trenér opravdu vybral. Dřív se obtížnost zapsala vždycky
+  // (výchozí 3) — stačilo opravit popis a trenér měl u videa „svou“ trojku.
+  if (myDiff) difficulties[uidCurrent] = myDiff; else delete difficulties[uidCurrent];
   if (myRating) ratings[uidCurrent] = myRating; else delete ratings[uidCurrent];
 
   /* ——— TIP OD PROHLÍŽEČE ———
@@ -8703,7 +8614,7 @@ function openDetailModal(id) {
   document.getElementById("editFromDetailBtn").innerHTML = isEditor()
     ? '<i class="fa-solid fa-pen"></i> Upravit'
     : '<i class="fa-solid fa-star"></i> Hodnotit';
-  setDetailDiffPicker(item.difficulties && item.difficulties[uidCurrent] ? item.difficulties[uidCurrent] : 3);
+  setDetailDiffPicker(item.difficulties && item.difficulties[uidCurrent] ? item.difficulties[uidCurrent] : 0);
   setDetailRatingPicker(item.ratings && item.ratings[uidCurrent] ? item.ratings[uidCurrent] : 0);
   document.getElementById("commentNewInput").value = "";
   subscribeToComments(id);
@@ -16984,7 +16895,8 @@ const HELP_DATA = [
     ]},
     { title: "Úprava, obtížnost a mazání videí", icon: "fa-solid fa-pen", qa: [
       { q: "Jak upravím název, popis, štítky nebo vybavení u už přidaného videa?", a: "Otevři video (klikni na kartu v knihovně) a v detailu najdeš tlačítko úpravy — otevře se stejný formulář jako při přidávání." },
-      { q: "Jak funguje obtížnost (barevný pruh) u videa?", a: "Obtížnost si u každého videa hodnotí každý trenér sám (1–5 hvězdiček), aplikace pak v knihovně ukazuje barevný pruh podle průměru ze všech hodnocení — není to tedy jedno pevné číslo, ale společný odhad." },
+      { q: "Jak funguje obtížnost (barevný pruh) u videa?", a: "Obtížnost si u každého videa hodnotí každý trenér sám — v otevřené kartě videa ťukne na jeden z pěti dílků (1 nejlehčí, 5 nejtěžší). Dokud nic nevybereš, nesvítí žádný dílek a tvoje obtížnost se nepočítá. Když ťukneš znovu na dílek, který máš vybraný, tvoje obtížnost se zruší — stejně jako u hvězdiček. Aplikace pak v knihovně ukazuje barevný pruh podle průměru ze všech, kdo obtížnost zadali — není to tedy jedno pevné číslo, ale společný odhad.", kw: "obtiznost dilky zrusit prumer" },
+      { q: "U videa mám obtížnost, kterou jsem nezadal. Kde se vzala?", a: "Do 25. 9. 2026 ji tam aplikace dávala sama: když jsi video upravil, přidal nebo mu dal jen hvězdičky, uložila se ti k němu i prostřední obtížnost (třetí dílek), i když jsi ji nevybral. Teď už se obtížnost ukládá jen po tvém ťuknutí. Tu starou zrušíš tak, že v kartě videa ťukneš na třetí dílek (ten nejvyšší, co svítí) — přestane svítit a z průměru zmizí.", kw: "obtiznost trojka sama nezadal zrusit" },
       { q: "Jak video smažu a dá se to vrátit zpátky?", a: "Smazané video putuje do Koše (najdeš ho v Knihovně), kde zůstane 14 dní a dá se kdykoli obnovit. Po 14 dnech ho aplikace sama nadobro smaže. Jde ho z Koše i rovnou smazat natrvalo dřív. Koš má každý editor — na rozdíl od správy složek a slučování štítků, které zůstávají adminovi.", kw: "kos smazat obnovit" },
       { q: "Video se nedá přehrát. Co s tím?", a: "Záleží, jestli jde pustit aspoň přímo u zdroje (ikonka YouTube, Disku… vedle názvu v otevřené kartě). Když tam jde a jen tady v appce ne, označ ho přeškrtnutou kamerou jako nefunkční (umí editor; totéž je v Knihovně v nabídce ⋮ u karty). Když nejde ani u zdroje — autor ho smazal nebo zprivátnil — ťukni na vlaječku a nahlas to; admin to ověří a přepne cvičení na „Video zmizelo“. Do otevřené karty se dostaneš i z tréninku — stačí ťuknout na náhled u cvičení.", kw: "nefunkcni video oznacit nejde prehrat ikonka smazane zdroj" },
       { q: "Video mi nejde. Jak to nahlásím?", a: "Vedle názvu videa v otevřené kartě je vlaječka (má ji každý). Ťukni na ni a appka se zeptá, jestli video jde pustit přímo u zdroje — tlačítko „Zkusit na …“ máš rovnou v okně. Podle odpovědi pošle adminovi hlášení, že video nejde jen tady v appce, nebo že nejde vůbec. Dostaneš „Díky, admin o tom ví“ a vlaječka zešedne. Video se ti dál tváří normálně, dokud to admin neověří — klidně to může být jen tvoje připojení.", kw: "prohlizec nahlasit video vlajecka zmizelo" },
