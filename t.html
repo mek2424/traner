@@ -657,8 +657,11 @@ function toast(msg) {
   if (!el) {
     el = document.createElement("div");
     el.id = "sharedToast";
-    el.style.cssText = "position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1B2430;color:#fff;" +
-      "padding:9px 16px;border-radius:999px;font-size:13.5px;z-index:400;max-width:88%;text-align:center;";
+    // Přes šířku displeje s okrajem 16 px (max 520 px) a zaoblení 19 px — dřív left:50% dovolil
+    // jen půlku šířky a dlouhý text lezl přes pilulkový okraj (Mek 29. 9. 2026, jako v appce).
+    el.style.cssText = "position:fixed;left:16px;right:16px;bottom:24px;margin:0 auto;width:fit-content;max-width:520px;" +
+      "background:#1B2430;color:#fff;padding:9px 16px;border-radius:19px;font-size:13.5px;line-height:1.4;z-index:400;" +
+      "text-align:center;pointer-events:none;box-sizing:border-box;";
     document.body.appendChild(el);
   }
   el.textContent = msg;

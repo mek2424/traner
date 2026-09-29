@@ -447,14 +447,26 @@ nav.tabs button{
 nav.tabs button.active{color:var(--court);border-bottom-color:var(--chalk);}
 main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 
-/* ---------- Toast ---------- */
+/* ---------- Toast ----------
+   #toast je od 29. 9. 2026 jen sloupec, do kterého se skládají jednotlivé hlášky (.toast-item),
+   nejvýš tři, nejnovější dole (Mek: B + A). Dřív to byla jediná hláška s left:50% — směla tak
+   zabrat nejvýš půlku šířky displeje a dlouhý text se na telefonu zalomil do úzkého „vajíčka“,
+   ze kterého lezl přes zaoblené okraje. Teď přes celou šířku (okraj 16 px, max 520 px) a
+   zaoblení 19 px: jeden řádek (38 px) je dál pilulka, víc řádků je obdélník s kulatými rohy. */
 #toast{
-  position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);
-  background:var(--ink);color:var(--paper);padding:9px 18px 9px 14px;border-radius:999px;font-size:13px;
-  opacity:0;pointer-events:none;transition:opacity .2s ease, transform .2s ease;z-index:100;box-shadow:var(--shadow);
-  display:inline-flex;align-items:center;gap:9px;max-width:calc(100vw - 32px);
+  position:fixed;left:16px;right:16px;bottom:24px;z-index:100;pointer-events:none;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
 }
-#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast-item{
+  background:var(--ink);color:var(--paper);padding:9px 16px 9px 12px;border-radius:19px;font-size:13px;line-height:1.4;
+  opacity:0;transform:translateY(20px);transition:opacity .2s ease, transform .2s ease;box-shadow:var(--shadow);
+  display:flex;align-items:center;gap:9px;width:fit-content;max-width:min(520px,100%);pointer-events:none;
+}
+.toast-item.show{opacity:1;transform:translateY(0);}
+/* Dlouho svítící hláška jde odsunout prstem do strany — a proto chytá dotyk. Krátké hlášky
+   (pod 4 s) dotyk dál propouštějí na tlačítko, které leží pod nimi. */
+.toast-item.swipe{pointer-events:auto;touch-action:pan-y;cursor:grab;user-select:none;-webkit-user-select:none;}
+.toast-item.leaving{opacity:0;}
 .toast-icon{
   width:20px;height:20px;border-radius:50%;background:var(--ok);display:flex;align-items:center;justify-content:center;
   font-size:10px;color:#fff;flex-shrink:0;
@@ -3097,7 +3109,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
   </div>
 </div>
 
-<div id="toast"></div>
+<div id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.7/Sortable.min.js" defer></script>
 <!-- defer: ani jeden z těchhle skriptů není potřeba při vykreslování stránky, a bez
@@ -3271,7 +3283,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-09-29 07:59";
+const APP_VERSION = "2026-09-29 10:12";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -4038,13 +4050,81 @@ function setupPasswordReveal(btn) {
   ["mouseup", "mouseleave", "touchend", "touchcancel"].forEach(evt => btn.addEventListener(evt, hide));
 }
 document.querySelectorAll(".pass-reveal-btn").forEach(setupPasswordReveal);
+/* HLÁŠKY (29. 9. 2026, Mekova rozhodnutí): víc hlášek pod sebou, nejvýš tři, nejnovější dole;
+   čas podle délky textu; ty, co svítí 4 s a déle, jdou odsunout prstem do strany. Dřív byla
+   hláška jediná a každá nová přepsala tu předchozí — třeba noční „Mazej spát“ chybu načítání. */
+const TOAST_MAX = 3;
+const TOAST_SWIPE_OD_MS = 4000;
+/** Jak dlouho hláška svítí: aspoň to, co chtěl volající, a dlouhý text déle, ať se stihne
+    přečíst — 1,5 s + 0,3 s na slovo, nejvýš 15 s. */
+function toastCas(msg, durationMs) {
+  const slov = String(msg || "").trim().split(/\s+/).filter(Boolean).length;
+  return Math.max(durationMs, Math.min(15000, 1500 + 300 * slov));
+}
+function zrusToast(el) {
+  if (!el || el.classList.contains("leaving")) return;
+  clearTimeout(el._tm);
+  el.classList.add("leaving");
+  el.classList.remove("show");
+  setTimeout(() => el.remove(), 220);
+}
+/** Odsunutí prstem (nebo myší) do strany — jen u hlášek s třídou .swipe. */
+function nastavSwipeToastu(el) {
+  let startX = null, dx = 0, pid = null;
+  el.addEventListener("pointerdown", (e) => {
+    if (!el.classList.contains("swipe") || el.classList.contains("leaving")) return;
+    startX = e.clientX; dx = 0; pid = e.pointerId;
+    try { el.setPointerCapture(pid); } catch (err) {}
+    el.style.transition = "none";
+  });
+  el.addEventListener("pointermove", (e) => {
+    if (startX === null || e.pointerId !== pid) return;
+    dx = e.clientX - startX;
+    el.style.transform = `translateX(${dx}px)`;
+    el.style.opacity = String(Math.max(0.15, 1 - Math.abs(dx) / 220));
+  });
+  const konec = () => {
+    if (startX === null) return;
+    startX = null;
+    el.style.transition = "";
+    if (Math.abs(dx) > 60) {
+      el.style.transform = `translateX(${dx > 0 ? 420 : -420}px)`;
+      el.style.opacity = "0";
+      zrusToast(el);
+    } else {
+      el.style.transform = "";
+      el.style.opacity = "";
+    }
+  };
+  el.addEventListener("pointerup", konec);
+  el.addEventListener("pointercancel", konec);
+}
 function toast(msg, durationMs = 2200, type = "ok") {
-  const t = document.getElementById("toast");
+  const box = document.getElementById("toast");
   const icon = TOAST_ICONS[type] || TOAST_ICONS.ok;
-  t.innerHTML = `<span class="toast-icon ${type}"><i class="fa-solid ${icon}"></i></span>${esc(msg)}`;
-  t.classList.add("show");
-  clearTimeout(toast._tm);
-  toast._tm = setTimeout(() => t.classList.remove("show"), durationMs);
+  const cas = toastCas(msg, durationMs);
+  const zive = () => [...box.children].filter(x => !x.classList.contains("leaving"));
+  // Stejná hláška, co už svítí, se neukáže podruhé — jen se jí prodlouží čas. Hláška
+  // s průběhem („Ukládám… 3/12“) je jedna a přepisuje se.
+  let el = zive().find(x => x._msg === msg && x._type === type)
+    || (type === "progress" ? zive().find(x => x._type === "progress") : null);
+  if (!el) {
+    // Přišel výsledek (cokoli jiného než průběh) — hláška s průběhem skončila.
+    if (type !== "progress") zive().filter(x => x._type === "progress").forEach(zrusToast);
+    el = document.createElement("div");
+    el.className = "toast-item";
+    nastavSwipeToastu(el);
+    box.appendChild(el);
+    const vsechny = zive();
+    while (vsechny.length > TOAST_MAX) zrusToast(vsechny.shift());
+    requestAnimationFrame(() => requestAnimationFrame(() => { if (!el.classList.contains("leaving")) el.classList.add("show"); }));
+  }
+  el._msg = msg;
+  el._type = type;
+  el.innerHTML = `<span class="toast-icon ${type}"><i class="fa-solid ${icon}"></i></span><span class="toast-text">${esc(msg)}</span>`;
+  el.classList.toggle("swipe", cas >= TOAST_SWIPE_OD_MS);
+  clearTimeout(el._tm);
+  el._tm = setTimeout(() => zrusToast(el), cas);
 }
 /** Vlastní, stylově sladěná náhrada za nativní okénko prohlížeče confirm(). Vrací Promise
     (true = potvrzeno, false = zrušeno) — volající funkce proto musí být async a použít await,
@@ -16799,6 +16879,7 @@ const HELP_DATA = [
       { q: "Co dělá tlačítko Zpět na telefonu?", a: "Zavře aktuálně otevřené okno — třeba detail videa, editaci tréninku, Tréninkový režim nebo otevřené zaměření v Trénincích — místo aby rovnou zavřelo celou aplikaci. Teprve když nic není otevřené, tlačítko Zpět aplikaci doopravdy opustí. Na počítači dělá totéž klávesa Escape.", kw: "zpet escape zavrit okno" },
       { q: "Proč se otevřené okno nezavře, když kliknu vedle něj?", a: "Je to záměr — kliknutí mimo okno ho už nikdy samo nezavře, aby se nic nezavřelo omylem rozklepnutím. Zavíráš ho vždy křížkem nebo tlačítkem přímo v okně, případně tlačítkem Zpět na telefonu.", kw: "kliknuti mimo zavrit" },
       { q: "Jak zavřu okno na počítači?", a: "Křížkem v rohu, nebo klávesou Escape — ta vždycky zavře jen to okno, které je navrchu. Když máš rozepsaný text v nějakém poli, první Escape jen odklikne z pole a teprve druhý zavře okno.", kw: "escape klavesa zavrit okno pocitac" },
+      { q: "Jak zavřu hlášku dole na obrazovce?", a: "Krátké hlášky (třeba „Uloženo.“) zmizí samy za pár vteřin a ťuknutí propouštějí na tlačítko, které leží pod nimi. Delší hlášky — hlavně chyby a varování — svítí déle, podle toho, kolik mají textu, a jdou zavřít přejetím prstem do strany (na počítači přetažením myší). Když jich přijde víc naráz, ukážou se pod sebou, nejvýš tři, nejnovější dole.", kw: "hlaska toast zavrit prejet oznameni dole" },
       { q: "Jak přepnu tmavý/světlý režim?", a: "V profilu (kolečko s tvojí iniciálou vpravo nahoře) najdeš přepínač se sluníčkem a měsícem — jedním klepnutím přepneš celý vzhled aplikace." }
     ]},
     { title: "Přidání videa přímo ze stránky", icon: "fa-solid fa-share-nodes", qa: [
