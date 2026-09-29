@@ -3271,7 +3271,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-09-26 01:33";
+const APP_VERSION = "2026-09-29 07:59";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -17157,6 +17157,21 @@ document.getElementById("helpSearchInput").addEventListener("input", (e) => rend
   const navStack = []; // sledované prvky, které appka aktuálně považuje za "otevřené", v pořadí otevření
   let pendingProgrammaticPops = 0; // history.back() volání, která appka spustila sama (viz níž)
   let closingViaBackButton = false; // true jen po dobu, co appka zavírá okno kvůli tlačítku Zpět
+  /* ZAVŘÍT JEDNO OKNO A HNED OTEVŘÍT DRUHÉ (29. 9. 2026, Mek: „stalo se to i mně“).
+     Upravit v kartě videa, Spustit prezentaci z Přehledu, návrat z prezentace do Přehledu,
+     Správa složek nebo Koš z panelu složek… Zavření zavolá history.back(), jenže ten proběhne
+     až za chvíli — a nový záznam z otevření (pushState) se mezitím přidal. Chrome pak krok
+     zpět vzal i s tím novým záznamem, historie byla o jeden kratší a příští zavření okna
+     poslalo trenéra v prohlížeči ven z aplikace, na předchozí stránku.
+     Teď: když appka ještě čeká na svůj vlastní krok zpět, nový záznam odloží a přidá ho, až
+     ten krok doběhne (popstate níž). Počet záznamů tak zase sedí s počtem otevřených oken. */
+  let odlozenaOtevreni = 0;
+  let odlozenaPojistka = null;
+  function pridejZaznam() { history.pushState({ appNav: navStack.length }, ""); }
+  function dohonOdlozena() {
+    if (odlozenaPojistka) { clearTimeout(odlozenaPojistka); odlozenaPojistka = null; }
+    while (odlozenaOtevreni > 0) { odlozenaOtevreni--; pridejZaznam(); }
+  }
 
   const isOpen = (el) => !el.classList.contains("hidden");
 
@@ -17175,10 +17190,24 @@ document.getElementById("helpSearchInput").addEventListener("input", (e) => rend
       if (isOpen(el)) {
         if (idx === -1) {
           navStack.push(el);
-          history.pushState({ appNav: navStack.length }, "");
+          if (pendingProgrammaticPops > 0) {
+            odlozenaOtevreni++;
+            // Pojistka: kdyby krok zpět nikdy nedoběhl (nemá kam jít), záznam se přidá stejně.
+            if (!odlozenaPojistka) odlozenaPojistka = setTimeout(() => {
+              odlozenaPojistka = null;
+              if (!odlozenaOtevreni) return;
+              logDebug("[zpět] vlastní krok zpět nedoběhl do 1,5 s — záznam okna přidávám bez něj");
+              pendingProgrammaticPops = 0;
+              dohonOdlozena();
+            }, 1500);
+          } else {
+            pridejZaznam();
+          }
         }
       } else if (idx !== -1) {
         navStack.splice(idx, 1);
+        // Okno, jehož záznam ještě čeká na přidání, se zavřelo dřív — záznam se prostě nepřidá.
+        if (!closingViaBackButton && odlozenaOtevreni > 0) { odlozenaOtevreni--; continue; }
         if (!closingViaBackButton) {
           // Okno zavřel běžný ovládací prvek appky (X, klik mimo okno, Uložit…), ne tlačítko
           // Zpět. Appka si proto sama "spotřebuje" odpovídající záznam v historii, ať jejich
@@ -17194,7 +17223,11 @@ document.getElementById("helpSearchInput").addEventListener("input", (e) => rend
   });
 
   window.addEventListener("popstate", () => {
-    if (pendingProgrammaticPops > 0) { pendingProgrammaticPops--; return; }
+    if (pendingProgrammaticPops > 0) {
+      pendingProgrammaticPops--;
+      if (pendingProgrammaticPops === 0) dohonOdlozena();
+      return;
+    }
     // Skutečné tlačítko Zpět (systémové na mobilu, nebo v prohlížeči). Zavře jen to, co je
     // aktuálně nejvíc "navrchu".
     for (let i = navStack.length - 1; i >= 0; i--) {
