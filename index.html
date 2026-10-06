@@ -995,6 +995,31 @@ body.popout-mode .popout-btn{display:none !important;}
 .folder-founder-note{flex-basis:100%;order:6;margin-left:42px;font-size:11.5px;color:var(--ink-faint);}
 
 /* ---------- Správa zaměření tréninků (jen admin) ---------- */
+/* Navrhnout trénink — dotazník a karty návrhů */
+.nv-hint{text-transform:none;letter-spacing:0;font-weight:500;color:var(--ink-faint);margin-left:4px;}
+.chip .nv-poradi{display:inline-block;min-width:15px;height:15px;line-height:15px;border-radius:50%;background:rgba(255,255,255,.28);font-size:10px;text-align:center;margin-right:4px;}
+.chip.nv-second{border-color:var(--court);color:var(--court);background:color-mix(in srgb, var(--court) 10%, transparent);}
+.chip.nv-second .nv-poradi{background:var(--court);color:#fff;}
+.nv-souhrn{font-size:12.5px;color:var(--ink-soft);margin:-4px 0 12px;}
+.nv-pills{display:flex;background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:3px;margin-bottom:12px;}
+.nv-pill{flex:1;text-align:center;font-size:12.5px;font-weight:600;color:var(--ink-soft);padding:6px 0;border-radius:999px;border:none;background:none;}
+.nv-pill.on{background:var(--court);color:#fff;}
+.nv-warn{display:flex;gap:9px;align-items:flex-start;background:var(--warn-bg);border:1px solid var(--warn-border);color:var(--warn-ink);border-radius:var(--radius-sm);padding:10px 12px;font-size:12.5px;line-height:1.5;margin-bottom:10px;}
+.nv-warn i{color:var(--warn-icon);margin-top:3px;}
+.nv-warn .manage-link{color:var(--warn-ink);padding:0;margin-left:2px;}
+.nv-card{border:1px solid var(--line);border-radius:var(--radius);padding:12px;margin-bottom:10px;background:var(--card);box-shadow:var(--shadow);}
+.nv-head{display:flex;align-items:center;gap:8px;}
+.nv-title{font-family:var(--font-display);font-size:21px;letter-spacing:.03em;color:var(--ink);flex:1;}
+.nv-title i{font-size:14px;color:var(--chalk);margin-right:3px;vertical-align:2px;}
+.nv-meta{font-size:12px;font-weight:600;color:var(--ink-soft);white-space:nowrap;}
+.nv-sub{font-size:12px;color:var(--ink-faint);margin:1px 0 8px;}
+.nv-bar{display:flex;height:6px;border-radius:999px;overflow:hidden;gap:2px;}
+.nv-part{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);margin:10px 0 3px;}
+.nv-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.nv-row{font-size:13px;line-height:1.35;padding:2px 0 2px 15px;color:var(--ink);overflow-wrap:anywhere;}
+.nv-btns{display:flex;gap:8px;margin-top:12px;}
+.nv-btns .btn{flex:1;}
+.nv-foot{display:flex;justify-content:space-between;gap:10px;margin-top:4px;padding:4px 2px 0;}
 .focus-manage-row{border:1px solid var(--line);border-radius:var(--radius-sm);padding:8px 9px;margin-bottom:8px;background:var(--card);}
 .focus-manage-head{display:flex;align-items:center;gap:8px;}
 .focus-manage-head .drag-handle{color:var(--ink-faint);flex-shrink:0;cursor:grab;}
@@ -1922,6 +1947,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
       <div style="display:flex;gap:8px;margin-bottom:12px;">
         <button type="button" class="btn btn-primary" id="openOverviewBtn" style="flex:1;" title="Otevře Přehled tréninku — celý plán na jedné obrazovce; z něj se dá spustit prezentace"><i class="fa-solid fa-play"></i> Začít trénovat</button>
       </div>
+      <button type="button" class="btn btn-block hidden" id="navrhOpenBtn" style="margin-bottom:12px;">🤷‍♂️ Navrhnout trénink</button>
       <div id="readOnlyBanner" class="hidden" style="background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-sm);padding:9px 12px;font-size:12.5px;color:var(--ink-soft);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
         <span><i class="fa-solid fa-eye"></i> <span id="readOnlyBannerText"></span></span>
         <button class="btn btn-sm btn-accent" id="cloneFromReadOnlyBtn"><i class="fa-regular fa-copy"></i> Naklonovat do mých</button>
@@ -2287,6 +2313,35 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
 </div>
 
 <!-- ===================== SPRÁVA ZAMĚŘENÍ (jen admin) ===================== -->
+<!-- ===================== NAVRHNOUT TRÉNINK ===================== -->
+<div id="navrhModalBackdrop" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 style="font-size:20px;" id="navrhTitle">Navrhnout trénink</h2>
+      <button class="btn btn-icon btn-ghost" id="closeNavrhModalBtn"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="navrhZadani">
+      <div class="field"><label>Zaměření <span class="nv-hint">první ťuknutí hlavní, druhé vedlejší</span></label><div class="chip-row" id="navrhZamRow"></div></div>
+      <div class="field"><label>Celkový čas</label><div class="chip-row" id="navrhCasRow"></div></div>
+      <div class="field"><label>Vybavení, které máš</label><div class="chip-row" id="navrhVybRow" style="margin-bottom:6px;"></div>
+        <button type="button" class="manage-link hidden" id="navrhVybDalsiBtn"></button>
+        <div class="chip-row hidden" id="navrhVybDalsiRow" style="margin:8px 0 0;"></div></div>
+      <div class="field"><label>Obtížnost</label><div class="chip-row" id="navrhObtRow"></div></div>
+      <div class="modal-actions"><button type="button" class="btn btn-primary btn-block" id="navrhGoBtn">Navrhnout</button></div>
+    </div>
+    <div id="navrhVysledky" class="hidden">
+      <p class="nv-souhrn" id="navrhSouhrn"></p>
+      <div class="nv-pills" id="navrhSkladbaRow"></div>
+      <div id="navrhHlasky"></div>
+      <div id="navrhKartyWrap"></div>
+      <div class="nv-foot">
+        <button type="button" class="manage-link" id="navrhZnovuBtn"><i class="fa-solid fa-rotate"></i> Namíchat znovu</button>
+        <button type="button" class="manage-link" id="navrhUpravitBtn"><i class="fa-solid fa-sliders"></i> Upravit zadání</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="focusManageBackdrop" class="modal-backdrop hidden">
   <div class="modal">
     <div class="modal-head">
@@ -3280,7 +3335,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-10-06 12:56";
+const APP_VERSION = "2026-10-06 13:38";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -7475,9 +7530,13 @@ function addEquip(v) {
      - Když napsaný text není přesná shoda s ničím v poolu ani s tím, co už je přidané, nabídne
        se navíc jako poslední položka v nabídce "+ Přidat „X“" — explicitní klikatelný/ťuknutelný
        způsob, jak založit úplně nový štítek, i bez klávesových zkratek. */
-function setupAutocomplete(inputId, dropId, getPool, getCurrent, addFn, orderFn) {
+/** zavritPoPridani (jen hromadná úprava videí): po přidání položky se nabídka schová a znovu
+    se otevře až psaním. Jinak by po přidání štítku zůstala viset přes tlačítko „Použít na
+    vybraná videa“ — formulář videa má pod poli dost místa, tam se nabídka nechává otevřená. */
+function setupAutocomplete(inputId, dropId, getPool, getCurrent, addFn, orderFn, zavritPoPridani) {
   const input = document.getElementById(inputId);
   const drop = document.getElementById(dropId);
+  const poPridani = () => { if (zavritPoPridani) { drop.classList.add("hidden"); drop.innerHTML = ""; } else showMatches(); };
   function commit(raw) {
     const v = (raw || "").trim();
     if (v) addFn(v);
@@ -7515,7 +7574,7 @@ function setupAutocomplete(inputId, dropId, getPool, getCurrent, addFn, orderFn)
     e.preventDefault();
     commit(input.value);
     input.value = "";
-    showMatches();
+    poPridani();
   });
   input.addEventListener("focus", showMatches);
   input.addEventListener("blur", () => setTimeout(() => {
@@ -7530,7 +7589,7 @@ function setupAutocomplete(inputId, dropId, getPool, getCurrent, addFn, orderFn)
     e.preventDefault(); // ať input neztratí focus (jinak by blur schoval nabídku dřív, než stihne proběhnout klik)
     addFn(btn.dataset.v);
     input.value = "";
-    showMatches();
+    poPridani();
   });
   return showMatches;
 }
@@ -7599,9 +7658,9 @@ function orderLinkFormSuggestions(field) {
 setupAutocomplete("tagInput", "tagAutocomplete", () => state.tagPool, () => formTags, addTag, orderLinkFormSuggestions("tags"));
 setupAutocomplete("equipInput", "equipAutocomplete", () => state.equipmentPool, () => formEquip, addEquip, orderLinkFormSuggestions("equipment"));
 setupAutocomplete("bulkTagInput", "bulkTagAutocomplete", () => state.tagPool, () => bulkTagAddList,
-  (v) => { if (!bulkTagAddList.includes(v)) { bulkTagAddList.push(v); renderBulkTagAddPills(); } });
+  (v) => { if (!bulkTagAddList.includes(v)) { bulkTagAddList.push(v); renderBulkTagAddPills(); } }, null, true);
 setupAutocomplete("bulkEquipInput", "bulkEquipAutocomplete", () => state.equipmentPool, () => bulkEquipAddList,
-  (v) => { if (!bulkEquipAddList.includes(v)) { bulkEquipAddList.push(v); renderBulkEquipAddPills(); } });
+  (v) => { if (!bulkEquipAddList.includes(v)) { bulkEquipAddList.push(v); renderBulkEquipAddPills(); } }, null, true);
 
 document.getElementById("thumbFileInput").addEventListener("change", async (e) => {
   const file = e.target.files[0];
@@ -12111,7 +12170,7 @@ function ovTickHtml(offsetSeconds, blockSeconds) {
     bez odhadu nebyl čas nikde. Tady se známost schválně ignoruje (known se nečte) a chybějící
     odhad řeší náhradní číslo. */
 function renderOverview() {
-  const t = state.trainings[currentTrainingId];
+  const t = ovNahled ? ovNahled.trenink : state.trainings[currentTrainingId];
   if (!t) return;
   document.getElementById("ovName").textContent = t.name || "Trénink";
   const equipEl = document.getElementById("ovEquip");
@@ -12157,6 +12216,27 @@ function renderOverview() {
   const endEl = document.getElementById("ovEnd");
   endEl.classList.toggle("hidden", ovStartSeconds == null);
   if (ovStartSeconds != null) endEl.textContent = `končíme ${pdfFmtClock((ovStartSeconds + acc) % 86400)}`;
+  else endEl.textContent = "";   // ať ve schovaném štítku nezůstane text z náhledu návrhu
+  // Náhled návrhu (Navrhnout trénink): bez začátku, místo něj jen souhrn, a dole „Použít“.
+  document.getElementById("ovStartBtn").classList.toggle("hidden", !!ovNahled);
+  document.getElementById("ovStartPresBtn").textContent = ovNahled ? "Použít tento návrh" : "Spustit prezentaci";
+  if (ovNahled) {
+    endEl.classList.remove("hidden");
+    endEl.textContent = `návrh · ${items.length} cvičení · ${ovMinText(acc)}`;
+  }
+}
+/* NÁHLED NÁVRHU V PŘEHLEDU. Návrh ještě není trénink (není ve state.trainings), tak se Přehledu
+   podstrčí jako ovNahled = { trenink, pouzit }. Dokud je nastavený, Přehled kreslí jeho, neptá se
+   na začátek a spodní tlačítko návrh použije. Zavření (Zpět, Escape) ho zase uklidí a zadaný
+   začátek skutečného tréninku vrátí, jak byl. */
+let ovNahled = null;
+function openOverviewNahled(trenink, pouzit) {
+  ovNahled = { trenink, pouzit, puvodniStart: ovStartSeconds };
+  ovStartSeconds = null;
+  document.getElementById("ovAskBackdrop").classList.add("hidden");
+  document.getElementById("overviewView").classList.remove("hidden");
+  renderOverview();
+  document.getElementById("ovList").scrollTop = 0;
 }
 function openOverview() {
   const t = state.trainings[currentTrainingId];
@@ -12179,6 +12259,7 @@ function openOverview() {
 function closeOverview() {
   document.getElementById("ovAskBackdrop").classList.add("hidden");
   document.getElementById("overviewView").classList.add("hidden");
+  if (ovNahled) { ovStartSeconds = ovNahled.puvodniStart; ovNahled = null; }
 }
 document.getElementById("openOverviewBtn").addEventListener("click", openOverview);
 document.getElementById("ovBackBtn").addEventListener("click", closeOverview);
@@ -12219,7 +12300,7 @@ document.getElementById("ovList").addEventListener("click", (e) => {
     fullscreenu), který je tady schovaný — na dobu otevření se proto přestěhuje do Přehledu
     a po zavření vrátí zpátky, stejně jako to dělá karta videa. */
 function ovOpenTextInfo(itemId, memberId) {
-  const t = state.trainings[currentTrainingId];
+  const t = ovNahled ? ovNahled.trenink : state.trainings[currentTrainingId];
   const row = (t.items || []).find(r => r.itemId === itemId);
   if (!row) return;
   const src = memberId ? (row.videos || []).find(v => v.memberId === memberId) : row;
@@ -12240,11 +12321,405 @@ function ovOpenTextInfo(itemId, memberId) {
     nemá odkud poznat, kde v tréninku trenér doopravdy je — prezentace proto startuje od
     začátku. Potichu přeskočit neodtrénovaný cvik by bylo horší než ho projet. */
 document.getElementById("ovStartPresBtn").addEventListener("click", () => {
+  if (ovNahled) {   // náhled návrhu: tlačítko návrh použije
+    const pouzit = ovNahled.pouzit;
+    closeOverview();
+    pouzit();
+    return;
+  }
   if (!state.trainings[currentTrainingId]) return;
   closeOverview();
   startTrainingMode(currentTrainingId, "faze");
   tmReturnToOverview = true; // až po startTrainingMode — ten příznak shazuje
 });
+
+/* =========================================================
+   NAVRHNOUT TRÉNINK (6. 10. 2026, kolo 2)
+   V prázdném tréninku tlačítko „🤷‍♂️ Navrhnout trénink“ → krátký dotazník → tři návrhy celého
+   tréninku složené z Knihovny. Žádná umělá inteligence, jen pravidla tady (Mekova rozhodnutí
+   jsou v projektu v claude/trener-navrh-treninku.md, čísla bodů v komentářích odkazují tam):
+   - Která videa: funkční, ne v koši, ze složky povolené pro navrhování (Spravovat složky),
+     s vybavením, které trenér zaškrtl, a s obtížností, která neodporuje zadání.
+   - K zaměření patří video ze složky zaměření NEBO se štítkem zaměření (Správa → Zaměření).
+     Odjinud se nedoplňuje — když je videí málo, návrh je kratší a řekne to.
+   - Rozcvička a hra na rozehřátí: ze složek, které nepatří žádnému zaměření, a ze zvoleného
+     zaměření. Proto se posilovna (patří ke Kondici) objeví jen při zaměření Kondice.
+   - Dril a herní cvičení: jen ze zvoleného zaměření, hlavní dostane zhruba dvě třetiny.
+   - Závěr: jen když pro něj je vhodné video, jinak jeho čas připadne herním cvičením.
+   Návrh nic neukládá, dokud trenér nedá „Použít“ — a vkládá se jen do PRÁZDNÉHO tréninku.
+   ========================================================= */
+const NAVRH_CASY = [60, 75, 90, 120];
+/* Schválená tabulka (minuty): R = [rozcvička, počet cvičení], H = [hra na rozehřátí, počet],
+   DG = drily a herní cvičení dohromady, Z = závěr. Vychází z podílů v Mekových trénincích. */
+const NAVRH_TAB = {
+  60: { R: [10, 2], H: [5, 1], DG: 40, Z: 5 },
+  75: { R: [10, 2], H: [10, 1], DG: 50, Z: 5 },
+  90: { R: [15, 3], H: [10, 1], DG: 60, Z: 5 },
+  120: { R: [20, 4], H: [10, 1], DG: 85, Z: 5 }
+};
+const NAVRH_SKLADBY = [["vyvazeny", "Vyvážený", 0.5], ["drilovy", "Drilový", 0.75], ["herni", "Herní", 0.25]]; // podíl drilů na DG
+const NAVRH_STYLY = [
+  ["osvedceny", "Osvědčený", "fa-star", "nejlépe hodnocená a často používaná"],
+  ["novy", "Nový", "fa-seedling", "videa, která jsi v tréninku ještě neměl(a)"],
+  ["mix", "Mix", "fa-shuffle", "od každého něco"]
+];
+const NAVRH_OBTIZNOSTI = [["lehci", "Lehčí"], ["stredni", "Střední"], ["tezsi", "Těžší"], ["nevim", "Nevím"]];
+const NAVRH_MAX_MINUT = 20;          // jedno cvičení nejvýš 20 minut (bod 19)
+const NAVRH_CASTE_VYBAVENI = 5;      // vybavení s aspoň tolika videi je v dotazníku vidět hned
+/* „Bez vybavení“ a „Nespecifické něco“ nejsou vybavení: v dotazníku nejsou a video kvůli nim
+   nevypadne. Míč a Síť jsou zaškrtnuté předem. Pozná se to podle názvu (bez diakritiky a
+   velikosti písmen) — po přejmenování v Knihovně je potřeba upravit i tady. */
+const NAVRH_NENI_VYBAVENI = ["bez vybaveni", "nespecificke neco"];
+const NAVRH_PREDVOLENE_VYBAVENI = ["mic", "sit"];
+
+let navrhZadani = null;   // { zam: [hlavní, vedlejší?], cas, mam: Set, obt, skladba }
+let navrhKarty = [];      // tři návrhy, jak je vrací navrhTri()
+let navrhSeed = 1;        // „Namíchat znovu“ = jiné číslo; přepnutí skladby losuje stejně
+let navrhDalsiOtevrene = false;
+
+/** Malý generátor náhody se zadaným začátkem — stejné zadání a stejné číslo dají stejný návrh
+    (přepnutí skladby tak nezamíchá všechno znovu). */
+function navrhNahoda(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function navrhPrumer(mapa) {
+  const cisla = Object.values(mapa || {}).map(x => parseFloat(x)).filter(x => x > 0);
+  return cisla.length ? cisla.reduce((s, x) => s + x, 0) / cisla.length : null;
+}
+function navrhJeVybaveni(nazev) { return !NAVRH_NENI_VYBAVENI.includes(helpNorm(nazev)); }
+/** mam = množina zaškrtnutého vybavení; null = vybavení se neřeší (rada, co přidat). */
+function navrhMaVybaveni(v, mam) {
+  if (!mam) return true;
+  return (v.equipment || []).every(e => !navrhJeVybaveni(e) || mam.has(e));
+}
+/** Měkký filtr obtížnosti (bod 13): vyřadí se jen opačný konec, video bez obtížnosti projde. */
+function navrhObtiznostJde(v, obt) {
+  const d = navrhPrumer(v.difficulties);
+  if (d == null) return true;
+  if (obt === "lehci") return d < 3.5;
+  if (obt === "tezsi") return d > 2.5;
+  return true;
+}
+function navrhVideoJde(v, zadani, mam) {
+  if (!v || !v.id || v.deletedAt || v.goneAt || v.brokenAt) return false;
+  const slozka = getFolder(v.folderId);
+  if (slozka && slozka.noSuggest) return false;   // i kdyby mělo štítek zaměření (bod 18)
+  return navrhMaVybaveni(v, mam) && navrhObtiznostJde(v, zadani.obt);
+}
+/** Patří video k zaměření? Složka přiřazená ve Správě, nebo přiřazený štítek. */
+function navrhPatri(v, f) {
+  if (!f) return false;
+  if (focusLibKeys(f.key).includes(v.folderId)) return true;
+  const stitky = focusTagList(f);
+  return (v.tags || []).some(t => stitky.includes(t));
+}
+/** Kolikrát je které video v trénincích: „vse“ počítá vlastní tréninky dvakrát a cizí jednou
+    (osvědčenost), „moje“ jen vlastní (co je pro trenéra nové). Archivované se počítají taky. */
+function navrhPouziti() {
+  const vse = new Map(), moje = new Map();
+  Object.values(state.trainings).forEach(t => {
+    const vlastni = t.ownerUid === uidCurrent;
+    getTrainingVideoIds(t).forEach(id => {
+      vse.set(id, (vse.get(id) || 0) + (vlastni ? 2 : 1));
+      if (vlastni) moje.set(id, (moje.get(id) || 0) + 1);
+    });
+  });
+  return { vse, moje };
+}
+/** n cvičení v násobcích 5 minut se součtem „minuty“ (první dostanou případný zbytek). */
+function navrhRozdel(minuty, n) {
+  if (n <= 0) return [];
+  minuty = Math.min(minuty, NAVRH_MAX_MINUT * n);
+  const delky = new Array(n).fill(5 * Math.floor(minuty / 5 / n));
+  for (let i = 0; delky.reduce((s, x) => s + x, 0) < minuty; i++) delky[i % n] += 5;
+  return delky;
+}
+/** Jeden návrh. videno = videa z dřívějších karet (dostanou postih, ať se karty liší). */
+function navrhSestav(zadani, styl, rnd, videno, pouziti) {
+  const zam = zadani.zam.map(focusByKey).filter(Boolean);
+  const hlavni = zam[0], vedlejsi = zam[1] || null;
+  const tab = NAVRH_TAB[zadani.cas];
+  const podilDrilu = (NAVRH_SKLADBY.find(s => s[0] === zadani.skladba) || NAVRH_SKLADBY[0])[2];
+  const pool = Object.values(state.library).filter(v => navrhVideoJde(v, zadani, zadani.mam));
+  const slozkyZamereni = new Set(state.trainingFocus.flatMap(f => focusLibKeys(f.key)));
+  const skore = new Map();
+  pool.forEach(v => {
+    const h = navrhPrumer(v.ratings), d = navrhPrumer(v.difficulties);
+    let s;
+    if (styl === "osvedceny") s = (h || 0) * 2 + Math.min(pouziti.vse.get(v.id) || 0, 6) + rnd() * 1.5;
+    else if (styl === "novy") s = (pouziti.moje.get(v.id) ? 0 : 6) + (h || 3) * 0.5 + rnd() * 3;
+    else s = (h || 3) * 0.5 + rnd() * 6;
+    // Obtížnost, o kterou si trenér řekl, má přednost; opačný konec už vyřadil filtr.
+    if (d != null && ((zadani.obt === "lehci" && d <= 2) || (zadani.obt === "tezsi" && d >= 4)
+      || (zadani.obt === "stredni" && d > 2.5 && d < 3.5))) s += 2;
+    if (videno.has(v.id)) s -= 4;
+    skore.set(v.id, s);
+  });
+  const pouzito = new Set();
+  const vyber = (kandidati, n) => {
+    const k = kandidati.filter(v => !pouzito.has(v.id)).sort((a, b) => skore.get(b.id) - skore.get(a.id)).slice(0, Math.max(0, n));
+    k.forEach(v => pouzito.add(v.id));
+    return k;
+  };
+  const uvod = cast => pool.filter(v => v.defaultPart === cast
+    && (!slozkyZamereni.has(v.folderId) || zam.some(f => navrhPatri(v, f))));
+  const tema = (cast, f) => pool.filter(v => v.defaultPart === cast && navrhPatri(v, f));
+  const polozky = [], malo = [];
+  const pridej = (cast, videa, minuty) => {
+    // uvnitř části lehčí před těžším; video bez obtížnosti se bere jako střední
+    const serazena = videa.slice().sort((a, b) => (navrhPrumer(a.difficulties) || 3) - (navrhPrumer(b.difficulties) || 3));
+    navrhRozdel(minuty, serazena.length).forEach((min, i) => polozky.push({ cast, videoId: serazena[i].id, min }));
+  };
+  const zaver = vyber(zam.flatMap(f => tema("zaver", f)), 1);
+  const dg = tab.DG + (zaver.length ? 0 : tab.Z);
+  const minDril = 5 * Math.floor(dg * podilDrilu / 5), minHerni = dg - minDril;
+
+  const rozcvicka = vyber(uvod("rozcvicka"), tab.R[1]);
+  if (rozcvicka.length < tab.R[1]) malo.push("rozcvicka");
+  pridej("rozcvicka", rozcvicka, tab.R[0]);
+  const hra = vyber(uvod("hra"), tab.H[1]);
+  if (hra.length < tab.H[1]) malo.push("hra");
+  pridej("hra", hra, tab.H[0]);
+
+  const hlavniCasti = {};
+  [["dril", minDril], ["herni", minHerni]].forEach(([cast, minuty]) => {
+    const n = Math.floor(minuty / 10);
+    const nHlavni = vedlejsi ? Math.max(1, Math.round(n * 2 / 3)) : n;
+    let videa = vyber(tema(cast, hlavni), Math.min(n, nHlavni));
+    if (vedlejsi) videa = videa.concat(vyber(tema(cast, vedlejsi), n - nHlavni));
+    if (videa.length < n) videa = videa.concat(vyber(zam.flatMap(f => tema(cast, f)), n - videa.length));
+    hlavniCasti[cast] = { videa, minuty, n };
+  });
+  // Část úplně bez videí předá svůj čas té druhé (jinak by trénink zbytečně vyšel krátký).
+  [["dril", "herni"], ["herni", "dril"]].forEach(([a, b]) => {
+    if (!hlavniCasti[a].videa.length && hlavniCasti[b].videa.length) { hlavniCasti[b].minuty += hlavniCasti[a].minuty; hlavniCasti[a].minuty = 0; }
+  });
+  ["dril", "herni"].forEach(cast => {
+    const c = hlavniCasti[cast];
+    if (c.videa.length < c.n) malo.push(cast);
+    pridej(cast, c.videa, c.minuty);
+  });
+  if (zaver.length) pridej("zaver", zaver, tab.Z);
+  return { styl, polozky, malo, celkem: polozky.reduce((s, p) => s + p.min, 0) };
+}
+/** Tři návrhy (Osvědčený, Nový, Mix) pro jedno zadání. */
+function navrhTri(zadani, seed) {
+  const pouziti = navrhPouziti();
+  const videno = new Set();
+  return NAVRH_STYLY.map(([styl], i) => {
+    const karta = navrhSestav(zadani, styl, navrhNahoda(seed * 31 + i), videno, pouziti);
+    karta.polozky.forEach(p => videno.add(p.videoId));
+    return karta;
+  });
+}
+/** Které vybavení by zaměření pomohlo nejvíc (bod 15): nejvýš dvě položky, které odemknou
+    nejvíc drilů a herních cvičení zvoleného zaměření. null = vybavením to není. */
+function navrhRadaVybaveni(zadani) {
+  const zam = zadani.zam.map(focusByKey).filter(Boolean);
+  const chybi = Object.values(state.library)
+    .filter(v => navrhVideoJde(v, zadani, null) && !navrhMaVybaveni(v, zadani.mam)
+      && (v.defaultPart === "dril" || v.defaultPart === "herni") && zam.some(f => navrhPatri(v, f)))
+    .map(v => (v.equipment || []).filter(e => navrhJeVybaveni(e) && !zadani.mam.has(e)));
+  if (!chybi.length) return null;
+  const veci = [...new Set(chybi.flat())];
+  const zisk = pridat => chybi.filter(potreba => potreba.every(e => pridat.includes(e))).length;
+  let nej = null;
+  const zkus = pridat => { const z = zisk(pridat); if (z > 0 && (!nej || z > nej.zisk)) nej = { pridat, zisk: z }; };
+  veci.forEach(a => zkus([a]));                                   // jedna věc má při shodě přednost
+  veci.forEach((a, i) => veci.slice(i + 1).forEach(b => zkus([a, b])));
+  return nej;
+}
+function navrhNazev(zadani) {
+  return `${zadani.zam.map(k => (focusByKey(k) || {}).label).filter(Boolean).join(" + ")}, ${zadani.cas} min`;
+}
+/** Návrh přepsaný na běžné řádky tréninku — stejný tvar, jaký dělá přidání videa z Knihovny. */
+function navrhNaPolozky(karta) {
+  return karta.polozky.map(p => ({ itemId: uid(), videoId: p.videoId, part: p.cast, duration: p.min, cue: "", poznamka: "", label: "" }));
+}
+
+/* ---------- okno: dotazník a výsledky ---------- */
+const navrhModalBackdrop = document.getElementById("navrhModalBackdrop");
+function navrhVybaveniPodleCetnosti() {
+  const cet = new Map();
+  Object.values(state.library).forEach(v => {
+    if (v.deletedAt) return;
+    (v.equipment || []).forEach(e => { if (navrhJeVybaveni(e)) cet.set(e, (cet.get(e) || 0) + 1); });
+  });
+  const vse = state.equipmentPool.filter(navrhJeVybaveni).sort((a, b) => (cet.get(b) || 0) - (cet.get(a) || 0) || a.localeCompare(b, "cs"));
+  return { caste: vse.filter(e => (cet.get(e) || 0) >= NAVRH_CASTE_VYBAVENI), dalsi: vse.filter(e => (cet.get(e) || 0) < NAVRH_CASTE_VYBAVENI) };
+}
+function openNavrhModal() {
+  const t = state.trainings[currentTrainingId];
+  if (!t || t.ownerUid !== uidCurrent) return;
+  if ((t.items || []).length) { toast("Navrhnout jde jen do prázdného tréninku.", 4000, "warn"); return; }
+  // Nic se nepamatuje (Mekovo rozhodnutí): dotazník začíná vždycky stejně. Jen zaměření, které
+  // už trénink má (zakládal se uvnitř zaměření), je rovnou vybrané.
+  const mam = new Set(state.equipmentPool.filter(e => NAVRH_PREDVOLENE_VYBAVENI.includes(helpNorm(e))));
+  navrhZadani = { zam: trainingFocusKeys(t).slice(0, 2), cas: 90, mam, obt: "nevim", skladba: "vyvazeny" };
+  navrhKarty = [];
+  navrhDalsiOtevrene = false;
+  navrhUkaz("zadani");
+  navrhModalBackdrop.classList.remove("hidden");
+  resetModalScroll(navrhModalBackdrop);
+}
+function closeNavrhModal() { navrhModalBackdrop.classList.add("hidden"); }
+function navrhUkaz(co) {
+  document.getElementById("navrhZadani").classList.toggle("hidden", co !== "zadani");
+  document.getElementById("navrhVysledky").classList.toggle("hidden", co !== "vysledky");
+  document.getElementById("navrhTitle").textContent = co === "zadani" ? "Navrhnout trénink" : "Návrhy tréninku";
+  if (co === "zadani") renderNavrhZadani(); else renderNavrhVysledky();
+}
+function renderNavrhZadani() {
+  const z = navrhZadani;
+  document.getElementById("navrhZamRow").innerHTML = state.trainingFocus.map(f => {
+    const poradi = z.zam.indexOf(f.key);
+    return `<button type="button" class="chip ${poradi === 0 ? "active" : ""} ${poradi === 1 ? "nv-second" : ""}" data-nv-zam="${esc(f.key)}">${poradi >= 0 ? `<span class="nv-poradi">${poradi + 1}</span>` : ""}${esc(f.label)}</button>`;
+  }).join("");
+  document.getElementById("navrhCasRow").innerHTML = NAVRH_CASY.map(m =>
+    `<button type="button" class="chip ${z.cas === m ? "active" : ""}" data-nv-cas="${m}">${m} min</button>`).join("");
+  const { caste, dalsi } = navrhVybaveniPodleCetnosti();
+  const chip = e => `<button type="button" class="chip ${z.mam.has(e) ? "active" : ""}" data-nv-vyb="${esc(e)}">${esc(e)}</button>`;
+  document.getElementById("navrhVybRow").innerHTML = caste.map(chip).join("");
+  const dalsiBtn = document.getElementById("navrhVybDalsiBtn");
+  dalsiBtn.classList.toggle("hidden", !dalsi.length);
+  const zaskrtnuteDalsi = dalsi.filter(e => z.mam.has(e)).length;
+  dalsiBtn.innerHTML = `Další vybavení (${dalsi.length}${zaskrtnuteDalsi ? `, zaškrtnuto ${zaskrtnuteDalsi}` : ""}) <i class="fa-solid fa-chevron-${navrhDalsiOtevrene ? "up" : "down"}"></i>`;
+  const dalsiRow = document.getElementById("navrhVybDalsiRow");
+  dalsiRow.classList.toggle("hidden", !navrhDalsiOtevrene || !dalsi.length);
+  dalsiRow.innerHTML = dalsi.map(chip).join("");
+  document.getElementById("navrhObtRow").innerHTML = NAVRH_OBTIZNOSTI.map(([k, l]) =>
+    `<button type="button" class="chip ${z.obt === k ? "active" : ""}" data-nv-obt="${k}">${l}</button>`).join("");
+}
+document.getElementById("navrhZadani").addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (!b || !navrhZadani) return;
+  const z = navrhZadani, d = b.dataset;
+  if (d.nvZam) {
+    // první ťuknutí hlavní, druhé vedlejší; ťuknutí na vybrané ho odebere (z vedlejšího se pak
+    // stane hlavní); třetí zaměření nahradí vedlejší
+    if (z.zam.includes(d.nvZam)) z.zam = z.zam.filter(k => k !== d.nvZam);
+    else if (z.zam.length < 2) z.zam.push(d.nvZam);
+    else z.zam[1] = d.nvZam;
+  } else if (d.nvCas) z.cas = parseInt(d.nvCas, 10);
+  else if (d.nvVyb) { if (z.mam.has(d.nvVyb)) z.mam.delete(d.nvVyb); else z.mam.add(d.nvVyb); }
+  else if (d.nvObt) z.obt = d.nvObt;
+  else if (b.id === "navrhVybDalsiBtn") navrhDalsiOtevrene = !navrhDalsiOtevrene;
+  else return;
+  renderNavrhZadani();
+});
+document.getElementById("navrhGoBtn").addEventListener("click", () => {
+  if (!navrhZadani.zam.length) { toast("Vyber aspoň jedno zaměření.", 3000, "warn"); return; }
+  navrhSeed = (Date.now() % 1000000) + 1;
+  navrhUkaz("vysledky");
+});
+function renderNavrhVysledky() {
+  const z = navrhZadani;
+  navrhKarty = navrhTri(z, navrhSeed);
+  const vybaveni = state.equipmentPool.filter(e => z.mam.has(e));
+  document.getElementById("navrhSouhrn").textContent = [
+    z.zam.map(k => (focusByKey(k) || {}).label).filter(Boolean).join(" + "),
+    `${z.cas} min`,
+    vybaveni.length ? (vybaveni.slice(0, 3).join(", ") + (vybaveni.length > 3 ? ` +${vybaveni.length - 3}` : "")) : "bez vybavení",
+    z.obt === "nevim" ? "" : NAVRH_OBTIZNOSTI.find(o => o[0] === z.obt)[1].toLowerCase()
+  ].filter(Boolean).join(" · ");
+  document.getElementById("navrhSkladbaRow").innerHTML = NAVRH_SKLADBY.map(([k, l]) =>
+    `<button type="button" class="nv-pill ${z.skladba === k ? "on" : ""}" data-nv-skladba="${k}">${l}</button>`).join("");
+
+  // Hlášky: málo videí (bod 9) a co by pomohlo z vybavení (bod 15).
+  const nejkratsi = Math.min(...navrhKarty.map(k => k.celkem));
+  const chybiCasti = [...new Set(navrhKarty.flatMap(k => k.malo))];
+  const JMENA = { rozcvicka: "rozcvička", hra: "hra na rozehřátí", dril: "drily", herni: "herní cvičení" };
+  let hlasky = "";
+  if (chybiCasti.length || nejkratsi < z.cas) {
+    const zamNazvy = z.zam.map(k => `<b>${esc((focusByKey(k) || {}).label || "")}</b>`).join(" a ");
+    const cehoMalo = ["rozcvicka", "hra", "dril", "herni"].filter(c => chybiCasti.includes(c)).map(c => JMENA[c]).join(", ");
+    hlasky += `<div class="nv-warn"><i class="fa-solid fa-triangle-exclamation"></i><span>Pro zaměření ${zamNazvy} je v Knihovně k tomuhle zadání málo videí${cehoMalo ? ` (chybí: ${cehoMalo})` : ""}. ${nejkratsi < z.cas
+      ? `Návrh proto vychází jen na ${nejkratsi} z ${z.cas} minut.`
+      : "Návrh má proto méně cvičení s delším časem."} Pomůže nahrát další videa.</span></div>`;
+    const rada = chybiCasti.includes("dril") || chybiCasti.includes("herni") || nejkratsi < z.cas ? navrhRadaVybaveni(z) : null;
+    if (rada) {
+      hlasky += `<div class="nv-warn nv-rada"><i class="fa-solid fa-wrench"></i><span>S vybavením <b>${rada.pridat.map(esc).join("</b> a <b>")}</b> by ${czPlural(rada.zisk, "přibylo", "přibyla", "přibylo")} ${rada.zisk} ${czPlural(rada.zisk, "cvičení", "cvičení", "cvičení")}.
+        <button type="button" class="manage-link" data-nv-pridat="${esc(JSON.stringify(rada.pridat))}">Přidat a přepočítat</button></span></div>`;
+    }
+  }
+  document.getElementById("navrhHlasky").innerHTML = hlasky;
+
+  document.getElementById("navrhKartyWrap").innerHTML = navrhKarty.map((k, i) => {
+    const [, nazev, ikona, popis] = NAVRH_STYLY.find(s => s[0] === k.styl);
+    const casti = [];
+    k.polozky.forEach(p => { const posl = casti[casti.length - 1]; if (posl && posl.cast === p.cast) posl.min += p.min; else casti.push({ cast: p.cast, min: p.min }); });
+    const pruh = casti.map(c => `<span style="flex:${c.min};background:${esc(getPart(c.cast).color)}" title="${esc(getPart(c.cast).label)} ${c.min} min"></span>`).join("");
+    const hlavni = ["dril", "herni"].map(cast => {
+      const radky = k.polozky.filter(p => p.cast === cast);
+      if (!radky.length) return "";
+      return `<div class="nv-part"><span class="nv-dot" style="background:${esc(getPart(cast).color)}"></span>${esc(getPart(cast).label)}</div>`
+        + radky.map(p => `<div class="nv-row">${esc((state.library[p.videoId] || {}).title || "(bez názvu)")}</div>`).join("");
+    }).join("");
+    if (!k.polozky.length) {
+      return `<div class="nv-card"><div class="nv-head"><div class="nv-title"><i class="fa-solid ${ikona}"></i> ${nazev}</div></div>
+        <div class="nv-sub">Pro tohle zadání se nenašlo žádné video.</div></div>`;
+    }
+    return `<div class="nv-card" data-nv-karta="${i}">
+      <div class="nv-head"><div class="nv-title"><i class="fa-solid ${ikona}"></i> ${nazev}</div><div class="nv-meta">${k.polozky.length} cvičení · ${k.celkem} min</div></div>
+      <div class="nv-sub">${popis}</div>
+      <div class="nv-bar">${pruh}</div>
+      ${hlavni || `<div class="nv-sub" style="margin-top:8px;">Bez drilů a herních cvičení.</div>`}
+      <div class="nv-btns">
+        <button type="button" class="btn btn-sm" data-nv-zobrazit="${i}"><i class="fa-solid fa-eye"></i> Zobrazit</button>
+        <button type="button" class="btn btn-primary btn-sm" data-nv-pouzit="${i}">Použít</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+document.getElementById("navrhVysledky").addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (!b || !navrhZadani) return;
+  const d = b.dataset;
+  if (d.nvSkladba) { navrhZadani.skladba = d.nvSkladba; renderNavrhVysledky(); }
+  else if (b.id === "navrhZnovuBtn") { navrhSeed = navrhSeed + 1 + Math.floor(Math.random() * 1000); renderNavrhVysledky(); }
+  else if (b.id === "navrhUpravitBtn") navrhUkaz("zadani");
+  else if (d.nvPridat) { JSON.parse(d.nvPridat).forEach(x => navrhZadani.mam.add(x)); renderNavrhVysledky(); }
+  else if (d.nvPouzit) navrhPouzij(navrhKarty[parseInt(d.nvPouzit, 10)]);
+  else if (d.nvZobrazit) {
+    const karta = navrhKarty[parseInt(d.nvZobrazit, 10)];
+    if (!karta) return;
+    openOverviewNahled({ id: "__navrh", name: navrhNazev(navrhZadani), ownerUid: uidCurrent, items: navrhNaPolozky(karta) },
+      () => navrhPouzij(karta));
+  }
+});
+document.getElementById("closeNavrhModalBtn").addEventListener("click", closeNavrhModal);
+document.getElementById("navrhOpenBtn").addEventListener("click", openNavrhModal);
+/** Vloží návrh do tréninku. Jen do prázdného — kdyby do něj mezitím něco přibylo (jiné
+    zařízení, druhé okno), nevloží se nic, ať se nic nepřepíše. */
+function navrhPouzij(karta) {
+  const t = state.trainings[currentTrainingId];
+  if (!karta || !t || t.ownerUid !== uidCurrent) return;
+  if ((t.items || []).length) {
+    toast("Trénink už mezitím není prázdný — návrh se nevložil, ať se ti nic nepřepíše.", 7000, "warn");
+    return;
+  }
+  t.items = navrhNaPolozky(karta);
+  // Zaměření ze zadání: trenér ho právě vybral, takže se na něj po uložení už neptáme.
+  t.focus = [...new Set([...trainingFocusKeys(t), ...navrhZadani.zam])];
+  t.focusDecided = true;
+  if (!t.name || t.name === "Nový trénink") {
+    t.name = navrhNazev(navrhZadani);
+    document.getElementById("trainingNameInput").value = t.name;
+  }
+  t.dateModified = Date.now();
+  closeNavrhModal();
+  renderSequence();
+  renderEditorFocusBtn();
+  scheduleSave();
+  toast(`Návrh vložen: ${karta.polozky.length} cvičení, ${karta.celkem} min. Uprav si ho podle sebe.`, 5000, "ok");
+}
 
 /* =========================================================
    EXPORT TRÉNINKU JAKO PDF
@@ -13479,6 +13954,8 @@ function renderSequence() {
   const wrap = document.getElementById("sequenceList");
   backfillGroupMemberIds(t);
   document.getElementById("sequenceEmpty").classList.toggle("hidden", t.items.length > 0);
+  // Navrhnout trénink: jen v prázdném vlastním tréninku — do rozdělaného se návrh nevkládá.
+  document.getElementById("navrhOpenBtn").classList.toggle("hidden", t.items.length > 0 || editorReadOnly);
   updateTotalBadge();
   renderTrainingEquipmentSummary(t);
   const ro = editorReadOnly;
@@ -17106,6 +17583,19 @@ const HELP_DATA = [
       { q: "Jak přidám přestávku?", a: "Přestávka se přidává stejně jako video — jen jako zvláštní typ položky bez videa, jen s délkou trvání." },
       { q: "Co je „skupina“ cvičení a k čemu je dobrá?", a: "Skupina spojuje víc cvičení dohromady tak, aby se v Tréninkovém režimu střídala v jednom bloku (třeba tři varianty přihrávky za sebou) — vybereš víc položek a použiješ „Seskupit“." }
     ]},
+    { title: "Navrhnout trénink", icon: "fa-solid fa-wand-magic-sparkles", qa: [
+      { q: "Nevím, co trénovat, nebo pospíchám. Umí mi aplikace trénink navrhnout?", a: "Ano. Založ nový trénink a v prázdném tréninku ťukni na „🤷‍♂️ Navrhnout trénink“ (hned pod „Začít trénovat“). Odpovíš na čtyři otázky — zaměření, celkový čas, vybavení, které máš, a obtížnost — a aplikace z Knihovny poskládá tři návrhy celého tréninku. Nic se neuloží, dokud nedáš „Použít“.", kw: "navrh navrhnout trenink dotaznik nevim pospicham automaticky" },
+      { q: "Proč tlačítko „Navrhnout trénink“ nevidím?", a: "Ukazuje se jen v prázdném tréninku, který je tvůj. Jakmile v tréninku je první cvičení, tlačítko zmizí — návrh se do rozdělaného tréninku nevkládá, aby ti nic nepřepsal. Když chceš návrh, založ si nový trénink.", kw: "navrhnout tlacitko chybi neni videt prazdny" },
+      { q: "Jak vyberu zaměření v dotazníku?", a: "První ťuknutí je hlavní zaměření (číslo 1), druhé vedlejší (číslo 2) — vedlejší je nepovinné. Hlavní dostane zhruba dvě třetiny drilů a herních cvičení. Ťuknutím na vybrané zaměření ho zase odebereš.", kw: "hlavni vedlejsi zamereni dotaznik" },
+      { q: "Proč mám zaškrtávat vybavení?", a: "Návrh vezme jen cvičení, na která máš všechno potřebné. Předem je zaškrtnutý Míč a Síť, zbytek si doťukej podle toho, co je v hale — čím víc toho zaškrtneš, tím víc cvičení je na výběr. Méně časté vybavení je pod „Další vybavení“.", kw: "vybaveni zaskrtnout mic sit dalsi" },
+      { q: "Čím se liší návrhy Osvědčený, Nový a Mix?", a: "Osvědčený dává přednost nejlépe hodnoceným a často používaným videím. Nový sahá po videích, která jsi ve svých trénincích ještě neměl(a). Mix bere od každého něco. „Namíchat znovu“ vylosuje jiná cvičení ke stejnému zadání.", kw: "osvedceny novy mix namichat znovu karty" },
+      { q: "K čemu je přepínač Vyvážený / Drilový / Herní?", a: "Určuje, kolik času dostanou drily a kolik herní cvičení. Vyvážený je dělí napůl, Drilový dává tři čtvrtiny drilům, Herní tři čtvrtiny herním cvičením. Rozcvička a hra na rozehřátí zůstávají stejné.", kw: "vyvazeny drilovy herni skladba prepinac" },
+      { q: "Co udělá „Zobrazit“ a co „Použít“?", a: "„Zobrazit“ otevře návrh v Přehledu tréninku — celý plán s videi a časy, jen ke čtení. „Použít“ (na kartě i dole v Přehledu) vloží cvičení do tréninku, pojmenuje ho podle zadání a zařadí do zvolených zaměření. Potom s ním pracuješ jako s každým jiným: cvičení přehazuješ, mažeš, měníš časy, přidáváš přestávky.", kw: "zobrazit pouzit prehled navrh upravit" },
+      { q: "Podle čeho aplikace cvičení vybírá?", a: "Podle toho, jak je Knihovna vyplněná: výchozí část tréninku u videa určuje, kam cvičení patří (rozcvička, dril…), složka a štítky určují zaměření, vybavení a obtížnost rozhodují, jestli se hodí k zadání, a hvězdičky s tím, jak často je video v trénincích, rozhodují o pořadí. Nefunkční videa a videa v koši se nenavrhují. Čím poctivěji jsou videa vyplněná, tím lepší návrhy.", kw: "jak vybira pravidla cast stitky slozka hvezdicky" },
+      { q: "Proč je návrh kratší, než jsem chtěl, nebo má málo cvičení?", a: "Pro zvolené zaměření a vybavení není v Knihovně dost videí. Aplikace schválně nedoplňuje cvičení z jiných zaměření — raději řekne, čeho je málo. Když pomůže vybavení, napíše které a nabídne „Přidat a přepočítat“. Jinak pomůže jedině nahrát další videa a dát jim správnou výchozí část a štítky.", kw: "malo videi kratsi navrh chybi drily herni" },
+      { q: "Proč v návrhu nejsou posilovací cvičení?", a: "Rozcvička a hra na rozehřátí se berou z obecných složek a ze zvoleného zaměření. Posilování a mobilita patří k zaměření Kondice — když je chceš v tréninku mít, vyber Kondici jako hlavní nebo vedlejší zaměření.", kw: "posilovani kondice rozcvicka chybi mobilita" },
+      { q: "Vloží návrh do tréninku i přestávky?", a: "Ne, přestávky si přidej sám tlačítkem „Přidat přestávku“. Jedno cvičení v návrhu trvá nejvýš 20 minut a časy jsou po pěti minutách — uprav si je podle sebe.", kw: "prestavky delka cviceni minuty navrh" }
+    ]},
     { title: "Nastavení cvičení v tréninku", icon: "fa-solid fa-sliders", qa: [
       { q: "Jak nastavím čas nebo počet opakování u cvičení?", a: "U každé položky přepínáš mezi režimem Čas a Opakování — podle toho pak zadáváš buď dobu trvání, nebo počet opakování." },
       { q: "Co jsou série a jak funguje pauza mezi nimi?", a: "Série znamená, že se stejné cvičení zopakuje víckrát za sebou (např. 3×) s automatickou pauzou mezi jednotlivými koly — nastavuje se to u dané položky nebo skupiny." },
@@ -17306,6 +17796,7 @@ document.getElementById("helpSearchInput").addEventListener("input", (e) => rend
     helpModalBackdrop: "closeHelpModalBtn",
     focusModalBackdrop: "closeFocusModalBtn",
     focusManageBackdrop: "closeFocusManageBtn",
+    navrhModalBackdrop: "closeNavrhModalBtn",
     trainingModeView: "tmExitBtn",
     overviewView: "ovBackBtn",
     editorView: "backToTrainingsBtn",
