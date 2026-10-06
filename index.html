@@ -3335,7 +3335,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-10-06 13:38";
+const APP_VERSION = "2026-10-06 14:27";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -6412,7 +6412,25 @@ document.querySelectorAll("nav.tabs button").forEach(btn => {
     switchView(btn.dataset.view);
   });
 });
+/** NEDOTČENÝ PRÁZDNÝ TRÉNINK SE PŘI ODCHODU Z EDITORU SMAŽE (6. 10. 2026, Mekova volba A).
+    „Nový trénink“ se ukládá hned při založení, ještě prázdný. Dřív to nevadilo, ale Navrhnout
+    trénink je jen v prázdném tréninku — kdo si návrhy jen prohlédl a odešel, nechal po sobě
+    v seznamu prázdný „Nový trénink“, a s každým dalším pokusem další.
+    Maže se jen trénink, u kterého platí všechno naráz: je můj, nemá žádné cvičení a pořád se
+    jmenuje „Nový trénink“. Přejmenovaný prázdný trénink zůstává (to je cesta „na potom“).
+    Stejná cesta jako „Smazat“ v nabídce tréninku v seznamu (pryč ze stavu + smazání dokumentu
+    na serveru — samotné ukládání dokumenty nemaže), jen bez dotazu a bez hlášky. */
+function uklidNedotcenyTrenink() {
+  const t = state.trainings[currentTrainingId];
+  if (!t || t.ownerUid !== uidCurrent) return;
+  if ((t.items || []).length || t.name !== "Nový trénink") return;
+  logDebug("[trénink] nedotčený prázdný trénink se při odchodu z editoru smazal:", currentTrainingId);
+  const id = currentTrainingId;
+  delete state.trainings[id];
+  deleteTrainingRemote(id);
+}
 function switchView(view) {
+  if (currentView === "editor" && view !== "editor") uklidNedotcenyTrenink();
   currentView = view;
   document.querySelectorAll("nav.tabs button").forEach(b => b.classList.toggle("active", b.dataset.view === view));
   document.getElementById("libraryView").classList.toggle("hidden", view !== "library");
@@ -17578,7 +17596,7 @@ const HELP_DATA = [
       { q: "Co je ten pás „Naposledy upravené“ nahoře?", a: "Tři tréninky, na kterých jsi dělal naposled — ať hned víš, kde jsi skončil. Nic se do něj nenastavuje, plní se sám. Uvnitř otevřeného zaměření už není." }
     ]},
     { title: "Vytváření tréninku", icon: "fa-solid fa-clipboard-list", qa: [
-      { q: "Jak založím nový trénink?", a: "Na záložce Tréninky klikni na tlačítko pro založení nového a pojmenuj ho — otevře se editor, kde skládáš jeho obsah. Když ho zakládáš uvnitř nějakého zaměření, bude v něm rovnou zařazený (odškrtnout se to dá kdykoli).", kw: "novy trenink zalozit" },
+      { q: "Jak založím nový trénink?", a: "Na záložce Tréninky klikni na tlačítko pro založení nového a pojmenuj ho — otevře se editor, kde skládáš jeho obsah. Když ho zakládáš uvnitř nějakého zaměření, bude v něm rovnou zařazený (odškrtnout se to dá kdykoli). Když z něj odejdeš, aniž bys do něj cokoli přidal(a) nebo ho přejmenoval(a), aplikace ho zase smaže — prázdné „Nové tréninky“ se tak v seznamu nehromadí.", kw: "novy trenink zalozit prazdny smaze zmizel" },
       { q: "Jak do tréninku přidám video nebo cvičení z knihovny?", a: "Dvěma způsoby. Buď v editoru tréninku klikni na tlačítko pro přidání položky a vyber video z knihovny (jde filtrovat stejně jako v Knihovně — podle složky, štítku, oblíbených), nebo naopak z Knihovny: otevři kartu videa a dole je „Přidat do tréninku“, kde si vybereš, do kterého tréninku má přibýt. To samé je i v nabídce pod třemi tečkami u karty v Knihovně.", kw: "pridat video do treninku karta kebab" },
       { q: "Jak přidám přestávku?", a: "Přestávka se přidává stejně jako video — jen jako zvláštní typ položky bez videa, jen s délkou trvání." },
       { q: "Co je „skupina“ cvičení a k čemu je dobrá?", a: "Skupina spojuje víc cvičení dohromady tak, aby se v Tréninkovém režimu střídala v jednom bloku (třeba tři varianty přihrávky za sebou) — vybereš víc položek a použiješ „Seskupit“." }
