@@ -1833,7 +1833,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
       <button class="btn btn-sm hidden" id="selectAllBtn">Zaškrtnout vše</button>
       <div id="bulkActionBar" class="hidden">
         <span id="bulkCount">0 vybráno</span>
-        <button type="button" class="btn btn-sm" id="bulkTagBtn"><i class="fa-solid fa-tag"></i> <span class="bulk-btn-label">Přidat štítek/vybavení</span></button>
+        <button type="button" class="btn btn-sm" id="bulkTagBtn"><i class="fa-solid fa-tag"></i> <span class="bulk-btn-label">Upravit vybraná</span></button>
         <button type="button" class="btn btn-sm" id="bulkMoveBtn"><i class="fa-solid fa-folder"></i> <span class="bulk-btn-label">Přesunout</span></button>
         <button type="button" class="btn btn-sm btn-danger" id="bulkDeleteBtn"><i class="fa-solid fa-trash"></i> <span class="bulk-btn-label">Smazat</span></button>
         <button type="button" class="btn btn-sm btn-ghost" id="bulkCancelBtn"><i class="fa-solid fa-xmark"></i> <span class="bulk-btn-label">Zrušit výběr</span></button>
@@ -2295,6 +2295,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
     </div>
     <p style="font-size:12.5px;color:var(--ink-soft);line-height:1.5;margin:0 0 6px;">Zaměření platí pro všechny trenéry i pro Tržiště, proto je spravuješ jen ty. Pořadí měníš přetažením — rozhoduje tam, kde má víc zaměření stejný počet tréninků.</p>
     <p style="font-size:12.5px;color:var(--ink-soft);line-height:1.5;margin:0 0 14px;"><b>Z Knihovny</b> říká, ze kterých složek videí aplikace pozná, že nový trénink sem nejspíš patří. Napoprvé se to naplnilo podle shody názvů; od té chvíle rozhoduje jen tenhle seznam, takže přejmenování složky v Knihovně už návrhy nerozbije.</p>
+    <p style="font-size:12.5px;color:var(--ink-soft);line-height:1.5;margin:0 0 14px;"><b>Štítky</b> použije navrhování tréninku: video s takovým štítkem se k zaměření počítá, i když leží v jiné složce. Štítek stejného jména jako zaměření je přiřazený předem.</p>
     <div id="focusManageList"></div>
     <div class="modal-actions">
       <button type="button" class="btn btn-primary btn-block" id="addFocusBtn"><i class="fa-solid fa-plus"></i> Přidat nové zaměření</button>
@@ -2698,10 +2699,6 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
           <input type="text" id="bulkDriveEquipInput" placeholder="napiš a Enter…" autocomplete="off">
         </div>
       </div>
-      <div class="field">
-        <label for="bulkDriveShortDesc">Krátký popisek (nepovinné, společný pro všechna vybraná videa)</label>
-        <textarea id="bulkDriveShortDesc" rows="2" placeholder="Necháš-li prázdné, aplikace popisek nevyplní"></textarea>
-      </div>
       <div class="filter-toggle-row" style="margin-bottom:8px;">
         <button type="button" class="manage-link" id="bulkDriveSelectAllBtn">Vybrat vše</button>
         <button type="button" class="manage-link" id="bulkDriveSelectNoneBtn">Zrušit výběr</button>
@@ -2774,7 +2771,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
 <div id="bulkTagModalBackdrop" class="modal-backdrop hidden">
   <div class="modal">
     <div class="modal-head">
-      <h2 style="font-size:20px;">Přidat štítek/vybavení</h2>
+      <h2 style="font-size:20px;">Upravit vybraná videa</h2>
       <button class="btn btn-icon btn-ghost" id="closeBulkTagModalBtn"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <p style="font-size:12.5px;color:var(--ink-soft);margin:-4px 0 14px;" id="bulkTagModalCount"></p>
@@ -2792,12 +2789,12 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
       </div>
       <div class="autocomplete-list hidden" id="bulkEquipAutocomplete"></div>
     </div>
-    <div class="field">
-      <label for="bulkShortDescInput">Krátký popisek (nepovinné — na rozdíl od štítků/vybavení tohle vybraným videím PŘEPÍŠE dosavadní popisek, necháš-li prázdné, aplikace nic nezmění)</label>
-      <textarea id="bulkShortDescInput" rows="2" placeholder="Necháš-li prázdné, aplikace popisek u videí nezmění"></textarea>
+    <div class="field hidden" id="bulkPartField">
+      <label for="bulkPartSelect">Výchozí část tréninku (vybraným videím se přepíše)</label>
+      <select id="bulkPartSelect"></select>
     </div>
     <div class="modal-actions">
-      <button type="button" class="btn btn-primary btn-block" id="bulkTagApplyBtn">Přidat vybraným videím</button>
+      <button type="button" class="btn btn-primary btn-block" id="bulkTagApplyBtn">Použít na vybraná videa</button>
     </div>
   </div>
 </div>
@@ -2810,11 +2807,11 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
       <button class="btn btn-icon btn-ghost" id="closeBulkImportModalBtn"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <p style="font-size:12.5px;color:var(--ink-soft);margin:-4px 0 12px;">
-      Jeden řádek = jedno video, sloupce oddělené tabulátorem (přesně tak, jak to vypadne při zkopírování z Excelu/Sheets): <b>ID videa</b>, <b>nový název</b>, <b>štítky</b> (čárkou), <b>vybavení</b> (čárkou), <b>krátký popis</b>.
+      Jeden řádek = jedno video, sloupce oddělené tabulátorem (přesně tak, jak to vypadne při zkopírování z Excelu/Sheets): <b>ID videa</b>, <b>nový název</b>, <b>štítky</b> (čárkou), <b>vybavení</b> (čárkou).
       Prázdný sloupec = u toho videa se dané pole nezmění. Neexistující štítek/vybavení aplikace rovnou založí.
     </p>
     <div class="field">
-      <textarea id="bulkImportTextarea" rows="12" style="font-family:monospace;font-size:12px;white-space:pre;" placeholder="ID	Nový název	Štítky	Vybavení	Krátký popis"></textarea>
+      <textarea id="bulkImportTextarea" rows="12" style="font-family:monospace;font-size:12px;white-space:pre;" placeholder="ID	Nový název	Štítky	Vybavení"></textarea>
     </div>
     <div id="bulkImportPreview" style="font-size:12.5px;color:var(--ink-soft);margin-bottom:10px;"></div>
     <div class="modal-actions">
@@ -3283,7 +3280,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-09-29 10:12";
+const APP_VERSION = "2026-10-06 12:56";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -6436,7 +6433,12 @@ function renderPartSelectOptions() {
   const pickerSel = document.getElementById("pickerPartFilter");
   if (defSel) { const prev = defSel.value; defSel.innerHTML = '<option value="">— vyber —</option>' + opts; if ([...defSel.options].some(o => o.value === prev)) defSel.value = prev; }
   if (pickerSel) { const prev = pickerSel.value; pickerSel.innerHTML = '<option value="">Jakákoli část</option>' + opts; if ([...pickerSel.options].some(o => o.value === prev)) pickerSel.value = prev; }
+  // Hromadná změna výchozí části (jen admin). BULK_PART_KEEP = „neměnit“; prázdná hodnota je
+  // skutečná volba „bez výchozí části“, proto nemůže sloužit jako „nic nedělej“.
+  const bulkPartSel = document.getElementById("bulkPartSelect");
+  if (bulkPartSel) bulkPartSel.innerHTML = `<option value="${BULK_PART_KEEP}">— neměnit —</option>` + opts + '<option value="">Bez výchozí části</option>';
 }
+const BULK_PART_KEEP = "__nemenit";
 
 // containerId -> právě napsaný text v přidruženém vyhledávacím poli (živé zúžení chipů/seznamů,
 // diakritika se ignoruje přes helpNorm() — viz sekce NÁPOVĚDA, funguje díky hoistingu).
@@ -6814,22 +6816,30 @@ document.getElementById("bulkTagBtn").addEventListener("click", () => {
   renderBulkEquipAddPills();
   document.getElementById("bulkTagInput").value = "";
   document.getElementById("bulkEquipInput").value = "";
-  document.getElementById("bulkShortDescInput").value = "";
-  document.getElementById("bulkTagModalCount").textContent = `Přidá se k ${selectedIds.size} vybraným videím.`;
+  // Výchozí část smí hromadně měnit jen admin — editor okno vidí bez tohohle řádku.
+  // Nabídka částí se plní až tady: po přihlášení ji nikdo jiný nenaplní, dokud se neotevře
+  // formulář videa nebo editor tréninku.
+  renderPartSelectOptions();
+  document.getElementById("bulkPartField").classList.toggle("hidden", uidCurrent !== ADMIN_UID);
+  document.getElementById("bulkPartSelect").value = BULK_PART_KEEP;
+  document.getElementById("bulkTagModalCount").textContent = `Vybraná videa: ${selectedIds.size}. Štítky a vybavení se jen přidávají.`;
   document.getElementById("bulkTagModalBackdrop").classList.remove("hidden");
 });
 document.getElementById("closeBulkTagModalBtn").addEventListener("click", () => {
   document.getElementById("bulkTagModalBackdrop").classList.add("hidden");
 });
 document.getElementById("bulkTagApplyBtn").addEventListener("click", async () => {
-  const bulkShortDesc = document.getElementById("bulkShortDescInput").value.trim();
-  if (!bulkTagAddList.length && !bulkEquipAddList.length && !bulkShortDesc) { toast("Nic k přidání.", 2200, "warn"); return; }
+  const bulkPart = document.getElementById("bulkPartSelect").value;
+  // Druhá pojistka vedle schovaného řádku: část mění jen admin a jen na část, která existuje.
+  const menitCast = uidCurrent === ADMIN_UID && bulkPart !== BULK_PART_KEEP
+    && (bulkPart === "" || state.parts.some(p => p.key === bulkPart));
+  if (!bulkTagAddList.length && !bulkEquipAddList.length && !menitCast) { toast("Není co změnit.", 2200, "warn"); return; }
   selectedIds.forEach(id => {
     const item = state.library[id];
     if (!item) return;
     bulkTagAddList.forEach(t => { if (!item.tags.includes(t)) item.tags.push(t); });
     bulkEquipAddList.forEach(t => { if (!item.equipment.includes(t)) item.equipment.push(t); });
-    if (bulkShortDesc) item.shortDesc = bulkShortDesc;
+    if (menitCast) item.defaultPart = bulkPart;
   });
   // Aplikace musí nové štítky/vybavení připsat i do sdíleného seznamu VŠECH známých štítků —
   // jinak se sice správně uloží na videu samotném, ale aplikace je nenabídne ve filtru ani v
@@ -6839,7 +6849,7 @@ document.getElementById("bulkTagApplyBtn").addEventListener("click", async () =>
   document.getElementById("bulkTagModalBackdrop").classList.add("hidden");
   renderLibrary();
   const ok = await saveUserData();
-  if (ok) toast(`Přidáno ${selectedIds.size} videím.`);
+  if (ok) toast(`Upraveno: ${selectedIds.size} ${czPlural(selectedIds.size, "video", "videa", "videí")}.`);
   else toast("Uložení se nepovedlo, zkus to prosím znovu.", 2200, "err");
 });
 
@@ -10196,6 +10206,7 @@ document.getElementById("closeFocusManageBtn").addEventListener("click", () => f
 document.getElementById("openFocusManageBtn").addEventListener("click", () => {
   if (uidCurrent !== ADMIN_UID) return;
   focusLibPickerFor = null;
+  focusTagPickerFor = null;
   renderFocusManageList();
   focusManageBackdrop.classList.remove("hidden");
 });
@@ -10208,6 +10219,24 @@ function setFocusLibKeys(key, keys) {
   if (!state.focusLibraryMap) state.focusLibraryMap = {};
   state.focusLibraryMap[key] = keys;
 }
+/* ŠTÍTKY K ZAMĚŘENÍ (6. 10. 2026) — podklad pro Navrhnout trénink: video se k zaměření počítá
+   podle složky (focusLibraryMap výš) NEBO podle štítku odsud.
+   Seznam žije přímo v položce zaměření (f.tags), takže se ukládá, zálohuje i obnovuje spolu
+   s ní a nepotřebuje vlastní pole v shared/data.
+   Dokud admin u zaměření na štítky nesáhl, f.tags neexistuje a platí předvolba: štítek stejného
+   jména jako zaměření (když v nabídce je). Prázdné pole [] je už rozhodnutí „žádný štítek“ —
+   proto se rozlišuje „chybí“ a „prázdné“. Štítek, který mezitím z nabídky zmizel, se nevrací. */
+function focusTagList(f) {
+  if (!f) return [];
+  if (Array.isArray(f.tags)) return f.tags.filter(t => state.tagPool.includes(t));
+  const jmeno = (f.label || "").trim().toLowerCase();
+  const stejny = state.tagPool.find(t => (t || "").trim().toLowerCase() === jmeno);
+  return stejny ? [stejny] : [];
+}
+function setFocusTagList(f, tags) {
+  if (f) f.tags = tags;
+}
+let focusTagPickerFor = null;   // u kterého zaměření je zrovna rozbalený výběr štítků
 
 function renderFocusManageList() {
   const wrap = document.getElementById("focusManageList");
@@ -10230,6 +10259,15 @@ function renderFocusManageList() {
           return `<button type="button" class="chip ${on ? "active" : ""}" data-map="${esc(f.key)}|${esc(fo.key)}">${esc(fo.label)}${jinde.length ? `<span class="focus-lib-elsewhere">už v ${esc(jinde.join(", "))}</span>` : ""}</button>`;
         }).join("")}</div>`
       : "";
+    const stitky = focusTagList(f);
+    const stitkyChipy = stitky.length
+      ? stitky.map(t => `<span class="focus-lib-chip">${esc(t)}<button type="button" data-untag="${esc(f.key)}|${esc(t)}" aria-label="Odebrat">&times;</button></span>`).join("")
+      : `<span class="focus-lib-none">žádný</span>`;
+    const stitkyPicker = focusTagPickerFor === f.key
+      ? `<div class="focus-lib-picker">${state.tagPool.slice().sort((a, b) => a.localeCompare(b, "cs")).map(t =>
+          `<button type="button" class="chip ${stitky.includes(t) ? "active" : ""}" data-tagmap="${esc(f.key)}|${esc(t)}">${esc(t)}</button>`).join("")
+          || `<span class="focus-lib-none">V knihovně zatím žádné štítky nejsou.</span>`}</div>`
+      : "";
     return `
       <div class="focus-manage-row" data-key="${esc(f.key)}">
         <div class="focus-manage-head">
@@ -10244,6 +10282,12 @@ function renderFocusManageList() {
           <button type="button" class="focus-lib-add" data-lib-picker="${esc(f.key)}">${focusLibPickerFor === f.key ? "hotovo" : "+ přidat"}</button>
         </div>
         ${picker}
+        <div class="focus-lib">
+          <span class="focus-lib-label">Štítky</span>
+          ${stitkyChipy}
+          <button type="button" class="focus-lib-add" data-tag-picker="${esc(f.key)}">${focusTagPickerFor === f.key ? "hotovo" : "+ přidat"}</button>
+        </div>
+        ${stitkyPicker}
       </div>`;
   }).join("");
 
@@ -10260,6 +10304,27 @@ function renderFocusManageList() {
   });
   wrap.querySelectorAll("[data-lib-picker]").forEach(b => b.addEventListener("click", () => {
     focusLibPickerFor = focusLibPickerFor === b.dataset.libPicker ? null : b.dataset.libPicker;
+    renderFocusManageList();
+  }));
+  wrap.querySelectorAll("[data-tag-picker]").forEach(b => b.addEventListener("click", () => {
+    focusTagPickerFor = focusTagPickerFor === b.dataset.tagPicker ? null : b.dataset.tagPicker;
+    renderFocusManageList();
+  }));
+  // Štítek může obsahovat cokoli, klíč zaměření svislítko nemá — dělí se proto jen na prvním.
+  const zTagu = (hodnota) => { const i = hodnota.indexOf("|"); return [focusByKey(hodnota.slice(0, i)), hodnota.slice(i + 1)]; };
+  wrap.querySelectorAll("[data-tagmap]").forEach(b => b.addEventListener("click", () => {
+    const [f, t] = zTagu(b.dataset.tagmap);
+    if (!f) return;
+    const ma = focusTagList(f);
+    setFocusTagList(f, ma.includes(t) ? ma.filter(x => x !== t) : [...ma, t]);
+    scheduleSave();
+    renderFocusManageList();
+  }));
+  wrap.querySelectorAll("[data-untag]").forEach(b => b.addEventListener("click", () => {
+    const [f, t] = zTagu(b.dataset.untag);
+    if (!f) return;
+    setFocusTagList(f, focusTagList(f).filter(x => x !== t));
+    scheduleSave();
     renderFocusManageList();
   }));
   wrap.querySelectorAll("[data-map]").forEach(b => b.addEventListener("click", () => {
@@ -10331,6 +10396,7 @@ document.getElementById("addFocusBtn").addEventListener("click", async () => {
   }
   state.trainingFocus.push({ key: uid(), label: trimmed, color: nextFolderColor() });
   focusLibPickerFor = null;
+  focusTagPickerFor = null;
   renderFocusManageList();
   if (currentView === "trainings") renderTrainingsList();
   const ok = await saveUserData();
@@ -14425,6 +14491,12 @@ function mergeTag(from, to) {
       if (!it.tags.includes(to)) it.tags.push(to);
     }
   });
+  // Přiřazení štítku k zaměření (Navrhnout trénink) jde za štítkem: kde byl ten slučovaný,
+  // bude ten cílový. Předvolba (f.tags chybí) se nechává být — dopočítá se sama.
+  state.trainingFocus.forEach(f => {
+    if (!Array.isArray(f.tags) || !f.tags.includes(from)) return;
+    f.tags = [...new Set(f.tags.map(t => (t === from ? to : t)))];
+  });
   state.tagPool = state.tagPool.filter(t => t !== from);
   libraryTagFilter.delete(from); pickerTagFilter.delete(from);
   scheduleSave();
@@ -14995,7 +15067,8 @@ const OBNOVA_VIDEO_POPISKY = {
     a jmenovka majitele (odvozená). */
 const OBNOVA_TRENINK_IGNOROVAT = ["share", "shareSnapshot", "restoredAt", "dateModified", "ownerLabel"];
 const OBNOVA_TRENINK_POPISKY = { name: "název", items: "cvičení", focus: "zaměření", public: "Tržiště", visibilityDecided: "Tržiště", archived: "archiv" };
-const OBNOVA_SEZNAM_POPISKY = { label: "název", color: "barva", note: "poznámka", hiddenFromMain: "schování", _slozky: "složky v Knihovně" };
+const OBNOVA_SEZNAM_POPISKY = { label: "název", color: "barva", note: "poznámka", hiddenFromMain: "schování", _slozky: "složky v Knihovně",
+  tags: "štítky pro navrhování", noSuggest: "navrhování tréninku" };
 const OBNOVA_PROFIL_POPISKY = { username: "jméno", category: "kategorie", club: "klub", avatarUrl: "fotka", colorPrimary: "barvy", colorAccent: "barvy", darkMode: "tmavý režim", trainingStartTime: "začátek tréninku" };
 const OBNOVA_OBLASTI = [
   { id: "videa", nazev: "Videa", tvary: ["video", "videa", "videí"] },
@@ -16107,7 +16180,9 @@ function naplanujZalohuPoPrihlaseni() {
   }, 12000);
 }
 
-/* ---- Hromadná úprava videí přes vloženou tabulku (ID / název / štítky / vybavení / popis) ----
+/* ---- Hromadná úprava videí přes vloženou tabulku (ID / název / štítky / vybavení) ----
+   Dřív měla tabulka pátý sloupec „krátký popis“. Ten appka už nezapisuje (6. 10. 2026) — ve
+   staré tabulce ho tiše přeskočí, další sloupce se prostě nečtou.
    Sloupce oddělené tabulátorem schválně — přesně tak vypadne text při zkopírování buňek z
    Excelu/Sheets, takže appka nepotřebuje žádný vlastní soubor ani parser tabulek. Prázdný sloupec
    u řádku appka bere jako "tohle pole neměň", ne jako "smaž" — ať jde snadno upravit jen některá
@@ -16129,8 +16204,7 @@ function parseBulkImportText(text) {
       id,
       title: (cols[1] || "").trim(),
       tags: (cols[2] || "").trim(),
-      equipment: (cols[3] || "").trim(),
-      shortDesc: (cols[4] || "").trim()
+      equipment: (cols[3] || "").trim()
     });
   });
   return { rows, unknownIds };
@@ -16173,7 +16247,6 @@ document.getElementById("bulkImportApplyBtn").addEventListener("click", async ()
     if (row.title) item.title = row.title;
     if (row.tags) item.tags = applyPoolList(row.tags, state.tagPool);
     if (row.equipment) item.equipment = applyPoolList(row.equipment, state.equipmentPool);
-    if (row.shortDesc) item.shortDesc = row.shortDesc;
   });
   document.getElementById("bulkImportModalBackdrop").classList.add("hidden");
   renderLibrary();
@@ -16447,6 +16520,9 @@ function renderFoldersManageList() {
       <label class="folder-hide-toggle" title="Videa z týhle složky se v hlavním seznamu Knihovny (a v panelu výběru u tréninků) neukážou, dokud si tuhle složku sám nevybereš — hledání i procházení složky napřímo funguje pořád normálně.">
         <input type="checkbox" ${f.hiddenFromMain ? "checked" : ""} data-field="hiddenFromMain"> Schovat z hlavního seznamu
       </label>
+      <label class="folder-hide-toggle" title="Odškrtni u složek, kde nejsou cvičení (ukázková videa pro hráčky, tipy pro trenéry). Navrhování tréninku z takové složky nevezme nic — ani video, které má štítek zaměření.">
+        <input type="checkbox" ${f.noSuggest ? "" : "checked"} data-field="noSuggest"> Brát videa do navrhování tréninku
+      </label>
       ${isAdmin ? `<button type="button" class="btn btn-icon btn-danger" data-delete-folder="${esc(f.key)}" aria-label="Smazat složku"><i class="fa-solid fa-trash"></i></button>` : ""}
       ${isAdmin && f.createdByLabel && f.createdBy !== ADMIN_UID ? `<span class="folder-founder-note"><i class="fa-solid fa-user-pen"></i> Založil(a) ${esc(f.createdByLabel)}${f.dateAdded ? `, ${new Date(f.dateAdded).toLocaleDateString("cs-CZ")}` : ""}</span>` : ""}
     </div>
@@ -16458,6 +16534,9 @@ function renderFoldersManageList() {
       if (!f) return;
       const field = inp.dataset.field;
       if (field === "hiddenFromMain") f.hiddenFromMain = inp.checked;
+      // Zaškrtnuto = složka se používá (výchozí stav, pole u složky vůbec není). Ukládá se jen
+      // výjimka noSuggest:true, ať se kvůli nové funkci nepřepisují všechny složky.
+      else if (field === "noSuggest") { if (inp.checked) delete f.noSuggest; else f.noSuggest = true; }
       else f[field] = field === "label" ? (inp.value.trim() || f.label) : inp.value;
       scheduleSave();
       renderLibrary();
@@ -16644,7 +16723,6 @@ let bulkDriveFoundFiles = []; // { id, name, thumbnailLink, isDuplicate }
 function openBulkDriveModal() {
   if (!isEditor()) return;
   document.getElementById("bulkDriveFolderUrl").value = "";
-  document.getElementById("bulkDriveShortDesc").value = "";
   document.getElementById("bulkDriveStatus").classList.add("hidden");
   document.getElementById("bulkDriveResultsWrap").classList.add("hidden");
   document.getElementById("bulkDriveImportBtn").classList.add("hidden");
@@ -16773,7 +16851,6 @@ document.getElementById("bulkDriveImportBtn").addEventListener("click", async ()
   const checked = Array.from(document.querySelectorAll("#bulkDriveFileList input[type='checkbox']:checked")).map(cb => cb.dataset.fileid);
   if (!checked.length) { toast("Nic není vybráno.", 2200, "warn"); return; }
   const folderId = document.getElementById("bulkDriveFolder").value;
-  const bulkShortDesc = document.getElementById("bulkDriveShortDesc").value.trim();
   const now = Date.now();
   let addedCount = 0;
   const newIds = [];
@@ -16788,7 +16865,7 @@ document.getElementById("bulkDriveImportBtn").addEventListener("click", async ()
       folderId, defaultPart: "", aspectRatio: "16/9",
       tags: [...bulkDriveTags], equipment: [...bulkDriveEquip],
       difficulties: {}, ratings: {}, notesByCoach: {},
-      shortDesc: bulkShortDesc, longDesc: "", timestamp: null, dateAdded: now, addedBy: uidCurrent
+      shortDesc: "", longDesc: "", timestamp: null, dateAdded: now, addedBy: uidCurrent
     };
     addedCount++;
   });
@@ -16966,7 +17043,7 @@ const HELP_DATA = [
       { q: "Musím při psaní štítku trefit přesnou diakritiku, aby se mi nabídl ten správný?", a: "Ne — když píšeš štítek nebo vybavení do pole při úpravě videa, nabídka existujících hledá bez ohledu na diakritiku. Stačí napsat „mic“ a najde se i „Míč“.", kw: "diakritika hacky carky bez" }
     ]},
     { title: "Práce s víc videi najednou", icon: "fa-solid fa-square-check", qa: [
-      { q: "Jak upravím víc videí najednou (přesun do složky, štítky, smazání)?", a: "V Knihovně zapni tlačítko „Vybrat více“, označ videa, co chceš upravit, a dole se objeví lišta s hromadnými akcemi — přesun do složky, přidání štítků/vybavení nebo přesun do koše." },
+      { q: "Jak upravím víc videí najednou (přesun do složky, štítky, smazání)?", a: "V Knihovně zapni tlačítko „Vybrat více“, označ videa, co chceš upravit, a dole se objeví lišta s hromadnými akcemi — „Upravit vybraná“ (ikona štítku: přidání štítků a vybavení), přesun do složky nebo přesun do koše.", kw: "hromadne upravit vybrana stitky vybaveni" },
       { q: "Jak označím rovnou všechna videa, co zrovna vidím?", a: "V režimu výběru je tlačítko „Vybrat vše“ — označí přesně to, co aplikace aktuálně zobrazuje (tedy podle právě nastaveného filtru/hledání), ne úplně celou knihovnu." },
       { q: "Přidají se hromadně přidané štítky/vybavení místo těch stávajících, nebo k nim?", a: "Vždycky se jen přidávají k tomu, co video už má — hromadná úprava nic nepřepisuje ani nemaže." }
     ]},
