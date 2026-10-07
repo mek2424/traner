@@ -2064,8 +2064,8 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
       <div class="field">
         <label for="linkAspectRatio">Tvar videa (u YouTube, Disku a nahraných souborů aplikace pozná sama, tohle je jen pro Facebook a ostatní)</label>
         <select id="linkAspectRatio">
-          <option value="16/9">Na šířku (16:9)</option>
           <option value="9/16">Na výšku (9:16 — mobil/Reels/Shorts)</option>
+          <option value="16/9">Na šířku (16:9)</option>
           <option value="1/1">Čtvercové (1:1)</option>
           <option value="4/3">Klasické (4:3)</option>
         </select>
@@ -3355,7 +3355,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-10-07 07:07";
+const APP_VERSION = "2026-10-07 10:00";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
