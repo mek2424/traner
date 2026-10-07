@@ -1020,6 +1020,10 @@ body.popout-mode .popout-btn{display:none !important;}
 .nv-btns{display:flex;gap:8px;margin-top:12px;}
 .nv-btns .btn{flex:1;}
 .nv-foot{display:flex;justify-content:space-between;gap:10px;margin-top:4px;padding:4px 2px 0;}
+.nv-pozn{font-size:12px;color:var(--ink-faint);line-height:1.45;margin:-1px 0 7px;}
+.nv-navic{display:flex;gap:7px;align-items:flex-start;font-size:12.5px;line-height:1.4;color:var(--warn-ink);background:var(--warn-bg);border:1px solid var(--warn-border);border-radius:var(--radius-sm);padding:6px 9px;margin-top:10px;}
+.nv-navic i{color:var(--warn-icon);margin-top:2px;font-size:12px;}
+.ov-gear span.ov-navic,.ov-equip span.ov-navic{border-color:var(--chalk);color:var(--chalk);font-weight:700;}
 .focus-manage-row{border:1px solid var(--line);border-radius:var(--radius-sm);padding:8px 9px;margin-bottom:8px;background:var(--card);}
 .focus-manage-head{display:flex;align-items:center;gap:8px;}
 .focus-manage-head .drag-handle{color:var(--ink-faint);flex-shrink:0;cursor:grab;}
@@ -2323,8 +2327,11 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
     <div id="navrhZadani">
       <div class="field"><label>Zaměření <span class="nv-hint">první ťuknutí hlavní, druhé vedlejší</span></label><div class="chip-row" id="navrhZamRow"></div></div>
       <div class="field"><label>Celkový čas</label><div class="chip-row" id="navrhCasRow"></div></div>
-      <div class="field"><label>Vybavení, které máš</label><div class="chip-row" id="navrhVybRow" style="margin-bottom:6px;"></div>
+      <div class="field"><label>Vybavení, které máš</label>
+        <p class="nv-pozn" id="navrhVybPozn"></p>
+        <div class="chip-row" id="navrhVybRow" style="margin-bottom:6px;"></div>
         <button type="button" class="manage-link hidden" id="navrhVybDalsiBtn"></button>
+        <p class="nv-pozn hidden" id="navrhVybDalsiPozn" style="margin-top:6px;"></p>
         <div class="chip-row hidden" id="navrhVybDalsiRow" style="margin:8px 0 0;"></div></div>
       <div class="field"><label>Obtížnost</label><div class="chip-row" id="navrhObtRow"></div></div>
       <div class="modal-actions"><button type="button" class="btn btn-primary btn-block" id="navrhGoBtn">Navrhnout</button></div>
@@ -2473,6 +2480,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
     <div class="admin-group">
       <button type="button" class="admin-row" id="spravaFoldersBtn"><i class="fa-solid fa-folder-tree"></i><span class="admin-row-label">Spravovat složky</span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
       <button type="button" class="admin-row" id="spravaTagsBtn"><i class="fa-solid fa-code-merge"></i><span class="admin-row-label">Sloučit štítky a vybavení</span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
+      <button type="button" class="admin-row" id="spravaEquipReqBtn"><i class="fa-solid fa-toolbox"></i><span class="admin-row-label">Nutné vybavení pro navrhování</span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
       <button type="button" class="admin-row" id="spravaPartsBtn"><i class="fa-solid fa-sliders"></i><span class="admin-row-label">Části tréninku</span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
       <button type="button" class="admin-row" id="openBulkImportBtn"><i class="fa-solid fa-table-list"></i><span class="admin-row-label">Hromadná úprava videí (import)</span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
     </div>
@@ -2876,6 +2884,18 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
 </div>
 
 <!-- ===================== MERGE TAGS/EQUIPMENT MODAL ===================== -->
+<div id="equipReqModalBackdrop" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 style="font-size:22px;">Nutné vybavení</h2>
+      <button class="btn btn-icon btn-ghost" id="closeEquipReqModalBtn"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <p style="font-size:12.5px;color:var(--ink-soft);line-height:1.5;margin:0 0 6px;">Označ vybavení, bez kterého cvičení udělat nejde (síť, zeď, žebřiny…). Když ho trenér v dotazníku nezaškrtne, navrhování takové cvičení vynechá.</p>
+    <p style="font-size:12.5px;color:var(--ink-soft);line-height:1.5;margin:0 0 14px;">Všechno ostatní je nahraditelné: cvičení se navrhne i bez něj, jen s poznámkou „navíc“ a s nižší předností. Nové vybavení je nahraditelné, dokud ho tady neoznačíš.</p>
+    <div class="chip-row" id="equipReqList"></div>
+  </div>
+</div>
+
 <div id="mergeModalBackdrop" class="modal-backdrop hidden">
   <div class="modal">
     <div class="modal-head">
@@ -3210,7 +3230,7 @@ try {
    STATE
    ========================================================= */
 let uidCurrent = null;
-let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], parts: [], profile: {}, thumbnails: {},
+let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], equipmentRequired: [], parts: [], profile: {}, thumbnails: {},
   trainingFocus: [], focusLibraryMap: {}, favoriteTrainings: new Set() };
 
 /* ZAMĚŘENÍ TRÉNINKŮ (16. 9.)
@@ -3321,7 +3341,7 @@ function sharedFingerprint() {
   // Od kroku 5 bez knihovny — ta do shared/data nejde (videa mají vlastní otisky výš).
   try {
     return JSON.stringify([state.folders, state.tagPool, state.equipmentPool, state.parts,
-      state.trainingFocus, state.focusLibraryMap]);
+      state.trainingFocus, state.focusLibraryMap, state.equipmentRequired || []]);
   } catch (e) { return null; }
 }
 /** Video tak, jak ho aplikace drží v paměti: bez razítka lastEditedBy/lastEditedAt. Razítko
@@ -3335,7 +3355,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-10-06 14:27";
+const APP_VERSION = "2026-10-07 07:07";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -5159,6 +5179,7 @@ async function loadUserData() {
     state.vapidKey = shared.vapidKey || "";
     state.tagPool = shared.tagPool || [];
     state.equipmentPool = shared.equipmentPool || [];
+    state.equipmentRequired = Array.isArray(shared.equipmentRequired) ? shared.equipmentRequired : [];
     state.parts = (shared.parts && shared.parts.length) ? shared.parts : structuredClone(DEFAULT_PARTS);
     state.trainingFocus = (shared.trainingFocus && shared.trainingFocus.length)
       ? shared.trainingFocus : structuredClone(DEFAULT_TRAINING_FOCUS);
@@ -5428,7 +5449,7 @@ function maNeulozeneSeznamy() {
   if (!savedSharedFingerprint) return false;
   try {
     const ulozene = JSON.parse(savedSharedFingerprint);   // od kroku 5 v otisku jen seznamy
-    return JSON.stringify(ulozene) !== JSON.stringify([state.folders, state.tagPool, state.equipmentPool, state.parts, state.trainingFocus, state.focusLibraryMap]);
+    return JSON.stringify(ulozene) !== JSON.stringify([state.folders, state.tagPool, state.equipmentPool, state.parts, state.trainingFocus, state.focusLibraryMap, state.equipmentRequired || []]);
   } catch (e) { return false; }
 }
 function unsubscribeFromSharedData() {
@@ -5527,6 +5548,7 @@ function applyRemoteSharedUpdate(shared) {
   state.folders = shared.folders || [];
   state.tagPool = shared.tagPool || [];
   state.equipmentPool = shared.equipmentPool || [];
+  state.equipmentRequired = Array.isArray(shared.equipmentRequired) ? shared.equipmentRequired : [];
   state.parts = (shared.parts && shared.parts.length) ? shared.parts : structuredClone(DEFAULT_PARTS);
   state.trainingFocus = (shared.trainingFocus && shared.trainingFocus.length)
     ? shared.trainingFocus : structuredClone(DEFAULT_TRAINING_FOCUS);
@@ -5670,6 +5692,7 @@ async function saveUserDataNow() {
     await zapisSdilena({
       folders: state.folders, tagPool: state.tagPool, equipmentPool: state.equipmentPool, parts: state.parts,
       trainingFocus: state.trainingFocus, focusLibraryMap: state.focusLibraryMap,
+      equipmentRequired: state.equipmentRequired || [],
       // Kdo a kdy naposled uložil — čte Cloud Function pro push notifikace admina, ať mu
       // nechodí upozornění na jeho vlastní změny a ať ví, kdo změnu udělal.
       lastEditedBy: uidCurrent, lastEditedAt: Date.now()
@@ -12173,7 +12196,14 @@ function ovGearStripHtml(items, from) {
   // Dřív na tom `undefined.toUpperCase()` spadlo a s ním celý seznam — viz renderOverview.
   const label = getPart(part).label || part;
   const prefix = label ? `${esc(String(label).toUpperCase())} &middot; ` : "";
-  return `<div class="ov-gear"><b>${prefix}PŘIPRAV</b>${gear.map(g => `<span>${esc(g)}</span>`).join("")}</div>`;
+  return `<div class="ov-gear"><b>${prefix}PŘIPRAV</b>${gear.map(ovGearChipHtml).join("")}</div>`;
+}
+/** Štítek vybavení v Přehledu. V náhledu návrhu se vybavení, které trenér v dotazníku
+    nezaškrtl, zvýrazní a dostane „+“ (je potřeba navíc). V Přehledu skutečného tréninku
+    (ovNahled není) je to obyčejný štítek jako dřív. */
+function ovGearChipHtml(g) {
+  const navic = !!(ovNahled && ovNahled.mam && navrhJeVybaveni(g) && !ovNahled.mam.has(g));
+  return navic ? `<span class="ov-navic" title="Tohle jsi v dotazníku nezaškrtl(a)">+ ${esc(g)}</span>` : `<span>${esc(g)}</span>`;
 }
 /** Ryska na časové pásce. Čas je HRANICE mezi cviky, takže konec jednoho a začátek dalšího je
     jedno číslo. Pod ryskou je plánovaná délka bloku, který za ní začíná. Bez zadaného začátku
@@ -12195,7 +12225,7 @@ function renderOverview() {
   const equip = computeTrainingEquipment(t);
   equipEl.classList.toggle("hidden", !equip.length);
   equipEl.innerHTML = equip.length
-    ? `<b><i class="fa-solid fa-toolbox"></i> VŠECHNO VYBAVENÍ</b>` + equip.map(n => `<span>${esc(n)}</span>`).join("")
+    ? `<b><i class="fa-solid fa-toolbox"></i> VŠECHNO VYBAVENÍ</b>` + equip.map(ovGearChipHtml).join("")
     : "";
   const items = t.items || [];
   let html = "", lastPart = null, acc = 0;
@@ -12248,8 +12278,8 @@ function renderOverview() {
    na začátek a spodní tlačítko návrh použije. Zavření (Zpět, Escape) ho zase uklidí a zadaný
    začátek skutečného tréninku vrátí, jak byl. */
 let ovNahled = null;
-function openOverviewNahled(trenink, pouzit) {
-  ovNahled = { trenink, pouzit, puvodniStart: ovStartSeconds };
+function openOverviewNahled(trenink, pouzit, mam) {
+  ovNahled = { trenink, pouzit, mam: mam || null, puvodniStart: ovStartSeconds };
   ovStartSeconds = null;
   document.getElementById("ovAskBackdrop").classList.add("hidden");
   document.getElementById("overviewView").classList.remove("hidden");
@@ -12356,8 +12386,11 @@ document.getElementById("ovStartPresBtn").addEventListener("click", () => {
    V prázdném tréninku tlačítko „🤷‍♂️ Navrhnout trénink“ → krátký dotazník → tři návrhy celého
    tréninku složené z Knihovny. Žádná umělá inteligence, jen pravidla tady (Mekova rozhodnutí
    jsou v projektu v claude/trener-navrh-treninku.md, čísla bodů v komentářích odkazují tam):
-   - Která videa: funkční, ne v koši, ze složky povolené pro navrhování (Spravovat složky),
-     s vybavením, které trenér zaškrtl, a s obtížností, která neodporuje zadání.
+   - Která videa: funkční, ne v koši, ze složky povolené pro navrhování (Spravovat složky)
+     a s obtížností, která neodporuje zadání.
+   - Vybavení (7. 10. 2026): cvičení vyřadí jen NUTNÉ vybavení, které trenér nezaškrtl
+     (nutné označuje admin ve Správě). Všechno ostatní je nahraditelné: cvičení se navrhne
+     i bez něj, jen má nižší přednost a návrh u něj napíše „navíc: …“.
    - K zaměření patří video ze složky zaměření NEBO se štítkem zaměření (Správa → Zaměření).
      Odjinud se nedoplňuje — když je videí málo, návrh je kratší a řekne to.
    - Rozcvička a hra na rozehřátí: ze složek, které nepatří žádnému zaměření, a ze zvoleného
@@ -12412,10 +12445,18 @@ function navrhPrumer(mapa) {
   return cisla.length ? cisla.reduce((s, x) => s + x, 0) / cisla.length : null;
 }
 function navrhJeVybaveni(nazev) { return !NAVRH_NENI_VYBAVENI.includes(helpNorm(nazev)); }
-/** mam = množina zaškrtnutého vybavení; null = vybavení se neřeší (rada, co přidat). */
+function navrhJeNutne(nazev) { return (state.equipmentRequired || []).includes(nazev); }
+/** mam = množina zaškrtnutého vybavení; null = vybavení se neřeší (rada, co přidat).
+    Cvičení vyřadí jen nutné vybavení, které zaškrtnuté není. */
 function navrhMaVybaveni(v, mam) {
   if (!mam) return true;
-  return (v.equipment || []).every(e => !navrhJeVybaveni(e) || mam.has(e));
+  return (v.equipment || []).every(e => !navrhJeVybaveni(e) || mam.has(e) || !navrhJeNutne(e));
+}
+/** Vybavení, které cvičení chce a trenér ho nezaškrtl. U cvičení, které prošlo, je to jen
+    nahraditelné vybavení — na kartě a v Přehledu se ukáže jako „navíc“. */
+function navrhNavic(v, mam) {
+  if (!v || !mam) return [];
+  return (v.equipment || []).filter(e => navrhJeVybaveni(e) && !mam.has(e));
 }
 /** Měkký filtr obtížnosti (bod 13): vyřadí se jen opačný konec, video bez obtížnosti projde. */
 function navrhObtiznostJde(v, obt) {
@@ -12478,6 +12519,8 @@ function navrhSestav(zadani, styl, rnd, videno, pouziti) {
     if (d != null && ((zadani.obt === "lehci" && d <= 2) || (zadani.obt === "tezsi" && d >= 4)
       || (zadani.obt === "stredni" && d > 2.5 && d < 3.5))) s += 2;
     if (videno.has(v.id)) s -= 4;
+    // Přednost má cvičení, na které trenér všechno má: každá nezaškrtnutá věc navíc ubírá.
+    s -= 2 * navrhNavic(v, zadani.mam).length;
     skore.set(v.id, s);
   });
   const pouzito = new Set();
@@ -12544,7 +12587,7 @@ function navrhRadaVybaveni(zadani) {
   const chybi = Object.values(state.library)
     .filter(v => navrhVideoJde(v, zadani, null) && !navrhMaVybaveni(v, zadani.mam)
       && (v.defaultPart === "dril" || v.defaultPart === "herni") && zam.some(f => navrhPatri(v, f)))
-    .map(v => (v.equipment || []).filter(e => navrhJeVybaveni(e) && !zadani.mam.has(e)));
+    .map(v => (v.equipment || []).filter(e => navrhJeVybaveni(e) && navrhJeNutne(e) && !zadani.mam.has(e)));
   if (!chybi.length) return null;
   const veci = [...new Set(chybi.flat())];
   const zisk = pridat => chybi.filter(potreba => potreba.every(e => pridat.includes(e))).length;
@@ -12571,7 +12614,11 @@ function navrhVybaveniPodleCetnosti() {
     (v.equipment || []).forEach(e => { if (navrhJeVybaveni(e)) cet.set(e, (cet.get(e) || 0) + 1); });
   });
   const vse = state.equipmentPool.filter(navrhJeVybaveni).sort((a, b) => (cet.get(b) || 0) - (cet.get(a) || 0) || a.localeCompare(b, "cs"));
-  return { caste: vse.filter(e => (cet.get(e) || 0) >= NAVRH_CASTE_VYBAVENI), dalsi: vse.filter(e => (cet.get(e) || 0) < NAVRH_CASTE_VYBAVENI) };
+  // Jakmile admin označí nutné vybavení, je nahoře jen to a všechno nahraditelné je pod
+  // „Další vybavení“. Dokud není označené nic, zůstává dělení podle četnosti (jako dřív),
+  // ať horní řádek není prázdný.
+  if (vse.some(navrhJeNutne)) return { caste: vse.filter(navrhJeNutne), dalsi: vse.filter(e => !navrhJeNutne(e)), podleNutnosti: true };
+  return { caste: vse.filter(e => (cet.get(e) || 0) >= NAVRH_CASTE_VYBAVENI), dalsi: vse.filter(e => (cet.get(e) || 0) < NAVRH_CASTE_VYBAVENI), podleNutnosti: false };
 }
 function openNavrhModal() {
   const t = state.trainings[currentTrainingId];
@@ -12602,7 +12649,13 @@ function renderNavrhZadani() {
   }).join("");
   document.getElementById("navrhCasRow").innerHTML = NAVRH_CASY.map(m =>
     `<button type="button" class="chip ${z.cas === m ? "active" : ""}" data-nv-cas="${m}">${m} min</button>`).join("");
-  const { caste, dalsi } = navrhVybaveniPodleCetnosti();
+  const { caste, dalsi, podleNutnosti } = navrhVybaveniPodleCetnosti();
+  document.getElementById("navrhVybPozn").textContent = podleNutnosti
+    ? "Bez tohohle vybavení se cvičení nenavrhne."
+    : "Cvičení se navrhne i bez zaškrtnutého vybavení — návrh jen napíše, co je potřeba navíc.";
+  document.getElementById("navrhVybDalsiPozn").textContent = podleNutnosti
+    ? "Dá se nahradit: cvičení se navrhne i bez něj, jen s poznámkou „navíc“. Zaškrtni, co máš, a taková cvičení dostanou přednost."
+    : "";
   const chip = e => `<button type="button" class="chip ${z.mam.has(e) ? "active" : ""}" data-nv-vyb="${esc(e)}">${esc(e)}</button>`;
   document.getElementById("navrhVybRow").innerHTML = caste.map(chip).join("");
   const dalsiBtn = document.getElementById("navrhVybDalsiBtn");
@@ -12612,6 +12665,7 @@ function renderNavrhZadani() {
   const dalsiRow = document.getElementById("navrhVybDalsiRow");
   dalsiRow.classList.toggle("hidden", !navrhDalsiOtevrene || !dalsi.length);
   dalsiRow.innerHTML = dalsi.map(chip).join("");
+  document.getElementById("navrhVybDalsiPozn").classList.toggle("hidden", !navrhDalsiOtevrene || !dalsi.length || !podleNutnosti);
   document.getElementById("navrhObtRow").innerHTML = NAVRH_OBTIZNOSTI.map(([k, l]) =>
     `<button type="button" class="chip ${z.obt === k ? "active" : ""}" data-nv-obt="${k}">${l}</button>`).join("");
 }
@@ -12684,11 +12738,14 @@ function renderNavrhVysledky() {
       return `<div class="nv-card"><div class="nv-head"><div class="nv-title"><i class="fa-solid ${ikona}"></i> ${nazev}</div></div>
         <div class="nv-sub">Pro tohle zadání se nenašlo žádné video.</div></div>`;
     }
+    // Co je v celém návrhu potřeba navíc proti zaškrtnutému (jen nahraditelné vybavení).
+    const navic = [...new Set(k.polozky.flatMap(p => navrhNavic(state.library[p.videoId], z.mam)))];
     return `<div class="nv-card" data-nv-karta="${i}">
       <div class="nv-head"><div class="nv-title"><i class="fa-solid ${ikona}"></i> ${nazev}</div><div class="nv-meta">${k.polozky.length} cvičení · ${k.celkem} min</div></div>
       <div class="nv-sub">${popis}</div>
       <div class="nv-bar">${pruh}</div>
       ${hlavni || `<div class="nv-sub" style="margin-top:8px;">Bez drilů a herních cvičení.</div>`}
+      ${navic.length ? `<div class="nv-navic"><i class="fa-solid fa-toolbox"></i><span><b>navíc:</b> ${navic.map(esc).join(", ")}</span></div>` : ""}
       <div class="nv-btns">
         <button type="button" class="btn btn-sm" data-nv-zobrazit="${i}"><i class="fa-solid fa-eye"></i> Zobrazit</button>
         <button type="button" class="btn btn-primary btn-sm" data-nv-pouzit="${i}">Použít</button>
@@ -12709,7 +12766,7 @@ document.getElementById("navrhVysledky").addEventListener("click", (e) => {
     const karta = navrhKarty[parseInt(d.nvZobrazit, 10)];
     if (!karta) return;
     openOverviewNahled({ id: "__navrh", name: navrhNazev(navrhZadani), ownerUid: uidCurrent, items: navrhNaPolozky(karta) },
-      () => navrhPouzij(karta));
+      () => navrhPouzij(karta), new Set(navrhZadani.mam));
   }
 });
 document.getElementById("closeNavrhModalBtn").addEventListener("click", closeNavrhModal);
@@ -14938,8 +14995,12 @@ function renderVisibilityModalStav() {
 }
 document.getElementById("deleteTrainingBtn").addEventListener("click", async () => {
   if (!(await confirmDialog("Smazat celý tento trénink?", { confirmLabel: "Smazat", danger: true }))) return;
-  delete state.trainings[currentTrainingId];
-  scheduleSave();
+  /* Smazat = smazat i ze serveru (Mek 7. 10. 2026). Dřív tu bylo jen odebrání ze stavu a
+     scheduleSave() — jenže ukládání tréninků dokumenty nemaže, takže trénink na serveru zůstal
+     a po příštím načtení aplikace se vrátil. Stejná cesta jako Smazat v nabídce v seznamu. */
+  const smazaneId = currentTrainingId;
+  delete state.trainings[smazaneId];
+  deleteTrainingRemote(smazaneId);
   switchView("trainings");
   toast("Smazáno.");
 });
@@ -15006,6 +15067,10 @@ function mergeEquip(from, to) {
     }
   });
   state.equipmentPool = state.equipmentPool.filter(t => t !== from);
+  // Označení „nutné pro navrhování“ jde za vybavením: bylo-li nutné to slučované, je nutné i cílové.
+  if ((state.equipmentRequired || []).includes(from)) {
+    state.equipmentRequired = [...new Set(state.equipmentRequired.map(t => (t === from ? to : t)))];
+  }
   libraryEquipFilter.delete(from); pickerEquipFilter.delete(from);
   scheduleSave();
   renderLibrary();
@@ -15088,6 +15153,32 @@ document.getElementById("spravaTagsBtn").addEventListener("click", () =>
   openAboveSprava("mergeModalBackdrop", () => document.getElementById("manageTagsBtn").click()));
 document.getElementById("spravaPartsBtn").addEventListener("click", () =>
   openAboveSprava("partsModalBackdrop", () => document.getElementById("managePartsBtn").click()));
+/* NUTNÉ VYBAVENÍ PRO NAVRHOVÁNÍ (7. 10. 2026). Seznam názvů v shared/data.equipmentRequired.
+   Co v něm není, je nahraditelné — navrhování kvůli němu cvičení nevyřadí (viz navrhMaVybaveni). */
+function renderEquipReqList() {
+  const nutne = state.equipmentRequired || [];
+  document.getElementById("equipReqList").innerHTML = state.equipmentPool.filter(navrhJeVybaveni)
+    .slice().sort((a, b) => a.localeCompare(b, "cs"))
+    .map(e => `<button type="button" class="chip ${nutne.includes(e) ? "active" : ""}" data-equipreq="${esc(e)}">${esc(e)}</button>`).join("")
+    || `<span class="focus-lib-none">V knihovně zatím žádné vybavení není.</span>`;
+}
+document.getElementById("spravaEquipReqBtn").addEventListener("click", () => {
+  if (uidCurrent !== ADMIN_UID) return;
+  openAboveSprava("equipReqModalBackdrop", () => {
+    renderEquipReqList();
+    document.getElementById("equipReqModalBackdrop").classList.remove("hidden");
+  });
+});
+document.getElementById("closeEquipReqModalBtn").addEventListener("click", () => document.getElementById("equipReqModalBackdrop").classList.add("hidden"));
+document.getElementById("equipReqList").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-equipreq]");
+  if (!b || uidCurrent !== ADMIN_UID) return;
+  const nazev = b.dataset.equipreq;
+  const nutne = (state.equipmentRequired || []).filter(x => state.equipmentPool.includes(x));   // co z nabídky zmizelo, se uklidí
+  state.equipmentRequired = nutne.includes(nazev) ? nutne.filter(x => x !== nazev) : [...nutne, nazev];
+  scheduleSave();
+  renderEquipReqList();
+});
 
 // Trenéři a role — dřív seznam rovnou v profilu, teď vlastní okno nad Správou.
 const membersModalBackdrop = document.getElementById("membersModalBackdrop");
@@ -15483,6 +15574,9 @@ async function sestavZalohu() {
     folders: state.folders,
     tagPool: state.tagPool,
     equipmentPool: state.equipmentPool,
+    // Nutné vybavení pro navrhování: v záloze je, obnova ho zatím nevrací (pár položek,
+    // které admin po obnově zaškrtne znovu — Mek o tom ví, 7. 10. 2026).
+    equipmentRequired: state.equipmentRequired || [],
     parts: state.parts,
     trainings: state.trainings,
     trainingFocus: state.trainingFocus,
@@ -17605,12 +17699,13 @@ const HELP_DATA = [
       { q: "Nevím, co trénovat, nebo pospíchám. Umí mi aplikace trénink navrhnout?", a: "Ano. Založ nový trénink a v prázdném tréninku ťukni na „🤷‍♂️ Navrhnout trénink“ (hned pod „Začít trénovat“). Odpovíš na čtyři otázky — zaměření, celkový čas, vybavení, které máš, a obtížnost — a aplikace z Knihovny poskládá tři návrhy celého tréninku. Nic se neuloží, dokud nedáš „Použít“.", kw: "navrh navrhnout trenink dotaznik nevim pospicham automaticky" },
       { q: "Proč tlačítko „Navrhnout trénink“ nevidím?", a: "Ukazuje se jen v prázdném tréninku, který je tvůj. Jakmile v tréninku je první cvičení, tlačítko zmizí — návrh se do rozdělaného tréninku nevkládá, aby ti nic nepřepsal. Když chceš návrh, založ si nový trénink.", kw: "navrhnout tlacitko chybi neni videt prazdny" },
       { q: "Jak vyberu zaměření v dotazníku?", a: "První ťuknutí je hlavní zaměření (číslo 1), druhé vedlejší (číslo 2) — vedlejší je nepovinné. Hlavní dostane zhruba dvě třetiny drilů a herních cvičení. Ťuknutím na vybrané zaměření ho zase odebereš.", kw: "hlavni vedlejsi zamereni dotaznik" },
-      { q: "Proč mám zaškrtávat vybavení?", a: "Návrh vezme jen cvičení, na která máš všechno potřebné. Předem je zaškrtnutý Míč a Síť, zbytek si doťukej podle toho, co je v hale — čím víc toho zaškrtneš, tím víc cvičení je na výběr. Méně časté vybavení je pod „Další vybavení“.", kw: "vybaveni zaskrtnout mic sit dalsi" },
+      { q: "Proč mám zaškrtávat vybavení?", a: "Vybavení je dvojí. Nutné (určuje ho admin — třeba síť nebo zeď) je v dotazníku nahoře: bez něj se cvičení nenavrhne vůbec. Všechno ostatní je nahraditelné a je pod „Další vybavení“: cvičení se navrhne i bez něj, jen má nižší přednost a návrh u něj napíše, co je potřeba navíc. Předem je zaškrtnutý Míč a Síť. Čím přesněji zaškrtneš, co máš, tím líp návrh sedne.", kw: "vybaveni zaskrtnout mic sit dalsi nutne nahraditelne" },
+      { q: "Co znamená „navíc: Čudlíky“ u návrhu?", a: "Některé cvičení v návrhu potřebuje vybavení, které jsi v dotazníku nezaškrtl(a). Aplikace ho kvůli tomu nevyhodila — třeba ho máš, nebo ho něčím nahradíš — jen ti říká, s čím počítat. Ke kterému cvičení to patří, uvidíš po ťuknutí na „Zobrazit“: vybavení navíc je v řádku „připrav“ zvýrazněné a má před sebou plus.", kw: "navic vybaveni cudliky znacka plus nezaskrtnute" },
       { q: "Čím se liší návrhy Osvědčený, Nový a Mix?", a: "Osvědčený dává přednost nejlépe hodnoceným a často používaným videím. Nový sahá po videích, která jsi ve svých trénincích ještě neměl(a). Mix bere od každého něco. „Namíchat znovu“ vylosuje jiná cvičení ke stejnému zadání.", kw: "osvedceny novy mix namichat znovu karty" },
       { q: "K čemu je přepínač Vyvážený / Drilový / Herní?", a: "Určuje, kolik času dostanou drily a kolik herní cvičení. Vyvážený je dělí napůl, Drilový dává tři čtvrtiny drilům, Herní tři čtvrtiny herním cvičením. Rozcvička a hra na rozehřátí zůstávají stejné.", kw: "vyvazeny drilovy herni skladba prepinac" },
       { q: "Co udělá „Zobrazit“ a co „Použít“?", a: "„Zobrazit“ otevře návrh v Přehledu tréninku — celý plán s videi a časy, jen ke čtení. „Použít“ (na kartě i dole v Přehledu) vloží cvičení do tréninku, pojmenuje ho podle zadání a zařadí do zvolených zaměření. Potom s ním pracuješ jako s každým jiným: cvičení přehazuješ, mažeš, měníš časy, přidáváš přestávky.", kw: "zobrazit pouzit prehled navrh upravit" },
       { q: "Podle čeho aplikace cvičení vybírá?", a: "Podle toho, jak je Knihovna vyplněná: výchozí část tréninku u videa určuje, kam cvičení patří (rozcvička, dril…), složka a štítky určují zaměření, vybavení a obtížnost rozhodují, jestli se hodí k zadání, a hvězdičky s tím, jak často je video v trénincích, rozhodují o pořadí. Nefunkční videa a videa v koši se nenavrhují. Čím poctivěji jsou videa vyplněná, tím lepší návrhy.", kw: "jak vybira pravidla cast stitky slozka hvezdicky" },
-      { q: "Proč je návrh kratší, než jsem chtěl, nebo má málo cvičení?", a: "Pro zvolené zaměření a vybavení není v Knihovně dost videí. Aplikace schválně nedoplňuje cvičení z jiných zaměření — raději řekne, čeho je málo. Když pomůže vybavení, napíše které a nabídne „Přidat a přepočítat“. Jinak pomůže jedině nahrát další videa a dát jim správnou výchozí část a štítky.", kw: "malo videi kratsi navrh chybi drily herni" },
+      { q: "Proč je návrh kratší, než jsem chtěl, nebo má málo cvičení?", a: "Pro zvolené zaměření a vybavení není v Knihovně dost videí. Aplikace schválně nedoplňuje cvičení z jiných zaměření — raději řekne, čeho je málo. Když chybí nutné vybavení, napíše které a nabídne „Přidat a přepočítat“. Jinak pomůže jedině nahrát další videa a dát jim správnou výchozí část a štítky.", kw: "malo videi kratsi navrh chybi drily herni" },
       { q: "Proč v návrhu nejsou posilovací cvičení?", a: "Rozcvička a hra na rozehřátí se berou z obecných složek a ze zvoleného zaměření. Posilování a mobilita patří k zaměření Kondice — když je chceš v tréninku mít, vyber Kondici jako hlavní nebo vedlejší zaměření.", kw: "posilovani kondice rozcvicka chybi mobilita" },
       { q: "Vloží návrh do tréninku i přestávky?", a: "Ne, přestávky si přidej sám tlačítkem „Přidat přestávku“. Jedno cvičení v návrhu trvá nejvýš 20 minut a časy jsou po pěti minutách — uprav si je podle sebe.", kw: "prestavky delka cviceni minuty navrh" }
     ]},
@@ -17815,6 +17910,7 @@ document.getElementById("helpSearchInput").addEventListener("input", (e) => rend
     focusModalBackdrop: "closeFocusModalBtn",
     focusManageBackdrop: "closeFocusManageBtn",
     navrhModalBackdrop: "closeNavrhModalBtn",
+    equipReqModalBackdrop: "closeEquipReqModalBtn",
     trainingModeView: "tmExitBtn",
     overviewView: "ovBackBtn",
     editorView: "backToTrainingsBtn",
