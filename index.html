@@ -3355,7 +3355,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-10-07 10:00";
+const APP_VERSION = "2026-10-07 11:37";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -7131,7 +7131,10 @@ function openLinkModal(id, opts) {
   // Nová videa začínají bez výchozí části („— vyber —", Mekovo rozhodnutí 21. 9.) —
   // v tréninku pak spadnou do části posledního řádku, viz partForNewTrainingRow.
   document.getElementById("linkDefaultPart").value = item ? (item.defaultPart || "") : "";
-  document.getElementById("linkAspectRatio").value = item ? (item.aspectRatio || "16/9") : "16/9";
+  // Nové video je předvolené na výšku (Reels) — Mek 7. 10. 2026; většina nově přidávaných videí
+  // jsou reely. U YouTube, Disku a nahraných souborů to aplikace stejně přepíše podle skutečnosti.
+  // Uložené video bez tvaru (stará data) se dál bere jako 16:9.
+  document.getElementById("linkAspectRatio").value = item ? (item.aspectRatio || "16/9") : "9/16";
   document.getElementById("linkTimestamp").value = item ? secondsToTimestamp(item.timestamp) : "";
   // Sloučení krátkého a dlouhého popisu do jednoho pole (viz #89) — appka od teď nabízí jen
   // "Popis cvičení". U starého videa, které ještě má vyplněný samostatný krátký popis (dosud
