@@ -1467,7 +1467,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
   display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0;font-size:11px;cursor:pointer;}
 .seq-select-box.checked{background:var(--court);border-color:var(--court);}
 .copy-bulk-bar{
-  position:sticky;bottom:12px;margin:14px auto 0;max-width:min(430px, calc(100vw - 24px));background:var(--ink);color:#fff;border-radius:999px;
+  position:sticky;bottom:12px;margin:14px auto 0;max-width:min(520px, calc(100vw - 24px));background:var(--ink);color:#fff;border-radius:999px;
   padding:8px 8px 8px 18px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 24px rgba(27,36,48,.35);
   font-size:12.5px;opacity:0;transform:translateY(12px);pointer-events:none;transition:all .18s ease;z-index:10;
 }
@@ -1495,9 +1495,18 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
 .seq-item.is-group{background:var(--card);border:2px dashed var(--court);}
 /* Blok stanovišť (kolo 3): plný rámeček (skupina má přerušovaný), uvnitř karty stanovišť. */
 .seq-item.is-stations{background:var(--card);border:2px solid var(--chalk);border-left-width:2px;}
-.seq-item.is-stations .clock-badge{position:static;margin-left:auto;}
-.seq-item.is-stations .seq-copy-btn{top:10px;right:10px;}
-.seq-item.is-stations .seq-remove{top:10px;right:38px;}
+.seq-item.is-stations > .clock-badge{position:static;margin-left:auto;}
+/* Jen tlačítka samotného bloku (>), karty stanovišť uvnitř mají tlačítka jako běžné cvičení. */
+.seq-item.is-stations > .seq-copy-btn{top:10px;right:10px;}
+.seq-item.is-stations > .seq-remove{top:10px;right:38px;}
+/* Telefon (kolo 3b): tři tečky bloku i skupiny vpravo nahoře, kopírování vedle nich —
+   dřív leželo přesně pod nimi a nebylo vidět (u skupiny už před kolem 3). */
+@media(max-width:640px){
+  .seq-item.is-stations > .seq-item-kebab-btn{top:10px;right:10px;}
+  .seq-item.is-stations > .seq-item-kebab-menu{top:36px;right:10px;}
+  .seq-item.is-group > .seq-copy-btn,
+  .seq-item.is-stations > .seq-copy-btn{right:36px;}
+}
 .stan-controls{flex-wrap:wrap;align-items:center;}
 .stan-lbl{font-size:11.5px;color:var(--ink-soft);margin-right:2px;}
 .stan-celkem{font-family:var(--font-display);font-size:16px;letter-spacing:.02em;color:var(--chalk-dark);margin-left:auto;}
@@ -2093,7 +2102,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
         <button type="button" class="copy-bulk-cancel" id="copyBulkCancelBtn" aria-label="Zrušit výběr"><span class="copy-bulk-cancel-text">Zrušit</span><i class="fa-solid fa-xmark copy-bulk-cancel-icon"></i></button>
         <button type="button" class="copy-bulk-group" id="copyBulkGroupBtn" title="Seskupit vybrané do jedné skupiny"><i class="fa-solid fa-layer-group"></i> Seskupit</button>
         <button type="button" class="copy-bulk-group copy-bulk-stan" id="copyBulkStanBtn" title="Z každé vybrané položky jedno stanoviště"><i class="fa-solid fa-table-cells-large"></i> <span class="copy-bulk-stan-text">Stanoviště</span></button>
-        <button type="button" class="copy-bulk-copy" id="copyBulkCopyBtn"><i class="fa-solid fa-copy"></i> <span class="copy-bulk-copy-full">Kopírovat do tréninku</span><span class="copy-bulk-copy-short">Kopírovat</span></button>
+        <button type="button" class="copy-bulk-copy" id="copyBulkCopyBtn" title="Kopírovat vybrané do tréninku"><i class="fa-solid fa-copy"></i> <span class="copy-bulk-copy-full">Kopírovat</span><span class="copy-bulk-copy-short">Kopírovat</span></button>
       </div>
       <div class="modal-actions" style="max-width:960px;">
         <button class="btn btn-primary" id="saveTrainingBtn"><i class="fa-solid fa-floppy-disk"></i> Uložit trénink</button>
@@ -3441,7 +3450,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-10-08 13:11";
+const APP_VERSION = "2026-10-08 13:41";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
