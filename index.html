@@ -1349,6 +1349,14 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
 .rte-btn{width:24px;height:24px;border:none;background:none;border-radius:4px;color:var(--ink-soft);font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .rte-btn:hover{background:var(--line);}
 .rte-btn:disabled{opacity:.4;cursor:not-allowed;}
+/* Špendlík „pamatovat poznámku“ (paměť cue a poznámek, 8. 10. 2026): šedý = nic, oranžový =
+   zapamatováno a shoduje se, zešedlý s oranžovou tečkou = zapamatovaná poznámka je jiná. */
+.rte-btn.rte-pin{margin-left:auto;position:relative;}
+.rte-btn.rte-pin.pin-zadna{color:var(--ink-faint);}
+.rte-btn.rte-pin.pin-shoda{color:var(--chalk);}
+.rte-btn.rte-pin.pin-jina{color:var(--ink-soft);}
+.rte-btn.rte-pin.pin-jina::after{content:"";position:absolute;top:3px;right:3px;width:5px;height:5px;border-radius:50%;background:var(--chalk);}
+.rte-btn.rte-pin.pin-shoda i{transform:rotate(-30deg);}
 .rte-editor{min-height:30px;padding:5px 7px;font-size:12px;outline:none;font-family:inherit;color:var(--ink);}
 .rte-editor:empty::before{content:attr(data-placeholder);color:var(--ink-faint);}
 .rte-editor[contenteditable="false"]{background:var(--line);color:var(--ink-faint);cursor:not-allowed;}
@@ -3355,7 +3363,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-10-07 11:37";
+const APP_VERSION = "2026-10-08 08:55";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -4071,13 +4079,14 @@ function flattenRichHtmlToLines(html, indentSize) {
 /** Vykreslí jedno pole rich textu (volitelná lišta s odrážky/číslováním + editovatelný blok).
     attrsHtml se vloží přímo na editační <div> — tam patří data-field/data-itemid apod.,
     stejně jako to dřív bývalo na <textarea>. */
-function renderRichField(value, placeholder, attrsHtml, ro, extraClass) {
+function renderRichField(value, placeholder, attrsHtml, ro, extraClass, toolbarExtra) {
   const toolbar = ro ? "" : `
     <div class="rte-toolbar">
       <button type="button" class="rte-btn" data-rte-cmd="insertUnorderedList" title="Odrážky"><i class="fa-solid fa-list-ul"></i></button>
       <button type="button" class="rte-btn" data-rte-cmd="insertOrderedList" title="Číslovaný seznam"><i class="fa-solid fa-list-ol"></i></button>
       <button type="button" class="rte-btn" data-rte-cmd="outdent" title="Zmenšit odsazení"><i class="fa-solid fa-outdent"></i></button>
       <button type="button" class="rte-btn" data-rte-cmd="indent" title="Zvětšit odsazení"><i class="fa-solid fa-indent"></i></button>
+      ${toolbarExtra || ""}
     </div>`;
   return `<div class="rte-wrap${extraClass ? " " + extraClass : ""}">
     ${toolbar}
@@ -5097,12 +5106,14 @@ function renderTopbarIdentity() {
    ========================================================= */
 async function loadUserData() {
   let legacy = {};
+  let legacyOk = false;
   const loadErrors = [];
 
   // --- starý dokument: zdroj profilu a (jen jednou) zdroj pro migraci ---
   try {
     const legacySnap = await getDoc(doc(db, "users", uidCurrent));
     legacy = legacySnap.exists() ? legacySnap.data() : {};
+    legacyOk = true;
   } catch (e) {
     console.error("Nepodařilo se načíst uživatelský dokument:", e);
     loadErrors.push(`profil (${e.code || e.message || "?"})`);
@@ -5151,6 +5162,9 @@ async function loadUserData() {
   // Kdy naposled vznikla záloha (ruční, automatická nebo před obnovou) — podle toho se po
   // 7 dnech připomíná (24. 9. 2026). Bydlí v users/{uid}, ať to ví každé zařízení.
   state.lastBackupAt = legacy.lastBackupAt || 0;
+  // Paměť cue a poznámek (8. 10. 2026) — soukromá, bydlí taky v users/{uid}.
+  pametKZapisu.clear();
+  state.cueMemory = pametZDokumentu(legacy.cueMemory);
 
   // --- sdílená knihovna ---
   let sharedOk = false;
@@ -5369,6 +5383,19 @@ async function loadUserData() {
       logDebug(`[Nepřiřazeno] automatická migrace při přihlášení: ${ok ? "úspěch" : "selhalo i po opakování, zkusí se zas při příštím přihlášení"}`);
     }
   } catch (e) { console.error("Přiřazení nepřiřazených videí selhalo:", e); }
+
+  // --- paměť cue: jednorázové naplnění ze stávajících vlastních tréninků (8. 10. 2026) ---
+  // Jen když se dokument, knihovna i tréninky opravdu načetly — jinak by se příznak zapsal nad
+  // neúplnými daty a naplnění by se už nikdy nezopakovalo.
+  if (legacyOk && trainingsOk && knihovnaNactena && !legacy.cueMemoryFilled) {
+    try {
+      const vlastni = Object.values(state.trainings).filter(t => t && t.ownerUid === uidCurrent);
+      const doplnek = pametCueZTreninku(vlastni, state.cueMemory, state.library);
+      await setDoc(doc(db, "users", uidCurrent), { cueMemory: doplnek, cueMemoryFilled: true }, { merge: true });
+      Object.entries(doplnek).forEach(([id, z]) => { state.cueMemory[id] = Object.assign({}, state.cueMemory[id], z); });
+      logDebug(`[pamet] naplněno cue ze stávajících tréninků: ${Object.keys(doplnek).length}`);
+    } catch (e) { console.warn("Naplnění paměti cue selhalo, zkusí se při příštím přihlášení:", e); }
+  }
 
   // --- jednorázový úklid starých duplicitních polí z users/{uid} (pravděpodobný důvod, proč dokument narostl přes limit) ---
   try {
@@ -12605,7 +12632,7 @@ function navrhNazev(zadani) {
 }
 /** Návrh přepsaný na běžné řádky tréninku — stejný tvar, jaký dělá přidání videa z Knihovny. */
 function navrhNaPolozky(karta) {
-  return karta.polozky.map(p => ({ itemId: uid(), videoId: p.videoId, part: p.cast, duration: p.min, cue: "", poznamka: "", label: "" }));
+  return karta.polozky.map(p => pametPredvypln({ itemId: uid(), videoId: p.videoId, part: p.cast, duration: p.min, cue: "", poznamka: "", label: "" }, p.videoId, "poznamka"));
 }
 
 /* ---------- okno: dotazník a výsledky ---------- */
@@ -13537,6 +13564,209 @@ function renderPickerList() {
   }));
 }
 
+/* =========================================================
+   PAMĚŤ CUE A POZNÁMEK (8. 10. 2026)
+   Aplikace si u každého trenéra pamatuje, co k videu z knihovny napsal, a při dalším vložení
+   videa do tréninku to předvyplní. Soukromé: bydlí v users/{uid}.cueMemory
+   ({ videoId: { cue, cueAt, note, noteAt } }), v aplikaci to nikdo jiný nevidí.
+   Mekova rozhodnutí: cue se pamatuje samo (poslední napsané vyhrává, vymazání paměť nesmaže),
+   poznámka jen špendlíkem — uloží text v tu chvíli, změnu nebo smazání zapamatované
+   poznámky potvrzuje okno. Na kartě videa se paměť neukazuje. Při prvním spuštění se cue
+   naplní ze stávajících vlastních tréninků (příznak cueMemoryFilled).
+   ========================================================= */
+const pametKZapisu = new Map();     // videoId -> změny čekající na zápis do users/{uid}
+let pametCasovac = null;
+/** Jen skutečná videa z knihovny — textová cvičení psaná v tréninku (txt_…) a pauzy (brk_…)
+    v knihovně nejsou a paměť nemají. */
+function pametLzeVideo(videoId) {
+  return !!videoId && !!state.library && !!state.library[videoId];
+}
+function pametZaznam(videoId) {
+  return (state.cueMemory && state.cueMemory[videoId]) || null;
+}
+/** Poznámka pro porovnání: prázdná pole (i "<p><br></p>") jsou "", bílé znaky se slévají. */
+function pametNormPozn(html) {
+  if (!richHasContent(html || "")) return "";
+  return sanitizeRichHtml(html).replace(/\s+/g, " ").trim();
+}
+/** Paměť z dokumentu users/{uid} — jen řetězce, cokoli jiného se zahodí. */
+function pametZDokumentu(raw) {
+  const out = {};
+  if (!raw || typeof raw !== "object") return out;
+  Object.entries(raw).forEach(([id, z]) => {
+    if (!z || typeof z !== "object") return;
+    const zaznam = {};
+    if (typeof z.cue === "string" && z.cue.trim()) { zaznam.cue = z.cue; zaznam.cueAt = z.cueAt || 0; }
+    if (typeof z.note === "string" && richHasContent(z.note)) { zaznam.note = z.note; zaznam.noteAt = z.noteAt || 0; }
+    if (zaznam.cue || zaznam.note) out[id] = zaznam;
+  });
+  return out;
+}
+function pametNaplanujZapis(videoId, zmena) {
+  pametKZapisu.set(videoId, Object.assign(pametKZapisu.get(videoId) || {}, zmena));
+  if (pametCasovac) clearTimeout(pametCasovac);
+  pametCasovac = setTimeout(pametZapis, 1200);
+}
+async function pametZapis() {
+  if (pametCasovac) { clearTimeout(pametCasovac); pametCasovac = null; }
+  if (!pametKZapisu.size || !uidCurrent) return;
+  const davka = new Map(pametKZapisu);
+  pametKZapisu.clear();
+  const cueMemory = {};
+  davka.forEach((zmena, id) => {
+    const z = {};
+    Object.entries(zmena).forEach(([k, v]) => { z[k] = v === null ? deleteField() : v; });
+    cueMemory[id] = z;
+  });
+  try {
+    await setDoc(doc(db, "users", uidCurrent), { cueMemory }, { merge: true });
+  } catch (e) {
+    console.warn("Uložení paměti cue selhalo, zkusí se znovu:", e);
+    logDebug("[pamet] zápis selhal: " + (e && (e.code || e.message)));
+    // Vrátit do fronty, ale novější změny (napsané mezitím) mají přednost.
+    davka.forEach((zmena, id) => { pametKZapisu.set(id, Object.assign({}, zmena, pametKZapisu.get(id) || {})); });
+    pametCasovac = setTimeout(pametZapis, 15000);
+  }
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && pametKZapisu.size) pametZapis(); });
+/** Cue napsané v tréninku se zapamatuje samo. Prázdné paměť nesmaže (otázka 7 předání). */
+function pametZapamatujCue(videoId, cue) {
+  if (!pametLzeVideo(videoId)) return;
+  const text = (cue || "").trim();
+  if (!text) return;
+  if (!state.cueMemory) state.cueMemory = {};
+  const z = Object.assign({}, state.cueMemory[videoId]);
+  if (z.cue === text) return;
+  z.cue = text;
+  z.cueAt = Date.now();
+  state.cueMemory[videoId] = z;
+  pametNaplanujZapis(videoId, { cue: z.cue, cueAt: z.cueAt });
+}
+function pametUlozPoznamku(videoId, html) {
+  if (!state.cueMemory) state.cueMemory = {};
+  const z = Object.assign({}, state.cueMemory[videoId]);
+  z.note = sanitizeRichHtml(html);
+  z.noteAt = Date.now();
+  state.cueMemory[videoId] = z;
+  pametNaplanujZapis(videoId, { note: z.note, noteAt: z.noteAt });
+}
+function pametZapomenPoznamku(videoId) {
+  const z = Object.assign({}, pametZaznam(videoId));
+  delete z.note;
+  delete z.noteAt;
+  if (z.cue) state.cueMemory[videoId] = z;
+  else delete state.cueMemory[videoId];
+  pametNaplanujZapis(videoId, { note: null, noteAt: null });
+}
+/** Nová položka tréninku (nebo člen skupiny) s předvyplněným cue a připíchnutou poznámkou.
+    `polePozn` je "poznamka" u řádku tréninku a "note" u člena skupiny. */
+function pametPredvypln(polozka, videoId, polePozn) {
+  if (!pametLzeVideo(videoId)) return polozka;
+  const z = pametZaznam(videoId);
+  if (!z) return polozka;
+  if (z.cue && !(polozka.cue || "").trim()) polozka.cue = z.cue;
+  if (z.note && !richHasContent(polozka[polePozn] || "")) polozka[polePozn] = z.note;
+  return polozka;
+}
+/** "zadna" = nic zapamatováno, "shoda" = text odpovídá zapamatovanému, "jina" = liší se. */
+function pametStavPoznamky(videoId, html) {
+  const z = pametZaznam(videoId);
+  if (!z || !z.note) return "zadna";
+  return pametNormPozn(z.note) === pametNormPozn(html) ? "shoda" : "jina";
+}
+const PAMET_SPENDLIK_TITULEK = {
+  zadna: "Pamatovat poznámku u tohoto cvičení",
+  shoda: "Poznámka je zapamatovaná — ťuknutím ji zapomeneš",
+  jina: "Zapamatovaná poznámka je jiná — ťuknutím ji nahradíš touhle"
+};
+/** Špendlík do lišty poznámky. Jen u videa z knihovny a jen v upravitelném tréninku. */
+function pametSpendlikHtml(videoId, html, itemId, memberId) {
+  if (!pametLzeVideo(videoId)) return "";
+  const stav = pametStavPoznamky(videoId, html);
+  return `<button type="button" class="rte-btn rte-pin pin-${stav}" data-pin-video="${esc(videoId)}" data-pin-item="${esc(itemId)}"${memberId ? ` data-pin-member="${esc(memberId)}"` : ""} title="${esc(PAMET_SPENDLIK_TITULEK[stav])}" aria-label="${esc(PAMET_SPENDLIK_TITULEK[stav])}"><i class="fa-solid fa-thumbtack"></i></button>`;
+}
+/** Po psaní v poznámce přebarví špendlík ve stejném poli (bez překreslení celého seznamu). */
+function pametObnovSpendlik(editor, html) {
+  const wrap = editor && editor.closest(".rte-wrap");
+  const pin = wrap && wrap.querySelector("[data-pin-video]");
+  if (!pin) return;
+  const stav = pametStavPoznamky(pin.dataset.pinVideo, html);
+  pin.classList.remove("pin-zadna", "pin-shoda", "pin-jina");
+  pin.classList.add("pin-" + stav);
+  pin.title = PAMET_SPENDLIK_TITULEK[stav];
+  pin.setAttribute("aria-label", PAMET_SPENDLIK_TITULEK[stav]);
+}
+async function pametKlikSpendlik(pin) {
+  const t = state.trainings[currentTrainingId];
+  if (!t) return;
+  const row = t.items.find(it => it.itemId === pin.dataset.pinItem);
+  if (!row) return;
+  const clen = pin.dataset.pinMember ? (row.videos || []).find(x => x.memberId === pin.dataset.pinMember) : null;
+  if (pin.dataset.pinMember && !clen) return;
+  const videoId = pin.dataset.pinVideo;
+  const html = clen ? (clen.note || "") : (row.poznamka || "");
+  const lib = state.library[videoId];
+  const nazev = lib ? lib.title : "cvičení";
+  const stav = pametStavPoznamky(videoId, html);
+  const prazdna = !pametNormPozn(html);
+  if (stav === "zadna") {
+    if (prazdna) { toast("Nejdřív napiš poznámku, kterou si má aplikace pamatovat.", 3500, "info"); return; }
+    pametUlozPoznamku(videoId, html);
+    toast("Poznámka zapamatovaná. Předvyplní se, až cvičení příště vložíš do tréninku.", 3500, "ok");
+  } else if (stav === "shoda" || prazdna) {
+    const ok = await confirmDialog(`Zapamatovaná poznámka k „${nazev}“ se smaže a do dalších tréninků se už nebude předvyplňovat. V tomhle tréninku zůstane, jak je.`,
+      { title: "Zapomenout poznámku?", confirmLabel: "Zapomenout", danger: true });
+    if (!ok) return;
+    pametZapomenPoznamku(videoId);
+    toast("Poznámka zapomenutá.", 2500, "ok");
+  } else {
+    const ok = await confirmDialog(`K „${nazev}“ máš zapamatovanou jinou poznámku. Nahradit ji touhle? Do dalších tréninků se pak bude předvyplňovat tahle.`,
+      { title: "Nahradit poznámku?", confirmLabel: "Nahradit" });
+    if (!ok) return;
+    pametUlozPoznamku(videoId, html);
+    toast("Zapamatovaná poznámka nahrazená.", 2500, "ok");
+  }
+  // Stejné video může být v tréninku víckrát — přebarvit všechny jeho špendlíky.
+  document.querySelectorAll(`[data-pin-video="${CSS.escape(videoId)}"]`).forEach(el => {
+    const editor = el.closest(".rte-wrap") && el.closest(".rte-wrap").querySelector(".rte-editor");
+    if (editor) pametObnovSpendlik(editor, editor.innerHTML);
+  });
+}
+/** Prvotní naplnění: cue ze stávajících vlastních tréninků (Mekova otázka 7 = A). Vrací jen
+    to, co v paměti ještě není; při různých cue u jednoho videa vyhraje naposledy upravený
+    trénink. Poznámky se nenaplňují — ty se připichují ručně. */
+function pametCueZTreninku(treninky, pamet, library) {
+  const nalez = {};
+  [...treninky].sort((a, b) => (a.dateModified || 0) - (b.dateModified || 0)).forEach(t => {
+    const vezmi = (videoId, cue) => {
+      const text = (cue || "").trim();
+      if (!text || !videoId || !library[videoId]) return;
+      nalez[videoId] = { cue: text, cueAt: t.dateModified || 0 };
+    };
+    (t.items || []).forEach(it => {
+      if (it.isGroup) (it.videos || []).forEach(v => { if (!v.isText && !v.isBreak) vezmi(v.videoId, v.cue); });
+      else if (!it.isText && it.part !== "prestavka") vezmi(it.videoId, it.cue);
+    });
+  });
+  const out = {};
+  Object.entries(nalez).forEach(([id, z]) => { if (!(pamet[id] && pamet[id].cue)) out[id] = z; });
+  return out;
+}
+/** Co ze zálohované paměti dnes chybí (cue nebo poznámka, kterou dnes video v paměti nemá).
+    Obnova jen doplňuje, dnešní zápisy nepřepisuje — stejně jako u oblíbených tréninků. */
+function pametChybiOprotiZaloze(zPamet, dPamet) {
+  const out = {};
+  const z = pametZDokumentu(zPamet), d = pametZDokumentu(dPamet);
+  Object.entries(z).forEach(([id, zz]) => {
+    const dd = d[id] || {};
+    const dopln = {};
+    if (zz.cue && !dd.cue) { dopln.cue = zz.cue; dopln.cueAt = zz.cueAt || 0; }
+    if (zz.note && !dd.note) { dopln.note = zz.note; dopln.noteAt = zz.noteAt || 0; }
+    if (dopln.cue || dopln.note) out[id] = dopln;
+  });
+  return out;
+}
+
 /** Do jaké části tréninku spadne nově přidané video. Má-li výchozí část, platí ta (jako dřív).
     Nemá-li (ve formuláři „— vyber —"), vezme se část POSLEDNÍHO řádku tréninku, který nějakou
     skutečnou část má — přestávky a skupiny „Bez části" se přeskakují, jinak by video za
@@ -13558,7 +13788,7 @@ function addLibraryItemToTraining(trainingId, libraryId) {
   if (!t) return false;
   const lib = state.library[libraryId];
   const part = partForNewTrainingRow(t, lib);
-  t.items.push({ itemId: uid(), videoId: libraryId, part, duration: 10, cue: "", poznamka: "", label: "" });
+  t.items.push(pametPredvypln({ itemId: uid(), videoId: libraryId, part, duration: 10, cue: "", poznamka: "", label: "" }, libraryId, "poznamka"));
   t.dateModified = Date.now();
   return true;
 }
@@ -13833,7 +14063,7 @@ document.getElementById("groupSelectedBtn").addEventListener("click", () => {
   t.items.push({
     itemId: uid(), isGroup: true, name: "Nová skupina", cue: "", poznamka: "",
     mode: "time", seriesCount: 1, seriesPause: 30, seriesPauseUnit: "s",
-    videos: orderedIds.map(videoId => ({ memberId: uid(), videoId, cue: "", note: "", duration: 1, durationUnit: "min", reps: "" }))
+    videos: orderedIds.map(videoId => pametPredvypln({ memberId: uid(), videoId, cue: "", note: "", duration: 1, durationUnit: "min", reps: "" }, videoId, "note"))
   });
   t.dateModified = Date.now();
   selectedPickerIds.clear();
@@ -14188,7 +14418,7 @@ function renderSequence() {
               ${ro ? "" : `<button type="button" class="seq-group-video-remove" data-groupvideo-remove-item="${esc(row.itemId)}" data-groupvideo-remove-video="${esc(v.memberId)}" aria-label="Odebrat ze skupiny"><i class="fa-solid fa-xmark"></i></button>`}
               <div class="seq-group-video-fields" data-notes-panel="${notesKeyV}">
                 <input type="text" class="seq-group-video-cue" placeholder="cue" value="${esc(v.cue || "")}" data-groupcue-item="${esc(row.itemId)}" data-groupcue-video="${esc(v.memberId)}" ${dis}>
-                ${renderRichField(v.note || "", "poznámka", `data-groupnote-item="${esc(row.itemId)}" data-groupnote-video="${esc(v.memberId)}"`, ro, "rte-xs")}
+                ${renderRichField(v.note || "", "poznámka", `data-groupnote-item="${esc(row.itemId)}" data-groupnote-video="${esc(v.memberId)}"`, ro, "rte-xs", ro ? "" : pametSpendlikHtml(v.videoId, v.note || "", row.itemId, v.memberId))}
                 <div class="field" style="position:relative;margin-top:5px;">
                   <label style="font-size:9.5px;color:var(--ink-faint);text-transform:none;letter-spacing:0;display:block;margin-bottom:3px;">Další vybavení (jen pro tenhle trénink)</label>
                   <div class="tag-input-wrap" id="extraEquipWrap_${esc(row.itemId)}_${esc(v.memberId)}">
@@ -14251,7 +14481,7 @@ function renderSequence() {
       <button type="button" class="seq-notes-toggle${(row.cue || richHasContent(row.poznamka) || (row.extraEquipment && row.extraEquipment.length)) ? " has-content" : ""}" data-notes-toggle="${esc(row.itemId)}"><i class="fa-solid fa-chevron-down"></i> Cue a poznámka</button>
       <div class="seq-item-fields" data-notes-panel="${esc(row.itemId)}">
         <input type="text" placeholder="Cue (co říct nahlas)" value="${esc(row.cue)}" data-field="cue" data-itemid="${esc(row.itemId)}" ${dis}>
-        ${renderRichField(row.poznamka, "Poznámka (např. dělat jen 3. cvik)", `data-field="poznamka" data-itemid="${esc(row.itemId)}"`, ro, "rte-sm")}
+        ${renderRichField(row.poznamka, "Poznámka (např. dělat jen 3. cvik)", `data-field="poznamka" data-itemid="${esc(row.itemId)}"`, ro, "rte-sm", ro ? "" : pametSpendlikHtml(row.videoId, row.poznamka || "", row.itemId))}
         <div class="field" style="position:relative;margin-top:8px;">
           <label style="font-size:10.5px;color:var(--ink-faint);text-transform:none;letter-spacing:0;display:block;margin-bottom:4px;">Další vybavení (jen pro tenhle trénink, nemění knihovnu)</label>
           <div class="tag-input-wrap" id="extraEquipWrap_${esc(row.itemId)}">
@@ -14567,7 +14797,7 @@ document.getElementById("sequenceList").addEventListener("input", (e) => {
     const t = state.trainings[currentTrainingId];
     const row = t.items.find(it => it.itemId === groupNoteItem);
     const v = row && row.videos.find(x => x.memberId === groupNoteVideo);
-    if (v) { v.note = sanitizeRichHtml(e.target.innerHTML); t.dateModified = Date.now(); scheduleSave(); }
+    if (v) { v.note = sanitizeRichHtml(e.target.innerHTML); t.dateModified = Date.now(); scheduleSave(); pametObnovSpendlik(e.target, v.note); }
     return;
   }
   const groupCueItem = e.target.dataset.groupcueItem, groupCueVideo = e.target.dataset.groupcueVideo;
@@ -14575,7 +14805,7 @@ document.getElementById("sequenceList").addEventListener("input", (e) => {
     const t = state.trainings[currentTrainingId];
     const row = t.items.find(it => it.itemId === groupCueItem);
     const v = row && row.videos.find(x => x.memberId === groupCueVideo);
-    if (v) { v.cue = e.target.value; t.dateModified = Date.now(); scheduleSave(); }
+    if (v) { v.cue = e.target.value; t.dateModified = Date.now(); scheduleSave(); if (!v.isText) pametZapamatujCue(v.videoId, v.cue); }
     return;
   }
   const groupBreakLabelItem = e.target.dataset.groupbreaklabelItem, groupBreakLabelVideo = e.target.dataset.groupbreaklabelVideo;
@@ -14604,6 +14834,10 @@ document.getElementById("sequenceList").addEventListener("input", (e) => {
     row.estimate = parseInt(e.target.value) || null;
   } else if (field === "poznamka") {
     row.poznamka = sanitizeRichHtml(e.target.innerHTML);
+    if (!row.isText && !row.isGroup) pametObnovSpendlik(e.target, row.poznamka);
+  } else if (field === "cue") {
+    row.cue = e.target.value;
+    if (!row.isText && !row.isGroup && row.part !== "prestavka") pametZapamatujCue(row.videoId, row.cue);
   } else {
     row[field] = numericFields.includes(field) ? (parseInt(e.target.value) || 0) : e.target.value;
   }
@@ -14613,6 +14847,8 @@ document.getElementById("sequenceList").addEventListener("input", (e) => {
   if (field === "part" || field === "seriesCount") renderSequence();
 });
 document.getElementById("sequenceList").addEventListener("click", (e) => {
+  const pin = e.target.closest("[data-pin-video]");
+  if (pin) { pametKlikSpendlik(pin); return; }
   const kebabToggle = e.target.closest("[data-kebab-toggle]");
   if (kebabToggle) {
     const menu = e.currentTarget.querySelector(`[data-kebab-menu="${CSS.escape(kebabToggle.dataset.kebabToggle)}"]`);
@@ -15525,6 +15761,7 @@ function vyberProfil(d) {
   const p = {};
   OBNOVA_PROFIL_POLE.forEach(k => { if (d && d[k] !== undefined) p[k] = d[k]; });
   p.favoriteTrainings = Array.isArray(d && d.favoriteTrainings) ? d.favoriteTrainings.slice() : [];
+  p.cueMemory = pametZDokumentu(d && d.cueMemory);   // paměť cue a poznámek (8. 10. 2026)
   return p;
 }
 /** Komentáře všech videí jedním dotazem (collectionGroup „items“ — potřebuje pravidlo pro
@@ -15591,6 +15828,7 @@ async function sestavZalohu() {
     memberNames,
     profile,
     favoriteTrainings: [...(state.favoriteTrainings || [])],
+    cueMemory: state.cueMemory || {},
     comments,
     tips,
     profiles
@@ -15940,9 +16178,11 @@ function sestavPlanObnovy(zaloha, dnes) {
     const pole = OBNOVA_PROFIL_POLE.filter(k => k in zP && obnovaNorm(zP[k]) !== obnovaNorm(dP[k]));
     const dFav = new Set(dnes.favoriteTrainings || []);
     const chybiFav = (zaloha.favoriteTrainings || []).filter(id => !dFav.has(id));
-    if (pole.length || chybiFav.length) {
+    const chybiPamet = Object.keys(pametChybiOprotiZaloze(zaloha.cueMemory, dnes.cueMemory)).length;
+    if (pole.length || chybiFav.length || chybiPamet) {
       const casti = obnovaPopisky(pole, OBNOVA_PROFIL_POPISKY);
       if (chybiFav.length) casti.push(`chybí ${chybiFav.length} ${czPlural(chybiFav.length, "oblíbený trénink", "oblíbené tréninky", "oblíbených tréninků")}`);
+      if (chybiPamet) casti.push(`chybí paměť cue a poznámek u ${chybiPamet} cvičení`);
       pridej("profil", "profil", "zmeneno", "Profil", casti.join(" · "));
     }
   }
@@ -15956,10 +16196,12 @@ function sestavPlanObnovy(zaloha, dnes) {
       const pole = OBNOVA_PROFIL_POLE.filter(k => k in zp && obnovaNorm(zp[k]) !== obnovaNorm(dp[k]));
       const dFav = new Set(dp.favoriteTrainings || []);
       const chybiFav = (zp.favoriteTrainings || []).filter(id => !dFav.has(id));
-      if (!pole.length && !chybiFav.length) return;
+      const chybiPamet = Object.keys(pametChybiOprotiZaloze(zp.cueMemory, dp.cueMemory)).length;
+      if (!pole.length && !chybiFav.length && !chybiPamet) return;
       const casti = obnovaPopisky(pole, OBNOVA_PROFIL_POPISKY);
       if (pole.includes("username")) casti[casti.indexOf("jméno")] = `jméno (dnes „${dp.username || ""}“)`;
       if (chybiFav.length) casti.push(`chybí ${chybiFav.length} ${czPlural(chybiFav.length, "oblíbený trénink", "oblíbené tréninky", "oblíbených tréninků")}`);
+      if (chybiPamet) casti.push(`chybí paměť cue a poznámek u ${chybiPamet} cvičení`);
       pridej("profily", u, "zmeneno", zp.username || jmenoTrenera(u), casti.join(" · "));
     });
   }
@@ -16103,8 +16345,10 @@ function prenesObnovuDoStavu(klice, zaloha, st, uidJa, razitko, dnes) {
       if (zp && id !== uidJa) {
         const pole = {};
         OBNOVA_PROFIL_POLE.forEach(k => { if (k in zp) pole[k] = zp[k]; });
-        const dnesni = ((dnes && dnes.profiles && dnes.profiles[id]) || {}).favoriteTrainings || [];
-        vysl.profily[id] = { pole, oblibene: [...new Set([...dnesni, ...(zp.favoriteTrainings || [])])] };
+        const dnesniProfil = (dnes && dnes.profiles && dnes.profiles[id]) || {};
+        const dnesni = dnesniProfil.favoriteTrainings || [];
+        vysl.profily[id] = { pole, oblibene: [...new Set([...dnesni, ...(zp.favoriteTrainings || [])])],
+          pamet: pametChybiOprotiZaloze(zp.cueMemory, dnesniProfil.cueMemory) };
         hotovo = true;
       }
     } else if (oblast === "clenove") {
@@ -16115,7 +16359,7 @@ function prenesObnovuDoStavu(klice, zaloha, st, uidJa, razitko, dnes) {
       const pole = {};
       OBNOVA_PROFIL_POLE.forEach(k => { if (k in zP) pole[k] = zP[k]; });
       const oblibene = [...new Set([...(st.favoriteTrainings || []), ...(zaloha.favoriteTrainings || [])])];
-      vysl.profil = { pole, oblibene };
+      vysl.profil = { pole, oblibene, pamet: pametChybiOprotiZaloze(zaloha.cueMemory, st.cueMemory) };
       hotovo = true;
     } else if (oblast === "klice") {
       if (zaloha[id]) { vysl.klice[id] = zaloha[id]; hotovo = true; }
@@ -16251,6 +16495,7 @@ async function nactiDnesniStavProObnovu(zaloha) {
     trainings,
     members: { approved }, jmena,
     profile: state.profile || {}, favoriteTrainings: [...(state.favoriteTrainings || [])],
+    cueMemory: state.cueMemory || {},
     driveApiKey: state.driveApiKey || "", vapidKey: state.vapidKey || "",
     comments: komentare, tips: tipy, profiles
   };
@@ -16454,7 +16699,10 @@ async function provedObnovu(klice, zaloha, hlas, dnes) {
   if (vysl.profil) {
     hlas("Zapisuju profil…");
     try {
-      await setDoc(doc(db, "users", uidCurrent), { ...vysl.profil.pole, favoriteTrainings: vysl.profil.oblibene, restoredAt: razitko }, { merge: true });
+      const pamet = vysl.profil.pamet || {};
+      await setDoc(doc(db, "users", uidCurrent), { ...vysl.profil.pole, favoriteTrainings: vysl.profil.oblibene, ...(Object.keys(pamet).length ? { cueMemory: pamet } : {}), restoredAt: razitko }, { merge: true });
+      if (!state.cueMemory) state.cueMemory = {};
+      Object.entries(pamet).forEach(([id, z]) => { state.cueMemory[id] = Object.assign({}, state.cueMemory[id], z); });
       state.profile = Object.assign({}, state.profile, vysl.profil.pole);
       state.favoriteTrainings = new Set(vysl.profil.oblibene);
       applyColorScheme();
@@ -16489,7 +16737,10 @@ async function provedObnovu(klice, zaloha, hlas, dnes) {
     await setDoc(doc(db, "videoTips", id), t);
   });
   await zapisVse("profily ostatních", Object.entries(vysl.profily), async ([u, p]) => {
-    await setDoc(doc(db, "users", u), { ...p.pole, favoriteTrainings: p.oblibene, restoredAt: razitko }, { merge: true });
+    // Paměť cue (8. 10. 2026) jen když něco chybí — pravidla ji u cizího profilu povolují až
+    // po úpravě (pole cueMemory v seznamu pro obnovu); bez ní by neprošel ani zbytek profilu.
+    const pamet = p.pamet || {};
+    await setDoc(doc(db, "users", u), { ...p.pole, favoriteTrainings: p.oblibene, ...(Object.keys(pamet).length ? { cueMemory: pamet } : {}), restoredAt: razitko }, { merge: true });
     delete profileCache[u];   // jméno a fotka se příště načtou znovu
   });
   if (odmitnuto) problemy.push("Firestore část zápisů odmítl — nejspíš ještě nejsou ve Firebase konzoli nasazená nová pravidla (2. kolo obnovy).");
@@ -17716,7 +17967,8 @@ const HELP_DATA = [
       { q: "Jak nastavím čas nebo počet opakování u cvičení?", a: "U každé položky přepínáš mezi režimem Čas a Opakování — podle toho pak zadáváš buď dobu trvání, nebo počet opakování." },
       { q: "Co jsou série a jak funguje pauza mezi nimi?", a: "Série znamená, že se stejné cvičení zopakuje víckrát za sebou (např. 3×) s automatickou pauzou mezi jednotlivými koly — nastavuje se to u dané položky nebo skupiny." },
       { q: "Jak přidám poznámku nebo instrukci ke cvičení?", a: "U položky rozklikni „Cue a poznámka“ — cue je krátký pokyn, co hráčům říct nahlas, poznámka je prostor pro delší vysvětlení, co si má trenér pamatovat." },
-      { q: "Co je „cue“ a čím se liší od poznámky?", a: "Cue je krátká věta, kterou trenér řekne nahlas hráčům přímo při cvičení (např. „ruce nahoru“). Poznámka je delší text jen pro trenéra samotného — třeba na co si dát pozor při vedení cvičení.", kw: "cue vs poznamka" },
+      { q: "Co je „cue“ a čím se liší od poznámky?", a: "Cue je krátká věta, kterou trenér řekne nahlas hráčům přímo při cvičení (např. „ruce nahoru“). Poznámka je delší text jen pro trenéra samotného — třeba na co si dát pozor při vedení cvičení. Liší se i tím, jak si je aplikace pamatuje: cue sama, poznámku jen když ji připíchneš špendlíkem.", kw: "cue vs poznamka" },
+      { q: "Pamatuje si aplikace cue a poznámky?", a: "Ano, jen pro tebe — ostatní trenéři tvoje zapamatované cue ani poznámky v aplikaci nevidí. Cue, které k videu napíšeš, si aplikace zapamatuje sama a předvyplní ho, až to video příště vložíš do tréninku (z Knihovny, z panelu v editoru, do nové skupiny i z návrhu tréninku). Poznámka se pamatuje, jen když ťukneš na špendlík v její liště: oranžový znamená zapamatovaná, šedý s tečkou znamená, že text se od zapamatovaného liší. Změnu nebo smazání zapamatované poznámky aplikace vždycky potvrdí. Předvyplněný text v tréninku klidně přepiš — u cue se tím zapamatuje nový, u poznámky jen když znovu ťukneš na špendlík. Pamatuje se jen u videí z Knihovny, ne u textových cvičení psaných přímo v tréninku.", kw: "pamet zapamatovat predvyplnit spendlik pripichnout cue poznamka minule" },
       { q: "Jak přidám vybavení, které platí jen pro tenhle konkrétní trénink?", a: "U položky je pole „Další vybavení (jen pro tenhle trénink, nemění knihovnu)“ — přidané vybavení se počítá do souhrnu jen u tohodle tréninku, ve videu samotném v knihovně zůstane beze změny." }
     ]},
     { title: "Části tréninku", icon: "fa-solid fa-layer-group", qa: [
