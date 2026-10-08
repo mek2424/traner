@@ -1493,6 +1493,26 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
 .part-swatch{width:10px;height:10px;border-radius:3px;display:inline-block;}
 .add-break-btn{margin-bottom:8px;}
 .seq-item.is-group{background:var(--card);border:2px dashed var(--court);}
+/* Blok stanovišť (kolo 3): plný rámeček (skupina má přerušovaný), uvnitř karty stanovišť. */
+.seq-item.is-stations{background:var(--card);border:2px solid var(--chalk);border-left-width:2px;}
+.seq-item.is-stations .clock-badge{position:static;margin-left:auto;}
+.seq-item.is-stations .seq-copy-btn{top:10px;right:10px;}
+.seq-item.is-stations .seq-remove{top:10px;right:38px;}
+.stan-controls{flex-wrap:wrap;align-items:center;}
+.stan-lbl{font-size:11.5px;color:var(--ink-soft);margin-right:2px;}
+.stan-celkem{font-family:var(--font-display);font-size:16px;letter-spacing:.02em;color:var(--chalk-dark);margin-left:auto;}
+.stan-warn{display:flex;gap:6px;align-items:flex-start;font-size:11.5px;color:var(--warn-ink);background:var(--warn-bg);border:1px solid var(--warn-border);border-radius:var(--radius-sm);padding:5px 8px;margin-top:6px;line-height:1.35;}
+.stan-warn i{margin-top:2px;color:var(--warn-icon);}
+.stan-list{margin-top:10px;border-top:1px solid var(--line);padding-top:8px;display:flex;flex-direction:column;gap:7px;min-height:44px;}
+.stan-list .seq-item{margin:0;}
+.stan-list .seq-controls{display:none;}
+.stan-head{display:flex;align-items:center;gap:7px;margin:-2px 0 6px;padding-right:56px;}
+.stan-num{width:22px;height:22px;border-radius:50%;background:var(--chalk);color:#fff;font-family:var(--font-display);font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.stan-popisek{flex:1;min-width:0;border:1px dashed var(--line);border-radius:var(--radius-sm);padding:4px 7px;font-size:12.5px;background:var(--paper);color:var(--ink);}
+.stan-popisek:focus{outline:2px solid var(--court);border-style:solid;}
+.manage-link.stan-zrusit{display:inline-flex;gap:6px;align-items:center;margin-top:6px;font-size:12px;}
+.copy-bulk-stan{background:var(--chalk);}
+@media (max-width:420px){ .copy-bulk-group i{display:none;} .copy-bulk-count-word{display:none;} }
 .seq-group-icon{color:var(--court);font-size:15px;flex-shrink:0;}
 .seq-group-name{font-family:var(--font-display);font-size:15px;letter-spacing:.02em;border:1px solid transparent;background:none;flex:1 1 120px;min-width:0;padding:2px 4px;border-radius:var(--radius-sm);}
 .seq-group-name:focus{border-color:var(--court);background:var(--paper);}
@@ -1651,6 +1671,32 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
 
 .tmf-run-title{font-family:var(--font-display);font-size:14px;color:#4A5564;letter-spacing:.04em;opacity:.75;max-width:90%;overflow-wrap:anywhere;}
 .tmf-clock{font-family:var(--font-display);line-height:.92;color:#1B2430;font-variant-numeric:tabular-nums;font-size:clamp(56px,15vw,108px);}
+/* Stanoviště v prezentaci (kolo 3): dlaždice vedle sebe, do 4 v řadě, 5–6 ve dvou řadách. */
+.stan-faze{width:100%;display:flex;flex-direction:column;align-items:center;gap:8px;}
+.stan-brief-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;justify-content:center;}
+.stan-brief-head .tmf-title{font-size:clamp(20px,3.6vw,32px);}
+.stan-rezim{font-size:13px;font-weight:600;color:#4A5564;}
+.stan-run-head{display:flex;align-items:center;gap:16px;justify-content:center;}
+.stan-run-head .tmf-clock{font-size:clamp(40px,9vw,72px);}
+.stan-kolo{font-family:var(--font-display);font-size:clamp(20px,3.4vw,30px);color:#C74F1E;letter-spacing:.03em;}
+.stan-grid{display:grid;grid-template-columns:repeat(var(--stan-cols,3),minmax(0,1fr));gap:8px;width:100%;max-width:1100px;}
+.stan-tile{background:#fff;border:2px solid #DCDFD9;border-radius:10px;padding:7px 9px;text-align:left;display:flex;flex-direction:column;gap:4px;min-width:0;}
+.stan-tile.klik{cursor:pointer;}
+.stan-tile-head{display:flex;align-items:center;gap:6px;min-width:0;}
+.stan-tile-num{width:24px;height:24px;border-radius:50%;background:#339933;color:#fff;font-family:var(--font-display);font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.stan-tile-kdo{background:#FBF3E5;border:1px solid #E8C468;color:#7A5A17;border-radius:999px;padding:1px 9px;font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+.stan-tile-thumb{position:relative;width:100%;aspect-ratio:16/9;border-radius:6px;overflow:hidden;background:#E9ECE4;}
+.stan-tile-thumb > span{position:absolute;inset:0;background:center/cover no-repeat;}
+.stan-tile-thumb > svg{position:absolute;inset:0;}
+.stan-tile-title{font-weight:700;color:#1B2430;font-size:clamp(13px,1.9vw,17px);line-height:1.2;overflow-wrap:anywhere;}
+.stan-run .stan-tile-title{font-size:clamp(14px,2.2vw,19px);}
+.stan-tile-list{margin:0;padding-left:18px;font-size:12px;color:#4A5564;line-height:1.3;}
+.stan-tile-cue{display:flex;gap:5px;align-items:flex-start;font-size:12.5px;font-weight:600;color:#1B2430;line-height:1.3;}
+.stan-tile-cue i{color:#E8622C;font-size:10px;margin-top:3px;}
+.stan-stridame{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:30;background:#E8622C;color:#fff;border-radius:16px;padding:16px 34px;display:flex;flex-direction:column;align-items:center;gap:2px;box-shadow:0 10px 30px rgba(0,0,0,.25);pointer-events:none;}
+.stan-stridame.hidden{display:none;}
+.stan-stridame b{font-family:var(--font-display);font-size:clamp(34px,7vw,60px);letter-spacing:.03em;line-height:1;}
+.stan-stridame span{font-weight:700;font-size:15px;}
 .tmf-clock.tmf-warn{color:var(--chalk-dark);}
 /* Opakování ve fázi Průběh — stejná váha jako časovač, jen snese i delší text ("3×12 na obě strany"). */
 .tmf-bigreps{font-family:var(--font-display);line-height:.95;color:#1B2430;font-size:clamp(40px,11vw,92px);max-width:94%;overflow-wrap:anywhere;}
@@ -1745,6 +1791,13 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
 .ov-mtitle{font-size:13.5px;font-weight:700;flex:1;min-width:0;color:var(--ink);overflow-wrap:anywhere;}
 .ov-gname{font-family:var(--font-display);font-size:17px;letter-spacing:.03em;color:var(--court-dark);flex:1;}
 .ov-series{font-family:var(--font-display);font-size:12.5px;letter-spacing:.04em;background:rgba(232,98,44,.12);border:1px solid var(--chalk);color:var(--chalk-dark);border-radius:5px;padding:1px 7px;}
+/* Stanoviště v Přehledu (kolo 3). */
+.ov-card.ov-stan{border:2px solid var(--chalk);}
+.ov-card.ov-stan .ov-gname{color:var(--chalk-dark);}
+.ov-stanlist{display:flex;flex-direction:column;gap:8px;margin-top:8px;}
+.ov-stanitem .ov-card{margin:0;}
+.ov-stanhead{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+.ov-stankdo{font-size:12px;font-weight:700;color:var(--warn-ink);background:var(--warn-bg);border:1px solid var(--warn-border);border-radius:999px;padding:1px 8px;}
 .ov-gear{display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:5px 9px;border-radius:8px;background:var(--paper);border:1px dashed var(--line);}
 .ov-gear b{font-family:var(--font-display);font-size:12px;letter-spacing:.06em;color:var(--ink-faint);font-weight:400;}
 .ov-gear span{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:1px 9px;color:var(--ink-soft);background:var(--card);}
@@ -2039,6 +2092,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
         <span class="copy-bulk-count" id="copyBulkCount">Vybráno 0</span>
         <button type="button" class="copy-bulk-cancel" id="copyBulkCancelBtn" aria-label="Zrušit výběr"><span class="copy-bulk-cancel-text">Zrušit</span><i class="fa-solid fa-xmark copy-bulk-cancel-icon"></i></button>
         <button type="button" class="copy-bulk-group" id="copyBulkGroupBtn" title="Seskupit vybrané do jedné skupiny"><i class="fa-solid fa-layer-group"></i> Seskupit</button>
+        <button type="button" class="copy-bulk-group copy-bulk-stan" id="copyBulkStanBtn" title="Z každé vybrané položky jedno stanoviště"><i class="fa-solid fa-table-cells-large"></i> <span class="copy-bulk-stan-text">Stanoviště</span></button>
         <button type="button" class="copy-bulk-copy" id="copyBulkCopyBtn"><i class="fa-solid fa-copy"></i> <span class="copy-bulk-copy-full">Kopírovat do tréninku</span><span class="copy-bulk-copy-short">Kopírovat</span></button>
       </div>
       <div class="modal-actions" style="max-width:960px;">
@@ -3387,7 +3441,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-10-08 12:09";
+const APP_VERSION = "2026-10-08 13:11";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -10918,7 +10972,8 @@ function startTrainingMode(trainingId, skin) {
   if (!t || !t.items.length) { toast("Trénink je prázdný, není co spustit.", 2200, "warn"); return; }
   tmReturnToOverview = false; // nastaví si ho jen spuštění z Přehledu, hned po tomhle volání
   currentTrainingId = id;
-  trainingModeItems = t.items;
+  // Stanoviště v prezentaci: blok je jedna položka, cvičení v něm se ukazují v jeho dlaždicích.
+  trainingModeItems = hlavniPolozky(t.items);
   trainingModeIndex = 0;
   trainingModeSeriesNum = 1;
   trainingModeGroupVideoIndex = 0;
@@ -10998,6 +11053,7 @@ function getUpNextLabel() {
     const lib = state.library[firstV.videoId];
     return lib ? lib.title : (next.name || "Skupina");
   }
+  if (next.isStations) return next.name || "Stanoviště";
   if (next.isText) return next.title || null;
   const lib = state.library[next.videoId];
   return lib ? lib.title : null;
@@ -11174,6 +11230,7 @@ function getTmCurrentInfo() {
       isText: !!v.isText || !!(lib && (lib.brokenAt || lib.goneAt || jeTextove(lib)))
     };
   }
+  if (row.isStations) return { title: row.name || "Stanoviště", shortDesc: stanPopisRezimu(row), longDesc: "", isText: true };
   const lib = row.isText ? null : state.library[row.videoId];
   return {
     title: row.isText ? (row.title || "(bez názvu)") : (lib ? lib.title : "(video smazáno z knihovny)"),
@@ -11324,6 +11381,26 @@ function renderTrainingModeItemClassic() {
     return;
   }
 
+  // Blok stanovišť (kolo 3): starý vzhled ho ukáže jen jako název a popis režimu, odpočet
+  // běží za celý blok. Dlaždice kreslí nový vzhled (renderFazeBrief/Run).
+  if (row.isStations) {
+    const partS = getPart(row.part);
+    document.getElementById("tmPartLabel").textContent = (partS ? partS.label : "").toUpperCase();
+    setPartTag(document.getElementById("tmPartLabel"), partS ? partS.color : null);
+    updateProgressBar(partS ? partS.color : null);
+    setScaledText(document.getElementById("tmTitle"), row.name || "Stanoviště");
+    setScaledText(document.getElementById("tmDesc"), stanPopisRezimu(row));
+    document.getElementById("tmCue").innerHTML = row.cue ? `<i class="fa-solid fa-comment"></i> ${esc(row.cue)}` : "";
+    document.getElementById("tmNote").innerHTML = richValueToHtml(row.poznamka || "");
+    showTrainingModeVideo(null);
+    setTimerMode("time");
+    trainingModeSeconds = stanCelkem(row);
+    stanPosledniKolo = 1;
+    updateTrainingModeTimerDisplay();
+    startTrainingModeTimer();
+    return;
+  }
+
   // obyčejné video (nebo textové cvičení bez videa)
   const lib = row.isText ? null : state.library[row.videoId];
   const part = getPart(row.part);
@@ -11435,6 +11512,7 @@ function startTrainingModeTimer() {
     if (trainingModeSkin === "faze" && trainingModeSeconds <= 0 && trainingModeSeconds % 180 === 0) {
       fazeFireAlert(trainingModeSeconds === 0);
     }
+    stanHlidejKolo();
   }, 1000);
 }
 function stopTrainingModeTimer() {
@@ -11456,6 +11534,9 @@ document.getElementById("tmTimerReset").addEventListener("click", () => {
   } else if (row.isGroup) {
     const v = row.videos[trainingModeGroupVideoIndex];
     trainingModeSeconds = Math.max(1, valueToSeconds(v && v.duration != null ? v.duration : 1, v ? (v.durationUnit || "min") : "min"));
+  } else if (row.isStations) {
+    trainingModeSeconds = stanCelkem(row);
+    stanPosledniKolo = 1;
   } else {
     trainingModeSeconds = Math.max(1, valueToSeconds(row.duration || 1, row.durationUnit || "min"));
   }
@@ -11661,13 +11742,31 @@ function exportTrainingAsText(t) {
   const fmtDuration = (row) => (row.mode || "time") === "reps"
     ? (row.reps || "")
     : `${row.duration != null ? row.duration : 1} ${(row.durationUnit || "min") === "s" ? "s" : "min"}`;
-  t.items.forEach((row, i) => {
+  hlavniPolozky(t.items).forEach((row, i) => {
     if (row.part === "prestavka") {
       lines.push(`— ${row.label || "Přestávka"} (${row.duration != null ? row.duration : 1} ${(row.durationUnit || "min") === "s" ? "s" : "min"}) —`);
       lines.push("");
       return;
     }
     const part = getPart(row.part);
+    if (row.isStations) {
+      // Stanoviště (kolo 3): hlavička bloku a pod ní stanoviště s popiskem.
+      lines.push(`${i + 1}. [${part ? part.label : "?"}] ${row.name || "Stanoviště"} — ${stanPopisRezimu(row)}`);
+      clenoveBloku(t.items, row).forEach((c, ci) => {
+        const kdo = String(c.stanovistePopisek || "").trim();
+        const nazev = c.isGroup ? `Skupina ${c.name || ""}`.trim()
+          : (c.isText ? (c.title || "(bez názvu)") : (state.library[c.videoId] ? state.library[c.videoId].title : "(video smazáno z knihovny)"));
+        lines.push(`   ${ci + 1}) ${kdo ? `[${kdo}] ` : ""}${nazev}`);
+        if (c.isGroup) (c.videos || []).filter(v => !v.isBreak).forEach(v => {
+          lines.push(`      – ${v.isText ? (v.title || "(bez názvu)") : (state.library[v.videoId] ? state.library[v.videoId].title : "(video smazáno)")}`);
+        });
+        if (c.cue) lines.push(`      Cue: ${c.cue}`);
+        if (c.poznamka) pushPoznamkaLines(lines, "      ", c.poznamka);
+      });
+      if (row.cue) lines.push(`   Cue: ${row.cue}`);
+      lines.push("");
+      return;
+    }
     if (row.isGroup) {
       lines.push(`${i + 1}. [${part ? part.label : "?"}] ${row.name || "Skupina"}`);
       (row.videos || []).forEach((v, vi) => {
@@ -11747,8 +11846,165 @@ const REPS_FALLBACK_SECONDS = 5 * 60;
     Dřív bylo tohle počítání rozepsané na čtyřech místech a každé se v detailech trochu lišilo.
     PDF (buildPdfEntries) zůstává schválně vlastní — potřebuje čas i po jednotlivých členech
     skupiny, ne jen jeden součet za kartu. */
-function rowDuration(row) {
+/* =========================================================
+   STANOVIŠTĚ (kolo 3, 8. 10. 2026 — rozhodnutí v claude/trener-textova-cviceni-cue-stanoviste.md)
+   Blok stanovišť = položka tréninku { isStations: true, name, part, stanMode: "rotace" | "soubezne",
+   duration + durationUnit (čas NA STANOVIŠTĚ), rounds (jen u střídání; prázdné = počet stanovišť),
+   stationIds, mode: "time", seriesCount: 1 }. Samotná stanoviště jsou BĚŽNÉ položky tréninku
+   (video, textové cvičení, skupina) se značkou `stanoviste: <itemId bloku>` a volitelným
+   popiskem `stanovistePopisek` („pro koho“). V t.items leží hned za svým blokem v pořadí
+   stanovišť. Úpravy cvičení uvnitř tak fungují beze změny (všechno hledá v t.items) a starší
+   verze aplikace stanoviště ukáže jako obyčejná cvičení za sebou.
+   Hodiny jsou jedny za celý blok (otázka 11), mezi koly žádná pauza (28), nejvýš 6 (30).
+   ========================================================= */
+const STAN_MAX = 6;
+function jeClenStanoviste(row) { return !!(row && row.stanoviste); }
+/** Položky tréninku bez stanovišť uvnitř bloků — to, co se prochází „po kartách“. */
+function hlavniPolozky(items) { return (items || []).filter(r => r && !jeClenStanoviste(r)); }
+function clenoveBloku(items, blok) { return (items || []).filter(r => r && blok && r.stanoviste === blok.itemId); }
+function stanPocet(blok) { return ((blok && blok.stationIds) || []).length; }
+function stanJeRotace(blok) { return !blok || blok.stanMode !== "soubezne"; }
+function stanKol(blok) {
+  if (!stanJeRotace(blok)) return 1;
+  const n = parseInt(blok.rounds, 10);
+  return n > 0 ? n : Math.max(1, stanPocet(blok));
+}
+function stanSekundyNaStanoviste(blok) {
+  return Math.max(1, valueToSeconds(blok.duration != null && blok.duration !== "" ? blok.duration : 5, blok.durationUnit || "min"));
+}
+function stanCelkem(blok) { return stanSekundyNaStanoviste(blok) * stanKol(blok); }
+/** Popis režimu do Přehledu, PDF a exportu: „se střídáním · 4 kola × 5 min“. */
+function stanPopisRezimu(blok) {
+  const na = ovMinText(stanSekundyNaStanoviste(blok));
+  if (!stanJeRotace(blok)) return `souběžně · ${na}`;
+  const k = stanKol(blok);
+  return `se střídáním · ${k} ${czPlural(k, "kolo", "kola", "kol")} × ${na}`;
+}
+/** Kolo (od 1), které právě běží, podle zbývajícího času bloku. */
+function stanKoloZeZbyvajicich(blok, zbyva) {
+  const na = stanSekundyNaStanoviste(blok);
+  const uplynulo = Math.max(0, stanCelkem(blok) - Math.max(0, zbyva));
+  return Math.min(stanKol(blok), Math.floor(uplynulo / na) + 1);
+}
+/** Kdo je v kole `kolo` (od 1) na stanovišti `s` (od 0): skupina, která začínala na stanovišti g,
+    je v kole r na stanovišti (g + r − 1) mod n. Popisek patří skupině ze startovního stanoviště. */
+function stanPopisekVKole(clenove, s, kolo, rotace) {
+  const n = clenove.length;
+  if (!n) return "";
+  const g = rotace ? ((s - (kolo - 1)) % n + n) % n : s;
+  return String((clenove[g] && clenove[g].stanovistePopisek) || "").trim();
+}
+/** Uklidí model stanovišť: osiřelí členové ztratí značku, členové jdou hned za svůj blok,
+    blok si přepočítá stationIds, prázdný blok zmizí. Vrací true, když se něco změnilo. */
+function normalizujStanoviste(t) {
+  if (!t || !Array.isArray(t.items)) return false;
+  let zmena = false;
+  const bloky = new Set(t.items.filter(r => r && r.isStations).map(b => b.itemId));
+  t.items.forEach(r => {
+    if (!r) return;
+    if (r.stanoviste && (!bloky.has(r.stanoviste) || r.isStations || r.part === "prestavka")) {
+      delete r.stanoviste; delete r.stanovistePopisek; zmena = true;
+    }
+  });
+  const out = [];
+  t.items.forEach(r => {
+    if (!r || r.stanoviste) return;
+    if (r.isStations) {
+      const cl = t.items.filter(x => x && x.stanoviste === r.itemId);
+      if (!cl.length) { zmena = true; return; }   // prázdný blok zmizí
+      const ids = cl.map(x => x.itemId);
+      if (JSON.stringify(ids) !== JSON.stringify(r.stationIds || [])) { r.stationIds = ids; zmena = true; }
+      // Část tréninku drží blok — stanoviště ji přebírají (Přehled, PDF a souhrny podle částí).
+      cl.forEach(x => { if (r.part && x.part !== r.part) { x.part = r.part; zmena = true; } });
+      out.push(r, ...cl);
+      return;
+    }
+    out.push(r);
+  });
+  if (out.length !== t.items.length || out.some((r, i) => r !== t.items[i])) zmena = true;
+  if (zmena) t.items = out;
+  return zmena;
+}
+/** Po přetažení v editoru převezme pořadí a příslušnost ke stanovištím přímo z obrazovky:
+    co je v seznamu bloku, je jeho stanoviště, co je mimo, je samostatné cvičení. */
+function stanPrevezmiPoradiZDomu() {
+  const t = state.trainings[currentTrainingId];
+  const wrap = document.getElementById("sequenceList");
+  if (!t || !wrap) return;
+  const podleId = new Map(t.items.map(r => [r.itemId, r]));
+  const out = [];
+  const videne = new Set();
+  [...wrap.children].forEach(el => {
+    const r = podleId.get(el.dataset.itemid);
+    if (!r || videne.has(r.itemId)) return;
+    videne.add(r.itemId);
+    out.push(r);
+    if (r.isStations) {
+      const list = el.querySelector(":scope > .stan-list");
+      [...(list ? list.children : [])].forEach(ch => {
+        const m = podleId.get(ch.dataset.itemid);
+        if (!m || videne.has(m.itemId) || m.isStations || m.part === "prestavka") return;
+        m.stanoviste = r.itemId;
+        videne.add(m.itemId);
+        out.push(m);
+      });
+    } else if (r.stanoviste) {
+      delete r.stanoviste;
+      delete r.stanovistePopisek;
+    }
+  });
+  t.items.forEach(r => { if (!videne.has(r.itemId)) out.push(r); });   // pojistka, nic se neztratí
+  t.items = out;
+  normalizujStanoviste(t);
+  t.dateModified = Date.now();
+  scheduleSave();
+  renderSequence();
+}
+/** „Vytvořit stanoviště“ z položek vybraných přes „Vybrat víc“ (otázka 26 = A): každá vybraná
+    položka (cvičení, textové cvičení, skupina) = jedno stanoviště, v pořadí v tréninku. */
+function vytvorStanoviste() {
+  const t = state.trainings[currentTrainingId];
+  if (!t || editorReadOnly) return;
+  const vybrane = t.items.filter(it => copySelectedIds.has(it.itemId));
+  const pouzitelne = vybrane.filter(it => it.part !== "prestavka" && !it.isStations && !it.stanoviste);
+  const vynechano = vybrane.length - pouzitelne.length;
+  if (pouzitelne.length < 2) { toast("Na stanoviště vyber aspoň dvě cvičení (přestávky a stanoviště se nepočítají).", 4500, "warn"); return; }
+  if (pouzitelne.length > STAN_MAX) { toast(`Stanovišť může být nejvýš ${STAN_MAX}. Vybráno je ${pouzitelne.length}.`, 4500, "warn"); return; }
+  const blok = {
+    itemId: uid(), isStations: true, name: "Stanoviště", part: pouzitelne[0].part || "",
+    stanMode: "rotace", duration: 5, durationUnit: "min", rounds: null,
+    mode: "time", seriesCount: 1, cue: "", poznamka: "", stationIds: pouzitelne.map(r => r.itemId)
+  };
+  const prvni = t.items.indexOf(pouzitelne[0]);
+  pouzitelne.forEach(r => { r.stanoviste = blok.itemId; });
+  t.items.splice(prvni, 0, blok);
+  normalizujStanoviste(t);
+  t.dateModified = Date.now();
+  scheduleSave();
+  copySelectedIds.clear();
+  copySelectMode = false;
+  renderSequence();
+  toast(vynechano ? `Stanoviště vytvořena. ${vynechano} ${czPlural(vynechano, "položka se nedala použít", "položky se nedaly použít", "položek se nedalo použít")} (přestávka nebo už jiné stanoviště).` : "Stanoviště vytvořena.", 3500, "ok");
+}
+/** „Zrušit stanoviště“: cvičení zůstanou v tréninku jako samostatné položky na místě bloku. */
+function zrusStanoviste(blokId) {
+  const t = state.trainings[currentTrainingId];
+  if (!t || editorReadOnly) return;
+  t.items.forEach(r => { if (r.stanoviste === blokId) { delete r.stanoviste; delete r.stanovistePopisek; } });
+  t.items = t.items.filter(r => r.itemId !== blokId);
+  t.dateModified = Date.now();
+  scheduleSave();
+  renderSequence();
+  toast("Stanoviště zrušena, cvičení zůstala v tréninku.", 3000, "ok");
+}
+/** Vlastní délka cvičení na stanovišti (bez ohledu na blok) — pro upozornění na nesoulad. */
+function stanVlastniDelka(row) { return rowDuration(row, true).seconds; }
+
+function rowDuration(row, vlastni) {
   if (!row) return { seconds: 0, known: false };
+  // Stanoviště: čas nese blok (jedny hodiny), cvičení uvnitř se do celku nepočítají zvlášť.
+  if (row.isStations) return { seconds: stanCelkem(row), known: true };
+  if (row.stanoviste && !vlastni) return { seconds: 0, known: true };
   if (row.part === "prestavka") {
     return { seconds: valueToSeconds(row.duration != null ? row.duration : 1, row.durationUnit || "min"), known: true };
   }
@@ -11813,6 +12069,7 @@ function getFazeCurrentEntry() {
   const row = trainingModeItems[trainingModeIndex];
   if (!row) return null;
   if (row.part === "prestavka") return { isBreak: true, title: row.label || "Přestávka" };
+  if (row.isStations) return stanFazeEntry(row);
   if (row.isGroup) {
     const v = row.videos[trainingModeGroupVideoIndex];
     if (!v) return null;
@@ -11872,6 +12129,7 @@ function getFazeUpNextEntry() {
       equipment: firstV.isText ? (firstV.equipment || []) : [...new Set([...((lib && lib.equipment) || []), ...(firstV.extraEquipment || [])])]
     };
   }
+  if (next.isStations) return { title: next.name || "Stanoviště", equipment: stanVybaveni(next) };
   const lib = next.isText ? null : state.library[next.videoId];
   return {
     title: next.isText ? (next.title || "(bez názvu)") : (lib ? lib.title : "(video smazáno z knihovny)"),
@@ -11893,7 +12151,8 @@ function computeFazeSummaryStats(t) {
   let totalSeconds = 0;
   items.forEach(row => { totalSeconds += rowDuration(row).seconds; });
   return {
-    count: items.filter(r => r.part !== "prestavka").length,
+    // Blok stanovišť se nepočítá, počítají se cvičení na jeho stanovištích.
+    count: items.filter(r => r.part !== "prestavka" && !r.isStations).length,
     totalMin: Math.round(totalSeconds / 60)
   };
 }
@@ -12067,6 +12326,7 @@ function renderFazeVideoArea(entry) {
   }
 }
 function renderFazeBrief(main, entry) {
+  if (entry.isStations) { stanRenderFaze(main, entry, "brief"); return; }
   const hasThumb = !entry.isText && !!entry.lib;
   const hasVid = hasThumb && !entry.broken;
   const hasDetail = !!((entry.shortDesc && entry.shortDesc.trim()) || (entry.longDesc && entry.longDesc.trim()));
@@ -12085,6 +12345,7 @@ function renderFazeBrief(main, entry) {
   if (hasThumb) renderFazeVideoArea(entry);
 }
 function renderFazeRun(main, entry) {
+  if (entry.isStations) { stanRenderFaze(main, entry, "run"); return; }
   // U cviku na opakování je hlavní informace "kolikrát", ne čas — nastoupí proto na místo
   // obřího časovače, ve stejné velikosti. Pilulka s opakováním by pak byla dvakrát.
   const isReps = fazeIsRepsEntry(entry);
@@ -12162,6 +12423,117 @@ function fazeNextCardHtml() {
     paintFazeForNewItem) i po každém ťuknutí na fázi (Zadání/Průběh/Konec). Video (živý embed)
     se tím pádem překresluje i při pouhém přepnutí fáze zpátky na Zadání — u admin-only
     zkušební verze je to přijatelný kompromis, jde to případně později zjednodušit. */
+/* ---------- Stanoviště v prezentaci (kolo 3, otázky 12, 13, 29, 30) ---------- */
+let stanPosledniKolo = 1;
+/** Vybavení celého bloku = sjednocení vybavení všech stanovišť. */
+function stanVybaveni(blok) {
+  const t = state.trainings[currentTrainingId];
+  const out = [];
+  clenoveBloku(t ? t.items : [], blok).forEach(c => (ovItemEquipment(c) || []).forEach(e => { if (!out.includes(e)) out.push(e); }));
+  return out;
+}
+/** Údaje jedné dlaždice: název, cue, náhled, co otevřít ťuknutím. Skupina ukáže svá cvičení. */
+function stanDlazdiceData(c) {
+  if (c.isGroup) {
+    const nazvy = (c.videos || []).filter(v => !v.isBreak).map(v => {
+      if (v.isText) return v.title || "(bez názvu)";
+      const l = state.library[v.videoId];
+      return l ? l.title : "(video smazáno)";
+    });
+    return { title: c.name || "Skupina", cue: c.cue || "", skupina: nazvy, lib: null, videoId: null, text: null };
+  }
+  if (c.isText) return { title: c.title || "(bez názvu)", cue: c.cue || "", skupina: null, lib: null, videoId: null, text: c };
+  const lib = state.library[c.videoId];
+  return { title: lib ? lib.title : "(video smazáno z knihovny)", cue: c.cue || "", skupina: null, lib: lib || null, videoId: lib ? c.videoId : null, text: null };
+}
+function stanFazeEntry(row) {
+  const t = state.trainings[currentTrainingId];
+  const clenove = clenoveBloku(t ? t.items : [], row);
+  return {
+    isStations: true, blok: row, clenove,
+    title: row.name || "Stanoviště", part: getPart(row.part), groupName: "",
+    cue: row.cue || "", note: row.poznamka || "", reps: "",
+    shortDesc: "", longDesc: "", equipment: stanVybaveni(row),
+    isText: true, broken: false, gone: false, lib: null, videoId: null,
+    dlazdice: clenove.map(stanDlazdiceData)
+  };
+}
+/** Dlaždice všech stanovišť. Zadání = větší, s náhledem; Průběh = menší, nad nimi hodiny a kolo.
+    Do čtyř stanovišť jedna řada, pět a šest dvě (otázka 30). */
+function stanRenderFaze(main, entry, faze) {
+  const blok = entry.blok;
+  const n = entry.dlazdice.length;
+  const rotace = stanJeRotace(blok);
+  const kol = stanKol(blok);
+  const kolo = faze === "run" ? stanKoloZeZbyvajicich(blok, trainingModeSeconds) : 1;
+  const sloupce = n <= 4 ? n : 3;
+  const dlazdice = entry.dlazdice.map((d, i) => {
+    const kdo = stanPopisekVKole(entry.clenove, i, kolo, rotace);
+    // Zadání: náhled (u textového cvičení obrázek TEXT); Průběh: bez náhledů a skupina jen
+    // počtem cvičení, ať se dlaždice vejdou pod hodiny.
+    const nahled = faze !== "brief" ? ""
+      : (d.lib ? `<div class="stan-tile-thumb">${resolveThumbnailUrl(d.lib) ? `<span style="background-image:url('${esc(resolveThumbnailUrl(d.lib))}')"></span>` : zastupnyObrazekHtml(d.lib)}</div>`
+        : (d.text ? `<div class="stan-tile-thumb">${PH_TEXT_SVG}</div>` : ""));
+    const obsah = !d.skupina ? ""
+      : (faze === "brief"
+        ? `<ol class="stan-tile-list">${d.skupina.map(x => `<li>${esc(x)}</li>`).join("")}</ol>`
+        : `<div class="stan-tile-list">${d.skupina.length} ${czPlural(d.skupina.length, "cvičení", "cvičení", "cvičení")} ve skupině</div>`);
+    const klik = d.videoId || d.text ? ` data-stan-tile="${i}"` : "";
+    return `<div class="stan-tile${klik ? " klik" : ""}"${klik}>
+      <div class="stan-tile-head"><span class="stan-tile-num">${i + 1}</span>${kdo ? `<span class="stan-tile-kdo">${esc(kdo)}</span>` : ""}</div>
+      ${nahled}
+      <div class="stan-tile-title">${esc(d.title)}</div>
+      ${obsah}
+      ${d.cue ? `<div class="stan-tile-cue"><i class="fa-solid fa-comment"></i>${esc(d.cue)}</div>` : ""}
+    </div>`;
+  }).join("");
+  const hlava = faze === "run"
+    ? `<div class="stan-run-head"><div class="tmf-clock${trainingModeSeconds < 0 ? " tmf-warn" : ""}" id="tmfClockRun">${fazeClockText(trainingModeSeconds)}</div>${rotace ? `<div class="stan-kolo">Kolo ${kolo}/${kol}</div>` : ""}</div>`
+    : `<div class="stan-brief-head"><span class="tmf-title">${esc(entry.title)}</span><span class="stan-rezim">${esc(stanPopisRezimu(blok))}</span></div>`;
+  main.innerHTML = `<div class="stan-faze stan-${faze}">${hlava}<div class="stan-grid" style="--stan-cols:${sloupce}">${dlazdice}</div></div>`;
+  main.querySelectorAll("[data-stan-tile]").forEach(el => el.addEventListener("click", () => {
+    const d = entry.dlazdice[parseInt(el.dataset.stanTile, 10)];
+    if (!d) return;
+    if (d.videoId) { fazeOpenLibraryCard(d.videoId); return; }
+    if (d.text) {
+      tmCurrentInfoData = { title: d.text.title || "", shortDesc: d.text.shortDesc || "", longDesc: d.text.longDesc || "" };
+      openExerciseInfoModal();
+    }
+  }));
+}
+/** Hlídá přechod do dalšího kola (volá se každou vteřinu z odpočtu). Při střídání zazvoní,
+    zavibruje a na chvíli ukáže „Střídáme!“ — bez pauzy, hodiny jedou dál (otázka 28). */
+function stanHlidejKolo() {
+  const row = trainingModeItems[trainingModeIndex];
+  if (!row || !row.isStations || trainingModeInSeriesPause || trainingModeFinished) return;
+  const kolo = stanKoloZeZbyvajicich(row, trainingModeSeconds);
+  if (kolo === stanPosledniKolo) return;
+  const dalsi = kolo > stanPosledniKolo;
+  stanPosledniKolo = kolo;
+  if (trainingModeSkin !== "faze") return;
+  if (dalsi && stanJeRotace(row)) {
+    try { new Audio(FAZE_BELL_SRC).play().catch(() => {}); } catch (e) {}
+    if ("vibrate" in navigator) { try { navigator.vibrate([300, 150, 300]); } catch (e) {} }
+    stanUkazStridame(kolo, stanKol(row));
+  }
+  if (!tmfAlertActive) renderFazeItem();
+}
+function stanUkazStridame(kolo, kol) {
+  const view = document.getElementById("trainingModeView");
+  if (!view) return;
+  let el = document.getElementById("stanStridame");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "stanStridame";
+    el.className = "stan-stridame hidden";
+    view.appendChild(el);
+  }
+  el.innerHTML = `<b>Střídáme!</b><span>Kolo ${kolo}/${kol}</span>`;
+  el.classList.remove("hidden");
+  clearTimeout(stanUkazStridame._t);
+  stanUkazStridame._t = setTimeout(() => el.classList.add("hidden"), 3500);
+}
+
 function renderFazeItem() {
   if (trainingModeFinished) { renderFazeFinished(); return; }
   document.getElementById("tmfExpired").classList.toggle("hidden", !tmfAlertActive);
@@ -12354,8 +12726,24 @@ function ovMemberHtml(row, v) {
 }
 /** Délka se na kartě nepíše — nese ji ryska na pásce vlevo. Výjimka je cvik na opakování:
     tam je "3×10" dávka, ne doba trvání, a ta na kartu patří. */
+let ovPolozky = [];   // položky právě kresleného Přehledu — kvůli stanovištím uvnitř bloku
 function ovCardHtml(row) {
   const isReps = (row.mode || "time") === "reps";
+  if (row.isStations) {
+    // Blok stanovišť (kolo 3): hlavička s režimem, pod ní stanoviště s číslem a popiskem.
+    const clenove = clenoveBloku(ovPolozky, row);
+    return `<div class="ov-card ov-group ov-stan" data-itemid="${esc(row.itemId)}">
+      <div class="ov-top">
+        <span class="ov-gname"><i class="fa-solid fa-table-cells-large"></i> ${esc(row.name || "Stanoviště")}</span>
+        <span class="ov-series">${esc(stanPopisRezimu(row))}</span>
+      </div>
+      <div class="ov-stanlist">${clenove.map((c, i) => `<div class="ov-stanitem">
+        <div class="ov-stanhead"><span class="stan-num">${i + 1}</span>${String(c.stanovistePopisek || "").trim() ? `<span class="ov-stankdo">${esc(c.stanovistePopisek)}</span>` : ""}</div>
+        ${ovCardHtml(c)}</div>`).join("")}</div>
+      ${row.cue ? `<div class="ov-cue"><i class="fa-solid fa-comment"></i>${esc(row.cue)}</div>` : ""}
+      ${ovNoteHtml(row.poznamka)}
+    </div>`;
+  }
   if (row.part === "prestavka") {
     return `<div class="ov-card ov-break" data-itemid="${esc(row.itemId)}" style="border-left-color:var(--part-prestavka)">
       <div class="ov-top"><span class="ov-title">${esc(row.label || "Přestávka")}</span></div></div>`;
@@ -12431,8 +12819,10 @@ function renderOverview() {
     ? `<b><i class="fa-solid fa-toolbox"></i> VŠECHNO VYBAVENÍ</b>` + equip.map(ovGearChipHtml).join("")
     : "";
   const items = t.items || [];
+  ovPolozky = items;
   let html = "", lastPart = null, acc = 0;
   items.forEach((row, i) => {
+    if (row.stanoviste) return;   // stanoviště kreslí jejich blok (ovCardHtml)
     // Každá položka zvlášť v try/catch. Dřív stačila jedna vadná a výjimka vyhodila celé
     // renderOverview PŘED zápisem do #ovList — v seznamu pak zůstal viset obsah PŘEDCHOZÍHO
     // otevřeného tréninku, zatímco hlavička už patřila tomu novému. Vypadalo to, jako by se
@@ -13322,12 +13712,40 @@ function pdfDrawEntry(doc, entry, layout, x, y, cols, withClock, timeLabel, durL
 function buildPdfEntries(t) {
   const entries = [];
   (t.items || []).forEach(row => {
+    if (row.stanoviste) return;   // stanoviště vypisuje jejich blok níž
     if (row.part === "prestavka") {
       const seconds = valueToSeconds(row.duration != null ? row.duration : 1, row.durationUnit || "min");
       entries.push({ kind: "break", label: row.label || "Přestávka", seconds });
       return;
     }
     const part = getPart(row.part);
+    if (row.isStations) {
+      // Stanoviště (kolo 3): hlavička s režimem a celkovým časem, pod ní stanoviště. Stanoviště
+      // běží souběžně, takže hodiny neposouvají (noClock) — čas posune až celý blok.
+      entries.push({ kind: "groupHead", part, title: `${row.name || "Stanoviště"} — ${stanPopisRezimu(row)}`, cue: row.cue || "", stanCelkem: stanCelkem(row) });
+      const clenove = clenoveBloku(t.items, row);
+      const naSt = stanSekundyNaStanoviste(row);
+      clenove.forEach((c, ci) => {
+        const kdo = String(c.stanovistePopisek || "").trim();
+        let title, desc = "", longDesc = "", equipment = ovItemEquipment(c);
+        if (c.isGroup) {
+          title = c.name || "Skupina";
+          desc = (c.videos || []).filter(v => !v.isBreak).map(v => v.isText ? (v.title || "(bez názvu)") : (state.library[v.videoId] ? state.library[v.videoId].title : "(video smazáno)")).join(", ");   // šipku font v PDF nemá
+        } else if (c.isText) {
+          title = c.title || "(bez názvu)"; desc = c.shortDesc || ""; longDesc = c.longDesc || "";
+        } else {
+          const l = state.library[c.videoId];
+          title = l ? l.title : "(video smazáno z knihovny)"; desc = l ? l.shortDesc : ""; longDesc = l ? l.longDesc : "";
+        }
+        entries.push({
+          kind: "groupVideo", part, noClock: true,
+          title: `${ci + 1}${kdo ? ` · ${kdo}` : ""} — ${title}`,
+          desc, longDesc, cue: c.cue || "", note: c.poznamka || "", equipment,
+          seconds: naSt, repsLabel: null, isLastInGroup: ci === clenove.length - 1
+        });
+      });
+      return;
+    }
     if (row.isGroup) {
       const seriesCount = row.seriesCount || 1;
       const pauseSeconds = getSeriesPauseSeconds(row);
@@ -13475,9 +13893,9 @@ function buildPdfDocAtSize(entries, meta, fs, withClock, startClock) {
     let timeLabel = "", durLabel = "";
     if (entry.kind === "groupHead") {
       timeLabel = withClock ? pdfFmtClock(clock) : "";
-      durLabel = "";
+      durLabel = entry.stanCelkem ? pdfFmtShortDuration(entry.stanCelkem) : "";
     } else {
-      timeLabel = withClock ? pdfFmtClock(clock) : "";
+      timeLabel = withClock && !entry.noClock ? pdfFmtClock(clock) : "";
       durLabel = pdfFormatDurCell(entry);
     }
     if (y + layout.h > pageH - margin) {
@@ -13488,7 +13906,8 @@ function buildPdfDocAtSize(entries, meta, fs, withClock, startClock) {
     }
     pdfDrawEntry(doc, entry, layout, margin, y, cols, withClock, timeLabel, durLabel);
     y += layout.h;
-    if (entry.kind !== "groupHead") clock += (entry.seconds || 0) + (entry.clockCatchUp || 0);
+    if (entry.kind === "groupHead") { if (entry.stanCelkem) clock += entry.stanCelkem; }
+    else if (!entry.noClock) clock += (entry.seconds || 0) + (entry.clockCatchUp || 0);
   });
 
   return doc;
@@ -14092,8 +14511,7 @@ function copyItemsToTraining(itemIds, targetTrainingId) {
   if (!src || !target) return 0;
   const idSet = new Set(itemIds);
   let count = 0;
-  src.items.forEach(row => {
-    if (!idSet.has(row.itemId)) return;
+  const klonuj = (row) => {
     const clone = structuredClone(row);
     // Nové itemId (a u skupiny i nové memberId u každého člena) — ať kopie nekoliduje s ničím
     // v cílovém tréninku, i kdyby to náhodou byl ten samý trénink (zdvojení cvičení).
@@ -14101,6 +14519,24 @@ function copyItemsToTraining(itemIds, targetTrainingId) {
     if (clone.isGroup && Array.isArray(clone.videos)) {
       clone.videos.forEach(v => { v.memberId = uid(); });
     }
+    return clone;
+  };
+  src.items.forEach(row => {
+    if (!idSet.has(row.itemId)) return;
+    // Stanoviště (kolo 3): blok se kopíruje i se všemi stanovišti; samotné cvičení ze
+    // stanoviště (bez bloku) se zkopíruje jako obyčejné cvičení.
+    if (row.stanoviste && idSet.has(row.stanoviste)) return;
+    const clone = klonuj(row);
+    if (row.isStations) {
+      const clenove = clenoveBloku(src.items, row).map(klonuj);
+      clenove.forEach(c => { c.stanoviste = clone.itemId; });
+      clone.stationIds = clenove.map(c => c.itemId);
+      target.items.push(clone, ...clenove);
+      count++;
+      return;
+    }
+    delete clone.stanoviste;
+    delete clone.stanovistePopisek;
     target.items.push(clone);
     count++;
   });
@@ -14132,7 +14568,8 @@ document.getElementById("copyBulkCopyBtn").addEventListener("click", () => {
 function groupSelectedSequenceItems() {
   const t = state.trainings[currentTrainingId];
   if (!t || editorReadOnly) return;
-  const groupableRows = t.items.filter(it => copySelectedIds.has(it.itemId) && !it.isGroup);
+  // Blok stanovišť ani cvičení uvnitř stanovišť se do skupiny nespojují (kolo 3).
+  const groupableRows = t.items.filter(it => copySelectedIds.has(it.itemId) && !it.isGroup && !it.isStations && !it.stanoviste);
   if (groupableRows.length < 2) return;
   const skippedGroups = t.items.filter(it => copySelectedIds.has(it.itemId) && it.isGroup).length;
 
@@ -14193,6 +14630,7 @@ function groupSelectedSequenceItems() {
   }
 }
 document.getElementById("copyBulkGroupBtn").addEventListener("click", groupSelectedSequenceItems);
+document.getElementById("copyBulkStanBtn").addEventListener("click", vytvorStanoviste);
 
 const copyToTrainingModalBackdrop = document.getElementById("copyToTrainingModalBackdrop");
 function openCopyToTrainingModal(itemIds) {
@@ -14341,6 +14779,7 @@ function computeRowClockTimes(t, startSeconds) {
   let clock = startSeconds;
   let unknown = false;
   (t.items || []).forEach(row => {
+    if (row.stanoviste) { times[row.itemId] = null; return; }   // stanoviště mají čas bloku
     times[row.itemId] = unknown ? null : clock;
     if (unknown) return;
     const { seconds, known } = rowDuration(row);
@@ -14495,6 +14934,8 @@ function renderSequence() {
   const t = state.trainings[currentTrainingId];
   const wrap = document.getElementById("sequenceList");
   backfillGroupMemberIds(t);
+  // Stanoviště (kolo 3): uklidit model dřív, než se kreslí — členové hned za blokem.
+  if (normalizujStanoviste(t) && !editorReadOnly) { t.dateModified = Date.now(); scheduleSave(); }
   document.getElementById("sequenceEmpty").classList.toggle("hidden", t.items.length > 0);
   // Navrhnout trénink: jen v prázdném vlastním tréninku — do rozdělaného se návrh nevkládá.
   document.getElementById("navrhOpenBtn").classList.toggle("hidden", t.items.length > 0 || editorReadOnly);
@@ -14524,16 +14965,25 @@ function renderSequence() {
   copyToggleBtn.classList.toggle("btn-accent", copySelectMode);
   copyToggleBtn.innerHTML = copySelectMode ? '<i class="fa-solid fa-xmark"></i> Zrušit výběr' : '<i class="fa-regular fa-square-check"></i> Vybrat víc';
   document.getElementById("copyBulkBar").classList.toggle("show", copySelectMode && copySelectedIds.size > 0);
-  document.getElementById("copyBulkCount").textContent = `Vybráno ${copySelectedIds.size}`;
+  // Na úzkém telefonu se slovo „Vybráno“ schová (kolo 3 — přibylo tlačítko Stanoviště).
+  document.getElementById("copyBulkCount").innerHTML = `<span class="copy-bulk-count-word">Vybráno </span>${copySelectedIds.size}`;
   // Seskupit se dá jen z existujících (ne-skupinových) položek, a jen v tréninku, co upravuju —
   // kopírování zůstává dostupné i v read-only pohledu, seskupení ne (to by měnilo cizí trénink).
   const groupBtn = document.getElementById("copyBulkGroupBtn");
   groupBtn.classList.toggle("hidden", ro);
   const groupableCount = [...copySelectedIds].filter(id => {
     const r = t.items.find(it => it.itemId === id);
-    return r && !r.isGroup;
+    return r && !r.isGroup && !r.isStations && !r.stanoviste;
   }).length;
   groupBtn.disabled = groupableCount < 2;
+  // Stanoviště (kolo 3): 2 až STAN_MAX položek mimo přestávky a stávající stanoviště.
+  const stanBtn = document.getElementById("copyBulkStanBtn");
+  stanBtn.classList.toggle("hidden", ro);
+  const stanCount = [...copySelectedIds].filter(id => {
+    const r = t.items.find(it => it.itemId === id);
+    return r && r.part !== "prestavka" && !r.isStations && !r.stanoviste;
+  }).length;
+  stanBtn.disabled = stanCount < 2 || stanCount > STAN_MAX;
   function seqActionsHtml(itemId) {
     if (copySelectMode) return "";
     const removeBtn = ro ? "" : `<button class="seq-remove" data-remove="${esc(itemId)}" aria-label="Odebrat"><i class="fa-solid fa-xmark"></i></button>`;
@@ -14556,11 +15006,20 @@ function renderSequence() {
     return ro ? "" : `<span class="drag-handle"><i class="fa-solid fa-grip-lines"></i></span>`;
   }
 
-  wrap.innerHTML = t.items.map(row => {
+  // Hlavička stanoviště nad kartou cvičení, které je v bloku stanovišť: číslo a popisek „pro koho“.
+  const stanCisla = {};
+  t.items.filter(r => r.isStations).forEach(b => (b.stationIds || []).forEach((id, i) => { stanCisla[id] = i + 1; }));
+  function stanHlavickaHtml(row) {
+    if (!row.stanoviste) return "";
+    return `<div class="stan-head"><span class="stan-num">${stanCisla[row.itemId] || "?"}</span>
+      <input type="text" class="stan-popisek" placeholder="Pro koho (nepovinné)" value="${esc(row.stanovistePopisek || "")}" data-stan-popisek="${esc(row.itemId)}" ${dis}></div>`;
+  }
+  const radekHtml = (row) => {
     if (row.part === "prestavka") {
       return `
       <div class="seq-item is-break" data-itemid="${esc(row.itemId)}">
         ${seqActionsHtml(row.itemId)}
+        ${stanHlavickaHtml(row)}
         <div class="seq-item-top">
           ${seqLeadHtml(row.itemId)}
           <input class="break-label" value="${esc(row.label || "Přestávka")}" data-field="label" data-itemid="${esc(row.itemId)}" ${dis}>
@@ -14577,6 +15036,7 @@ function renderSequence() {
       return `
       <div class="seq-item is-group" data-itemid="${esc(row.itemId)}"${groupPart ? ` style="border-color:${esc(groupPart.color)}"` : ""}>
         ${seqActionsHtml(row.itemId)}
+        ${stanHlavickaHtml(row)}
         <div class="seq-item-top">
           ${seqLeadHtml(row.itemId)}
           <i class="fa-solid fa-layer-group seq-group-icon"></i>
@@ -14675,6 +15135,7 @@ function renderSequence() {
       return `
       <div class="seq-item seq-item-text" data-itemid="${esc(row.itemId)}" style="border-left-color:${esc(part.color)}">
         ${seqActionsHtml(row.itemId)}
+        ${stanHlavickaHtml(row)}
         <div class="seq-item-top">
           ${seqLeadHtml(row.itemId)}
           <div class="seq-thumb seq-thumb-text"><i class="fa-solid fa-file-lines"></i></div>
@@ -14703,6 +15164,7 @@ function renderSequence() {
     return `
     <div class="seq-item" data-itemid="${esc(row.itemId)}" style="border-left-color:${esc(part.color)}">
       ${seqActionsHtml(row.itemId)}
+      ${stanHlavickaHtml(row)}
       <div class="seq-item-top">
         ${seqLeadHtml(row.itemId)}
         ${lib ? malyNahledHtml(lib, "seq-thumb", ` data-open="${esc(row.videoId)}"`) : `<div class="seq-thumb" data-open="${esc(row.videoId)}"></div>`}
@@ -14729,7 +15191,51 @@ function renderSequence() {
       </div>
       ${clockBadgeHtml(row.itemId)}
     </div>`;
-  }).join("");
+  };
+  /** Blok stanovišť: hlavička jako u skupiny, režim, čas na stanoviště, kola, celkový čas,
+      upozornění na nesoulad a uvnitř seznam stanovišť (běžné karty cvičení s hlavičkou). */
+  const blokHtml = (row) => {
+    const part = row.part ? getPart(row.part) : null;
+    const clenove = clenoveBloku(t.items, row);
+    const rotace = stanJeRotace(row);
+    const naSt = stanSekundyNaStanoviste(row);
+    const delsi = clenove.map((c, i) => ({ i, sec: stanVlastniDelka(c) })).filter(x => x.sec > naSt);
+    const varovani = delsi.length
+      ? `<div class="stan-warn"><i class="fa-solid fa-circle-info"></i> ${delsi.map(x => `Stanoviště ${x.i + 1} má podle cvičení ${esc(ovMinText(x.sec))}`).join(", ")} — blok počítá ${esc(ovMinText(naSt))} na stanoviště.</div>` : "";
+    return `
+      <div class="seq-item is-stations" data-itemid="${esc(row.itemId)}"${part ? ` style="border-color:${esc(part.color)}"` : ""}>
+        ${seqActionsHtml(row.itemId)}
+        <div class="seq-item-top">
+          ${seqLeadHtml(row.itemId)}
+          <i class="fa-solid fa-table-cells-large seq-group-icon"></i>
+          <input type="text" class="seq-group-name" value="${esc(row.name || "Stanoviště")}" placeholder="Název" data-field="name" data-itemid="${esc(row.itemId)}" ${dis}>
+          <div class="seq-controls">
+            <select class="seq-part-select" data-field="part" data-itemid="${esc(row.itemId)}" ${dis}${part ? ` style="${esc(partTagStyle(part.color))}"` : ""}>
+              <option value="">Bez části</option>
+              ${state.parts.map(p => `<option value="${esc(p.key)}" ${row.part === p.key ? "selected" : ""}>${esc(p.label)}</option>`).join("")}
+            </select>
+          </div>
+        </div>
+        <div class="seq-dosage-row stan-controls">
+          <div class="seq-mode-toggle">
+            <button type="button" class="${rotace ? "active" : ""}" data-stan-mode="rotace" data-itemid="${esc(row.itemId)}" ${dis}>Se střídáním</button>
+            <button type="button" class="${rotace ? "" : "active"}" data-stan-mode="soubezne" data-itemid="${esc(row.itemId)}" ${dis}>Souběžně</button>
+          </div>
+          <div class="seq-dosage-group">
+            <label class="stan-lbl">Na stanoviště</label>
+            <input class="seq-duration" type="number" min="1" value="${row.duration != null ? row.duration : 5}" data-field="duration" data-itemid="${esc(row.itemId)}" ${dis}>
+            ${renderTimeUnitSelect("durationUnit", row.itemId, row.durationUnit, "min", dis)}
+          </div>
+          ${rotace ? `<div class="seq-dosage-group seq-series-row"><label>Kol <input type="number" min="1" value="${row.rounds ? esc(row.rounds) : ""}" placeholder="${clenove.length}" data-field="rounds" data-itemid="${esc(row.itemId)}" ${dis}></label></div>` : ""}
+          <span class="stan-celkem" data-stan-celkem="${esc(row.itemId)}">= ${esc(ovMinText(stanCelkem(row)))}</span>
+        </div>
+        ${varovani}
+        ${clockBadgeHtml(row.itemId)}
+        <div class="stan-list" data-stanblok="${esc(row.itemId)}">${clenove.map(radekHtml).join("")}</div>
+        ${ro ? "" : `<button type="button" class="manage-link stan-zrusit" data-stan-zrusit="${esc(row.itemId)}"><i class="fa-solid fa-object-ungroup"></i> Zrušit stanoviště (cvičení zůstanou v tréninku)</button>`}
+      </div>`;
+  };
+  wrap.innerHTML = hlavniPolozky(t.items).map(row => row.isStations ? blokHtml(row) : radekHtml(row)).join("");
 
   // "Další vybavení" — samostatný autocomplete pro každou video položku zvlášť (ne skupinové
   // ani textové cvičení, viz #78), proto se musí znovu-navázat po každém překreslení stejně
@@ -14814,10 +15320,13 @@ function renderSequence() {
       ghostClass: "sortable-ghost",
       group: {
         name: "seqGroupTransfer",
-        pull: (to, from, el) => !el.classList.contains("is-group"),
+        // Blok stanovišť se nikam nepřetahuje; skupina jen do stanoviště (do jiné skupiny ne).
+        pull: (to, from, el) => !el.classList.contains("is-stations")
+          && (!el.classList.contains("is-group") || to.el.classList.contains("stan-list")),
         put: true
       },
-      onAdd: handleGroupCrossMove,
+      // Ze stanoviště zpátky do tréninku (kolo 3) řeší převzetí pořadí z obrazovky.
+      onAdd: (evt) => (evt.from.classList.contains("stan-list") ? stanPrevezmiPoradiZDomu() : handleGroupCrossMove(evt)),
       onEnd: (evt) => {
         if (evt.from !== evt.to) return; // cross-seznamový přesun řeší celý handleGroupCrossMove
         const order = [...wrap.querySelectorAll(".seq-item")].map(el => el.dataset.itemid);
@@ -14829,6 +15338,24 @@ function renderSequence() {
         // (na rozdíl od jiných "jen přeuspořádat" míst) musí časy na kartách přepočítat.
         updateClockBadges();
       }
+    });
+    // Stanoviště (kolo 3): v bloku jde přeskládat pořadí a přetáhnout cvičení (i celou skupinu)
+    // dovnitř a ven. Přestávka ani další blok dovnitř nesmí, víc než STAN_MAX taky ne.
+    wrap.querySelectorAll(".stan-list").forEach(listEl => {
+      groupSortableInstances.push(Sortable.create(listEl, {
+        handle: ".drag-handle",
+        animation: 150,
+        ghostClass: "sortable-ghost",
+        group: {
+          name: "seqGroupTransfer",
+          // Skupina ze stanoviště může zpátky do tréninku nebo do jiného stanoviště, do skupiny ne.
+          pull: (to, from, el) => !el.classList.contains("is-group") || !to.el.classList.contains("seq-group-videos"),
+          put: (to, from, el) => el.classList.contains("seq-item") && !el.classList.contains("is-break")
+            && !el.classList.contains("is-stations") && to.el.children.length < STAN_MAX
+        },
+        onAdd: () => stanPrevezmiPoradiZDomu(),
+        onEnd: (evt) => { if (evt.from === evt.to) stanPrevezmiPoradiZDomu(); }
+      }));
     });
     // aplikace umí přetahovat pořadí videí i UVNITŘ jedné skupiny, samostatně pro každou —
     // a zároveň (viz group: výš) i MEZI skupinami a hlavní sekvencí navzájem
@@ -14871,6 +15398,16 @@ function itemDisplayTitle(x) {
     do skupiny zruší (skupina má jen jednu společnou), appka na to upozorní. Volané z onAdd
     obou typů Sortable instancí výš — příslušné onEnd handlery se pro tenhle případ (evt.from
     !== evt.to) samy vypnou, ať si nekonkurují. */
+/** Kam do t.items vložit položku přetaženou ze skupiny do hlavní sekvence. Se stanovišti
+    (kolo 3) už pořadí na obrazovce neodpovídá indexům v t.items (cvičení stanovišť jsou uvnitř
+    bloku), proto se místo evt.newIndex hledá soused, před kterého karta dopadla. Bez stanovišť
+    vyjde totéž co dřív. */
+function indexVlozeniDoSekvence(evt, t) {
+  let dalsi = evt.item ? evt.item.nextElementSibling : null;
+  while (dalsi && !dalsi.dataset.itemid) dalsi = dalsi.nextElementSibling;
+  const i = dalsi ? t.items.findIndex(it => it.itemId === dalsi.dataset.itemid) : -1;
+  return i === -1 ? t.items.length : i;
+}
 function handleGroupCrossMove(evt) {
   const t = state.trainings[currentTrainingId];
   if (!t) { renderSequence(); return; }
@@ -14945,7 +15482,7 @@ function handleGroupCrossMove(evt) {
       duration: removed.duration != null ? removed.duration : 1,
       durationUnit: removed.durationUnit || "min"
     };
-    const insertAt = Math.max(0, Math.min(evt.newIndex, t.items.length));
+    const insertAt = indexVlozeniDoSekvence(evt, t);
     t.items.splice(insertAt, 0, topBreak);
     if (fromGroupId) {
       toast(`„${itemDisplayTitle(removed)}“ vyjmuta ze skupiny.`);
@@ -14975,7 +15512,7 @@ function handleGroupCrossMove(evt) {
       topItem.tags = removed.tags || [];
       topItem.equipment = removed.equipment || [];
     }
-    const insertAt = Math.max(0, Math.min(evt.newIndex, t.items.length));
+    const insertAt = indexVlozeniDoSekvence(evt, t);
     t.items.splice(insertAt, 0, topItem);
     if (fromGroupId) {
       toast(`„${itemDisplayTitle(removed)}“ vyjmuto ze skupiny — cue, poznámka i doba trvání zůstaly zachované.`);
@@ -15060,13 +15597,23 @@ document.getElementById("sequenceList").addEventListener("input", (e) => {
     if (v) { v.title = e.target.value; t.dateModified = Date.now(); scheduleSave(); }
     return;
   }
+  // Popisek stanoviště „pro koho“ (kolo 3).
+  if (e.target.dataset.stanPopisek) {
+    const t = state.trainings[currentTrainingId];
+    const r = t.items.find(it => it.itemId === e.target.dataset.stanPopisek);
+    if (r) { r.stanovistePopisek = e.target.value; t.dateModified = Date.now(); scheduleSave(); }
+    return;
+  }
   const field = e.target.dataset.field, itemId = e.target.dataset.itemid;
   if (!field || !itemId) return;
   const t = state.trainings[currentTrainingId];
   const row = t.items.find(it => it.itemId === itemId);
   if (!row) return;
   const numericFields = ["duration", "seriesCount", "seriesPause"];
-  if (field === "estimate") {
+  if (field === "rounds") {
+    const n = parseInt(e.target.value, 10);
+    row.rounds = n > 0 ? n : null;   // prázdné = tolik kol, kolik je stanovišť
+  } else if (field === "estimate") {
     row.estimate = parseInt(e.target.value) || null;
   } else if (field === "poznamka") {
     row.poznamka = sanitizeRichHtml(e.target.innerHTML);
@@ -15079,12 +15626,29 @@ document.getElementById("sequenceList").addEventListener("input", (e) => {
   }
   t.dateModified = Date.now();
   scheduleSave();
-  if (["duration", "durationUnit", "seriesPause", "seriesPauseUnit", "estimate", "estimateUnit"].includes(field)) updateClockBadges();
+  if (["duration", "durationUnit", "seriesPause", "seriesPauseUnit", "estimate", "estimateUnit", "rounds"].includes(field)) updateClockBadges();
+  if (row.isStations && ["duration", "durationUnit", "rounds"].includes(field)) {
+    const celkem = document.querySelector(`[data-stan-celkem="${CSS.escape(row.itemId)}"]`);
+    if (celkem) celkem.textContent = `= ${ovMinText(stanCelkem(row))}`;
+    updateTotalBadge();
+  }
   if (field === "part" || field === "seriesCount") renderSequence();
 });
 document.getElementById("sequenceList").addEventListener("click", (e) => {
   const pin = e.target.closest("[data-pin-video]");
   if (pin) { pametKlikSpendlik(pin); return; }
+  const stanRezim = e.target.closest("[data-stan-mode]");
+  if (stanRezim && !editorReadOnly) {
+    const t = state.trainings[currentTrainingId];
+    const blok = t.items.find(it => it.itemId === stanRezim.dataset.itemid && it.isStations);
+    if (blok && blok.stanMode !== stanRezim.dataset.stanMode) {
+      blok.stanMode = stanRezim.dataset.stanMode;
+      t.dateModified = Date.now(); scheduleSave(); renderSequence();
+    }
+    return;
+  }
+  const stanZrusit = e.target.closest("[data-stan-zrusit]");
+  if (stanZrusit) { zrusStanoviste(stanZrusit.dataset.stanZrusit); return; }
   const ulozit = e.target.closest("[data-ulozit-item]");
   if (ulozit) { otevriUlozeniDoKnihovny(ulozit.dataset.ulozitItem, ulozit.dataset.ulozitMember || null); return; }
   const kebabToggle = e.target.closest("[data-kebab-toggle]");
@@ -15174,6 +15738,20 @@ document.getElementById("sequenceList").addEventListener("click", (e) => {
   const rm = e.target.closest("[data-remove]");
   if (rm) {
     const t = state.trainings[currentTrainingId];
+    const blok = t.items.find(it => it.itemId === rm.dataset.remove && it.isStations);
+    if (blok) {
+      // Blok stanovišť: odebrat i se cvičeními, nebo jen zrušit (cvičení zůstanou) — kolo 3.
+      const n = clenoveBloku(t.items, blok).length;
+      confirmDialog(`Odebrat stanoviště i se všemi ${n} ${czPlural(n, "cvičením", "cvičeními", "cvičeními")}? Když chceš cvičení v tréninku nechat, použij „Zrušit stanoviště“.`,
+        { title: "Odebrat stanoviště?", confirmLabel: "Odebrat vše", danger: true }).then(ok => {
+        if (!ok) return;
+        t.items = t.items.filter(it => it.itemId !== blok.itemId && it.stanoviste !== blok.itemId);
+        t.dateModified = Date.now();
+        scheduleSave();
+        renderSequence();
+      });
+      return;
+    }
     t.items = t.items.filter(it => it.itemId !== rm.dataset.remove);
     t.dateModified = Date.now();
     scheduleSave();
@@ -18234,6 +18812,15 @@ const HELP_DATA = [
       { q: "Co je archivace tréninku a čím se liší od smazání?", a: "Archivace jen schová trénink z běžného přehledu, aniž by ho smazala — hodí se na starší tréninky, co si chceš nechat pro pozdější inspiraci, ale nepřekáží v seznamu. Najdeš je zpátky přes tlačítko „Archiv“ v přehledu Tréninků a jde je odtud kdykoli „Obnovit“.", kw: "archivovat archiv" },
       { q: "Jak archivuju víc tréninků najednou?", a: "V přehledu Tréninků zapni režim výběru (ikona zaškrtnutí), označ, co chceš schovat, a použij hromadné tlačítko „Archivovat“ dole." },
       { q: "Jsou archivované tréninky taky ve složkách?", a: "Ne, archiv zůstává zvlášť — je to odkladiště, ne zaměření. Tlačítko „Archiv“ najdeš dole pod dlaždicemi zaměření a otevře se ti prostý seznam archivovaných.", kw: "archiv slozky zamereni" }
+    ]},
+    { title: "Stanoviště", icon: "fa-solid fa-table-cells-large", qa: [
+      { q: "Co jsou stanoviště?", a: "Několik cvičení, která běží najednou — každá skupina hráček na jiném stanovišti. Stanovištěm může být cvičení z knihovny, textové cvičení i celá skupina cvičení. Stanovišť může být dvě až šest.", kw: "stanoviste soubezne najednou rotace okruh" },
+      { q: "Jak stanoviště vytvořím?", a: "V editoru tréninku klikni na „Vybrat víc“, označ cvičení, ze kterých mají být stanoviště (každé označené = jedno stanoviště), a dole klikni na „Stanoviště“. Přestávky se do stanovišť nepočítají. Další cvičení do bloku dostaneš přetažením, ven ho zase vytáhneš.", kw: "vytvorit stanoviste vybrat vic" },
+      { q: "Jaký je rozdíl mezi „Se střídáním“ a „Souběžně“?", a: "Se střídáním skupiny po každém kole přejdou na další stanoviště, takže každá projde všechna. Souběžně zůstává každá skupina celou dobu na svém stanovišti — hodí se, když má každá skupina jiný úkol (třeba nahrávačky zvlášť a smečařky zvlášť).", kw: "stridani rotace soubezne" },
+      { q: "Jak se počítá čas stanovišť?", a: "Nastavuješ čas na jedno stanoviště. Při střídání se násobí počtem kol — když políčko „Kol“ necháš prázdné, je kol tolik, kolik je stanovišť. Celkový čas bloku vidíš vpravo (= …) a s ním počítá i délka tréninku. Mezi koly žádná pauza není. Když má některé cvičení samo o sobě delší čas, aplikace na to upozorní.", kw: "cas kola delka stanoviste" },
+      { q: "K čemu je políčko „Pro koho“?", a: "Nepovinný popisek skupiny, která na stanovišti začíná — třeba „Nahrávačky“ nebo „Skupina A“. V prezentaci se při střídání popisky posouvají s koly, takže je vždycky vidět, kdo kde zrovna je.", kw: "popisek pro koho skupina hracky" },
+      { q: "Jak stanoviště zruším?", a: "Tlačítko „Zrušit stanoviště“ pod blokem zruší jen stanoviště — cvičení zůstanou v tréninku jako obyčejná cvičení. Křížek u bloku naopak odebere blok i se všemi cvičeními v něm (aplikace se předem zeptá).", kw: "zrusit odebrat smazat stanoviste" },
+      { q: "Jak vypadají stanoviště v prezentaci?", a: "Všechna stanoviště jsou vidět najednou jako dlaždice vedle sebe. V Zadání s náhledy a popisem, v Průběhu nad nimi běží jedny hodiny za celý blok a číslo kola. Při přechodu do dalšího kola zazní zvonek a na chvíli se ukáže „Střídáme!“. Ťuknutím na dlaždici otevřeš detail cvičení.", kw: "prezentace stanoviste stridame kolo dlazdice" }
     ]},
     { title: "Export a tisk", icon: "fa-solid fa-file-export", qa: [
       { q: "Jak stáhnu trénink jako PDF?", a: "Nejrychleji rovnou z přehledu Tréninků — u tréninku otevři nabídku (⋮) a vyber „Stáhnout PDF“, bez nutnosti trénink otevírat. Stejná volba je i uvnitř editoru tréninku, když ho zrovna máš otevřený." },

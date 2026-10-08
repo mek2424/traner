@@ -202,6 +202,32 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
 
 .tmf-run-title{font-family:var(--font-display);font-size:14px;color:#4A5564;letter-spacing:.04em;opacity:.75;max-width:90%;overflow-wrap:anywhere;}
 .tmf-clock{font-family:var(--font-display);line-height:.92;color:#1B2430;font-variant-numeric:tabular-nums;font-size:clamp(56px,15vw,108px);}
+/* Stanoviště v prezentaci (kolo 3): dlaždice vedle sebe, do 4 v řadě, 5–6 ve dvou řadách. */
+.stan-faze{width:100%;display:flex;flex-direction:column;align-items:center;gap:8px;}
+.stan-brief-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;justify-content:center;}
+.stan-brief-head .tmf-title{font-size:clamp(20px,3.6vw,32px);}
+.stan-rezim{font-size:13px;font-weight:600;color:#4A5564;}
+.stan-run-head{display:flex;align-items:center;gap:16px;justify-content:center;}
+.stan-run-head .tmf-clock{font-size:clamp(40px,9vw,72px);}
+.stan-kolo{font-family:var(--font-display);font-size:clamp(20px,3.4vw,30px);color:#C74F1E;letter-spacing:.03em;}
+.stan-grid{display:grid;grid-template-columns:repeat(var(--stan-cols,3),minmax(0,1fr));gap:8px;width:100%;max-width:1100px;}
+.stan-tile{background:#fff;border:2px solid #DCDFD9;border-radius:10px;padding:7px 9px;text-align:left;display:flex;flex-direction:column;gap:4px;min-width:0;}
+.stan-tile.klik{cursor:pointer;}
+.stan-tile-head{display:flex;align-items:center;gap:6px;min-width:0;}
+.stan-tile-num{width:24px;height:24px;border-radius:50%;background:#339933;color:#fff;font-family:var(--font-display);font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.stan-tile-kdo{background:#FBF3E5;border:1px solid #E8C468;color:#7A5A17;border-radius:999px;padding:1px 9px;font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+.stan-tile-thumb{position:relative;width:100%;aspect-ratio:16/9;border-radius:6px;overflow:hidden;background:#E9ECE4;}
+.stan-tile-thumb > span{position:absolute;inset:0;background:center/cover no-repeat;}
+.stan-tile-thumb > svg{position:absolute;inset:0;}
+.stan-tile-title{font-weight:700;color:#1B2430;font-size:clamp(13px,1.9vw,17px);line-height:1.2;overflow-wrap:anywhere;}
+.stan-run .stan-tile-title{font-size:clamp(14px,2.2vw,19px);}
+.stan-tile-list{margin:0;padding-left:18px;font-size:12px;color:#4A5564;line-height:1.3;}
+.stan-tile-cue{display:flex;gap:5px;align-items:flex-start;font-size:12.5px;font-weight:600;color:#1B2430;line-height:1.3;}
+.stan-tile-cue i{color:#E8622C;font-size:10px;margin-top:3px;}
+.stan-stridame{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:30;background:#E8622C;color:#fff;border-radius:16px;padding:16px 34px;display:flex;flex-direction:column;align-items:center;gap:2px;box-shadow:0 10px 30px rgba(0,0,0,.25);pointer-events:none;}
+.stan-stridame.hidden{display:none;}
+.stan-stridame b{font-family:var(--font-display);font-size:clamp(34px,7vw,60px);letter-spacing:.03em;line-height:1;}
+.stan-stridame span{font-weight:700;font-size:15px;}
 .tmf-clock.tmf-warn{color:var(--chalk-dark);}
 /* Opakování ve fázi Průběh — stejná váha jako časovač, jen snese i delší text ("3×12 na obě strany"). */
 .tmf-bigreps{font-family:var(--font-display);line-height:.95;color:#1B2430;font-size:clamp(40px,11vw,92px);max-width:94%;overflow-wrap:anywhere;}
@@ -300,6 +326,14 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
 .ov-mtitle{font-size:13.5px;font-weight:700;flex:1;min-width:0;color:var(--ink);overflow-wrap:anywhere;}
 .ov-gname{font-family:var(--font-display);font-size:17px;letter-spacing:.03em;color:var(--court-dark);flex:1;}
 .ov-series{font-family:var(--font-display);font-size:12.5px;letter-spacing:.04em;background:rgba(232,98,44,.12);border:1px solid var(--chalk);color:var(--chalk-dark);border-radius:5px;padding:1px 7px;}
+/* Stanoviště v Přehledu (kolo 3). */
+.stan-num{width:22px;height:22px;border-radius:50%;background:var(--chalk);color:#fff;font-family:var(--font-display);font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ov-card.ov-stan{border:2px solid var(--chalk);}
+.ov-card.ov-stan .ov-gname{color:var(--chalk-dark);}
+.ov-stanlist{display:flex;flex-direction:column;gap:8px;margin-top:8px;}
+.ov-stanitem .ov-card{margin:0;}
+.ov-stanhead{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+.ov-stankdo{font-size:12px;font-weight:700;color:var(--warn-ink,#7A5A17);background:var(--warn-bg,#FBF3E5);border:1px solid var(--warn-border,#E8C468);border-radius:999px;padding:1px 8px;}
 .ov-gear{display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:5px 9px;border-radius:8px;background:var(--paper);border:1px dashed var(--line);}
 .ov-gear b{font-family:var(--font-display);font-size:12px;letter-spacing:.06em;color:var(--ink-faint);font-weight:400;}
 .ov-gear span{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:1px 9px;color:var(--ink-soft);background:var(--card);}
@@ -614,6 +648,9 @@ function resolveThumbnailUrl(item) { return (item && item.thumbnail) || ""; }
 function jeTextove(item) { return !!item && !String(item.url || "").trim(); }
 const PH_TEXT_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 90" preserveAspectRatio="xMidYMid slice" class="tx-thumb" width="100%" height="100%" aria-hidden="true"><rect x="0" y="0" width="160" height="90" style="fill:#E9ECE4"/><rect x="40" y="30" width="4" height="16" rx="2" style="fill:#339933"/><text x="50" y="46" style="fill:#6B7684;font-family:'Bebas Neue',Impact,sans-serif;font-size:22px;letter-spacing:2.5px">TEXT</text><rect x="40" y="56" width="80" height="6" rx="3" style="fill:#ADB5A9"/><rect x="40" y="67" width="56" height="6" rx="3" style="fill:#ADB5A9"/></svg>`;
 const PH_VIDEO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 90" preserveAspectRatio="xMidYMid slice" class="tx-thumb" width="100%" height="100%" aria-hidden="true"><rect x="0" y="0" width="160" height="90" style="fill:#E9ECE4"/><circle cx="51" cy="38" r="11" style="fill:#339933"/><path d="M47.8 33.2V42.8Q47.8 44.2 49 43.5L56.4 38.9Q57.5 38 56.4 37.1L49 32.5Q47.8 31.8 47.8 33.2Z" style="fill:#FFFFFF"/><text x="68" y="46" style="fill:#6B7684;font-family:'Bebas Neue',Impact,sans-serif;font-size:22px;letter-spacing:2.5px">VIDEO</text><rect x="40" y="61" width="80" height="5" rx="2.5" style="fill:#ADB5A9"/><rect x="40" y="61" width="28" height="5" rx="2.5" style="fill:#339933"/></svg>`;
+function zastupnyObrazekHtml(item) { return jeTextove(item) ? PH_TEXT_SVG : PH_VIDEO_SVG; }
+// Stanoviště (kolo 3): česká množná čísla „1 kolo / 2 kola / 5 kol“ — stejné jako v index.html.
+function czPlural(n, one, few, many) { return n === 1 ? one : (n >= 2 && n <= 4 ? few : many); }
 function pdfFmtClock(totalSeconds) {
   let s = Math.round(totalSeconds) % (24 * 3600);
   if (s < 0) s += 24 * 3600;
@@ -937,7 +974,8 @@ function startTrainingMode(trainingId, skin) {
   if (!t || !t.items.length) { toast("Trénink je prázdný, není co spustit.", 2200, "warn"); return; }
   tmReturnToOverview = false; // nastaví si ho jen spuštění z Přehledu, hned po tomhle volání
   currentTrainingId = id;
-  trainingModeItems = t.items;
+  // Stanoviště v prezentaci: blok je jedna položka, cvičení v něm se ukazují v jeho dlaždicích.
+  trainingModeItems = hlavniPolozky(t.items);
   trainingModeIndex = 0;
   trainingModeSeriesNum = 1;
   trainingModeGroupVideoIndex = 0;
@@ -1017,6 +1055,7 @@ function getUpNextLabel() {
     const lib = state.library[firstV.videoId];
     return lib ? lib.title : (next.name || "Skupina");
   }
+  if (next.isStations) return next.name || "Stanoviště";
   if (next.isText) return next.title || null;
   const lib = state.library[next.videoId];
   return lib ? lib.title : null;
@@ -1192,6 +1231,7 @@ function getTmCurrentInfo() {
       isText: !!v.isText || !!(lib && (lib.brokenAt || lib.goneAt || jeTextove(lib)))
     };
   }
+  if (row.isStations) return { title: row.name || "Stanoviště", shortDesc: stanPopisRezimu(row), longDesc: "", isText: true };
   const lib = row.isText ? null : state.library[row.videoId];
   return {
     title: row.isText ? (row.title || "(bez názvu)") : (lib ? lib.title : "(video smazáno z knihovny)"),
@@ -1342,6 +1382,26 @@ function renderTrainingModeItemClassic() {
     return;
   }
 
+  // Blok stanovišť (kolo 3): starý vzhled ho ukáže jen jako název a popis režimu, odpočet
+  // běží za celý blok. Dlaždice kreslí nový vzhled (renderFazeBrief/Run).
+  if (row.isStations) {
+    const partS = getPart(row.part);
+    document.getElementById("tmPartLabel").textContent = (partS ? partS.label : "").toUpperCase();
+    setPartTag(document.getElementById("tmPartLabel"), partS ? partS.color : null);
+    updateProgressBar(partS ? partS.color : null);
+    setScaledText(document.getElementById("tmTitle"), row.name || "Stanoviště");
+    setScaledText(document.getElementById("tmDesc"), stanPopisRezimu(row));
+    document.getElementById("tmCue").innerHTML = row.cue ? `<i class="fa-solid fa-comment"></i> ${esc(row.cue)}` : "";
+    document.getElementById("tmNote").innerHTML = richValueToHtml(row.poznamka || "");
+    showTrainingModeVideo(null);
+    setTimerMode("time");
+    trainingModeSeconds = stanCelkem(row);
+    stanPosledniKolo = 1;
+    updateTrainingModeTimerDisplay();
+    startTrainingModeTimer();
+    return;
+  }
+
   // obyčejné video (nebo textové cvičení bez videa)
   const lib = row.isText ? null : state.library[row.videoId];
   const part = getPart(row.part);
@@ -1453,6 +1513,7 @@ function startTrainingModeTimer() {
     if (trainingModeSkin === "faze" && trainingModeSeconds <= 0 && trainingModeSeconds % 180 === 0) {
       fazeFireAlert(trainingModeSeconds === 0);
     }
+    stanHlidejKolo();
   }, 1000);
 }
 function stopTrainingModeTimer() {
@@ -1474,6 +1535,9 @@ document.getElementById("tmTimerReset").addEventListener("click", () => {
   } else if (row.isGroup) {
     const v = row.videos[trainingModeGroupVideoIndex];
     trainingModeSeconds = Math.max(1, valueToSeconds(v && v.duration != null ? v.duration : 1, v ? (v.durationUnit || "min") : "min"));
+  } else if (row.isStations) {
+    trainingModeSeconds = stanCelkem(row);
+    stanPosledniKolo = 1;
   } else {
     trainingModeSeconds = Math.max(1, valueToSeconds(row.duration || 1, row.durationUnit || "min"));
   }
@@ -1699,8 +1763,61 @@ const REPS_FALLBACK_SECONDS = 5 * 60;
     Dřív bylo tohle počítání rozepsané na čtyřech místech a každé se v detailech trochu lišilo.
     PDF (buildPdfEntries) zůstává schválně vlastní — potřebuje čas i po jednotlivých členech
     skupiny, ne jen jeden součet za kartu. */
-function rowDuration(row) {
+/* =========================================================
+   STANOVIŠTĚ (kolo 3, 8. 10. 2026 — rozhodnutí v claude/trener-textova-cviceni-cue-stanoviste.md)
+   Blok stanovišť = položka tréninku { isStations: true, name, part, stanMode: "rotace" | "soubezne",
+   duration + durationUnit (čas NA STANOVIŠTĚ), rounds (jen u střídání; prázdné = počet stanovišť),
+   stationIds, mode: "time", seriesCount: 1 }. Samotná stanoviště jsou BĚŽNÉ položky tréninku
+   (video, textové cvičení, skupina) se značkou `stanoviste: <itemId bloku>` a volitelným
+   popiskem `stanovistePopisek` („pro koho“). V t.items leží hned za svým blokem v pořadí
+   stanovišť. Úpravy cvičení uvnitř tak fungují beze změny (všechno hledá v t.items) a starší
+   verze aplikace stanoviště ukáže jako obyčejná cvičení za sebou.
+   Hodiny jsou jedny za celý blok (otázka 11), mezi koly žádná pauza (28), nejvýš 6 (30).
+   ========================================================= */
+const STAN_MAX = 6;
+function jeClenStanoviste(row) { return !!(row && row.stanoviste); }
+/** Položky tréninku bez stanovišť uvnitř bloků — to, co se prochází „po kartách“. */
+function hlavniPolozky(items) { return (items || []).filter(r => r && !jeClenStanoviste(r)); }
+function clenoveBloku(items, blok) { return (items || []).filter(r => r && blok && r.stanoviste === blok.itemId); }
+function stanPocet(blok) { return ((blok && blok.stationIds) || []).length; }
+function stanJeRotace(blok) { return !blok || blok.stanMode !== "soubezne"; }
+function stanKol(blok) {
+  if (!stanJeRotace(blok)) return 1;
+  const n = parseInt(blok.rounds, 10);
+  return n > 0 ? n : Math.max(1, stanPocet(blok));
+}
+function stanSekundyNaStanoviste(blok) {
+  return Math.max(1, valueToSeconds(blok.duration != null && blok.duration !== "" ? blok.duration : 5, blok.durationUnit || "min"));
+}
+function stanCelkem(blok) { return stanSekundyNaStanoviste(blok) * stanKol(blok); }
+/** Popis režimu do Přehledu, PDF a exportu: „se střídáním · 4 kola × 5 min“. */
+function stanPopisRezimu(blok) {
+  const na = ovMinText(stanSekundyNaStanoviste(blok));
+  if (!stanJeRotace(blok)) return `souběžně · ${na}`;
+  const k = stanKol(blok);
+  return `se střídáním · ${k} ${czPlural(k, "kolo", "kola", "kol")} × ${na}`;
+}
+/** Kolo (od 1), které právě běží, podle zbývajícího času bloku. */
+function stanKoloZeZbyvajicich(blok, zbyva) {
+  const na = stanSekundyNaStanoviste(blok);
+  const uplynulo = Math.max(0, stanCelkem(blok) - Math.max(0, zbyva));
+  return Math.min(stanKol(blok), Math.floor(uplynulo / na) + 1);
+}
+/** Kdo je v kole `kolo` (od 1) na stanovišti `s` (od 0): skupina, která začínala na stanovišti g,
+    je v kole r na stanovišti (g + r − 1) mod n. Popisek patří skupině ze startovního stanoviště. */
+function stanPopisekVKole(clenove, s, kolo, rotace) {
+  const n = clenove.length;
+  if (!n) return "";
+  const g = rotace ? ((s - (kolo - 1)) % n + n) % n : s;
+  return String((clenove[g] && clenove[g].stanovistePopisek) || "").trim();
+}
+/* Úklid modelu, přetahování, vytvoření a zrušení stanovišť žijí jen v editoru (index.html). */
+
+function rowDuration(row, vlastni) {
   if (!row) return { seconds: 0, known: false };
+  // Stanoviště: čas nese blok (jedny hodiny), cvičení uvnitř se do celku nepočítají zvlášť.
+  if (row.isStations) return { seconds: stanCelkem(row), known: true };
+  if (row.stanoviste && !vlastni) return { seconds: 0, known: true };
   if (row.part === "prestavka") {
     return { seconds: valueToSeconds(row.duration != null ? row.duration : 1, row.durationUnit || "min"), known: true };
   }
@@ -1765,6 +1882,7 @@ function getFazeCurrentEntry() {
   const row = trainingModeItems[trainingModeIndex];
   if (!row) return null;
   if (row.part === "prestavka") return { isBreak: true, title: row.label || "Přestávka" };
+  if (row.isStations) return stanFazeEntry(row);
   if (row.isGroup) {
     const v = row.videos[trainingModeGroupVideoIndex];
     if (!v) return null;
@@ -1824,6 +1942,7 @@ function getFazeUpNextEntry() {
       equipment: firstV.isText ? (firstV.equipment || []) : [...new Set([...((lib && lib.equipment) || []), ...(firstV.extraEquipment || [])])]
     };
   }
+  if (next.isStations) return { title: next.name || "Stanoviště", equipment: stanVybaveni(next) };
   const lib = next.isText ? null : state.library[next.videoId];
   return {
     title: next.isText ? (next.title || "(bez názvu)") : (lib ? lib.title : "(video smazáno z knihovny)"),
@@ -1845,7 +1964,8 @@ function computeFazeSummaryStats(t) {
   let totalSeconds = 0;
   items.forEach(row => { totalSeconds += rowDuration(row).seconds; });
   return {
-    count: items.filter(r => r.part !== "prestavka").length,
+    // Blok stanovišť se nepočítá, počítají se cvičení na jeho stanovištích.
+    count: items.filter(r => r.part !== "prestavka" && !r.isStations).length,
     totalMin: Math.round(totalSeconds / 60)
   };
 }
@@ -2019,6 +2139,7 @@ function renderFazeVideoArea(entry) {
   }
 }
 function renderFazeBrief(main, entry) {
+  if (entry.isStations) { stanRenderFaze(main, entry, "brief"); return; }
   const hasThumb = !entry.isText && !!entry.lib;
   const hasVid = hasThumb && !entry.broken;
   const hasDetail = !!((entry.shortDesc && entry.shortDesc.trim()) || (entry.longDesc && entry.longDesc.trim()));
@@ -2037,6 +2158,7 @@ function renderFazeBrief(main, entry) {
   if (hasThumb) renderFazeVideoArea(entry);
 }
 function renderFazeRun(main, entry) {
+  if (entry.isStations) { stanRenderFaze(main, entry, "run"); return; }
   // U cviku na opakování je hlavní informace "kolikrát", ne čas — nastoupí proto na místo
   // obřího časovače, ve stejné velikosti. Pilulka s opakováním by pak byla dvakrát.
   const isReps = fazeIsRepsEntry(entry);
@@ -2114,6 +2236,117 @@ function fazeNextCardHtml() {
     paintFazeForNewItem) i po každém ťuknutí na fázi (Zadání/Průběh/Konec). Video (živý embed)
     se tím pádem překresluje i při pouhém přepnutí fáze zpátky na Zadání — u admin-only
     zkušební verze je to přijatelný kompromis, jde to případně později zjednodušit. */
+/* ---------- Stanoviště v prezentaci (kolo 3, otázky 12, 13, 29, 30) ---------- */
+let stanPosledniKolo = 1;
+/** Vybavení celého bloku = sjednocení vybavení všech stanovišť. */
+function stanVybaveni(blok) {
+  const t = state.trainings[currentTrainingId];
+  const out = [];
+  clenoveBloku(t ? t.items : [], blok).forEach(c => (ovItemEquipment(c) || []).forEach(e => { if (!out.includes(e)) out.push(e); }));
+  return out;
+}
+/** Údaje jedné dlaždice: název, cue, náhled, co otevřít ťuknutím. Skupina ukáže svá cvičení. */
+function stanDlazdiceData(c) {
+  if (c.isGroup) {
+    const nazvy = (c.videos || []).filter(v => !v.isBreak).map(v => {
+      if (v.isText) return v.title || "(bez názvu)";
+      const l = state.library[v.videoId];
+      return l ? l.title : "(video smazáno)";
+    });
+    return { title: c.name || "Skupina", cue: c.cue || "", skupina: nazvy, lib: null, videoId: null, text: null };
+  }
+  if (c.isText) return { title: c.title || "(bez názvu)", cue: c.cue || "", skupina: null, lib: null, videoId: null, text: c };
+  const lib = state.library[c.videoId];
+  return { title: lib ? lib.title : "(video smazáno z knihovny)", cue: c.cue || "", skupina: null, lib: lib || null, videoId: lib ? c.videoId : null, text: null };
+}
+function stanFazeEntry(row) {
+  const t = state.trainings[currentTrainingId];
+  const clenove = clenoveBloku(t ? t.items : [], row);
+  return {
+    isStations: true, blok: row, clenove,
+    title: row.name || "Stanoviště", part: getPart(row.part), groupName: "",
+    cue: row.cue || "", note: row.poznamka || "", reps: "",
+    shortDesc: "", longDesc: "", equipment: stanVybaveni(row),
+    isText: true, broken: false, gone: false, lib: null, videoId: null,
+    dlazdice: clenove.map(stanDlazdiceData)
+  };
+}
+/** Dlaždice všech stanovišť. Zadání = větší, s náhledem; Průběh = menší, nad nimi hodiny a kolo.
+    Do čtyř stanovišť jedna řada, pět a šest dvě (otázka 30). */
+function stanRenderFaze(main, entry, faze) {
+  const blok = entry.blok;
+  const n = entry.dlazdice.length;
+  const rotace = stanJeRotace(blok);
+  const kol = stanKol(blok);
+  const kolo = faze === "run" ? stanKoloZeZbyvajicich(blok, trainingModeSeconds) : 1;
+  const sloupce = n <= 4 ? n : 3;
+  const dlazdice = entry.dlazdice.map((d, i) => {
+    const kdo = stanPopisekVKole(entry.clenove, i, kolo, rotace);
+    // Zadání: náhled (u textového cvičení obrázek TEXT); Průběh: bez náhledů a skupina jen
+    // počtem cvičení, ať se dlaždice vejdou pod hodiny.
+    const nahled = faze !== "brief" ? ""
+      : (d.lib ? `<div class="stan-tile-thumb">${resolveThumbnailUrl(d.lib) ? `<span style="background-image:url('${esc(resolveThumbnailUrl(d.lib))}')"></span>` : zastupnyObrazekHtml(d.lib)}</div>`
+        : (d.text ? `<div class="stan-tile-thumb">${PH_TEXT_SVG}</div>` : ""));
+    const obsah = !d.skupina ? ""
+      : (faze === "brief"
+        ? `<ol class="stan-tile-list">${d.skupina.map(x => `<li>${esc(x)}</li>`).join("")}</ol>`
+        : `<div class="stan-tile-list">${d.skupina.length} ${czPlural(d.skupina.length, "cvičení", "cvičení", "cvičení")} ve skupině</div>`);
+    const klik = d.videoId || d.text ? ` data-stan-tile="${i}"` : "";
+    return `<div class="stan-tile${klik ? " klik" : ""}"${klik}>
+      <div class="stan-tile-head"><span class="stan-tile-num">${i + 1}</span>${kdo ? `<span class="stan-tile-kdo">${esc(kdo)}</span>` : ""}</div>
+      ${nahled}
+      <div class="stan-tile-title">${esc(d.title)}</div>
+      ${obsah}
+      ${d.cue ? `<div class="stan-tile-cue"><i class="fa-solid fa-comment"></i>${esc(d.cue)}</div>` : ""}
+    </div>`;
+  }).join("");
+  const hlava = faze === "run"
+    ? `<div class="stan-run-head"><div class="tmf-clock${trainingModeSeconds < 0 ? " tmf-warn" : ""}" id="tmfClockRun">${fazeClockText(trainingModeSeconds)}</div>${rotace ? `<div class="stan-kolo">Kolo ${kolo}/${kol}</div>` : ""}</div>`
+    : `<div class="stan-brief-head"><span class="tmf-title">${esc(entry.title)}</span><span class="stan-rezim">${esc(stanPopisRezimu(blok))}</span></div>`;
+  main.innerHTML = `<div class="stan-faze stan-${faze}">${hlava}<div class="stan-grid" style="--stan-cols:${sloupce}">${dlazdice}</div></div>`;
+  main.querySelectorAll("[data-stan-tile]").forEach(el => el.addEventListener("click", () => {
+    const d = entry.dlazdice[parseInt(el.dataset.stanTile, 10)];
+    if (!d) return;
+    if (d.videoId) { fazeOpenLibraryCard(d.videoId); return; }
+    if (d.text) {
+      tmCurrentInfoData = { title: d.text.title || "", shortDesc: d.text.shortDesc || "", longDesc: d.text.longDesc || "" };
+      openExerciseInfoModal();
+    }
+  }));
+}
+/** Hlídá přechod do dalšího kola (volá se každou vteřinu z odpočtu). Při střídání zazvoní,
+    zavibruje a na chvíli ukáže „Střídáme!“ — bez pauzy, hodiny jedou dál (otázka 28). */
+function stanHlidejKolo() {
+  const row = trainingModeItems[trainingModeIndex];
+  if (!row || !row.isStations || trainingModeInSeriesPause || trainingModeFinished) return;
+  const kolo = stanKoloZeZbyvajicich(row, trainingModeSeconds);
+  if (kolo === stanPosledniKolo) return;
+  const dalsi = kolo > stanPosledniKolo;
+  stanPosledniKolo = kolo;
+  if (trainingModeSkin !== "faze") return;
+  if (dalsi && stanJeRotace(row)) {
+    try { new Audio(FAZE_BELL_SRC).play().catch(() => {}); } catch (e) {}
+    if ("vibrate" in navigator) { try { navigator.vibrate([300, 150, 300]); } catch (e) {} }
+    stanUkazStridame(kolo, stanKol(row));
+  }
+  if (!tmfAlertActive) renderFazeItem();
+}
+function stanUkazStridame(kolo, kol) {
+  const view = document.getElementById("trainingModeView");
+  if (!view) return;
+  let el = document.getElementById("stanStridame");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "stanStridame";
+    el.className = "stan-stridame hidden";
+    view.appendChild(el);
+  }
+  el.innerHTML = `<b>Střídáme!</b><span>Kolo ${kolo}/${kol}</span>`;
+  el.classList.remove("hidden");
+  clearTimeout(stanUkazStridame._t);
+  stanUkazStridame._t = setTimeout(() => el.classList.add("hidden"), 3500);
+}
+
 function renderFazeItem() {
   if (trainingModeFinished) { renderFazeFinished(); return; }
   document.getElementById("tmfExpired").classList.toggle("hidden", !tmfAlertActive);
@@ -2305,8 +2538,24 @@ function ovMemberHtml(row, v) {
 }
 /** Délka se na kartě nepíše — nese ji ryska na pásce vlevo. Výjimka je cvik na opakování:
     tam je "3×10" dávka, ne doba trvání, a ta na kartu patří. */
+let ovPolozky = [];   // položky právě kresleného Přehledu — kvůli stanovištím uvnitř bloku
 function ovCardHtml(row) {
   const isReps = (row.mode || "time") === "reps";
+  if (row.isStations) {
+    // Blok stanovišť (kolo 3): hlavička s režimem, pod ní stanoviště s číslem a popiskem.
+    const clenove = clenoveBloku(ovPolozky, row);
+    return `<div class="ov-card ov-group ov-stan" data-itemid="${esc(row.itemId)}">
+      <div class="ov-top">
+        <span class="ov-gname"><i class="fa-solid fa-table-cells-large"></i> ${esc(row.name || "Stanoviště")}</span>
+        <span class="ov-series">${esc(stanPopisRezimu(row))}</span>
+      </div>
+      <div class="ov-stanlist">${clenove.map((c, i) => `<div class="ov-stanitem">
+        <div class="ov-stanhead"><span class="stan-num">${i + 1}</span>${String(c.stanovistePopisek || "").trim() ? `<span class="ov-stankdo">${esc(c.stanovistePopisek)}</span>` : ""}</div>
+        ${ovCardHtml(c)}</div>`).join("")}</div>
+      ${row.cue ? `<div class="ov-cue"><i class="fa-solid fa-comment"></i>${esc(row.cue)}</div>` : ""}
+      ${ovNoteHtml(row.poznamka)}
+    </div>`;
+  }
   if (row.part === "prestavka") {
     return `<div class="ov-card ov-break" data-itemid="${esc(row.itemId)}" style="border-left-color:var(--part-prestavka)">
       <div class="ov-top"><span class="ov-title">${esc(row.label || "Přestávka")}</span></div></div>`;
@@ -2375,8 +2624,10 @@ function renderOverview() {
     ? `<b><i class="fa-solid fa-toolbox"></i> VŠECHNO VYBAVENÍ</b>` + equip.map(n => `<span>${esc(n)}</span>`).join("")
     : "";
   const items = t.items || [];
+  ovPolozky = items;
   let html = "", lastPart = null, acc = 0;
   items.forEach((row, i) => {
+    if (row.stanoviste) return;   // stanoviště kreslí jejich blok (ovCardHtml)
     // Každá položka zvlášť v try/catch. Dřív stačila jedna vadná a výjimka vyhodila celé
     // renderOverview PŘED zápisem do #ovList — v seznamu pak zůstal viset obsah PŘEDCHOZÍHO
     // otevřeného tréninku, zatímco hlavička už patřila tomu novému. Vypadalo to, jako by se
