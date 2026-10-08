@@ -308,6 +308,11 @@ function zmenenyObsahVidea(a, b) {
   });
 }
 
+/** Textové cvičení (kolo 2 aplikace, 8. 10. 2026): položka knihovny nebo tip bez odkazu na video. */
+function jeTextoveCviceni(d) {
+  return !!d && !String(d.url || "").trim();
+}
+
 exports.onVideoChange = onDocumentWritten("videos/{videoId}", async (event) => {
   const id = event.params.videoId;
   const pred = event.data.before.exists ? event.data.before.data() : null;
@@ -322,6 +327,9 @@ exports.onVideoChange = onDocumentWritten("videos/{videoId}", async (event) => {
 
   const nazev = po.title || (pred && pred.title) || "video";
   const odkaz = `${APP_URL}?open=video&id=${encodeURIComponent(id)}`;
+  // Textové cvičení (8. 10. 2026) = položka knihovny bez odkazu na video.
+  const textPo = jeTextoveCviceni(po);
+  const textPred = !!pred && jeTextoveCviceni(pred);
   const zivePred = !!pred && !pred.deletedAt;
   const zivePo = !po.deletedAt;
   const kdo = await jmeno(editorUid);
@@ -330,7 +338,8 @@ exports.onVideoChange = onDocumentWritten("videos/{videoId}", async (event) => {
     await notifikuj(ADMIN_UID, {
       type: "videoAdded",
       title: "Trenér — změna v knihovně",
-      body: pred ? `${kdo} vrátil(a) „${nazev}“ z koše.` : `${kdo} přidal(a) video „${nazev}“.`,
+      body: pred ? `${kdo} vrátil(a) „${nazev}“ z koše.`
+        : `${kdo} přidal(a) ${textPo ? "textové cvičení" : "video"} „${nazev}“.`,
       url: odkaz
     });
     return;
@@ -338,7 +347,7 @@ exports.onVideoChange = onDocumentWritten("videos/{videoId}", async (event) => {
   if (zivePred && !zivePo) {
     await notifikuj(ADMIN_UID, {
       type: "videoDeleted",
-      title: "Trenér — smazané video",
+      title: textPo ? "Trenér — smazané cvičení" : "Trenér — smazané video",
       body: `${kdo} smazal(a) „${nazev}“.`,
       url: APP_URL
     });
@@ -373,10 +382,12 @@ exports.onVideoChange = onDocumentWritten("videos/{videoId}", async (event) => {
   }
 
   if (zmenenyObsahVidea(pred, po).length) {
+    const co = (textPred && !textPo) ? `doplnil(a) video k „${nazev}“`
+      : `upravil(a) ${textPo ? "textové cvičení" : "video"} „${nazev}“`;
     await notifikuj(ADMIN_UID, {
       type: "videoEdited",
       title: "Trenér — změna v knihovně",
-      body: `${kdo} upravil(a) video „${nazev}“.`,
+      body: `${kdo} ${co}.`,
       url: odkaz
     });
   }
@@ -477,8 +488,8 @@ exports.onVideoTip = onDocumentCreated("videoTips/{tipId}", async (event) => {
   const kdo = d.fromLabel || await jmeno(d.fromUid);
   await notifikuj(ADMIN_UID, {
     type: "tip",
-    title: "Trenér — tip na video",
-    body: `${kdo} poslal(a) tip: ${d.title || d.url || "nové video"}`,
+    title: jeTextoveCviceni(d) ? "Trenér — tip na textové cvičení" : "Trenér — tip na video",
+    body: `${kdo} poslal(a) tip: ${d.title || d.url || (jeTextoveCviceni(d) ? "nové cvičení" : "nové video")}`,
     url: `${APP_URL}?open=tipy`
   });
 });
