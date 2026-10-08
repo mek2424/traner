@@ -3387,7 +3387,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-10-08 11:08";
+const APP_VERSION = "2026-10-08 12:09";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -9460,7 +9460,9 @@ function subscribeToVideoTips() {
       .filter(t => (t.status || "waiting") === "waiting")
       .sort((a, b) => (b.sentAt || 0) - (a.sentAt || 0));
     renderPendingBadge();
-    if (!document.getElementById("videoTipsModalBackdrop").classList.contains("hidden")) renderVideoTipsList("admin");
+    // Překreslit jen „Došlé tipy“ — když je otevřené okno „Moje tipy“, nesmí ho to přepsat
+    // (a naopak níž). Dřív se okno přepínalo podle toho, který odběr dorazil dřív (8. 10. 2026).
+    if (!document.getElementById("videoTipsModalBackdrop").classList.contains("hidden") && videoTipsModalMode === "admin") renderVideoTipsList("admin");
     if (!document.getElementById("profileModalBackdrop").classList.contains("hidden")) applyTipsSectionsVisibility();
   }, (err) => {
     // Nejčastější důvod je chybějící pravidlo v konzoli — ať je to v 🐞 vidět jako příčina,
@@ -9478,7 +9480,7 @@ function subscribeToMyTips() {
     myTips = snap.docs
       .map(d => ({ id: d.id, ...d.data() }))
       .sort((a, b) => (b.sentAt || 0) - (a.sentAt || 0));
-    if (!document.getElementById("videoTipsModalBackdrop").classList.contains("hidden")) renderVideoTipsList("mine");
+    if (!document.getElementById("videoTipsModalBackdrop").classList.contains("hidden") && videoTipsModalMode === "mine") renderVideoTipsList("mine");
     if (!document.getElementById("profileModalBackdrop").classList.contains("hidden")) applyTipsSectionsVisibility();
   }, (err) => {
     console.warn("Sledování vlastních tipů selhalo:", err);
@@ -13663,7 +13665,11 @@ document.getElementById("trainingNameInput").addEventListener("input", (e) => {
 });
 
 
-["pickerSearch", "pickerFolderFilter", "pickerPartFilter"].forEach(id => {
+/* Hledání v panelu stačí překreslit při psaní („input“). „change“ přichází, až pole ztratí
+   fokus — tedy právě ve chvíli, kdy trenér ťukne na „+“ u nalezeného videa, a překreslení
+   mu tlačítko vymění pod prstem (první ťuknutí se ztratilo, 8. 10. 2026). Výběry dál na obojí. */
+document.getElementById("pickerSearch").addEventListener("input", renderPickerList);
+["pickerFolderFilter", "pickerPartFilter"].forEach(id => {
   document.getElementById(id).addEventListener("input", renderPickerList);
   document.getElementById(id).addEventListener("change", renderPickerList);
 });
