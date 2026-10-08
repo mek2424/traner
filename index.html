@@ -701,6 +701,21 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;
   width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:50%;
 }
+/* Zástupné obrázky TEXT / VIDEO a vodoznak (kolo 2, 8. 10. 2026 — návrh Mek, Claude Design). */
+.tx-thumb{--tx-bg:#E9ECE4;--tx-ink:#ADB5A9;--tx-label:#6B7684;display:block;}
+body.dark-mode .tx-thumb,html.dark-mode-preload body .tx-thumb{--tx-bg:#2A323D;--tx-ink:#566271;--tx-label:#9BA4B0;}
+.card-thumb.ph{background:none;}
+.card-thumb.ph > svg.tx-thumb,.thumb-preview > svg.tx-thumb{position:absolute;inset:0;}
+.thumb-preview{position:relative;}
+.card-thumb.foto::after{content:"";position:absolute;left:0;right:0;bottom:0;height:38%;background:linear-gradient(to top,rgba(0,0,0,.38),rgba(0,0,0,0));pointer-events:none;z-index:1;}
+.card-thumb .wm{position:absolute;left:50%;bottom:9px;transform:translateX(-50%);height:15%;min-height:11px;opacity:.9;pointer-events:none;z-index:2;line-height:0;}
+.card-thumb .wm .wm-svg{height:100%;width:auto;display:block;}
+.card-thumb .platform-badge,.card-thumb .card-fav-btn{z-index:5;}
+.grid.list-mode .card-thumb .wm,.grid.list-mode .card-thumb.foto::after{display:none;}
+div.tx-mini-ph,span.tx-mini-ph{position:relative;overflow:hidden;display:block;padding:0;}
+.tx-mini-ph > svg.tx-thumb{position:absolute;inset:0;}
+div.tx-mini-foto,span.tx-mini-foto{position:relative;display:block;background-size:cover;background-position:center;background-repeat:no-repeat;}
+.tx-mini-badge{position:absolute;right:2px;bottom:2px;width:12px;height:12px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:6.5px;display:flex;align-items:center;justify-content:center;pointer-events:none;}
 .card-body{padding:9px 10px 11px;flex:1;display:flex;flex-direction:column;gap:5px;}
 .card-title{font-size:13.5px;font-weight:600;line-height:1.3;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
@@ -1116,6 +1131,11 @@ body.popout-mode .popout-btn{display:none !important;}
   width:100%;height:100%;background-color:#2b2f36;background-size:cover;background-position:center;
   display:flex;align-items:center;justify-content:center;
 }
+/* Textové cvičení v detailu (kolo 2): fotka, nebo zástupný obrázek TEXT přes celý rámeček. */
+.detail-text-thumb{width:100%;height:100%;position:relative;background-color:var(--paper);background-size:cover;background-position:center;}
+.detail-text-thumb > svg.tx-thumb{position:absolute;inset:0;}
+.chip.chip-texttag i{font-size:.85em;opacity:.8;}
+.manage-link.seq-save-lib{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:12px;text-align:left;line-height:1.3;}
 /* ---------- Rozpadací řádek pod videem (17. 9.) ---------- */
 .detail-titlerow{display:flex;align-items:flex-start;gap:8px;}
 .detail-titlerow .detail-title{flex:1;min-width:0;margin-bottom:8px;}
@@ -1293,7 +1313,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
   display:flex;gap:8px;align-items:center;padding:7px;border-radius:var(--radius-sm);border:1px solid transparent;
 }
 .picker-item:hover{background:var(--paper);}
-.picker-item img{width:46px;height:30px;object-fit:cover;border-radius:4px;background:var(--line);flex-shrink:0;cursor:pointer;}
+.picker-item img,.picker-item .picker-thumb{width:46px;height:30px;object-fit:cover;border-radius:4px;background-color:var(--line);flex-shrink:0;cursor:pointer;}
 .picker-item-title{font-size:12.5px;font-weight:600;line-height:1.25;flex:1;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 .picker-item button{flex-shrink:0;}
@@ -1503,7 +1523,8 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
 .seq-group-video-reps{width:66px;flex-shrink:0;border:1px solid var(--line);border-radius:5px;padding:5px 7px;font-size:13px;font-weight:700;color:var(--chalk-dark);}
 .seq-group-video-duration{width:50px;flex-shrink:0;border:1px solid var(--line);border-radius:5px;padding:5px 7px;font-size:13px;font-weight:700;color:var(--court-dark);text-align:center;}
 .seq-group-dosage-pair{display:inline-flex;align-items:center;gap:4px;flex-shrink:0;}
-.seq-group-video-cue{width:100%;border:1px solid var(--line);border-radius:5px;padding:5px 7px;font-size:12.5px;font-style:italic;}
+.seq-group-video-cue{width:100%;border:1px solid var(--line);border-radius:5px;padding:5px 7px;font-size:12.5px;font-style:italic;background:var(--paper);color:var(--ink);}
+/* Tmavý režim: pole cue ve skupině mělo bílé pozadí prohlížeče (nález 8. 10., Mek: opravit). */
 .seq-group-video-note{width:100%;border:1px solid var(--line);border-radius:5px;padding:5px 7px;font-size:12.5px;font-family:inherit;resize:vertical;height:26px;min-height:26px;}
 .seq-group-video-row.is-break-row{background:var(--break-row-bg);}
 .seq-group-break-label{flex:1;min-width:100px;border:1px solid var(--line);border-radius:5px;padding:5px 7px;font-size:12.5px;font-family:var(--font-display);letter-spacing:.02em;background:var(--card);}
@@ -1880,6 +1901,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
         <button class="btn btn-accent" id="openAddLinkMenuBtn"><i class="fa-solid fa-cloud-arrow-up"></i> <span class="add-link-btn-label">Přidat</span> <i class="fa-solid fa-chevron-down add-link-btn-chevron"></i></button>
         <div class="add-link-menu hidden" id="addLinkMenu">
           <button type="button" class="add-link-item" id="openAddLinkBtn"><i class="fa-solid fa-link add-link-icon"></i><span class="add-link-label">Přidat odkaz</span></button>
+          <button type="button" class="add-link-item" id="openAddTextBtn"><i class="fa-solid fa-align-left add-link-icon"></i><span class="add-link-label">Přidat textové cvičení</span></button>
           <button type="button" class="add-link-item hidden" id="openBulkDriveBtn"><i class="fa-brands fa-google-drive add-link-icon"></i><span class="add-link-label">Hromadně ze složky Disku</span></button>
         </div>
       </div>
@@ -2044,12 +2066,13 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
         <i class="fa-solid fa-paper-plane"></i>
         <span>Tip půjde adminovi ke schválení.</span>
       </div>
-      <div class="field">
-        <label for="linkUrl">Odkaz (YouTube, Facebook, Disk, jiné)</label>
+      <div class="field" id="linkUrlField">
+        <label for="linkUrl" id="linkUrlLabel">Odkaz (YouTube, Facebook, Disk, jiné)</label>
         <div class="url-row">
-          <input type="url" id="linkUrl" placeholder="https://…" required>
+          <input type="url" id="linkUrl" placeholder="https://…">
           <button type="button" class="btn btn-sm btn-ghost" id="fetchMetaBtn"><i class="fa-solid fa-arrow-rotate-right"></i> Načíst znovu</button>
         </div>
+        <div class="folder-hidden-hint hidden" id="linkUrlTextHint"><i class="fa-solid fa-circle-info"></i><span>Nepovinné. Když vložíš odkaz, z textového cvičení se stane video.</span></div>
       </div>
       <div class="duplicate-warning hidden" id="fbShareWarning">
         <i class="fa-solid fa-triangle-exclamation"></i>
@@ -2069,7 +2092,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
         <label class="btn btn-sm" for="thumbFileInput"><i class="fa-solid fa-image"></i> Nahrát vlastní náhled</label>
         <input type="file" id="thumbFileInput" accept="image/*">
       </div>
-      <div class="field">
+      <div class="field" id="linkAspectField">
         <label for="linkAspectRatio">Tvar videa (u YouTube, Disku a nahraných souborů aplikace pozná sama, tohle je jen pro Facebook a ostatní)</label>
         <select id="linkAspectRatio">
           <option value="9/16">Na výšku (9:16 — mobil/Reels/Shorts)</option>
@@ -2139,7 +2162,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
           </div>
         </div>
       </div>
-      <div class="field">
+      <div class="field" id="linkTimestampField">
         <label for="linkTimestamp">Čas ve videu (mm:ss, nepovinné)</label>
         <input type="text" id="linkTimestamp" placeholder="např. 2:15" pattern="[0-9]{1,3}:[0-9]{2}">
       </div>
@@ -2285,6 +2308,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
     </div>
     <div class="modal-actions">
       <button type="button" class="btn btn-primary" id="saveTextExerciseDetailBtn"><i class="fa-solid fa-floppy-disk"></i> Uložit</button>
+      <button type="button" class="btn" id="saveTextExerciseToLibraryBtn"><i class="fa-solid fa-book-medical"></i> <span>Uložit do knihovny</span></button>
     </div>
   </div>
 </div>
@@ -3363,7 +3387,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-10-08 08:55";
+const APP_VERSION = "2026-10-08 11:08";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -3387,6 +3411,8 @@ let editingLinkId = null;       // id knihovní položky, když se edituje
    Schválně jeden formulář místo tří: kdyby byly tři, dřív nebo později se rozejdou. */
 let linkModalMode = "normal";
 let approvingTip = null;        // dokument tipu, který admin právě zařazuje (režim "approve")
+let linkFormText = false;       // formulář je pro textové cvičení (kolo 2) — odkaz nepovinný
+let linkFormZTreninku = null;   // { trainingId, itemId, memberId } — „Uložit do knihovny“ z tréninku
 let currentTrainingId = null;   // id tréninku otevřeného v editoru
 let editorReadOnly = false;     // true, když prohlížím trénink kolegy (nejde upravovat)
 let currentDetailId = null;     // id knihovní položky v detail modalu
@@ -3437,7 +3463,30 @@ function scheduleLinkAutoFetch(delay) {
     fetchLinkMeta();
   }, delay);
 }
+/** Textový režim formuláře (kolo 2): odkaz je nepovinný, tvar a čas ve videu se ukážou až
+    s vloženým odkazem, zástupný obrázek TEXT se při vložení odkazu změní na VIDEO. */
+function aktualizujTextovyRezimFormulare() {
+  const url = document.getElementById("linkUrl").value.trim();
+  // U textového cvičení je odkaz až dole pod vybavením — je nepovinný a nemá být první věc,
+  // kterou trenér ve formuláři vidí. U videa zůstává nahoře jako dřív.
+  const urlPole = document.getElementById("linkUrlField");
+  const fbVarovani = document.getElementById("fbShareWarning");
+  const kotva = linkFormText ? linkForm.querySelector(".two-col") : document.getElementById("duplicateWarning");
+  // Přesouvá se jen když je potřeba — přesun pole by mu při psaní vzal kurzor.
+  const naMiste = urlPole.nextElementSibling === fbVarovani && fbVarovani.nextElementSibling === kotva;
+  if (kotva && !naMiste) {
+    kotva.parentNode.insertBefore(urlPole, kotva);
+    kotva.parentNode.insertBefore(fbVarovani, kotva);
+  }
+  document.getElementById("linkUrlLabel").textContent = linkFormText ? "Odkaz na video" : "Odkaz (YouTube, Facebook, Disk, jiné)";
+  document.getElementById("linkUrlTextHint").classList.toggle("hidden", !linkFormText);
+  const videoPole = !linkFormText || !!url;
+  ["linkAspectField", "linkTimestampField"].forEach(fid => document.getElementById(fid).classList.toggle("hidden", !videoPole));
+  const tp = document.getElementById("thumbPreview");
+  if (tp.querySelector("svg.tx-thumb")) tp.innerHTML = (linkFormText && !url) ? PH_TEXT_SVG : PH_VIDEO_SVG;
+}
 document.getElementById("linkUrl").addEventListener("input", () => {
+  aktualizujTextovyRezimFormulare();
   updateFbShareWarning();
   scheduleLinkAutoFetch(LINK_AUTOFETCH_DELAY_MS);
 });
@@ -3902,7 +3951,7 @@ const isEditor = () => state.myRole !== "viewer";
     prohlížeč knihovnu jen čte a tvoří si vlastní tréninky. */
 function applyRoleUI() {
   const editor = isEditor();
-  ["openAddLinkMenuBtn", "openAddLinkBtn", "toggleSelectModeBtn", "openTrashBtn", "openBulkDriveBtn"]
+  ["openAddLinkMenuBtn", "openAddLinkBtn", "openAddTextBtn", "toggleSelectModeBtn", "openTrashBtn", "openBulkDriveBtn"]
     .forEach(id => { const el = document.getElementById(id); if (el) el.classList.toggle("hidden", !editor); });
   /* Tyhle tři ovlivňují úplně všechny trenéry najednou — barvy a pořadí složek, sloučení
      štítku napříč celou knihovnou, části tréninku v PDF. Proto je smí jen admin, ne každý
@@ -4382,6 +4431,54 @@ function resolveThumbnailUrl(item) {
     return state.thumbnails[item.id] || "";
   }
   return (item && item.thumbnail) || "";
+}
+
+/* =========================================================
+   TEXTOVÁ CVIČENÍ V KNIHOVNĚ (kolo 2, 8. 10. 2026)
+   Textové cvičení = položka knihovny BEZ odkazu na video (url prázdné, platform "text").
+   Je to plnohodnotné cvičení, ne „video, kterému chybí video“ — doplněním odkazu se z něj
+   stane video, smazáním odkazu zase textové cvičení. Štítek „Textové cvičení“ se neukládá,
+   dopočítává se (stitkyPolozky). Zástupné obrázky TEXT / VIDEO navrhl Mek v Claude Design
+   (claude/trener-placeholdery.md); vodoznak přes fotky = Mekova varianta C.
+   ========================================================= */
+const TEXT_TAG = "Textové cvičení";
+function jeTextove(item) { return !!item && !String(item.url || "").trim(); }
+/** Štítky položky včetně dopočítaného „Textové cvičení“ (hledání, filtry, detail). */
+function stitkyPolozky(item) {
+  const t = (item && item.tags) || [];
+  return jeTextove(item) ? [TEXT_TAG, ...t.filter(x => x !== TEXT_TAG)] : t;
+}
+const PH_TEXT_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 90" preserveAspectRatio="xMidYMid slice" class="tx-thumb" width="100%" height="100%" aria-hidden="true"><rect x="0" y="0" width="160" height="90" style="fill:var(--tx-bg,#E9ECE4)"/><rect x="40" y="30" width="4" height="16" rx="2" style="fill:var(--tx-accent,#339933)"/><text x="50" y="46" style="fill:var(--tx-label,#6B7684);font-family:'Bebas Neue',Impact,sans-serif;font-size:22px;letter-spacing:2.5px">TEXT</text><rect x="40" y="56" width="80" height="6" rx="3" style="fill:var(--tx-ink,#ADB5A9)"/><rect x="40" y="67" width="56" height="6" rx="3" style="fill:var(--tx-ink,#ADB5A9)"/></svg>`;
+const PH_VIDEO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 90" preserveAspectRatio="xMidYMid slice" class="tx-thumb" width="100%" height="100%" aria-hidden="true"><rect x="0" y="0" width="160" height="90" style="fill:var(--tx-bg,#E9ECE4)"/><circle cx="51" cy="38" r="11" style="fill:var(--tx-accent,#339933)"/><path d="M47.8 33.2V42.8Q47.8 44.2 49 43.5L56.4 38.9Q57.5 38 56.4 37.1L49 32.5Q47.8 31.8 47.8 33.2Z" style="fill:#FFFFFF"/><text x="68" y="46" style="fill:var(--tx-label,#6B7684);font-family:'Bebas Neue',Impact,sans-serif;font-size:22px;letter-spacing:2.5px">VIDEO</text><rect x="40" y="61" width="80" height="5" rx="2.5" style="fill:var(--tx-ink,#ADB5A9)"/><rect x="40" y="61" width="28" height="5" rx="2.5" style="fill:var(--tx-accent,#339933)"/></svg>`;
+const VODOZNAK_VIDEO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 76 24" class="wm-svg" aria-hidden="true"><circle cx="11" cy="12" r="10" fill="#fff"/><path d="M8 7.6V16.4Q8 17.7 9.1 17L15.9 12.8Q16.9 12 15.9 11.2L9.1 7Q8 6.3 8 7.6Z" fill="#1B2430"/><text x="26" y="20" fill="#fff" style="font-family:'Bebas Neue',Impact,sans-serif;font-size:21px;letter-spacing:2.2px">VIDEO</text></svg>`;
+const VODOZNAK_TEXT_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 54 24" class="wm-svg" aria-hidden="true"><rect x="1" y="3" width="4" height="17" rx="2" fill="#fff"/><text x="11" y="20" fill="#fff" style="font-family:'Bebas Neue',Impact,sans-serif;font-size:21px;letter-spacing:2.2px">TEXT</text></svg>`;
+const TEXT_ODZNAK_IKONA = "fa-solid fa-align-left";
+/** Zástupný obrázek pro položku bez fotky (TEXT, nebo VIDEO u videa bez náhledu). */
+function zastupnyObrazekHtml(item) { return jeTextove(item) ? PH_TEXT_SVG : PH_VIDEO_SVG; }
+/** Vodoznak přes fotku na kartě (jen velké náhledy). */
+function vodoznakHtml(item) { return `<span class="wm">${jeTextove(item) ? VODOZNAK_TEXT_SVG : VODOZNAK_VIDEO_SVG}</span>`; }
+/** Malý náhled (panel v editoru, řádek tréninku, skupina, Přehled): fotka, nebo zástupný
+    obrázek; textové cvičení s fotkou dostane malou značku (Mekova varianta C — videa čistá).
+    `cls` = třída, která dává rozměry, `attrs` = data-* pro otevření detailu. */
+/** Štítek „Textové cvičení“ přidává aplikace sama — ručně ho založit nejde (Claude určil,
+    otázka 4 brainstormingu): jinak by se dal přidat i videu a filtr by lhal. */
+function jeTextTag(v) { return String(v || "").trim().toLocaleLowerCase("cs") === TEXT_TAG.toLocaleLowerCase("cs"); }
+function odmitniTextTag(v) {
+  if (!jeTextTag(v)) return false;
+  toast(`Štítek „${TEXT_TAG}“ dává aplikace sama všem cvičením bez videa.`, 4500, "info");
+  return true;
+}
+/** Nabídka štítků do filtru: „Textové cvičení“ na začátku, když nějaké textové cvičení v rozsahu je. */
+function sTextTagem(stitky, polozky) {
+  const bez = stitky.filter(t => !jeTextTag(t));
+  return polozky.some(it => !it.deletedAt && jeTextove(it)) ? [TEXT_TAG, ...bez] : bez;
+}
+function malyNahledHtml(item, cls, attrs) {
+  const url = resolveThumbnailUrl(item);
+  const a = attrs || "";
+  if (!url) return `<div class="${cls} tx-mini-ph"${a}>${zastupnyObrazekHtml(item)}</div>`;
+  if (jeTextove(item)) return `<div class="${cls} tx-mini-foto" style="background-image:url('${esc(url)}')"${a}><span class="tx-mini-badge"><i class="${TEXT_ODZNAK_IKONA}"></i></span></div>`;
+  return `<img class="${cls}" src="${esc(url)}" alt=""${a}>`;
 }
 
 /** Zápis náhledu do Firestore, do vlastní kolekce sharedThumbnails — jeden dokument na video,
@@ -6594,11 +6691,13 @@ function renderFilterChips(containerId, pool, filterSet, onChange) {
   });
 }
 function tagsUsedInActiveFolder(field) {
-  if (!activeFolderFilter) return field === "tags" ? state.tagPool : state.equipmentPool;
+  const vRozsahu = Object.values(state.library).filter(it => !activeFolderFilter || it.folderId === activeFolderFilter);
+  if (!activeFolderFilter) return field === "tags" ? sTextTagem(state.tagPool, vRozsahu) : state.equipmentPool;
   const used = new Set();
-  Object.values(state.library).filter(it => it.folderId === activeFolderFilter).forEach(it => (it[field] || []).forEach(t => used.add(t)));
+  vRozsahu.forEach(it => (it[field] || []).forEach(t => used.add(t)));
   const pool = field === "tags" ? state.tagPool : state.equipmentPool;
-  return pool.filter(t => used.has(t));
+  const out = pool.filter(t => used.has(t));
+  return field === "tags" ? sTextTagem(out, vRozsahu) : out;
 }
 function renderTagFilterRow() { renderFilterChips("tagFilterRow", tagsUsedInActiveFolder("tags"), libraryTagFilter, () => { renderTagFilterRow(); renderEquipFilterRow(); renderLibrary(); }); }
 function renderEquipFilterRow() { renderFilterChips("equipFilterRow", tagsUsedInActiveFolder("equipment"), libraryEquipFilter, () => { renderTagFilterRow(); renderEquipFilterRow(); renderLibrary(); }); }
@@ -6672,12 +6771,12 @@ function getFilteredLibraryItems() {
       const itFolder = getFolder(item.folderId);
       if (itFolder && itFolder.hiddenFromMain) return false; // schovaná složka — dokud ji nikdo výslovně nevybere nebo nehledá, aplikace ji v hlavním seznamu vynechá
     }
-    if (libraryTagFilter.size && ![...libraryTagFilter].every(t => item.tags.includes(t))) return false;
+    if (libraryTagFilter.size && ![...libraryTagFilter].every(t => stitkyPolozky(item).includes(t))) return false;
     if (libraryEquipFilter.size && ![...libraryEquipFilter].every(t => item.equipment.includes(t))) return false;
     if (libraryUploaderFilter.size && !libraryUploaderFilter.has(item.addedBy || UNKNOWN_UPLOADER_KEY)) return false;
     if (q) {
       const folderLabel = getFolder(item.folderId) ? getFolder(item.folderId).label : "";
-      const hay = [item.title, folderLabel, ...(item.tags || []), item.shortDesc].join(" ").toLowerCase();
+      const hay = [item.title, folderLabel, ...stitkyPolozky(item), item.shortDesc].join(" ").toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -6695,7 +6794,8 @@ function getFilteredLibraryItems() {
 }
 
 const PLATFORM_ICONS = { youtube: "fa-brands fa-youtube", facebook: "fa-brands fa-facebook", drive: "fa-brands fa-google-drive", instagram: "fa-brands fa-instagram", tiktok: "fa-brands fa-tiktok", file: "fa-solid fa-film", other: "fa-solid fa-link" };
-const NO_THUMB_HTML = '<i class="fa-solid fa-clapperboard thumb-empty-icon"></i><span class="thumb-empty-label">Bez náhledu</span>';
+// Dřívější NO_THUMB_HTML (zelený přechod s klapkou „Bez náhledu“) nahradil 8. 10. 2026
+// zástupný obrázek VIDEO / TEXT — viz zastupnyObrazekHtml.
 /** Vrátí hotové HTML pro "prázdný stav" (kolečko s ikonou + nadpis + text) — používá se pro
     prázdnou knihovnu, prázdné tréninky, prázdný koš apod., ať to vždycky vypadá stejně. */
 function emptyStateHtml(icon, title, text) {
@@ -6755,10 +6855,10 @@ function renderLibrary() {
       ${(item.dateAdded > sessionBadgeThreshold && !selectMode) ? '<span class="new-badge" title="Nové od posledního přihlášení"></span>' : ""}
       <button type="button" class="card-select-box ${selectMode ? "" : "hidden"} ${isSelected ? "checked" : ""}" data-action="toggle-select" aria-label="Vybrat">${isSelected ? '<i class="fa-solid fa-check"></i>' : ""}</button>
       <button type="button" class="card-menu-btn" data-action="open-menu" aria-label="Menu"><i class="fa-solid fa-ellipsis-vertical"></i></button>
-      <div class="card-thumb" data-action="open-detail" style="${thumbUrl ? `background-image:url('${esc(thumbUrl)}')` : ""}">
-        ${thumbUrl ? "" : NO_THUMB_HTML}
+      <div class="card-thumb ${thumbUrl ? "foto" : "ph"}" data-action="open-detail" style="${thumbUrl ? `background-image:url('${esc(thumbUrl)}')` : ""}">
+        ${thumbUrl ? vodoznakHtml(item) : zastupnyObrazekHtml(item)}
         ${isEditor() ? `<button type="button" class="card-fav-btn ${item.favorite ? "on" : ""}" data-action="toggle-fav" aria-label="Oblíbené"><i class="fa-solid fa-star"></i></button>` : ""}
-        <span class="platform-badge"><i class="${PLATFORM_ICONS[item.platform] || PLATFORM_ICONS.other}"></i></span>
+        <span class="platform-badge"${jeTextove(item) ? ' title="Textové cvičení"' : ""}><i class="${jeTextove(item) ? TEXT_ODZNAK_IKONA : (PLATFORM_ICONS[item.platform] || PLATFORM_ICONS.other)}"></i></span>
       </div>
       <div class="card-body" data-action="open-detail">
         <div class="card-title">${esc(item.title)}</div>
@@ -7095,6 +7195,7 @@ document.addEventListener("click", (e) => {
   if (!menu.classList.contains("hidden") && !e.target.closest(".add-link-menu-wrap")) setAddLinkMenuOpen(false);
 });
 document.getElementById("openAddLinkBtn").addEventListener("click", () => { setAddLinkMenuOpen(false); openLinkModal(null); });
+document.getElementById("openAddTextBtn").addEventListener("click", () => { setAddLinkMenuOpen(false); openLinkModal(null, { text: true }); });
 document.getElementById("closeLinkModalBtn").addEventListener("click", closeLinkModal);
 // Kliknutí mimo formulář ho záměrně nezavírá (na rozdíl od ostatních oken aplikace) — u
 // rozepsaného přidávání/úpravy videa by to jinak snadno vedlo k nechtěné ztrátě práce.
@@ -7148,8 +7249,15 @@ function openLinkModal(id, opts) {
   pendingThumbUpload = null;
   document.getElementById("thumbFileInput").value = "";
   const item = id ? state.library[id] : null;
+  // Textové cvičení (kolo 2): upravované bez odkazu, nové z „Přidat textové cvičení“ nebo
+  // z tréninku, zařazovaný tip bez odkazu.
+  linkFormText = item ? jeTextove(item)
+    : (linkModalMode === "approve" ? !String((approvingTip && approvingTip.url) || "").trim() : !!opts.text);
+  linkFormZTreninku = (!item && opts.zTreninku) ? opts.zTreninku : null;
   document.getElementById("popoutLinkBtn").classList.toggle("hidden", !id);
-  document.getElementById("linkModalTitle").textContent = item ? "Upravit odkaz" : "Přidat odkaz";
+  document.getElementById("linkModalTitle").textContent = linkFormText
+    ? (item ? "Upravit textové cvičení" : (linkFormZTreninku ? "Uložit do knihovny" : "Přidat textové cvičení"))
+    : (item ? "Upravit odkaz" : "Přidat odkaz");
   document.getElementById("linkUrl").value = item ? item.url : "";
   metaFetchedForUrl = item ? item.url : "";
   document.getElementById("fetchMetaBtn").classList.remove("pulse");
@@ -7173,7 +7281,7 @@ function openLinkModal(id, opts) {
   document.getElementById("linkLongDesc").innerHTML = mergedDescHtml;
   document.getElementById("linkLongDesc").dataset.placeholder = pickRandomDescPlaceholder();
   document.getElementById("thumbPreview").style.backgroundImage = item && resolveThumbnailUrl(item) ? `url('${resolveThumbnailUrl(item)}')` : "none";
-  document.getElementById("thumbPreview").innerHTML = item && resolveThumbnailUrl(item) ? "" : NO_THUMB_HTML;
+  document.getElementById("thumbPreview").innerHTML = item && resolveThumbnailUrl(item) ? "" : (linkFormText ? PH_TEXT_SVG : PH_VIDEO_SVG);
   document.getElementById("thumbPreview").dataset.thumb = item ? (item.thumbnail || "") : "";
   document.getElementById("thumbPreview").dataset.platform = item ? item.platform : "";
   document.getElementById("thumbPreview").dataset.videoId = item ? (item.videoId || "") : "";
@@ -7215,6 +7323,18 @@ function openLinkModal(id, opts) {
     document.getElementById("linkUrl").value = opts.prefillUrl;
     metaFetchedForUrl = ""; // info se pro tenhle odkaz ještě nestahovalo
   }
+  // „Uložit do knihovny“ z tréninku (kolo 2, otázka 24 = A): předvyplní se, co cvičení
+  // v tréninku má; složku (a případně fotku) doplní trenér.
+  if (!item && opts.prefill) {
+    const pf = opts.prefill;
+    document.getElementById("linkTitle").value = pf.title || "";
+    document.getElementById("linkLongDesc").innerHTML = pf.longDescHtml || "";
+    if (pf.defaultPart && state.parts.some(p => p.key === pf.defaultPart)) document.getElementById("linkDefaultPart").value = pf.defaultPart;
+    formTags = (pf.tags || []).filter(t => !jeTextTag(t));
+    formEquip = [...(pf.equipment || [])];
+    renderTagPills();
+    renderEquipPills();
+  }
 
   // Prohlížeč smí v tomhle formuláři upravit jen svoje hodnocení/obtížnost —
   // zbytek aplikace zamkne needitovatelný, ale dál viditelný pro přehled.
@@ -7245,6 +7365,9 @@ function openLinkModal(id, opts) {
 
   updateFolderHiddenHint();
   updateFbShareWarning();
+  aktualizujTextovyRezimFormulare();
+  // Náhodné výzvy k popisu mluví o videu („Video může zmizet…“) — u textového cvičení vlastní.
+  if (linkFormText) document.getElementById("linkLongDesc").dataset.placeholder = "Popiš cvičení tak, aby ho podle textu zvládl vést i kolega, který ho nikdy neviděl.";
   document.getElementById("tagWrap").classList.remove("field-missing");
   document.getElementById("equipWrap").classList.remove("field-missing");
 
@@ -7257,7 +7380,7 @@ function openLinkModal(id, opts) {
   linkModalBackdrop.classList.toggle("above-profile", linkModalMode !== "normal");
   renderTipEmbed(linkModalMode === "approve" ? approvingTip : null);
   if (linkModalMode === "tip") {
-    document.getElementById("linkModalTitle").textContent = "Poslat tip na video";
+    document.getElementById("linkModalTitle").textContent = linkFormText ? "Poslat tip na textové cvičení" : "Poslat tip na video";
     submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Poslat tip';
     document.getElementById("deleteLinkBtn").classList.add("hidden");
     document.getElementById("popoutLinkBtn").classList.add("hidden");
@@ -7284,7 +7407,8 @@ function openLinkModal(id, opts) {
     jinak by hrál dál na pozadí, stejně jako u detailu videa. */
 function renderTipEmbed(tip) {
   const wrap = document.getElementById("tipEmbedWrap");
-  const showEmbed = !!tip;
+  // Tip na textové cvičení (kolo 2) nemá co přehrát — ukáže se náhled jako u běžného formuláře.
+  const showEmbed = !!tip && !!String(tip.url || "").trim();
   const item = showEmbed ? {
     platform: tip.platform, videoId: tip.videoId, url: tip.url,
     timestamp: tip.timestamp, aspectRatio: tip.aspectRatio || "16/9"
@@ -7521,7 +7645,7 @@ function findDuplicateLibraryItem(platform, videoId, url) {
     if (it.deletedAt) return false; // co je v koši, se za duplicitu nepočítá
     if (editingLinkId && id === editingLinkId) return false; // sama sebe (při úpravě) nepočítat
     if (videoId && it.platform === platform && it.videoId === videoId) return true;
-    if (!videoId && it.url === url) return true;
+    if (!videoId && url && it.url === url) return true;
     return false;
   });
 }
@@ -7579,6 +7703,7 @@ function currentUserDisplayLabel() {
   return (state.profile && state.profile.username) || (auth.currentUser && auth.currentUser.email) || uidCurrent;
 }
 function addTag(v) {
+  if (odmitniTextTag(v)) return;
   v = normalizeAgainstPool(v.trim(), state.tagPool);
   if (v && !formTags.includes(v)) { formTags.push(v); renderTagPills(); }
 }
@@ -7729,7 +7854,7 @@ function orderLinkFormSuggestions(field) {
 setupAutocomplete("tagInput", "tagAutocomplete", () => state.tagPool, () => formTags, addTag, orderLinkFormSuggestions("tags"));
 setupAutocomplete("equipInput", "equipAutocomplete", () => state.equipmentPool, () => formEquip, addEquip, orderLinkFormSuggestions("equipment"));
 setupAutocomplete("bulkTagInput", "bulkTagAutocomplete", () => state.tagPool, () => bulkTagAddList,
-  (v) => { if (!bulkTagAddList.includes(v)) { bulkTagAddList.push(v); renderBulkTagAddPills(); } }, null, true);
+  (v) => { if (odmitniTextTag(v)) return; if (!bulkTagAddList.includes(v)) { bulkTagAddList.push(v); renderBulkTagAddPills(); } }, null, true);
 setupAutocomplete("bulkEquipInput", "bulkEquipAutocomplete", () => state.equipmentPool, () => bulkEquipAddList,
   (v) => { if (!bulkEquipAddList.includes(v)) { bulkEquipAddList.push(v); renderBulkEquipAddPills(); } }, null, true);
 
@@ -7787,7 +7912,7 @@ function renderDetailChips(item) {
   // Třídy podle druhu štítku — v Knihovně se nic nemění, ale karta otevřená z tréninku si díky
   // nim nechá jen nářadí (viz .tmf-sheet v CSS).
   if (detailFolder) chips.push(`<span class="chip chip-folder" style="border-color:${esc(detailFolder.color)};color:${esc(detailFolder.color)};">${esc(detailFolder.label)}</span>`);
-  item.tags.forEach(t => chips.push(`<span class="chip chip-tag">${esc(t)}</span>`));
+  stitkyPolozky(item).forEach(t => chips.push(`<span class="chip chip-tag${jeTextTag(t) ? " chip-texttag" : ""}">${jeTextTag(t) ? `<i class="${TEXT_ODZNAK_IKONA}"></i> ` : ""}${esc(t)}</span>`));
   item.equipment.forEach(t => chips.push(`<span class="chip chip-equip"><i class="fa-solid fa-wrench"></i> ${esc(t)}</span>`));
   const dAvg = avgOf(item.difficulties), rAvg = avgOf(item.ratings);
   chips.push(`<span class="chip chip-rating">Obtížnost ${dAvg.count ? renderDiffBarsHtml(dAvg.avg, "lg") : "—"}${dAvg.count > 1 ? ` (${dAvg.count}×)` : ""}</span>`);
@@ -7860,6 +7985,22 @@ linkForm.addEventListener("submit", async (e) => {
     document.getElementById("fbShareWarning").scrollIntoView({ block: "center", behavior: "smooth" });
     return;
   }
+  // Odkaz (kolo 2): u videa povinný, u textového cvičení ne. Smazáním odkazu u uloženého videa
+  // se z něj stane textové cvičení — to se potvrzuje, ať se to nestane omylem.
+  const urlZadany = document.getElementById("linkUrl").value.trim();
+  if (!urlZadany && !linkFormText) {
+    const upravovane = editingLinkId ? state.library[editingLinkId] : null;
+    if (!upravovane) {
+      toast("Vlož odkaz na video.", 3500, "err");
+      document.getElementById("linkUrl").focus();
+      return;
+    }
+    if (isEditor()) {
+      const ok = await confirmDialog("Bez odkazu se z videa stane textové cvičení. Popis, štítky i hodnocení zůstanou, video zmizí. Pokračovat?",
+        { title: "Změnit na textové cvičení?", confirmLabel: "Změnit", cancelLabel: "Vrátit odkaz" });
+      if (!ok) { document.getElementById("linkUrl").focus(); return; }
+    }
+  }
   const missingFields = missingRequiredLinkFields();
   if (missingFields.length) { showMissingRequiredLinkFields(missingFields); return; }
   // Jemné (ne blokující) nabádání k delšímu popisu (viz #96) — appka se jen zeptá, uložit
@@ -7886,8 +8027,11 @@ linkForm.addEventListener("submit", async (e) => {
   let url = document.getElementById("linkUrl").value.trim();
   if (url.includes("facebook.com")) url = normalizeFacebookUrl(url);
   else if (url.includes("instagram.com")) url = normalizeInstagramUrl(url);
-  const platform = document.getElementById("thumbPreview").dataset.platform || detectPlatform(url);
-  let videoId = document.getElementById("thumbPreview").dataset.videoId || null;
+  const jeText = !url;   // textové cvičení (kolo 2)
+  // Platforma z náhledu neplatí, když jde o doplnění odkazu k textovému cvičení (tam je "text").
+  const platformZNahledu = document.getElementById("thumbPreview").dataset.platform;
+  const platform = jeText ? "text" : ((platformZNahledu && platformZNahledu !== "text") ? platformZNahledu : detectPlatform(url));
+  let videoId = jeText ? null : (document.getElementById("thumbPreview").dataset.videoId || null);
   if (!videoId && platform === "youtube") videoId = extractYouTubeId(url);
   if (!videoId && platform === "drive") videoId = extractDriveId(url);
   if (!videoId && platform === "instagram") videoId = extractInstagramId(url);
@@ -7929,11 +8073,11 @@ linkForm.addEventListener("submit", async (e) => {
         thumbnail: pendingThumbUpload || document.getElementById("thumbPreview").dataset.thumb || "",
         folderId,
         defaultPart: document.getElementById("linkDefaultPart").value,
-        aspectRatio: document.getElementById("linkAspectRatio").value,
+        aspectRatio: jeText ? "" : document.getElementById("linkAspectRatio").value,
         tags: [...formTags],
         equipment: [...formEquip],
         longDesc: sanitizeRichHtml(document.getElementById("linkLongDesc").innerHTML),
-        timestamp: parseTimestampToSeconds(document.getElementById("linkTimestamp").value),
+        timestamp: jeText ? null : parseTimestampToSeconds(document.getElementById("linkTimestamp").value),
         fromUid: uidCurrent,
         fromLabel: myLabel(),
         sentAt: Date.now(),
@@ -7989,7 +8133,7 @@ linkForm.addEventListener("submit", async (e) => {
     thumbnail: thumbToSave,
     folderId,
     defaultPart: document.getElementById("linkDefaultPart").value,
-    aspectRatio: document.getElementById("linkAspectRatio").value,
+    aspectRatio: jeText ? "" : document.getElementById("linkAspectRatio").value,
     tags: [...formTags],
     equipment: [...formEquip],
     difficulties, ratings, notesByCoach,
@@ -7998,7 +8142,7 @@ linkForm.addEventListener("submit", async (e) => {
     // hodnotu (ta už je v tuhle chvíli sloučená do popisu níž, viz openLinkModal).
     shortDesc: "",
     longDesc: sanitizeRichHtml(document.getElementById("linkLongDesc").innerHTML),
-    timestamp: parseTimestampToSeconds(document.getElementById("linkTimestamp").value),
+    timestamp: jeText ? null : parseTimestampToSeconds(document.getElementById("linkTimestamp").value),
     dateAdded: editingLinkId ? (state.library[editingLinkId].dateAdded || Date.now()) : Date.now(),
     // Zařazený tip nese jméno toho, kdo ho poslal, ne admina, který ho zařadil — aby se dal
     // ve filtru „Kdo nahrál" najít pod ním. Filtr ani nic dalšího o tipech nic neví, čte
@@ -8010,7 +8154,8 @@ linkForm.addEventListener("submit", async (e) => {
      neukazuje, by se uložením tiše smazala (setDoc bez merge) — třeba označení „nefunkční“.
      Přenáší se proto z původního videa. */
   const replacedGone = !!(existing && existing.goneAt && (existing.url || "") !== url && uidCurrent === ADMIN_UID);
-  if (existing) {
+  // Textové cvičení nemá co být „nefunkční“ ani „zmizelé“ — označení se u něj nepřenáší.
+  if (existing && !jeText) {
     ["brokenAt", "goneAt", "goneResolvedAt", "autoCheck", "autoCheckIgnoreUrl"].forEach(f => {
       if (existing[f] !== undefined && existing[f] !== null) state.library[id][f] = existing[f];
     });
@@ -8033,10 +8178,13 @@ linkForm.addEventListener("submit", async (e) => {
       logDebug(`[tip] video uloženo, ale tip ${approvingTip.id} zůstal ve stavu "waiting" — objeví se v Došlých tipech znovu.`);
     }
   }
+  // „Uložit do knihovny“ z tréninku: položka v tréninku se změní v odkaz na knihovnu.
+  const zTreninku = linkFormZTreninku;
+  const prevedeno = zTreninku ? prevedTextoveNaKnihovnu(zTreninku, id) : false;
   scheduleSave();
   closeLinkModal();
   renderLibrary();
-  if (currentView === "editor") renderPickerList();
+  if (currentView === "editor") { renderPickerList(); if (prevedeno && zTreninku.trainingId === currentTrainingId) renderSequence(); }
   if (replacedGone) {
     renderPendingBadge();
     deleteGoneReportComments(id).catch(() => {});
@@ -8053,7 +8201,9 @@ linkForm.addEventListener("submit", async (e) => {
   // video v hlavním seznamu vidět nebude a bez vysvětlení to vypadá, že se neuložilo.
   // Úprava videa, které ve skryté složce už bylo, se znovu neohlašuje.
   const savedFolder = state.folders.find(f => f.key === folderId);
-  if (savedFolder && savedFolder.hiddenFromMain && (!existing || existing.folderId !== folderId)) {
+  if (prevedeno) {
+    toast("Uloženo do knihovny. V tréninku je teď odkaz na knihovnu.", 4500, "ok");
+  } else if (savedFolder && savedFolder.hiddenFromMain && (!existing || existing.folderId !== folderId)) {
     toast(`Uloženo do skryté složky „${savedFolder.label}“. V hlavním seznamu ho neuvidíš.`, 6000);
   } else {
     toast(linkModalMode === "approve" && approvingTip
@@ -8700,6 +8850,15 @@ function platformIconHtml(item) {
 }
 
 function renderDetailVideoControls(item) {
+  if (jeTextove(item)) {
+    // Textové cvičení nemá co přehrávat, hlásit ani otevírat u zdroje.
+    ["detailSrcBig", "detailSrcSmall", "detailUndoBrokenBtn", "detailBrokenToggleBtn", "detailReportBtn",
+      "detailReportThanks", "detailGoneAdmin", "detailGoneHint"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.add("hidden");
+    });
+    return;
+  }
   const jeZmizele = !!item.goneAt;                 // zmizelo u zdroje, potvrdil admin
   const jeRozbite = !!item.brokenAt && !jeZmizele; // nefunkční embed (u zdroje jde)
   const jeEditor = isEditor();
@@ -8788,7 +8947,15 @@ function openDetailModal(id) {
   embedWrap.style.height = ""; // reset z případného předchozího otevření
   embedWrap.style.maxHeight = "";
   embedWrap.style.aspectRatio = item.aspectRatio || "16/9";
-  if (item.brokenAt || item.goneAt) {
+  if (jeTextove(item)) {
+    // Textové cvičení (kolo 2): místo přehrávače fotka, nebo zástupný obrázek TEXT. Popis je
+    // hned pod tím jako u videa.
+    embedWrap.style.aspectRatio = "16/9";
+    const fotka = resolveThumbnailUrl(item);
+    embedWrap.innerHTML = fotka
+      ? `<div class="detail-text-thumb" style="background-image:url('${esc(fotka)}')"></div>`
+      : `<div class="detail-text-thumb">${PH_TEXT_SVG}</div>`;
+  } else if (item.brokenAt || item.goneAt) {
     // Video ručně označené jako nefunkční (#91/#95) — appka se ho ani nesnaží přehrát (byl by
     // to jen prázdný/rozbitý embed). Místo něj jen náhledový obrázek s jemným vodoznakem —
     // schválně nenápadný, appka o téhle informaci jinak nikde nekřičí. Přímý odkaz na zdroj je
@@ -8825,7 +8992,7 @@ function openDetailModal(id) {
     setupDriveVideoPlayback(embedWrap, item);
   }
   const hint = document.getElementById("detailTimestampHint");
-  if (item.timestamp) { hint.textContent = `Cvičení začíná v ${secondsToTimestamp(item.timestamp)}`; hint.classList.remove("hidden"); }
+  if (item.timestamp && !jeTextove(item)) { hint.textContent = `Cvičení začíná v ${secondsToTimestamp(item.timestamp)}`; hint.classList.remove("hidden"); }
   else { hint.classList.add("hidden"); }
   renderDetailVideoControls(item);
   renderDetailReviewPanel(item);
@@ -9367,7 +9534,7 @@ function renderVideoTipsList(mode) {
     const st = TIP_STATE_LABELS[t.status || "waiting"] || TIP_STATE_LABELS.waiting;
     const thumb = t.thumbnail
       ? `<div style="width:84px;aspect-ratio:16/9;border-radius:6px;flex:0 0 auto;background:center/cover no-repeat url('${esc(t.thumbnail)}');"></div>`
-      : `<div style="width:84px;aspect-ratio:16/9;border-radius:6px;flex:0 0 auto;background:var(--paper);border:1px dashed var(--line);"></div>`;
+      : `<div class="tx-mini-ph" style="width:84px;aspect-ratio:16/9;border-radius:6px;flex:0 0 auto;">${zastupnyObrazekHtml(t)}</div>`;
     const when = t.sentAt ? new Date(t.sentAt).toLocaleString("cs-CZ", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
     const meta = mode === "admin" ? `${esc(t.fromLabel || "neznámý trenér")} · ${when}` : when;
     const reason = t.status === "rejected" && t.rejectReason
@@ -10920,10 +11087,11 @@ function showTrainingModeVideo(lib, textItem) {
   // to jen prázdný/rozbitý embed). Chová se jako textové cvičení (dlouhý popis na místě videa),
   // ale navíc — na rozdíl od skutečného textového cvičení — pořád zůstane i přímý odkaz na
   // zdroj, protože tady je to jediná cesta, jak se k videu vůbec dostat.
-  if (lib && (lib.brokenAt || lib.goneAt)) {
+  if (lib && (lib.brokenAt || lib.goneAt || jeTextove(lib))) {
     wrap.classList.add("hidden"); wrap.innerHTML = "";
-    // U videa, které zmizelo u zdroje, by odkaz vedl do prázdna — nedává se.
-    const directLink = lib.goneAt ? "" : platformDirectLinkHtml(lib, "Otevřít přímo — ");
+    // U videa, které zmizelo u zdroje, by odkaz vedl do prázdna — nedává se. Textové cvičení
+    // z knihovny (kolo 2) odkaz nemá, chová se jako textové cvičení z tréninku.
+    const directLink = (lib.goneAt || jeTextove(lib)) ? "" : platformDirectLinkHtml(lib, "Otevřít přímo — ");
     fbEl.innerHTML = directLink;
     fbEl.classList.toggle("hidden", !directLink);
     const textHtml = richHasContent(lib.longDesc) ? richValueToHtml(lib.longDesc) : "";
@@ -11001,7 +11169,7 @@ function getTmCurrentInfo() {
       longDesc: v.isText ? (v.longDesc || "") : (lib ? lib.longDesc : ""),
       // Rozbité video se v "?" tlačítku neřeší stejně jako textové cvičení — dlouhý popis je
       // vidět rovnou na místě videa (viz showTrainingModeVideo), tlačítko by ho jen duplikovalo.
-      isText: !!v.isText || !!(lib && (lib.brokenAt || lib.goneAt))
+      isText: !!v.isText || !!(lib && (lib.brokenAt || lib.goneAt || jeTextove(lib)))
     };
   }
   const lib = row.isText ? null : state.library[row.videoId];
@@ -11009,7 +11177,7 @@ function getTmCurrentInfo() {
     title: row.isText ? (row.title || "(bez názvu)") : (lib ? lib.title : "(video smazáno z knihovny)"),
     shortDesc: row.isText ? (row.shortDesc || "") : (lib ? lib.shortDesc : ""),
     longDesc: row.isText ? (row.longDesc || "") : (lib ? lib.longDesc : ""),
-    isText: !!row.isText || !!(lib && (lib.brokenAt || lib.goneAt))
+    isText: !!row.isText || !!(lib && (lib.brokenAt || lib.goneAt || jeTextove(lib)))
   };
 }
 function refreshTmInfoBtn() {
@@ -11523,7 +11691,7 @@ function exportTrainingAsText(t) {
     }
     const lib = state.library[row.videoId];
     lines.push(`${i + 1}. [${part ? part.label : "?"}] ${lib ? lib.title : "(video smazáno z knihovny)"} — ${fmtDuration(row)}`);
-    if (lib) lines.push(`   Odkaz: ${lib.url}`);
+    if (lib && lib.url) lines.push(`   Odkaz: ${lib.url}`);
     if (row.cue) lines.push(`   Cue: ${row.cue}`);
     if (row.poznamka) pushPoznamkaLines(lines, "   ", row.poznamka);
     lines.push("");
@@ -11657,7 +11825,7 @@ function getFazeCurrentEntry() {
       shortDesc: v.isText ? (v.shortDesc || "") : (lib ? lib.shortDesc : ""),
       longDesc: v.isText ? (v.longDesc || "") : (lib ? lib.longDesc : ""),
       equipment: v.isText ? (v.equipment || []) : [...new Set([...((lib && lib.equipment) || []), ...(v.extraEquipment || [])])],
-      isText: !!v.isText, broken: !!(lib && (lib.brokenAt || lib.goneAt)), gone: !!(lib && lib.goneAt), lib, videoId: v.isText ? null : v.videoId
+      isText: !!v.isText || jeTextove(lib), broken: !!(lib && !jeTextove(lib) && (lib.brokenAt || lib.goneAt)), gone: !!(lib && lib.goneAt), lib, videoId: v.isText ? null : v.videoId
     };
   }
   const lib = row.isText ? null : state.library[row.videoId];
@@ -11669,7 +11837,7 @@ function getFazeCurrentEntry() {
     shortDesc: row.isText ? (row.shortDesc || "") : (lib ? lib.shortDesc : ""),
     longDesc: row.isText ? (row.longDesc || "") : (lib ? lib.longDesc : ""),
     equipment: row.isText ? (row.equipment || []) : [...new Set([...((lib && lib.equipment) || []), ...(row.extraEquipment || [])])],
-    isText: !!row.isText, broken: !!(lib && (lib.brokenAt || lib.goneAt)), gone: !!(lib && lib.goneAt), lib, videoId: row.isText ? null : row.videoId
+    isText: !!row.isText || jeTextove(lib), broken: !!(lib && !jeTextove(lib) && (lib.brokenAt || lib.goneAt)), gone: !!(lib && lib.goneAt), lib, videoId: row.isText ? null : row.videoId
   };
 }
 /** Stejná větvící logika jako getUpNextLabel/getUpNextColor výš (další video ve skupině →
@@ -12148,7 +12316,10 @@ function ovItemEquipment(row) {
 function ovThumbHtml(lib, isText) {
   if (isText) return '<span class="ov-thumb"><i class="fa-regular fa-file-lines"></i></span>';
   const url = lib ? resolveThumbnailUrl(lib) : "";
-  return `<span class="ov-thumb"${url ? ` style="background-image:url('${esc(url)}')"` : ""}></span>`;
+  // Kolo 2: bez fotky zástupný obrázek TEXT/VIDEO, textové cvičení s fotkou malou značku.
+  if (lib && !url) return `<span class="ov-thumb tx-mini-ph">${zastupnyObrazekHtml(lib)}</span>`;
+  const znacka = lib && jeTextove(lib) ? `<span class="tx-mini-badge"><i class="${TEXT_ODZNAK_IKONA}"></i></span>` : "";
+  return `<span class="ov-thumb${znacka ? " tx-mini-foto" : ""}"${url ? ` style="background-image:url('${esc(url)}')"` : ""}>${znacka}</span>`;
 }
 /** Poznámka se v Přehledu neukazuje rovnou — je pod značkou a rozbalí se ťuknutím.
     Mekovo zadání: cue rozbalené, poznámka na rozklik, ale ať je vidět, že tam je. */
@@ -13510,11 +13681,13 @@ document.getElementById("pickerToggleFavFilterBtn").addEventListener("click", ()
     v celé aplikaci, ne jen na jednom místě. */
 function tagsUsedInActivePickerFolder(field) {
   const folder = document.getElementById("pickerFolderFilter").value;
-  if (!folder) return field === "tags" ? state.tagPool : state.equipmentPool;
+  const vRozsahu = Object.values(state.library).filter(it => !folder || it.folderId === folder);
+  if (!folder) return field === "tags" ? sTextTagem(state.tagPool, vRozsahu) : state.equipmentPool;
   const used = new Set();
-  Object.values(state.library).filter(it => it.folderId === folder).forEach(it => (it[field] || []).forEach(t => used.add(t)));
+  vRozsahu.forEach(it => (it[field] || []).forEach(t => used.add(t)));
   const pool = field === "tags" ? state.tagPool : state.equipmentPool;
-  return pool.filter(t => used.has(t));
+  const out = pool.filter(t => used.has(t));
+  return field === "tags" ? sTextTagem(out, vRozsahu) : out;
 }
 function renderPickerFilterChips() {
   renderFilterChips("pickerTagFilterRow", tagsUsedInActivePickerFolder("tags"), pickerTagFilter, () => { renderPickerFilterChips(); renderPickerList(); });
@@ -13536,9 +13709,9 @@ function renderPickerList() {
       }
       if (part && it.defaultPart !== part) return false;
       if (pickerFavOnlyFilter && !it.favorite) return false;
-      if (pickerTagFilter.size && ![...pickerTagFilter].every(t => it.tags.includes(t))) return false;
+      if (pickerTagFilter.size && ![...pickerTagFilter].every(t => stitkyPolozky(it).includes(t))) return false;
       if (pickerEquipFilter.size && ![...pickerEquipFilter].every(t => it.equipment.includes(t))) return false;
-      if (q && !(it.title + " " + (getFolder(it.folderId) ? getFolder(it.folderId).label : "") + " " + it.tags.join(" ")).toLowerCase().includes(q)) return false;
+      if (q && !(it.title + " " + (getFolder(it.folderId) ? getFolder(it.folderId).label : "") + " " + stitkyPolozky(it).join(" ")).toLowerCase().includes(q)) return false;
       return true;
     })
     .sort((a, b) => (b.dateAdded || 0) - (a.dateAdded || 0));
@@ -13547,7 +13720,7 @@ function renderPickerList() {
   list.innerHTML = items.map(it => `
     <div class="picker-item">
       ${pickerSelectMode ? `<button type="button" class="training-select-box ${selectedPickerIds.has(it.id) ? "checked" : ""}" data-toggle-pick="${esc(it.id)}" aria-label="Vybrat">${selectedPickerIds.has(it.id) ? '<i class="fa-solid fa-check"></i>' : ""}</button>` : ""}
-      ${resolveThumbnailUrl(it) ? `<img src="${esc(resolveThumbnailUrl(it))}" alt="" data-open-detail="${esc(it.id)}">` : `<div style="width:46px;height:30px;background:var(--line);border-radius:4px;flex-shrink:0;cursor:pointer;" data-open-detail="${esc(it.id)}"></div>`}
+      ${malyNahledHtml(it, "picker-thumb", ` data-open-detail="${esc(it.id)}"`)}
       <div class="picker-item-title">${esc(it.title)}</div>
       ${pickerSelectMode ? "" : `<button class="btn btn-sm btn-icon" data-add="${esc(it.id)}" aria-label="Přidat do tréninku"><i class="fa-solid fa-plus"></i></button>`}
     </div>
@@ -13765,6 +13938,61 @@ function pametChybiOprotiZaloze(zPamet, dPamet) {
     if (dopln.cue || dopln.note) out[id] = dopln;
   });
   return out;
+}
+
+/* ---------- „Uložit do knihovny“ z tréninku (kolo 2, otázky 2, 23, 24) ---------- */
+/** Textové cvičení psané v tréninku se po uložení do knihovny změní v odkaz na ni. Propojí se
+    JEN tahle jedna položka (otázka 23 = A); cue, poznámka, čas a série zůstanou. */
+function prevedTextoveNaKnihovnu(cil, libId) {
+  const t = state.trainings[cil.trainingId];
+  if (!t || !state.library[libId]) return false;
+  const row = (t.items || []).find(it => it.itemId === cil.itemId);
+  if (!row) return false;
+  const TEXT_POLE = ["isText", "title", "shortDesc", "longDesc", "tags", "equipment"];
+  if (cil.memberId) {
+    const v = (row.videos || []).find(x => x.memberId === cil.memberId);
+    if (!v || !v.isText) return false;
+    TEXT_POLE.forEach(k => { delete v[k]; });
+    v.videoId = libId;
+    pametZapamatujCue(libId, v.cue);
+  } else {
+    if (!row.isText) return false;
+    TEXT_POLE.forEach(k => { delete row[k]; });
+    row.videoId = libId;
+    if (row.label === undefined) row.label = "";
+    pametZapamatujCue(libId, row.cue);
+  }
+  t.dateModified = Date.now();
+  return true;
+}
+/** Otevře formulář knihovny předvyplněný z textového cvičení v tréninku (otázka 24 = A).
+    Prohlížeč do knihovny nezapisuje — pošle cvičení jako tip ke schválení. */
+function otevriUlozeniDoKnihovny(itemId, memberId) {
+  const t = state.trainings[currentTrainingId];
+  if (!t || editorReadOnly) return;
+  const row = (t.items || []).find(it => it.itemId === itemId);
+  const cil = row && (memberId ? (row.videos || []).find(v => v.memberId === memberId) : row);
+  if (!cil || !cil.isText) return;
+  if (!String(cil.title || "").trim()) {
+    toast("Nejdřív cvičení pojmenuj — název se převezme do knihovny.", 4000, "info");
+    return;
+  }
+  const kratky = String(cil.shortDesc || "").trim();
+  const prefill = {
+    title: String(cil.title || "").trim(),
+    longDescHtml: (kratky ? `<p><b>${esc(kratky)}</b></p>` : "") + richValueToHtml(cil.longDesc || ""),
+    tags: [...(cil.tags || [])],
+    equipment: [...(cil.equipment || [])],
+    defaultPart: row.part && row.part !== "prestavka" ? row.part : ""
+  };
+  if (isEditor()) openLinkModal(null, { text: true, prefill, zTreninku: { trainingId: currentTrainingId, itemId, memberId: memberId || null } });
+  else openLinkModal(null, { mode: "tip", text: true, prefill });
+}
+const ULOZIT_DO_KNIHOVNY_TEXT = () => isEditor()
+  ? "Ulož do knihovny, ať si aplikace pamatuje cue a poznámku"
+  : "Pošli jako tip do knihovny";
+function ulozitDoKnihovnyHtml(itemId, memberId) {
+  return `<button type="button" class="manage-link seq-save-lib" data-ulozit-item="${esc(itemId)}"${memberId ? ` data-ulozit-member="${esc(memberId)}"` : ""}><i class="fa-solid fa-book-medical"></i> ${ULOZIT_DO_KNIHOVNY_TEXT()}</button>`;
 }
 
 /** Do jaké části tréninku spadne nově přidané video. Má-li výchozí část, platí ta (jako dřív).
@@ -14396,6 +14624,7 @@ function renderSequence() {
                 <div class="seq-group-video-fields" data-notes-panel="${notesKey}">
                   <input type="text" class="seq-group-video-cue" placeholder="cue" value="${esc(v.cue || "")}" data-groupcue-item="${esc(row.itemId)}" data-groupcue-video="${esc(v.memberId)}" ${dis}>
                   ${renderRichField(v.note || "", "poznámka", `data-groupnote-item="${esc(row.itemId)}" data-groupnote-video="${esc(v.memberId)}"`, ro, "rte-xs")}
+                  ${ro ? "" : ulozitDoKnihovnyHtml(row.itemId, v.memberId)}
                 </div>
               </div>`;
             }
@@ -14405,7 +14634,7 @@ function renderSequence() {
             return `
             <div class="seq-group-video-row" data-videoref="${esc(v.memberId)}">
               ${ro ? "" : `<span class="drag-handle-inner"><i class="fa-solid fa-grip-lines"></i></span>`}
-              ${resolveThumbnailUrl(lib) ? `<img class="seq-group-thumb" src="${esc(resolveThumbnailUrl(lib))}" data-open="${esc(v.videoId)}">` : `<div class="seq-group-thumb" data-open="${esc(v.videoId)}"></div>`}
+              ${lib ? malyNahledHtml(lib, "seq-group-thumb", ` data-open="${esc(v.videoId)}"`) : `<div class="seq-group-thumb" data-open="${esc(v.videoId)}"></div>`}
               <span class="seq-group-video-title" data-open="${esc(v.videoId)}">${lib ? esc(lib.title) : "(video smazáno z knihovny)"}</span>
               <span class="seq-group-dosage-pair">
                 ${(row.mode || "time") === "reps"
@@ -14458,6 +14687,7 @@ function renderSequence() {
         <div class="seq-item-fields" data-notes-panel="${esc(row.itemId)}">
           <input type="text" placeholder="Cue (co říct nahlas)" value="${esc(row.cue)}" data-field="cue" data-itemid="${esc(row.itemId)}" ${dis}>
           ${renderRichField(row.poznamka, "Poznámka", `data-field="poznamka" data-itemid="${esc(row.itemId)}"`, ro, "rte-sm")}
+          ${ro ? "" : ulozitDoKnihovnyHtml(row.itemId)}
         </div>
         ${clockBadgeHtml(row.itemId)}
       </div>`;
@@ -14469,7 +14699,7 @@ function renderSequence() {
       ${seqActionsHtml(row.itemId)}
       <div class="seq-item-top">
         ${seqLeadHtml(row.itemId)}
-        ${resolveThumbnailUrl(lib) ? `<img class="seq-thumb" src="${esc(resolveThumbnailUrl(lib))}" data-open="${esc(row.videoId)}">` : `<div class="seq-thumb" data-open="${esc(row.videoId)}"></div>`}
+        ${lib ? malyNahledHtml(lib, "seq-thumb", ` data-open="${esc(row.videoId)}"`) : `<div class="seq-thumb" data-open="${esc(row.videoId)}"></div>`}
         <span class="seq-title" data-open="${esc(row.videoId)}">${lib ? esc(lib.title) : "(video smazáno z knihovny)"}</span>
         <div class="seq-controls">
           <select class="seq-part-select" data-field="part" data-itemid="${esc(row.itemId)}" ${dis} style="${esc(partTagStyle(part.color))}">
@@ -14849,6 +15079,8 @@ document.getElementById("sequenceList").addEventListener("input", (e) => {
 document.getElementById("sequenceList").addEventListener("click", (e) => {
   const pin = e.target.closest("[data-pin-video]");
   if (pin) { pametKlikSpendlik(pin); return; }
+  const ulozit = e.target.closest("[data-ulozit-item]");
+  if (ulozit) { otevriUlozeniDoKnihovny(ulozit.dataset.ulozitItem, ulozit.dataset.ulozitMember || null); return; }
   const kebabToggle = e.target.closest("[data-kebab-toggle]");
   if (kebabToggle) {
     const menu = e.currentTarget.querySelector(`[data-kebab-menu="${CSS.escape(kebabToggle.dataset.kebabToggle)}"]`);
@@ -15059,6 +15291,7 @@ function renderTextExerciseEquipPills() {
   });
 }
 function addTextExerciseTag(v) {
+  if (odmitniTextTag(v)) return;
   v = normalizeAgainstPool(v.trim(), state.tagPool);
   if (v && !textExerciseFormTags.includes(v)) { textExerciseFormTags.push(v); renderTextExerciseTagPills(); }
 }
@@ -15079,6 +15312,9 @@ function openTextExerciseDetailModal(itemId, videoId) {
   textExerciseFormEquip = [...(target.equipment || [])];
   renderTextExerciseTagPills();
   renderTextExerciseEquipPills();
+  const doKnihovnyBtn = document.getElementById("saveTextExerciseToLibraryBtn");
+  doKnihovnyBtn.classList.toggle("hidden", editorReadOnly);
+  doKnihovnyBtn.querySelector("span").textContent = isEditor() ? "Uložit do knihovny" : "Poslat jako tip";
   document.getElementById("textExerciseDetailModalBackdrop").classList.remove("hidden");
   resetModalScroll(document.getElementById("textExerciseDetailModalBackdrop"));
   if (!editorReadOnly) document.getElementById("textExerciseShortDesc").focus();
@@ -15088,6 +15324,13 @@ function closeTextExerciseDetailModal() {
   textExerciseDetailTarget = null;
 }
 document.getElementById("closeTextExerciseDetailModalBtn").addEventListener("click", closeTextExerciseDetailModal);
+/** Z okna popisu: nejdřív uložit rozepsané změny do tréninku, pak otevřít formulář knihovny. */
+document.getElementById("saveTextExerciseToLibraryBtn").addEventListener("click", () => {
+  if (!textExerciseDetailTarget || editorReadOnly) return;
+  const { itemId, videoId } = textExerciseDetailTarget;
+  document.getElementById("saveTextExerciseDetailBtn").click();
+  otevriUlozeniDoKnihovny(itemId, videoId);
+});
 document.getElementById("saveTextExerciseDetailBtn").addEventListener("click", () => {
   if (!textExerciseDetailTarget || editorReadOnly) return;
   const target = findTextExerciseTarget(textExerciseDetailTarget.itemId, textExerciseDetailTarget.videoId);
@@ -17612,7 +17855,7 @@ document.getElementById("bulkDriveTagInput").addEventListener("keydown", (e) => 
   if (e.key !== "Enter") return;
   e.preventDefault();
   const v = e.target.value.trim();
-  if (v && !bulkDriveTags.includes(v)) { bulkDriveTags.push(v); renderBulkDriveTagPills(); }
+  if (v && !odmitniTextTag(v) && !bulkDriveTags.includes(v)) { bulkDriveTags.push(v); renderBulkDriveTagPills(); }
   e.target.value = "";
 });
 document.getElementById("bulkDriveEquipInput").addEventListener("keydown", (e) => {
@@ -17859,7 +18102,9 @@ const HELP_DATA = [
       { q: "Co je „Výchozí část tréninku“ a co když ji nevyberu?", a: "Určuje, do které části tréninku video spadne, když ho do tréninku přidáš. Když necháš „— vyber —“, přidá se do stejné části jako poslední cvičení v tréninku (přestávky se přeskakují), v prázdném tréninku do první části. V tréninku ho pak můžeš kdykoli přehodit.", kw: "vychozi cast treninku vyber nezaraditelne" },
       { q: "Jaké odkazy/platformy aplikace podporuje?", a: "YouTube, Google Drive, Facebook, Instagram a TikTok. U videí, která nejdou vložit žádnou z těchhle cest, jde použít i platformu „Soubor“ (přímý odkaz na video)." },
       { q: "Proč mi nejde vložit sdílený odkaz z Facebooku?", a: "Krátké odkazy typu „/share/…“, které dává aplikace Facebook, Trenér neumí — Facebook je přehrát nedovolí a rozbalit je umí jen jeho vlastní aplikace nebo prohlížeč. Pod odkazem se v tu chvíli ukáže upozornění. Otevři reel v Chromu (ne v aplikaci Facebook) a sdílej ho odtamtud, nebo zkopíruj adresu, která obsahuje „/reel/“ a dlouhé číslo." },
-      { q: "Můžu přidat cvičení bez videa, jen popisem?", a: "Ano — při přidávání nech pole s odkazem prázdné a napiš jen popis cvičení. Aplikace ho v knihovně i v tréninku zobrazí jako textové cvičení místo videa." },
+      { q: "Můžu přidat cvičení bez videa, jen popisem?", a: "Ano, jako textové cvičení. V Knihovně dej Přidat → „Přidat textové cvičení“, vyplň název, popis, složku, štítky a vybavení a můžeš nahrát i ilustrační fotku. Textové cvičení je plnohodnotné: jde hodnotit, komentovat, sdílet odkazem, dávat do tréninků a bere ho i Navrhnout trénink.", kw: "textove cviceni bez videa popis pridat" },
+      { q: "Jak poznám video od textového cvičení?", a: "Textové cvičení bez fotky má obrázek s nápisem TEXT, video bez náhledu obrázek s nápisem VIDEO. Přes fotky je dole malý vodoznak VIDEO nebo TEXT a textové cvičení má vpravo dole odznak s řádky textu. V malých náhledech (v tréninku a v panelu videí) má značku jen textové cvičení. Všechna textová cvičení navíc mají štítek „Textové cvičení“, takže je najdeš i filtrem štítků.", kw: "vodoznak text video poznat odznak stitek textove cviceni" },
+      { q: "Můžu k textovému cvičení později doplnit video?", a: "Ano. Otevři ho k úpravě a do pole „Odkaz na video“ vlož odkaz. Uložením se z něj stane video a ve všech trénincích, kde je, se začne přehrávat. Funguje to i obráceně: když u videa odkaz smažeš, aplikace se zeptá a udělá z něj textové cvičení.", kw: "doplnit video textove cviceni odkaz zmenit" },
       { q: "Co je pole „Popiš cvičení“?", a: "Je to hlavní popis cvičení — nahradilo dřívější rozdělení na krátký a dlouhý popis. Píše se tam, v čem cvičení spočívá, ideálně tak podrobně, aby ho podle toho zvládl vést i kolega, co ho nikdy neviděl." },
       { q: "Proč mi aplikace řekne, ať popis rozepíšu víc, i když jsem něco napsal?", a: "Když je popis hodně krátký (pod pár slov), aplikace se jen jednou zeptá, jestli by nešlo přidat víc detailů, a ukáže konkrétní příklad, jak by to mohlo vypadat. Uložit se dá i tak, jak je — je to jen jemné doporučení, ne povinnost." }
     ]},
@@ -17968,7 +18213,8 @@ const HELP_DATA = [
       { q: "Co jsou série a jak funguje pauza mezi nimi?", a: "Série znamená, že se stejné cvičení zopakuje víckrát za sebou (např. 3×) s automatickou pauzou mezi jednotlivými koly — nastavuje se to u dané položky nebo skupiny." },
       { q: "Jak přidám poznámku nebo instrukci ke cvičení?", a: "U položky rozklikni „Cue a poznámka“ — cue je krátký pokyn, co hráčům říct nahlas, poznámka je prostor pro delší vysvětlení, co si má trenér pamatovat." },
       { q: "Co je „cue“ a čím se liší od poznámky?", a: "Cue je krátká věta, kterou trenér řekne nahlas hráčům přímo při cvičení (např. „ruce nahoru“). Poznámka je delší text jen pro trenéra samotného — třeba na co si dát pozor při vedení cvičení. Liší se i tím, jak si je aplikace pamatuje: cue sama, poznámku jen když ji připíchneš špendlíkem.", kw: "cue vs poznamka" },
-      { q: "Pamatuje si aplikace cue a poznámky?", a: "Ano, jen pro tebe — ostatní trenéři tvoje zapamatované cue ani poznámky v aplikaci nevidí. Cue, které k videu napíšeš, si aplikace zapamatuje sama a předvyplní ho, až to video příště vložíš do tréninku (z Knihovny, z panelu v editoru, do nové skupiny i z návrhu tréninku). Poznámka se pamatuje, jen když ťukneš na špendlík v její liště: oranžový znamená zapamatovaná, šedý s tečkou znamená, že text se od zapamatovaného liší. Změnu nebo smazání zapamatované poznámky aplikace vždycky potvrdí. Předvyplněný text v tréninku klidně přepiš — u cue se tím zapamatuje nový, u poznámky jen když znovu ťukneš na špendlík. Pamatuje se jen u videí z Knihovny, ne u textových cvičení psaných přímo v tréninku.", kw: "pamet zapamatovat predvyplnit spendlik pripichnout cue poznamka minule" },
+      { q: "Jak dostanu textové cvičení z tréninku do knihovny?", a: "U textového cvičení v tréninku rozklikni „Cue a poznámka“ a ťukni na „Ulož do knihovny…“ (nebo v okně „Popis, štítky, nářadí“ na „Uložit do knihovny“). Otevře se formulář knihovny předvyplněný z tréninku — doplň složku, případně fotku, a ulož. V tomhle tréninku se cvičení propojí s knihovnou; kopie stejného cvičení v jiných trénincích zůstanou samostatné. Jako Prohlížeč cvičení pošleš adminovi jako tip.", kw: "ulozit do knihovny textove cviceni z treninku tip" },
+      { q: "Pamatuje si aplikace cue a poznámky?", a: "Ano, jen pro tebe — ostatní trenéři tvoje zapamatované cue ani poznámky v aplikaci nevidí. Cue, které k videu napíšeš, si aplikace zapamatuje sama a předvyplní ho, až to video příště vložíš do tréninku (z Knihovny, z panelu v editoru, do nové skupiny i z návrhu tréninku). Poznámka se pamatuje, jen když ťukneš na špendlík v její liště: oranžový znamená zapamatovaná, šedý s tečkou znamená, že text se od zapamatovaného liší. Změnu nebo smazání zapamatované poznámky aplikace vždycky potvrdí. Předvyplněný text v tréninku klidně přepiš — u cue se tím zapamatuje nový, u poznámky jen když znovu ťukneš na špendlík. Pamatuje se u všech cvičení z Knihovny (videí i textových cvičení), ne u textových cvičení psaných jen v tréninku — ta stačí uložit do knihovny.", kw: "pamet zapamatovat predvyplnit spendlik pripichnout cue poznamka minule" },
       { q: "Jak přidám vybavení, které platí jen pro tenhle konkrétní trénink?", a: "U položky je pole „Další vybavení (jen pro tenhle trénink, nemění knihovnu)“ — přidané vybavení se počítá do souhrnu jen u tohodle tréninku, ve videu samotném v knihovně zůstane beze změny." }
     ]},
     { title: "Části tréninku", icon: "fa-solid fa-layer-group", qa: [

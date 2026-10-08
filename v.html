@@ -73,6 +73,12 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
 .v-gone-thumb{width:100%;aspect-ratio:16/9;background-color:#2b2f36;background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;border-radius:var(--radius);box-shadow:var(--shadow);}
 .v-gone-thumb.hidden{display:none;}
 .v-gone-watermark{font-family:var(--font-display);font-size:15px;letter-spacing:.05em;color:rgba(255,255,255,.88);background:rgba(20,22,20,.38);padding:7px 18px;border-radius:999px;}
+/* Textové cvičení (8. 10. 2026): místo přehrávače fotka, nebo zástupný obrázek TEXT jako
+   v aplikaci (návrh Mek, Claude Design). */
+.v-text-thumb{position:relative;width:100%;aspect-ratio:16/9;background-color:#E9ECE4;background-size:cover;background-position:center;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+.v-text-thumb.hidden{display:none;}
+.v-text-thumb > svg{position:absolute;inset:0;}
+.v-chip.v-chip-text{background:rgba(27,36,48,.06);color:var(--ink-soft);border-color:var(--line);}
 .open-in-app{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 0 10px;padding:11px 16px;border-radius:var(--radius-sm);background:var(--court);color:#fff;text-decoration:none;font-weight:600;font-size:14px;}
 .open-in-app.hidden{display:none;}
 .open-in-app-hint{display:block;text-align:center;margin:10px 0 2px;font-size:12px;color:#6B7684;text-decoration:underline;}
@@ -97,6 +103,7 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
 <div id="videoView">
   <a class="open-in-app hidden" id="openInAppBtn" href="#"><i class="fa-solid fa-up-right-from-square"></i> Otevřít v Trenérovi</a>
   <div class="v-gone-thumb hidden" id="vGoneThumb"><span class="v-gone-watermark">Video zmizelo</span></div>
+  <div class="v-text-thumb hidden" id="vTextThumb"></div>
   <div class="v-embed-wrap hidden" id="vEmbedWrap"></div>
   <a href="#" target="_blank" rel="noopener" class="v-open-source-link hidden" id="vOpenSourceLink">Otevřít na Facebooku <i class="fa-solid fa-up-right-from-square"></i></a>
   <div class="v-part-row" id="vChips"></div>
@@ -281,9 +288,24 @@ const PLATFORM_DIRECT_LINK_LABELS = {
   youtube: `<i class="fa-brands fa-youtube"></i> YouTube`,
   file: `<i class="fa-solid fa-up-right-from-square"></i> video`
 };
+const PH_TEXT_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 90" preserveAspectRatio="xMidYMid slice" width="100%" height="100%" aria-hidden="true"><rect x="0" y="0" width="160" height="90" style="fill:#E9ECE4"/><rect x="40" y="30" width="4" height="16" rx="2" style="fill:#339933"/><text x="50" y="46" style="fill:#6B7684;font-family:'Bebas Neue',Impact,sans-serif;font-size:22px;letter-spacing:2.5px">TEXT</text><rect x="40" y="56" width="80" height="6" rx="3" style="fill:#ADB5A9"/><rect x="40" y="67" width="56" height="6" rx="3" style="fill:#ADB5A9"/></svg>`;
+/** Textové cvičení = sdílená položka bez odkazu na video (8. 10. 2026). */
+function jeTextove(item) { return !!item && !String(item.url || "").trim(); }
 function showVideoEmbed(item) {
   const wrap = document.getElementById("vEmbedWrap");
   const openLink = document.getElementById("vOpenSourceLink");
+  const textThumb = document.getElementById("vTextThumb");
+  if (jeTextove(item)) {
+    wrap.classList.add("hidden");
+    wrap.innerHTML = "";
+    openLink.classList.add("hidden");
+    document.getElementById("vGoneThumb").classList.add("hidden");
+    textThumb.classList.remove("hidden");
+    if (item.thumbnail) { textThumb.style.backgroundImage = `url('${item.thumbnail}')`; textThumb.innerHTML = ""; }
+    else textThumb.innerHTML = PH_TEXT_SVG;
+    return;
+  }
+  textThumb.classList.add("hidden");
   // Video ručně označené jako nefunkční (appka #91/#94) — appka se ho ani nesnaží načíst (byl
   // by to jen prázdný/rozbitý embed), na jeho místě zůstane rovnou jen přímý odkaz na zdroj.
   // Dlouhý popis (a krátký popis) se zobrazují beze změny, appka je na týhle stránce ukazuje
@@ -391,7 +413,7 @@ async function init() {
   // videem obří prázdný prostor, který se musí odscrollovat.
   document.getElementById("stateView").innerHTML = "";
   document.getElementById("stateView").classList.add("hidden");
-  document.title = (item.title || "Video") + " — Trenér";
+  document.title = (item.title || (jeTextove(item) ? "Cvičení" : "Video")) + " — Trenér";
   document.getElementById("vTitle").textContent = item.title || "(bez názvu)";
   document.getElementById("vShortDesc").textContent = item.shortDesc || "";
   document.getElementById("vShortDesc").classList.toggle("hidden", !item.shortDesc);
@@ -399,6 +421,7 @@ async function init() {
 
   const chipsWrap = document.getElementById("vChips");
   const chips = [
+    ...(jeTextove(item) ? [`<span class="v-chip v-chip-text"><i class="fa-solid fa-align-left"></i> Textové cvičení</span>`] : []),
     ...(item.tags || []).map(t => `<span class="v-chip">${esc(t)}</span>`),
     ...(item.equipment || []).map(e => `<span class="v-chip v-chip-equip"><i class="fa-solid fa-dumbbell"></i> ${esc(e)}</span>`)
   ];
