@@ -3326,7 +3326,7 @@ try {
    ========================================================= */
 let uidCurrent = null;
 let state = { library: {}, trainings: {}, folders: [], tagPool: [], equipmentPool: [], equipmentRequired: [], parts: [], profile: {}, thumbnails: {},
-  trainingFocus: [], focusLibraryMap: {}, favoriteTrainings: new Set() };
+  trainingFocus: [], focusLibraryMap: {}, favoriteTrainings: new Set(), favoriteVideos: new Set() };
 
 /* ZAMĚŘENÍ TRÉNINKŮ (16. 9.)
    Pevná, společná sada složek pro Moje tréninky i Tržiště. Trénink smí patřit do VÍC
@@ -3376,6 +3376,26 @@ function focusStripeStyle(t) {
   return `linear-gradient(180deg,${cols.map((c, i) => `${c} ${i * step}% ${(i + 1) * step}%`).join(",")})`;
 }
 function isFavoriteTraining(id) { return state.favoriteTrainings.has(id); }
+/* OBLÍBENÁ CVIČENÍ (9. 10. 2026). Hvězdička u cvičení je od teď věc každého trenéra zvlášť,
+   stejně jako u tréninků: bydlí v users/{uid}.favoriteVideos, ne ve cvičení samotném. Dřív
+   seděla přímo ve sdílené knihovně (pole favorite) — svítila všem, kdokoli ji mohl zhasnout
+   a formulář úpravy ji při každém uložení tiše smazal. Staré pole favorite ve cvičeních
+   zůstává ležet, aplikace ho čte už jen při jednorázovém převodu adminovi (viz loadUserData). */
+let oblibenaCviceniPrevedena = false;
+function isFavoriteVideo(id) { return state.favoriteVideos.has(id); }
+/** Stejný drobný samostatný zápis jako u oblíbených tréninků — mimo hlavní ukládací řetěz,
+    takže ho smí i prohlížeč a na sdílenou knihovnu nesahá. */
+function prepniOblibeneCviceni(id) {
+  if (state.favoriteVideos.has(id)) state.favoriteVideos.delete(id);
+  else state.favoriteVideos.add(id);
+  if (!uidCurrent) return;
+  const zapis = { favoriteVideos: [...state.favoriteVideos] };
+  // Admin: kdyby zápis převodu při přihlášení selhal, tenhle ho nese taky — jinak by příští
+  // přihlášení staré hvězdičky přičetlo znovu, i ty mezitím zhasnuté.
+  if (uidCurrent === ADMIN_UID && oblibenaCviceniPrevedena) zapis.favoriteVideosFilled = true;
+  setDoc(doc(db, "users", uidCurrent), zapis, { merge: true })
+    .catch(e => console.warn("Uložení oblíbených cvičení selhalo:", e));
+}
 /** Seed mapování zaměření → složky v Knihovně podle SHODY NÁZVŮ. Použije se jen tehdy,
     když ve sdílených datech ještě žádné mapování není. Jakmile existuje, rozhoduje ono —
     přejmenování složky v Knihovně pak už návrhy tiše nerozbije. */
@@ -3450,7 +3470,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-10-08 13:41";
+const APP_VERSION = "2026-10-09 11:58";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -5319,6 +5339,9 @@ async function loadUserData() {
      hvězdičkuje CIZÍ tréninky — do těch zapisovat nesmí a ani by neměl: hvězdička je jeho
      věc, ne majitelova. */
   state.favoriteTrainings = new Set(Array.isArray(legacy.favoriteTrainings) ? legacy.favoriteTrainings : []);
+  // Oblíbená cvičení — taky osobní (9. 10. 2026), viz isFavoriteVideo.
+  state.favoriteVideos = new Set(Array.isArray(legacy.favoriteVideos) ? legacy.favoriteVideos : []);
+  oblibenaCviceniPrevedena = !!legacy.favoriteVideosFilled;
   // Kdy naposled vznikla záloha (ruční, automatická nebo před obnovou) — podle toho se po
   // 7 dnech připomíná (24. 9. 2026). Bydlí v users/{uid}, ať to ví každé zařízení.
   state.lastBackupAt = legacy.lastBackupAt || 0;
@@ -5555,6 +5578,20 @@ async function loadUserData() {
       Object.entries(doplnek).forEach(([id, z]) => { state.cueMemory[id] = Object.assign({}, state.cueMemory[id], z); });
       logDebug(`[pamet] naplněno cue ze stávajících tréninků: ${Object.keys(doplnek).length}`);
     } catch (e) { console.warn("Naplnění paměti cue selhalo, zkusí se při příštím přihlášení:", e); }
+  }
+
+  // --- oblíbená cvičení: jednorázový převod starých společných hvězdiček (9. 10. 2026) ---
+  // Hvězdičky ve cvičeních (pole favorite) byly do té doby jen adminovy (Mek, 9. 10.), proto
+  // připadnou jemu; ostatní začínají s prázdnými. Jen když se profil i knihovna opravdu
+  // načetly — jinak by se příznak zapsal nad neúplnými daty a převod by se už nezopakoval.
+  if (legacyOk && knihovnaNactena && uidCurrent === ADMIN_UID && !legacy.favoriteVideosFilled) {
+    const stare = Object.values(state.library).filter(it => it && it.id && it.favorite === true).map(it => it.id);
+    stare.forEach(id => state.favoriteVideos.add(id));
+    oblibenaCviceniPrevedena = true;
+    try {
+      await setDoc(doc(db, "users", uidCurrent), { favoriteVideos: [...state.favoriteVideos], favoriteVideosFilled: true }, { merge: true });
+      logDebug(`[oblíbené] převedeno hvězdiček ze cvičení do profilu: ${stare.length}`);
+    } catch (e) { console.warn("Převod oblíbených cvičení se nezapsal, zkusí se při příštím přihlášení:", e); }
   }
 
   // --- jednorázový úklid starých duplicitních polí z users/{uid} (pravděpodobný důvod, proč dokument narostl přes limit) ---
@@ -6828,7 +6865,7 @@ function getFilteredLibraryItems() {
   const sortMode = document.getElementById("librarySort").value;
   const items = Object.values(state.library).filter(item => {
     if (item.deletedAt) return false; // položky v koši se v běžné knihovně nezobrazují
-    if (favOnlyFilter && !item.favorite) return false;
+    if (favOnlyFilter && !isFavoriteVideo(item.id)) return false;
     if (activeFolderFilter && item.folderId !== activeFolderFilter) return false;
     if (!activeFolderFilter && !q) {
       const itFolder = getFolder(item.folderId);
@@ -6920,7 +6957,7 @@ function renderLibrary() {
       <button type="button" class="card-menu-btn" data-action="open-menu" aria-label="Menu"><i class="fa-solid fa-ellipsis-vertical"></i></button>
       <div class="card-thumb ${thumbUrl ? "foto" : "ph"}" data-action="open-detail" style="${thumbUrl ? `background-image:url('${esc(thumbUrl)}')` : ""}">
         ${thumbUrl ? vodoznakHtml(item) : zastupnyObrazekHtml(item)}
-        ${isEditor() ? `<button type="button" class="card-fav-btn ${item.favorite ? "on" : ""}" data-action="toggle-fav" aria-label="Oblíbené"><i class="fa-solid fa-star"></i></button>` : ""}
+        <button type="button" class="card-fav-btn ${isFavoriteVideo(item.id) ? "on" : ""}" data-action="toggle-fav" aria-label="${isFavoriteVideo(item.id) ? "Odebrat z oblíbených" : "Přidat do oblíbených"}"><i class="fa-solid fa-star"></i></button>
         <span class="platform-badge"${jeTextove(item) ? ' title="Textové cvičení"' : ""}><i class="${jeTextove(item) ? TEXT_ODZNAK_IKONA : (PLATFORM_ICONS[item.platform] || PLATFORM_ICONS.other)}"></i></span>
       </div>
       <div class="card-body" data-action="open-detail">
@@ -6944,12 +6981,9 @@ document.getElementById("libraryGrid").addEventListener("click", (e) => {
   const id = card.dataset.id;
   if (e.target.closest("[data-action='open-menu']")) { openCardContextMenu(id, e.target.closest("[data-action='open-menu']")); return; }
   if (e.target.closest("[data-action='toggle-fav']")) {
-    const it = state.library[id];
-    if (it) {
-      it.favorite = !it.favorite;
-      logDebug("[fav] přepínám oblíbené u", id, "— počet videí v knihovně teď:", Object.keys(state.library).length);
+    if (state.library[id]) {
+      prepniOblibeneCviceni(id);
       renderLibrary();
-      saveUserData();
     }
     return;
   }
@@ -7175,7 +7209,7 @@ function openCardContextMenu(itemId, anchorBtn) {
   const menu = document.createElement("div");
   menu.className = "card-context-menu";
   menu.innerHTML = isEditor() ? `
-    <button type="button" data-act="fav"><i class="fa-solid fa-star"></i> ${item.favorite ? "Odebrat z oblíbených" : "Přidat do oblíbených"}</button>
+    <button type="button" data-act="fav"><i class="fa-solid fa-star"></i> ${isFavoriteVideo(itemId) ? "Odebrat z oblíbených" : "Přidat do oblíbených"}</button>
     <button type="button" data-act="edit"><i class="fa-solid fa-pen"></i> Upravit</button>
     <button type="button" data-act="share"><i class="fa-solid fa-share-nodes"></i> ${isVideoShareActive(item) ? "Spravovat sdílení" : "Sdílet odkazem"}</button>
     <button type="button" data-act="add-to-training"><i class="fa-solid fa-list-check"></i> Přidat do tréninku</button>
@@ -7183,6 +7217,7 @@ function openCardContextMenu(itemId, anchorBtn) {
     <button type="button" data-act="toggle-broken">${item.brokenAt ? '<i class="fa-solid fa-video"></i> Vrátit zpět (je nefunkční)' : '<i class="fa-solid fa-video-slash"></i> Označit jako nefunkční'}</button>
     <button type="button" class="danger" data-act="delete"><i class="fa-solid fa-trash"></i> Smazat</button>
   ` : `
+    <button type="button" data-act="fav"><i class="fa-solid fa-star"></i> ${isFavoriteVideo(itemId) ? "Odebrat z oblíbených" : "Přidat do oblíbených"}</button>
     <button type="button" data-act="add-to-training"><i class="fa-solid fa-list-check"></i> Přidat do tréninku</button>
   `;
   document.body.appendChild(menu);
@@ -7192,8 +7227,7 @@ function openCardContextMenu(itemId, anchorBtn) {
   openContextMenuEl = menu;
   menu.querySelector("[data-act='fav']")?.addEventListener("click", () => {
     closeCardContextMenu();
-    item.favorite = !item.favorite;
-    scheduleSave();
+    prepniOblibeneCviceni(itemId);
     renderLibrary();
   });
   menu.querySelector("[data-act='edit']")?.addEventListener("click", () => { closeCardContextMenu(); openLinkModal(itemId); });
@@ -8220,6 +8254,17 @@ linkForm.addEventListener("submit", async (e) => {
   // Textové cvičení nemá co být „nefunkční“ ani „zmizelé“ — označení se u něj nepřenáší.
   if (existing && !jeText) {
     ["brokenAt", "goneAt", "goneResolvedAt", "autoCheck", "autoCheckIgnoreUrl"].forEach(f => {
+      if (existing[f] !== undefined && existing[f] !== null) state.library[id][f] = existing[f];
+    });
+  }
+  /* Stejná chyba u dalších dvou polí (9. 10. 2026), platí i pro textová cvičení:
+     - share: cvičení s platným veřejným odkazem se po úpravě tvářilo jako nesdílené a odkaz
+       dál ukazoval verzi před úpravou. Teď sdílení zůstane a veřejná kopie se přepíše při
+       uložení (obnovSdilenaVidea).
+     - favorite: stará společná hvězdička. Aplikace ji už nečte ani nemění (viz isFavoriteVideo),
+       ale dokud si ji admin nepřevedl do profilu, nesmí ji úprava cvičení smazat. */
+  if (existing) {
+    ["share", "favorite"].forEach(f => {
       if (existing[f] !== undefined && existing[f] !== null) state.library[id][f] = existing[f];
     });
   }
@@ -13017,6 +13062,8 @@ const NAVRH_STYLY = [
   ["mix", "Mix", "fa-shuffle", "od každého něco"]
 ];
 const NAVRH_OBTIZNOSTI = [["lehci", "Lehčí"], ["stredni", "Střední"], ["tezsi", "Těžší"], ["nevim", "Nevím"]];
+// Přednost oblíbených cvičení v Osvědčeném návrhu (9. 10. 2026) — stejná váha jako čtyři hvězdy hodnocení.
+const NAVRH_BONUS_OBLIBENE = 8;
 const NAVRH_MAX_MINUT = 20;          // jedno cvičení nejvýš 20 minut (bod 19)
 const NAVRH_CASTE_VYBAVENI = 5;      // vybavení s aspoň tolika videi je v dotazníku vidět hned
 /* „Bez vybavení“ a „Nespecifické něco“ nejsou vybavení: v dotazníku nejsou a video kvůli nim
@@ -13114,7 +13161,10 @@ function navrhSestav(zadani, styl, rnd, videno, pouziti) {
   pool.forEach(v => {
     const h = navrhPrumer(v.ratings), d = navrhPrumer(v.difficulties);
     let s;
-    if (styl === "osvedceny") s = (h || 0) * 2 + Math.min(pouziti.vse.get(v.id) || 0, 6) + rnd() * 1.5;
+    // Oblíbené cvičení (hvězdička trenéra, který si návrh nechává udělat) má v Osvědčeném
+    // silnou přednost (Mek 9. 10. 2026: +8) — váží stejně jako čtyři hvězdy hodnocení; Nový
+    // a Mix na hvězdičku nehledí.
+    if (styl === "osvedceny") s = (h || 0) * 2 + Math.min(pouziti.vse.get(v.id) || 0, 6) + rnd() * 1.5 + (isFavoriteVideo(v.id) ? NAVRH_BONUS_OBLIBENE : 0);
     else if (styl === "novy") s = (pouziti.moje.get(v.id) ? 0 : 6) + (h || 3) * 0.5 + rnd() * 3;
     else s = (h || 3) * 0.5 + rnd() * 6;
     // Obtížnost, o kterou si trenér řekl, má přednost; opačný konec už vyřadil filtr.
@@ -14142,7 +14192,7 @@ function renderPickerList() {
         if (itFolder && itFolder.hiddenFromMain) return false; // stejné schovávání jako v Knihovně — dokud si tuhle složku sám nevybereš
       }
       if (part && it.defaultPart !== part) return false;
-      if (pickerFavOnlyFilter && !it.favorite) return false;
+      if (pickerFavOnlyFilter && !isFavoriteVideo(it.id)) return false;
       if (pickerTagFilter.size && ![...pickerTagFilter].every(t => stitkyPolozky(it).includes(t))) return false;
       if (pickerEquipFilter.size && ![...pickerEquipFilter].every(t => it.equipment.includes(t))) return false;
       if (q && !(it.title + " " + (getFolder(it.folderId) ? getFolder(it.folderId).label : "") + " " + stitkyPolozky(it).join(" ")).toLowerCase().includes(q)) return false;
@@ -16592,11 +16642,13 @@ const PRIPOMINKA_ZALOHY_DNI = 7;
     nastavení notifikací se nezálohují — patří k telefonu, ne k účtu. */
 const OBNOVA_PROFIL_POLE = ["username", "category", "club", "avatarUrl", "colorPrimary", "colorAccent", "darkMode", "trainingStartTime"];
 
-/** Profil trenéra tak, jak ho záloha nese: pole OBNOVA_PROFIL_POLE a oblíbené tréninky. */
+/** Profil trenéra tak, jak ho záloha nese: pole OBNOVA_PROFIL_POLE, oblíbené tréninky
+    a oblíbená cvičení. */
 function vyberProfil(d) {
   const p = {};
   OBNOVA_PROFIL_POLE.forEach(k => { if (d && d[k] !== undefined) p[k] = d[k]; });
   p.favoriteTrainings = Array.isArray(d && d.favoriteTrainings) ? d.favoriteTrainings.slice() : [];
+  p.favoriteVideos = Array.isArray(d && d.favoriteVideos) ? d.favoriteVideos.slice() : [];   // 9. 10. 2026
   p.cueMemory = pametZDokumentu(d && d.cueMemory);   // paměť cue a poznámek (8. 10. 2026)
   return p;
 }
@@ -16664,6 +16716,7 @@ async function sestavZalohu() {
     memberNames,
     profile,
     favoriteTrainings: [...(state.favoriteTrainings || [])],
+    favoriteVideos: [...(state.favoriteVideos || [])],
     cueMemory: state.cueMemory || {},
     comments,
     tips,
@@ -16720,7 +16773,19 @@ document.getElementById("backupLibraryBtn").addEventListener("click", async () =
 
 /** Stav u zdroje a sdílení: obnova je nechává dnešní, protože popisují skutečnost teď, ne
     v den zálohy (Mek, otázka 9: B). Koš a razítko obnovy se ze zálohy nepřenáší nikdy. */
-const OBNOVA_VIDEO_DNESNI = ["goneAt", "goneResolvedAt", "brokenAt", "autoCheck", "autoCheckIgnoreUrl", "share", "deletedAt", "restoredAt"];
+const OBNOVA_VIDEO_DNESNI = ["goneAt", "goneResolvedAt", "brokenAt", "autoCheck", "autoCheckIgnoreUrl", "share", "favorite", "deletedAt", "restoredAt"];
+/** Oblíbená cvičení přihlášeného trenéra tak, jak je záloha nese. Záloha z doby před osobními
+    hvězdičkami (do 9. 10. 2026) pole favoriteVideos nemá — hvězdičky tehdy bydlely přímo ve
+    cvičeních a byly jen adminovy, takže se adminovi vezmou odtamtud. */
+function zalohaOblibenaCviceni(zaloha, uid) {
+  if (Array.isArray(zaloha && zaloha.favoriteVideos)) return zaloha.favoriteVideos.slice();
+  if (uid !== ADMIN_UID) return [];
+  return Object.values((zaloha && zaloha.library) || {}).filter(v => v && v.id && v.favorite === true).map(v => v.id);
+}
+/** Jeden kousek popisu u profilu v plánu obnovy. */
+function obnovaPopisChybiCviceni(n) {
+  return `chybí ${n} ${czPlural(n, "oblíbené cvičení", "oblíbená cvičení", "oblíbených cvičení")}`;
+}
 /** Zpětná vazba trenérů: slučuje se — dnešní hodnoty zůstávají, co dnes chybí, doplní se. */
 const OBNOVA_VIDEO_ZPETNA_VAZBA = ["ratings", "difficulties", "notesByCoach"];
 const OBNOVA_ZPETNA_VAZBA_POPISKY = { ratings: "hodnocení", difficulties: "obtížnost", notesByCoach: "poznámky" };
@@ -17015,9 +17080,12 @@ function sestavPlanObnovy(zaloha, dnes) {
     const dFav = new Set(dnes.favoriteTrainings || []);
     const chybiFav = (zaloha.favoriteTrainings || []).filter(id => !dFav.has(id));
     const chybiPamet = Object.keys(pametChybiOprotiZaloze(zaloha.cueMemory, dnes.cueMemory)).length;
-    if (pole.length || chybiFav.length || chybiPamet) {
+    const dFavV = new Set(dnes.favoriteVideos || []);
+    const chybiFavV = zalohaOblibenaCviceni(zaloha, dnes.uid).filter(id => !dFavV.has(id));
+    if (pole.length || chybiFav.length || chybiFavV.length || chybiPamet) {
       const casti = obnovaPopisky(pole, OBNOVA_PROFIL_POPISKY);
       if (chybiFav.length) casti.push(`chybí ${chybiFav.length} ${czPlural(chybiFav.length, "oblíbený trénink", "oblíbené tréninky", "oblíbených tréninků")}`);
+      if (chybiFavV.length) casti.push(obnovaPopisChybiCviceni(chybiFavV.length));
       if (chybiPamet) casti.push(`chybí paměť cue a poznámek u ${chybiPamet} cvičení`);
       pridej("profil", "profil", "zmeneno", "Profil", casti.join(" · "));
     }
@@ -17033,10 +17101,13 @@ function sestavPlanObnovy(zaloha, dnes) {
       const dFav = new Set(dp.favoriteTrainings || []);
       const chybiFav = (zp.favoriteTrainings || []).filter(id => !dFav.has(id));
       const chybiPamet = Object.keys(pametChybiOprotiZaloze(zp.cueMemory, dp.cueMemory)).length;
-      if (!pole.length && !chybiFav.length && !chybiPamet) return;
+      const dFavV = new Set(dp.favoriteVideos || []);
+      const chybiFavV = (zp.favoriteVideos || []).filter(id => !dFavV.has(id));
+      if (!pole.length && !chybiFav.length && !chybiFavV.length && !chybiPamet) return;
       const casti = obnovaPopisky(pole, OBNOVA_PROFIL_POPISKY);
       if (pole.includes("username")) casti[casti.indexOf("jméno")] = `jméno (dnes „${dp.username || ""}“)`;
       if (chybiFav.length) casti.push(`chybí ${chybiFav.length} ${czPlural(chybiFav.length, "oblíbený trénink", "oblíbené tréninky", "oblíbených tréninků")}`);
+      if (chybiFavV.length) casti.push(obnovaPopisChybiCviceni(chybiFavV.length));
       if (chybiPamet) casti.push(`chybí paměť cue a poznámek u ${chybiPamet} cvičení`);
       pridej("profily", u, "zmeneno", zp.username || jmenoTrenera(u), casti.join(" · "));
     });
@@ -17183,7 +17254,12 @@ function prenesObnovuDoStavu(klice, zaloha, st, uidJa, razitko, dnes) {
         OBNOVA_PROFIL_POLE.forEach(k => { if (k in zp) pole[k] = zp[k]; });
         const dnesniProfil = (dnes && dnes.profiles && dnes.profiles[id]) || {};
         const dnesni = dnesniProfil.favoriteTrainings || [];
+        // Oblíbená cvičení (9. 10. 2026): k zápisu jdou jen tehdy, když kolegovi nějaké chybí
+        // (cviceni === null = nic nechybí) — stejně opatrně jako paměť cue, viz zápis.
+        const dnesniCv = dnesniProfil.favoriteVideos || [];
+        const chybiCv = (zp.favoriteVideos || []).some(x => !dnesniCv.includes(x));
         vysl.profily[id] = { pole, oblibene: [...new Set([...dnesni, ...(zp.favoriteTrainings || [])])],
+          cviceni: chybiCv ? [...new Set([...dnesniCv, ...(zp.favoriteVideos || [])])] : null,
           pamet: pametChybiOprotiZaloze(zp.cueMemory, dnesniProfil.cueMemory) };
         hotovo = true;
       }
@@ -17195,7 +17271,8 @@ function prenesObnovuDoStavu(klice, zaloha, st, uidJa, razitko, dnes) {
       const pole = {};
       OBNOVA_PROFIL_POLE.forEach(k => { if (k in zP) pole[k] = zP[k]; });
       const oblibene = [...new Set([...(st.favoriteTrainings || []), ...(zaloha.favoriteTrainings || [])])];
-      vysl.profil = { pole, oblibene, pamet: pametChybiOprotiZaloze(zaloha.cueMemory, st.cueMemory) };
+      const cviceni = [...new Set([...(st.favoriteVideos || []), ...zalohaOblibenaCviceni(zaloha, uidJa)])];
+      vysl.profil = { pole, oblibene, cviceni, pamet: pametChybiOprotiZaloze(zaloha.cueMemory, st.cueMemory) };
       hotovo = true;
     } else if (oblast === "klice") {
       if (zaloha[id]) { vysl.klice[id] = zaloha[id]; hotovo = true; }
@@ -17331,6 +17408,7 @@ async function nactiDnesniStavProObnovu(zaloha) {
     trainings,
     members: { approved }, jmena,
     profile: state.profile || {}, favoriteTrainings: [...(state.favoriteTrainings || [])],
+    favoriteVideos: [...(state.favoriteVideos || [])],
     cueMemory: state.cueMemory || {},
     driveApiKey: state.driveApiKey || "", vapidKey: state.vapidKey || "",
     comments: komentare, tips: tipy, profiles
@@ -17536,7 +17614,8 @@ async function provedObnovu(klice, zaloha, hlas, dnes) {
     hlas("Zapisuju profil…");
     try {
       const pamet = vysl.profil.pamet || {};
-      await setDoc(doc(db, "users", uidCurrent), { ...vysl.profil.pole, favoriteTrainings: vysl.profil.oblibene, ...(Object.keys(pamet).length ? { cueMemory: pamet } : {}), restoredAt: razitko }, { merge: true });
+      await setDoc(doc(db, "users", uidCurrent), { ...vysl.profil.pole, favoriteTrainings: vysl.profil.oblibene, favoriteVideos: vysl.profil.cviceni, ...(Object.keys(pamet).length ? { cueMemory: pamet } : {}), restoredAt: razitko }, { merge: true });
+      state.favoriteVideos = new Set(vysl.profil.cviceni);
       if (!state.cueMemory) state.cueMemory = {};
       Object.entries(pamet).forEach(([id, z]) => { state.cueMemory[id] = Object.assign({}, state.cueMemory[id], z); });
       state.profile = Object.assign({}, state.profile, vysl.profil.pole);
@@ -17576,7 +17655,9 @@ async function provedObnovu(klice, zaloha, hlas, dnes) {
     // Paměť cue (8. 10. 2026) jen když něco chybí — pravidla ji u cizího profilu povolují až
     // po úpravě (pole cueMemory v seznamu pro obnovu); bez ní by neprošel ani zbytek profilu.
     const pamet = p.pamet || {};
-    await setDoc(doc(db, "users", u), { ...p.pole, favoriteTrainings: p.oblibene, ...(Object.keys(pamet).length ? { cueMemory: pamet } : {}), restoredAt: razitko }, { merge: true });
+    // Oblíbená cvičení (9. 10. 2026) stejně: jen když kolegovi nějaká chybí, a pravidla je
+    // u cizího profilu povolují až s polem favoriteVideos v seznamu pro obnovu.
+    await setDoc(doc(db, "users", u), { ...p.pole, favoriteTrainings: p.oblibene, ...(p.cviceni ? { favoriteVideos: p.cviceni } : {}), ...(Object.keys(pamet).length ? { cueMemory: pamet } : {}), restoredAt: razitko }, { merge: true });
     delete profileCache[u];   // jméno a fotka se příště načtou znovu
   });
   if (odmitnuto) problemy.push("Firestore část zápisů odmítl — nejspíš ještě nejsou ve Firebase konzoli nasazená nová pravidla (2. kolo obnovy).");
@@ -18732,7 +18813,7 @@ const HELP_DATA = [
       { q: "Jak najdu konkrétní video v knihovně?", a: "Použij vyhledávací pole nahoře — hledá podle názvu, štítku i složky zároveň, živě při psaní." },
       { q: "Jak si knihovnu vyfiltruju podle složky, štítku nebo obtížnosti?", a: "V horní liště Knihovny jsou filtry pro složku a řazení (mimo jiné podle obtížnosti od nejsnazší po nejtěžší)." },
       { q: "Jak vyfiltruju knihovnu podle toho, kdo video nahrál?", a: "V horní liště Knihovny je vedle Štítků a Vybavení i filtr „Kdo nahrál“ — rozbalí seznam kolegů, co do knihovny něco přidali, a jde podle nich filtrovat stejně jako podle štítků.", kw: "autor nahral kolega filtr" },
-      { q: "Co znamená hvězdička/oblíbené u videa?", a: "Označuje si jí video, ke kterému se chceš rychle vracet — dá se pak filtrovat jen na oblíbená videa, hlavně užitečné při výběru videí do tréninku." },
+      { q: "Co znamená hvězdička/oblíbené u cvičení?", a: "Označíš si jí cvičení, ke kterému se chceš rychle vracet — dá se pak filtrovat jen na oblíbená, hlavně při výběru cvičení do tréninku. Hvězdičky jsou jen tvoje: nikdo jiný je nevidí a nikomu jinému se tím nic nezmění. Dát si je může každý, i prohlížeč. Když cvičení upravíš, hvězdička u něj zůstane. Oblíbená cvičení mají taky přednost v Osvědčeném návrhu tréninku.", kw: "hvezdicka oblibene oblibena cviceni video filtr moje osobni" },
       { q: "Jak přepnu knihovnu ze dlaždic na seznam?", a: "V horní liště Knihovny je přepínač zobrazení mezi mřížkou (dlaždice) a seznamem — na počítači, na mobilu zůstává jen mřížka." }
     ]},
     { title: "Úprava, obtížnost a mazání videí", icon: "fa-solid fa-pen", qa: [
@@ -18793,7 +18874,7 @@ const HELP_DATA = [
       { q: "Jak vyberu zaměření v dotazníku?", a: "První ťuknutí je hlavní zaměření (číslo 1), druhé vedlejší (číslo 2) — vedlejší je nepovinné. Hlavní dostane zhruba dvě třetiny drilů a herních cvičení. Ťuknutím na vybrané zaměření ho zase odebereš.", kw: "hlavni vedlejsi zamereni dotaznik" },
       { q: "Proč mám zaškrtávat vybavení?", a: "Vybavení je dvojí. Nutné (určuje ho admin — třeba síť nebo zeď) je v dotazníku nahoře: bez něj se cvičení nenavrhne vůbec. Všechno ostatní je nahraditelné a je pod „Další vybavení“: cvičení se navrhne i bez něj, jen má nižší přednost a návrh u něj napíše, co je potřeba navíc. Předem je zaškrtnutý Míč a Síť. Čím přesněji zaškrtneš, co máš, tím líp návrh sedne.", kw: "vybaveni zaskrtnout mic sit dalsi nutne nahraditelne" },
       { q: "Co znamená „navíc: Čudlíky“ u návrhu?", a: "Některé cvičení v návrhu potřebuje vybavení, které jsi v dotazníku nezaškrtl(a). Aplikace ho kvůli tomu nevyhodila — třeba ho máš, nebo ho něčím nahradíš — jen ti říká, s čím počítat. Ke kterému cvičení to patří, uvidíš po ťuknutí na „Zobrazit“: vybavení navíc je v řádku „připrav“ zvýrazněné a má před sebou plus.", kw: "navic vybaveni cudliky znacka plus nezaskrtnute" },
-      { q: "Čím se liší návrhy Osvědčený, Nový a Mix?", a: "Osvědčený dává přednost nejlépe hodnoceným a často používaným videím. Nový sahá po videích, která jsi ve svých trénincích ještě neměl(a). Mix bere od každého něco. „Namíchat znovu“ vylosuje jiná cvičení ke stejnému zadání.", kw: "osvedceny novy mix namichat znovu karty" },
+      { q: "Čím se liší návrhy Osvědčený, Nový a Mix?", a: "Osvědčený dává přednost nejlépe hodnoceným a často používaným cvičením, a ještě víc těm, která máš označená hvězdičkou jako oblíbená — každému trenérovi se počítají jeho vlastní hvězdičky. Nový sahá po videích, která jsi ve svých trénincích ještě neměl(a). Mix bere od každého něco. „Namíchat znovu“ vylosuje jiná cvičení ke stejnému zadání.", kw: "osvedceny novy mix namichat znovu karty oblibene hvezdicka prednost" },
       { q: "K čemu je přepínač Vyvážený / Drilový / Herní?", a: "Určuje, kolik času dostanou drily a kolik herní cvičení. Vyvážený je dělí napůl, Drilový dává tři čtvrtiny drilům, Herní tři čtvrtiny herním cvičením. Rozcvička a hra na rozehřátí zůstávají stejné.", kw: "vyvazeny drilovy herni skladba prepinac" },
       { q: "Co udělá „Zobrazit“ a co „Použít“?", a: "„Zobrazit“ otevře návrh v Přehledu tréninku — celý plán s videi a časy, jen ke čtení. „Použít“ (na kartě i dole v Přehledu) vloží cvičení do tréninku, pojmenuje ho podle zadání a zařadí do zvolených zaměření. Potom s ním pracuješ jako s každým jiným: cvičení přehazuješ, mažeš, měníš časy, přidáváš přestávky.", kw: "zobrazit pouzit prehled navrh upravit" },
       { q: "Podle čeho aplikace cvičení vybírá?", a: "Podle toho, jak je Knihovna vyplněná: výchozí část tréninku u videa určuje, kam cvičení patří (rozcvička, dril…), složka a štítky určují zaměření, vybavení a obtížnost rozhodují, jestli se hodí k zadání, a hvězdičky s tím, jak často je video v trénincích, rozhodují o pořadí. Nefunkční videa a videa v koši se nenavrhují. Čím poctivěji jsou videa vyplněná, tím lepší návrhy.", kw: "jak vybira pravidla cast stitky slozka hvezdicky" },
