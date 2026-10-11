@@ -311,7 +311,14 @@ body.dark-mode .sesit-list{box-shadow:0 8px 20px rgba(0,0,0,.5);}
 /* Otáčení listu: prázdný list papíru, který se přetočí přes hřbet (na telefonu přes levý okraj). */
 .list-otacka{position:absolute;top:0;left:0;width:100%;z-index:3;pointer-events:none;border-radius:10px;backface-visibility:visible;
   background-color:var(--s-papir);box-shadow:0 10px 26px rgba(0,0,0,.28);transform-origin:left center;
-  background-image:repeating-linear-gradient(to bottom,transparent 0,transparent calc(var(--radek) - 1px),var(--s-linka) calc(var(--radek) - 1px),var(--s-linka) var(--radek));background-position:0 var(--posun);}
+  background-image:linear-gradient(to right,transparent 55px,var(--s-okraj) 55px,var(--s-okraj) 56.5px,transparent 56.5px),
+    repeating-linear-gradient(to bottom,transparent 0,transparent calc(var(--radek) - 1px),var(--s-linka) calc(var(--radek) - 1px),var(--s-linka) var(--radek));
+  background-position:0 0,0 var(--posun);}
+.sesit[data-papir="ctverecky"] .list-otacka{
+  background-image:linear-gradient(to right,transparent 55px,var(--s-okraj) 55px,var(--s-okraj) 56.5px,transparent 56.5px),
+    repeating-linear-gradient(to bottom,transparent 0,transparent 13px,var(--s-linka) 13px,var(--s-linka) 14px),
+    repeating-linear-gradient(to right,transparent 0,transparent 13px,var(--s-linka) 13px,var(--s-linka) 14px);
+  background-position:0 0,0 var(--posun),0 0;}
 .list-otacka.dvoj{width:50%;}
 .list-otacka.dvoj.starsi{transform-origin:right center;}
 .list-otacka.dvoj.novejsi{left:50%;}
@@ -320,7 +327,7 @@ body.dark-mode .sesit-list{box-shadow:0 8px 20px rgba(0,0,0,.5);}
 /* Otevřený sešit: od 1000 px dvě stránky vedle sebe s hřbetem uprostřed. */
 @media (min-width:1000px){
   .sesit-list{column-count:2;column-gap:0;padding-right:0;border-radius:6px;background-size:50% 100%,100% auto;background-repeat:repeat-x,repeat;}
-  .sesit[data-papir="ctverecky"] .sesit-list{background-size:50% 100%,auto,auto;background-repeat:repeat-x,repeat,repeat;}
+  .sesit[data-papir="ctverecky"] .sesit-list{background-size:50% 100%,auto,50% 100%;background-repeat:repeat-x,repeat,repeat-x;}
   .sesit-list::after{content:"";position:absolute;top:0;bottom:0;left:calc(50% - 26px);width:52px;pointer-events:none;
     background:linear-gradient(to right,transparent,rgba(60,50,30,.10) 38%,rgba(60,50,30,.26) 49.4%,rgba(255,255,255,.35) 50.6%,rgba(60,50,30,.12) 62%,transparent);}
   .sesit .zapis{break-inside:avoid;padding-right:22px;}
@@ -3797,7 +3804,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-10-11 23:45";
+const APP_VERSION = "2026-10-12 00:55";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -13866,6 +13873,7 @@ document.getElementById("denikVzhledBtn").addEventListener("click", () => {
   const panel = document.getElementById("denikVzhled"), otevrit = panel.classList.contains("hidden");
   panel.classList.toggle("hidden", !otevrit);
   document.getElementById("denikVzhledBtn").setAttribute("aria-expanded", otevrit);
+  denikVyskaListu();
   if (otevrit) denikNactiUkazky();
 });
 document.getElementById("denikVzhled").addEventListener("click", (e) => {
@@ -13918,6 +13926,19 @@ function denikCekaHtml(c) {
     <div class="upravy"><button type="button" class="hl" data-ds="ceka-ano">Ano</button><button type="button" data-ds="ceka-ne">Ne</button></div></div></article>`;
 }
 function denikPoleSesitu() { return document.querySelector("#denikList .ds-rte .rte-editor"); }
+/** List sahá vždy aspoň ke spodku okna (po celých řádcích), ať krátké měsíce při listování
+    neposkakují. Delší měsíc ho natáhne dál. */
+const DENIK_RADEK_PX = 28;
+/** Nejmenší výška listu: ke spodku okna (bez 40 px na okraj stránky), dolů na celé řádky, nejmíň osm řádků. */
+function denikMinVyska(okno, shora) {
+  return Math.max(8, Math.floor((okno - shora - 40) / DENIK_RADEK_PX)) * DENIK_RADEK_PX;
+}
+function denikVyskaListu() {
+  if (currentView !== "denik") return;
+  const list = document.getElementById("denikList");
+  list.style.minHeight = denikMinVyska(window.innerHeight, list.getBoundingClientRect().top + window.scrollY) + "px";
+}
+window.addEventListener("resize", denikVyskaListu);
 function denikKurzorNaKonec(pole) {
   try {
     const r = document.createRange();
@@ -13940,6 +13961,7 @@ function renderDenik() {
     denikMesic = null;
     denikSesitUprava = null;
     list.innerHTML = '<p class="ds-prazdno">Zatím tu nic není. Až odejdeš z Přehledu tréninku, ťukni nahoře na „Ano, odtrénováno“. Starší trénink dopíšeš tlačítkem nad sešitem.</p>';
+    denikVyskaListu();
     return;
   }
   const l = listy[i];
@@ -13948,6 +13970,7 @@ function renderDenik() {
   list.dataset.mesic = l.mesic;
   list.innerHTML = `<div class="listuj"><button type="button" class="li-sipka" data-ds="starsi" aria-label="Starší měsíc"${i < listy.length - 1 ? "" : " disabled"}><i class="fa-solid fa-chevron-left"></i></button><div class="mesic"><span>${esc(l.text)}</span></div><button type="button" class="li-sipka" data-ds="novejsi" aria-label="Novější měsíc"${i > 0 ? "" : " disabled"}><i class="fa-solid fa-chevron-right"></i></button></div>`
     + l.ceka.map(denikCekaHtml).join("") + l.zapisy.map(x => denikZapisHtml(x.z, x.kolikrat)).join("");
+  denikVyskaListu();
   const nove = denikPoleSesitu();
   if (nove && rozepsano) {
     nove.innerHTML = rozepsano.html;
@@ -14020,7 +14043,8 @@ function denikListuj(smer) {
   const listy = denikListy(state.denik.zaznamy, state.denik.ceka, denikDen());
   const i = denikListIndex(listy, denikMesic), j = i + smer;
   if (i === -1 || j < 0 || j >= listy.length) return;
-  const prepni = () => { denikMesic = listy[j].mesic; renderDenik(); };
+  let otacka = null;
+  const prepni = () => { denikMesic = listy[j].mesic; renderDenik(); if (otacka) otacka.style.height = document.getElementById("denikList").offsetHeight + "px"; };
   denikZvuk("list");
   const list = document.getElementById("denikList"), sesit = document.getElementById("denikSesit");
   const klid = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -14037,6 +14061,7 @@ function denikListuj(smer) {
   o.className = "list-otacka" + (dvoj ? " dvoj" : "") + (smer > 0 ? " starsi" : " novejsi");
   o.style.height = list.offsetHeight + "px";
   sesit.appendChild(o);
+  otacka = o;
   const konec = () => { o.remove(); denikOtaceni = false; };
   let a;
   if (dvoj) {
