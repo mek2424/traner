@@ -1,5 +1,5 @@
-const CACHE_NAME = "trener-v54";
-const APP_SHELL = ["./", "./index.html", "./training-mode.css", "./manifest.json", "./icon-192.png", "./icon-512.png", "./icon-512-maskable.png", "./club-logo.png", "./raptor-sound.mp3", "./Boxing%20Bell%20Sound%20Effect.mp3"];
+const CACHE_NAME = "trener-v55";
+const APP_SHELL = ["./", "./index.html", "./training-mode.css", "./manifest.json", "./icon-192.png", "./icon-512.png", "./icon-512-maskable.png", "./club-logo.png", "./raptor-sound.mp3", "./Boxing%20Bell%20Sound%20Effect.mp3", "./page_turn.mp3", "./erase.mp3"];
 
 /* =========================================================
    NOTIFIKACE (23. 9. 2026, doplněno 24. 9. 2026)
