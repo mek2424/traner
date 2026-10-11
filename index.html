@@ -3382,6 +3382,7 @@ function isFavoriteTraining(id) { return state.favoriteTrainings.has(id); }
    a formulář úpravy ji při každém uložení tiše smazal. Staré pole favorite ve cvičeních
    zůstává ležet, aplikace ho čte už jen při jednorázovém převodu adminovi (viz loadUserData). */
 let oblibenaCviceniPrevedena = false;
+let oblibenaPrevodZapsan = false;   // příznak převodu už je na serveru
 function isFavoriteVideo(id) { return state.favoriteVideos.has(id); }
 /** Stejný drobný samostatný zápis jako u oblíbených tréninků — mimo hlavní ukládací řetěz,
     takže ho smí i prohlížeč a na sdílenou knihovnu nesahá. */
@@ -3389,12 +3390,70 @@ function prepniOblibeneCviceni(id) {
   if (state.favoriteVideos.has(id)) state.favoriteVideos.delete(id);
   else state.favoriteVideos.add(id);
   if (!uidCurrent) return;
-  const zapis = { favoriteVideos: [...state.favoriteVideos] };
-  // Admin: kdyby zápis převodu při přihlášení selhal, tenhle ho nese taky — jinak by příští
-  // přihlášení staré hvězdičky přičetlo znovu, i ty mezitím zhasnuté.
-  if (uidCurrent === ADMIN_UID && oblibenaCviceniPrevedena) zapis.favoriteVideosFilled = true;
-  setDoc(doc(db, "users", uidCurrent), zapis, { merge: true })
+  /* DVĚ ZAŘÍZENÍ (11. 10. 2026). Zapisuje se jen ta jedna hvězdička („přidej“ / „odeber“), ne
+     celý seznam — jinak by telefon se starým stavem přepsal, co si trenér mezitím rozsvítil
+     na počítači. Výjimka: admin, kterému se při přihlášení nezapsal převod starých hvězdiček.
+     Ten pošle jednou celý seznam i s příznakem, jinak by převedené hvězdičky na serveru
+     chyběly, nebo by je příští přihlášení přičetlo znovu i se zhasnutými. */
+  if (uidCurrent === ADMIN_UID && oblibenaCviceniPrevedena && !oblibenaPrevodZapsan) {
+    setDoc(doc(db, "users", uidCurrent), { favoriteVideos: [...state.favoriteVideos], favoriteVideosFilled: true }, { merge: true })
+      .then(() => { oblibenaPrevodZapsan = true; })
+      .catch(e => console.warn("Uložení oblíbených cvičení selhalo:", e));
+    return;
+  }
+  const zmena = state.favoriteVideos.has(id) ? arrayUnion(id) : arrayRemove(id);
+  setDoc(doc(db, "users", uidCurrent), { favoriteVideos: zmena }, { merge: true })
     .catch(e => console.warn("Uložení oblíbených cvičení selhalo:", e));
+}
+
+/* ČERSTVÝ STAV PŘI NÁVRATU DO APLIKACE (11. 10. 2026). Hvězdičky a paměť cue se načítaly jen
+   při přihlášení, takže druhé zařízení ukazovalo starý stav až do nového otevření aplikace.
+   Teď se při návratu (odemknutí telefonu, přepnutí zpět z jiné aplikace nebo karty) jednou
+   znovu přečte vlastní profil — jeden malý dokument, knihovna ani tréninky se nenačítají.
+   Schválně ne průběžným sledováním: profil se kvůli známce „kdo je online“ přepisuje každé
+   3 minuty a pokaždé by se stáhl celý znovu (Mek 11. 10.: šetřit data). */
+const OSOBNI_ZNOVU_NEJDRIV_PO_MS = 30000;
+let osobniNactenoV = 0;
+/** Paměť cue ze serveru + to, co je na tomhle zařízení napsané a ještě neodeslané (má přednost). */
+function pametSlucSNeodeslanym(zeServeru, neodeslane) {
+  const out = Object.assign({}, zeServeru);
+  neodeslane.forEach((zmena, id) => {
+    const z = Object.assign({}, out[id]);
+    Object.entries(zmena).forEach(([k, v]) => { if (v === null) delete z[k]; else z[k] = v; });
+    if (z.cue || z.note) out[id] = z; else delete out[id];
+  });
+  return out;
+}
+const stejneMnoziny = (a, b) => a.size === b.size && [...a].every(x => b.has(x));
+async function nactiOsobniZnovu() {
+  if (!uidCurrent || !osobniNactenoV) return;   // před dokončením přihlášení nic
+  if (Date.now() - osobniNactenoV < OSOBNI_ZNOVU_NEJDRIV_PO_MS) return;
+  osobniNactenoV = Date.now();
+  const uid = uidCurrent;
+  let d;
+  try {
+    const snap = await getDoc(doc(db, "users", uid));
+    if (!snap.exists()) return;
+    d = snap.data();
+  } catch (e) { return; }   // bez signálu zůstane, co aplikace má
+  if (uid !== uidCurrent) return;   // mezitím se přihlásil někdo jiný
+  const cviceni = new Set(Array.isArray(d.favoriteVideos) ? d.favoriteVideos : []);
+  const treninky = new Set(Array.isArray(d.favoriteTrainings) ? d.favoriteTrainings : []);
+  // Admin s nezapsaným převodem: převedené hvězdičky na serveru ještě nejsou, nesmí zmizet.
+  const prevodCeka = uid === ADMIN_UID && oblibenaCviceniPrevedena && !oblibenaPrevodZapsan && !d.favoriteVideosFilled;
+  if (prevodCeka) state.favoriteVideos.forEach(x => cviceni.add(x));
+  if (d.favoriteVideosFilled) { oblibenaCviceniPrevedena = true; oblibenaPrevodZapsan = true; }
+  const zmenaCviceni = !stejneMnoziny(cviceni, state.favoriteVideos);
+  const zmenaTreninku = !stejneMnoziny(treninky, state.favoriteTrainings);
+  state.favoriteVideos = cviceni;
+  state.favoriteTrainings = treninky;
+  state.cueMemory = pametSlucSNeodeslanym(pametZDokumentu(d.cueMemory), pametKZapisu);
+  if (zmenaCviceni) {
+    renderLibrary();
+    if (currentView === "editor") renderPickerList();
+  }
+  if (zmenaTreninku) renderTrainingsList();
+  if (zmenaCviceni || zmenaTreninku) logDebug(`[oblíbené] po návratu načten čerstvý stav: cvičení ${cviceni.size}, tréninky ${treninky.size}`);
 }
 /** Seed mapování zaměření → složky v Knihovně podle SHODY NÁZVŮ. Použije se jen tehdy,
     když ve sdílených datech ještě žádné mapování není. Jakmile existuje, rozhoduje ono —
@@ -3470,7 +3529,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-10-09 11:58";
+const APP_VERSION = "2026-10-11 12:12";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -4026,8 +4085,10 @@ function stopHeartbeat() {
 document.addEventListener("visibilitychange", () => {
   if (!uidCurrent) return;
   if (document.visibilityState === "hidden") stopHeartbeat();
-  else startHeartbeat();
+  else { startHeartbeat(); nactiOsobniZnovu(); }
 });
+// Na počítači se mezi okny přepíná bez změny viditelnosti stránky — proto i focus.
+window.addEventListener("focus", () => { nactiOsobniZnovu(); });
 state.myRole = "editor"; // "editor" | "viewer" — zjistí se přesně při přihlášení
 const isEditor = () => state.myRole !== "viewer";
 /** Podle role (editor/prohlížeč) aplikace schová tlačítka pro úpravu sdílené knihovny —
@@ -5145,6 +5206,7 @@ onAuthStateChanged(auth, async (user) => {
     await checkMembershipAndProceed();
   } else {
     uidCurrent = null;
+    osobniNactenoV = 0;
     authInitializedForUid = null;
     // Otisky patří odhlášenému člověku. Kdyby se na stejné stránce přihlásil někdo jiný,
     // nesmí zdědit informaci "tenhle trénink je už uložený".
@@ -5342,6 +5404,8 @@ async function loadUserData() {
   // Oblíbená cvičení — taky osobní (9. 10. 2026), viz isFavoriteVideo.
   state.favoriteVideos = new Set(Array.isArray(legacy.favoriteVideos) ? legacy.favoriteVideos : []);
   oblibenaCviceniPrevedena = !!legacy.favoriteVideosFilled;
+  oblibenaPrevodZapsan = !!legacy.favoriteVideosFilled;
+  osobniNactenoV = legacyOk ? Date.now() : 0;   // od teď smí běžet nactiOsobniZnovu
   // Kdy naposled vznikla záloha (ruční, automatická nebo před obnovou) — podle toho se po
   // 7 dnech připomíná (24. 9. 2026). Bydlí v users/{uid}, ať to ví každé zařízení.
   state.lastBackupAt = legacy.lastBackupAt || 0;
@@ -5590,6 +5654,7 @@ async function loadUserData() {
     oblibenaCviceniPrevedena = true;
     try {
       await setDoc(doc(db, "users", uidCurrent), { favoriteVideos: [...state.favoriteVideos], favoriteVideosFilled: true }, { merge: true });
+      oblibenaPrevodZapsan = true;
       logDebug(`[oblíbené] převedeno hvězdiček ze cvičení do profilu: ${stare.length}`);
     } catch (e) { console.warn("Převod oblíbených cvičení se nezapsal, zkusí se při příštím přihlášení:", e); }
   }
@@ -10984,7 +11049,9 @@ function prepniOblibeny(id) {
   else state.favoriteTrainings.add(id);
   renderTrainingsList();
   if (!uidCurrent) return;
-  setDoc(doc(db, "users", uidCurrent), { favoriteTrainings: [...state.favoriteTrainings] }, { merge: true })
+  // Jen ta jedna hvězdička, ne celý seznam — viz prepniOblibeneCviceni (dvě zařízení, 11. 10. 2026).
+  const zmena = state.favoriteTrainings.has(id) ? arrayUnion(id) : arrayRemove(id);
+  setDoc(doc(db, "users", uidCurrent), { favoriteTrainings: zmena }, { merge: true })
     .catch(e => console.warn("Uložení oblíbených tréninků selhalo:", e));
 }
 function updateTrainingBulkBar() {
