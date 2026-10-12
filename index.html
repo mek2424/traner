@@ -227,7 +227,9 @@ body.dark-mode{
    až pod ní. Papír má vlastní pevné barvy (--s-*), stejné ve světlém i tmavém režimu; papír,
    jeho tón a rukopis si volí trenér (data-papir / data-ton / data-pismo na .sesit).
    Všechno na listu je vysoké v násobcích --radek, ať text sedí na linkách. */
-#denikView{position:relative;overflow-x:clip;}
+/* Deníček nesmí nic vystrčit mimo sebe (ani otáčený list): jinak se objeví posuvník stránky
+   a všechno poskočí do strany. Stín sešitu se do okraje vejde. */
+#denikView{position:relative;overflow:clip;overflow-clip-margin:28px;}
 .btn.denik-vstup{position:relative;color:var(--chalk);border-color:var(--chalk);}
 .dv-tecka{position:absolute;top:-5px;right:-5px;width:13px;height:13px;border-radius:50%;background:var(--chalk);border:2.5px solid var(--paper);}
 /* Hlavička Deníčku v jednom řádku (kolo 10): zpět, nadpis, Dopsat trénink, Vzhled — ať sešit
@@ -3825,7 +3827,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-10-12 02:40";
+const APP_VERSION = "2026-10-12 12:20";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -14186,17 +14188,17 @@ function denikListuj(smer) {
   let a;
   if (dvoj) {
     // Dvoustrana: list se přetočí přes hřbet na druhou stranu; obsah se vymění, když stojí hranou.
-    const uhel = smer > 0 ? 180 : -180, ms = 520;
+    const uhel = smer > 0 ? -180 : 180, ms = 520;   // od trenéra, do hloubky — viz CSS #denikView
     a = o.animate([{ transform: "rotateY(0deg)", opacity: 1 }, { opacity: 1, offset: .82 }, { transform: `rotateY(${uhel}deg)`, opacity: 0 }], { duration: ms, easing: "ease-in-out" });
     setTimeout(prepni, ms / 2);
   } else if (smer > 0) {
     // Telefon, zpět: list přiletí zleva a přikryje ten dosavadní.
-    a = o.animate([{ transform: "rotateY(-100deg)" }, { transform: "rotateY(0deg)" }], { duration: 400, easing: "ease-out" });
+    a = o.animate([{ transform: "rotateY(100deg)" }, { transform: "rotateY(0deg)" }], { duration: 400, easing: "ease-out" });
     a.finished.then(prepni, prepni);
   } else {
     // Telefon, dál: dosavadní list odletí doleva a odkryje ten další.
     prepni();
-    a = o.animate([{ transform: "rotateY(0deg)" }, { transform: "rotateY(-100deg)" }], { duration: 400, easing: "ease-in" });
+    a = o.animate([{ transform: "rotateY(0deg)" }, { transform: "rotateY(100deg)" }], { duration: 400, easing: "ease-in" });
   }
   a.finished.then(konec, konec);
 }
