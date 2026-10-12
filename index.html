@@ -3882,7 +3882,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-10-12 19:00";
+const APP_VERSION = "2026-10-12 20:50";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -14548,7 +14548,10 @@ async function denikSesitAkce(akce, el) {
 const denikListEl = document.getElementById("denikList"), denikSesitEl = document.getElementById("denikSesit");
 // Koš ani smajlík (kolo 13) nesmí sebrat fokus rozepsané poznámce — jinak by se uložila a sešit
 // překreslil dřív, než ťuknutí dopadne, a ťuknutí by se ztratilo (na telefonu prst drží déle).
-denikListEl.addEventListener("mousedown", (e) => { if (e.target.closest('[data-ds="smazat"], [data-ds="hodnotit"]')) e.preventDefault(); });
+// Totéž datum na okraji, když se právě píše poznámka: výběr data otevře až ťuknutí (viz click níž).
+denikListEl.addEventListener("mousedown", (e) => {
+  if (e.target.closest('[data-ds="smazat"], [data-ds="hodnotit"]') || (denikSesitUprava && e.target.closest(".dz-datum"))) e.preventDefault();
+});
 // Nabídka hodnocení se zavře ťuknutím kamkoli mimo ni (i mimo sešit) a klávesou Escape.
 document.addEventListener("pointerdown", (e) => {
   if (e.target.closest && !e.target.closest(".dz-nabidka, .dz-hodn")) denikHodnZavri();
@@ -14558,7 +14561,18 @@ document.addEventListener("keydown", (e) => {
 }, true);
 denikSesitEl.addEventListener("click", (e) => {
   const d = e.target.closest(".dz-datum");
-  if (d) { try { if (d.showPicker) d.showPicker(); } catch (err) {} return; }
+  if (d) {
+    // Píše-li se poznámka, nejdřív se uloží (sešit se překreslí), výběr data se pak otevře
+    // na novém poli téhož záznamu.
+    let pole = d;
+    if (denikSesitUprava) {
+      const id = d.closest(".zapis").dataset.id;
+      if (!denikSesitZavriUpravu(true)) return;
+      pole = document.querySelector(`#denikList .zapis[data-id="${CSS.escape(id)}"] .dz-datum`);
+    }
+    try { if (pole && pole.showPicker) pole.showPicker(); else if (pole) pole.focus(); } catch (err) {}
+    return;
+  }
   const b = e.target.closest("[data-ds]");
   if (b && !b.disabled) denikSesitAkce(b.dataset.ds, b);
 });
