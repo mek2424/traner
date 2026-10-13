@@ -1615,6 +1615,18 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
 .editor-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;}
 @media(min-width:860px){.editor-layout{grid-template-columns:280px minmax(0,1fr);align-items:start;}}
 .editor-seq-col{min-width:0;}
+/* Kolo 16 (13. 10. 2026, Mek): na telefonu nejdřív cvičení tréninku, pod nimi „Přidat z knihovny“
+   — trenér hned vidí, co v tréninku má, a nové cvičení se stejně přidává na konec. Prázdná karta
+   „Zatím prázdno“ se tu neukazuje (knihovna je hned pod tlačítky). Na počítači beze změny. */
+@media(max-width:859px){
+  .editor-layout > .picker-panel{order:2;}
+  .editor-layout > .editor-seq-col{order:1;}
+  #sequenceEmpty{display:none;}
+  .sequence.je-prazdna{min-height:0;}
+}
+/* Krátké zvýraznění položky, ke které editor posunul (Ukázat / nové textové cvičení / skupina). */
+.seq-item.editor-zvyraznena{animation:editorZvyrazni 1.8s ease-out;}
+@keyframes editorZvyrazni{0%,55%{outline:3px solid var(--chalk);outline-offset:2px;}100%{outline:3px solid transparent;outline-offset:2px;}}
 @media(min-width:860px){.editor-layout.no-picker{grid-template-columns:1fr;}}
 .picker-panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:12px;min-width:0;}
 @media(min-width:860px){.picker-panel{position:sticky;top:110px;max-height:calc(100vh - 130px);overflow-y:auto;}}
@@ -3904,7 +3916,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-10-13 10:40";
+const APP_VERSION = "2026-10-13 12:24";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -16542,12 +16554,51 @@ function addLibraryItemToTraining(trainingId, libraryId) {
   t.dateModified = Date.now();
   return true;
 }
+/* Editor na telefonu (kolo 16, 13. 10. 2026): pod 860 px jsou cvičení NAD panelem „Přidat
+   z knihovny“. Nová položka přibude na konec seznamu, tedy těsně nad knihovnou — knihovna by
+   uskočila dolů. Chrome ji drží sám (scroll anchoring), Safari ne; editorDrzKnihovnu ji proto
+   drží v kódu, ať se to chová všude stejně. Mek: video a přestávka → zůstat u knihovny, hláška
+   s „Ukázat“; textové cvičení a nová skupina → posun k nové položce se zvýrazněním, psaní se
+   samo neotevře. Na počítači beze změny. */
+const EDITOR_UZKY_MQ = window.matchMedia("(max-width: 859px)");
+const EDITOR_UKAZAT_MS = 4000;
+function editorUzky() { return EDITOR_UZKY_MQ.matches; }
+/** Provede fn (přidání + překreslení) a vrátí panel knihovny na stejné místo obrazovky. */
+function editorDrzKnihovnu(fn) {
+  const panel = document.querySelector("#editorLayout > .picker-panel");
+  const pred = panel.getBoundingClientRect().top;
+  fn();
+  const posun = panel.getBoundingClientRect().top - pred;
+  if (Math.abs(posun) >= 1) window.scrollBy(0, posun);
+}
+/** Posune k položce tréninku (doprostřed obrazovky) a krátce ji zvýrazní. */
+function editorUkazPolozku(itemId) {
+  const el = [...document.querySelectorAll("#sequenceList .seq-item[data-itemid]")].find(x => x.dataset.itemid === itemId);
+  if (!el) return;
+  const omezene = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  el.scrollIntoView({ block: "center", behavior: omezene ? "auto" : "smooth" });
+  el.classList.remove("editor-zvyraznena");
+  void el.offsetWidth;   // znovu spustit animaci i u položky, která už svítí
+  el.classList.add("editor-zvyraznena");
+  setTimeout(() => el.classList.remove("editor-zvyraznena"), 1900);
+}
+function editorPridanoHlaska(itemId) {
+  toast("Přidáno do tréninku.", EDITOR_UKAZAT_MS, "ok", { text: "Ukázat", fn: () => editorUkazPolozku(itemId) });
+}
 function addItemToTraining(libraryId) {
-  if (addLibraryItemToTraining(currentTrainingId, libraryId)) {
+  const t = state.trainings[currentTrainingId];
+  const uzky = editorUzky();
+  let ok = false;
+  const pridej = () => {
+    ok = addLibraryItemToTraining(currentTrainingId, libraryId);
+    if (!ok) return;
     scheduleSave();
     renderSequence();
-    toast("Přidáno do tréninku.");
-  }
+  };
+  if (uzky) editorDrzKnihovnu(pridej); else pridej();
+  if (!ok) return;
+  if (uzky) editorPridanoHlaska(t.items[t.items.length - 1].itemId);
+  else toast("Přidáno do tréninku.");
 }
 
 /* =========================================================
@@ -16777,10 +16828,16 @@ document.getElementById("closeCopyToTrainingModalBtn").addEventListener("click",
 document.getElementById("addBreakBtn").addEventListener("click", () => {
   const t = state.trainings[currentTrainingId];
   if (!t) return;
-  t.items.push({ itemId: uid(), videoId: null, part: "prestavka", duration: 5, cue: "", poznamka: "", label: "Přestávka" });
-  t.dateModified = Date.now();
-  scheduleSave();
-  renderSequence();
+  const novaId = uid();
+  const pridej = () => {
+    t.items.push({ itemId: novaId, videoId: null, part: "prestavka", duration: 5, cue: "", poznamka: "", label: "Přestávka" });
+    t.dateModified = Date.now();
+    scheduleSave();
+    renderSequence();
+  };
+  if (!editorUzky()) { pridej(); return; }
+  editorDrzKnihovnu(pridej);
+  editorPridanoHlaska(novaId);
 });
 /** Textové cvičení = položka bez videa (pro cvičení, na které appka ještě nemá natočené video) —
     stejná pole jako u normálního videa (část, čas/opakování, cue, poznámka), jen navíc vlastní
@@ -16800,18 +16857,21 @@ document.getElementById("addTextExerciseBtn").addEventListener("click", () => {
       scheduleSave();
       renderSequence();
       toast("Přidáno do skupiny.");
+      if (editorUzky()) editorUkazPolozku(group.itemId);
       return;
     }
   }
   const part = state.parts[0] ? state.parts[0].key : "";
+  const novaId = uid();
   t.items.push({
-    itemId: uid(), videoId: null, isText: true, title: "", part, duration: 10, durationUnit: "min",
+    itemId: novaId, videoId: null, isText: true, title: "", part, duration: 10, durationUnit: "min",
     cue: "", poznamka: "", mode: "time", reps: "", seriesCount: 1, seriesPause: 30, seriesPauseUnit: "s",
     shortDesc: "", longDesc: "", tags: [], equipment: []
   });
   t.dateModified = Date.now();
   scheduleSave();
   renderSequence();
+  if (editorUzky()) editorUkazPolozku(novaId);
 });
 document.getElementById("togglePickerSelectModeBtn").addEventListener("click", () => {
   pickerSelectMode = !pickerSelectMode;
@@ -16829,8 +16889,9 @@ document.getElementById("groupSelectedBtn").addEventListener("click", () => {
     .filter(it => selectedPickerIds.has(it.id))
     .sort((a, b) => (b.dateAdded || 0) - (a.dateAdded || 0))
     .map(it => it.id);
+  const novaId = uid();
   t.items.push({
-    itemId: uid(), isGroup: true, name: "Nová skupina", cue: "", poznamka: "",
+    itemId: novaId, isGroup: true, name: "Nová skupina", cue: "", poznamka: "",
     mode: "time", seriesCount: 1, seriesPause: 30, seriesPauseUnit: "s",
     videos: orderedIds.map(videoId => pametPredvypln({ memberId: uid(), videoId, cue: "", note: "", duration: 1, durationUnit: "min", reps: "" }, videoId, "note"))
   });
@@ -16843,6 +16904,7 @@ document.getElementById("groupSelectedBtn").addEventListener("click", () => {
   renderPickerList();
   renderSequence();
   toast("Skupina vytvořena — pojmenuj ji a nastav si detaily v sekvenci.");
+  if (editorUzky()) editorUkazPolozku(novaId);
 });
 
 /** Celkový čas tréninku ve vteřinách — součet přes rowDuration(), takže jednotky, skupiny,
@@ -17034,6 +17096,7 @@ function renderSequence() {
   // Stanoviště (kolo 3): uklidit model dřív, než se kreslí — členové hned za blokem.
   if (normalizujStanoviste(t) && !editorReadOnly) { t.dateModified = Date.now(); scheduleSave(); }
   document.getElementById("sequenceEmpty").classList.toggle("hidden", t.items.length > 0);
+  wrap.classList.toggle("je-prazdna", t.items.length === 0);
   // Navrhnout trénink: jen v prázdném vlastním tréninku — do rozdělaného se návrh nevkládá.
   document.getElementById("navrhOpenBtn").classList.toggle("hidden", t.items.length > 0 || editorReadOnly);
   updateTotalBadge();
@@ -20905,8 +20968,9 @@ const HELP_DATA = [
     ]},
     { title: "Vytváření tréninku", icon: "fa-solid fa-clipboard-list", qa: [
       { q: "Jak založím nový trénink?", a: "Na záložce Tréninky klikni na tlačítko pro založení nového a pojmenuj ho — otevře se editor, kde skládáš jeho obsah. Když ho zakládáš uvnitř nějakého zaměření, bude v něm rovnou zařazený (odškrtnout se to dá kdykoli). Když z něj odejdeš, aniž bys do něj cokoli přidal(a) nebo ho přejmenoval(a), aplikace ho zase smaže — prázdné „Nové tréninky“ se tak v seznamu nehromadí.", kw: "novy trenink zalozit prazdny smaze zmizel" },
-      { q: "Jak do tréninku přidám video nebo cvičení z knihovny?", a: "Dvěma způsoby. Buď v editoru tréninku klikni na tlačítko pro přidání položky a vyber video z knihovny (jde filtrovat stejně jako v Knihovně — podle složky, štítku, oblíbených), nebo naopak z Knihovny: otevři kartu videa a dole je „Přidat do tréninku“, kde si vybereš, do kterého tréninku má přibýt. To samé je i v nabídce pod třemi tečkami u karty v Knihovně.", kw: "pridat video do treninku karta kebab" },
-      { q: "Jak přidám přestávku?", a: "Přestávka se přidává stejně jako video — jen jako zvláštní typ položky bez videa, jen s délkou trvání." },
+      { q: "Jak do tréninku přidám video nebo cvičení z knihovny?", a: "Dvěma způsoby. Buď v editoru tréninku v panelu „Přidat z knihovny“ (na počítači vlevo, na telefonu pod cvičeními tréninku) ťukni na „+“ u videa — jde filtrovat stejně jako v Knihovně, podle složky, štítku, oblíbených. Video přibude na konec tréninku; na telefonu zůstaneš u knihovny a v hlášce „Přidáno do tréninku.“ je „Ukázat“, které tě k němu posune. Nebo naopak z Knihovny: otevři kartu videa a dole je „Přidat do tréninku“, kde si vybereš, do kterého tréninku má přibýt. To samé je i v nabídce pod třemi tečkami u karty v Knihovně.", kw: "pridat video do treninku karta kebab" },
+      { q: "Jak přidám přestávku?", a: "V editoru tréninku v panelu „Přidat z knihovny“ ťukni na „Přidat přestávku“. Přibude na konec tréninku jako položka bez videa, jen s délkou trvání. Na telefonu zůstaneš u knihovny a hláška má „Ukázat“ jako u videa." },
+      { q: "Kde je na telefonu v editoru tréninku knihovna?", a: "Pod cvičeními tréninku — nahoře vidíš, co už v tréninku máš, a nové cvičení se stejně přidává na konec. U dlouhého tréninku se ke knihovně dostaneš posunutím dolů. Textové cvičení a nová skupina tě po přidání rovnou posunou k sobě, ať je můžeš vyplnit. Na počítači je knihovna vlevo vedle cvičení.", kw: "knihovna dole telefon mobil editor poradi pridat z knihovny" },
       { q: "Co je „skupina“ cvičení a k čemu je dobrá?", a: "Skupina spojuje víc cvičení dohromady tak, aby se v Tréninkovém režimu střídala v jednom bloku (třeba tři varianty přihrávky za sebou) — vybereš víc položek a použiješ „Seskupit“." }
     ]},
     { title: "Deníček odtrénovaných tréninků", icon: "fa-solid fa-book-open", qa: [
