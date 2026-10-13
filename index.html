@@ -2934,7 +2934,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
     <div class="admin-group">
       <button type="button" class="admin-row" id="openNotifyKeyBtn"><i class="fa-solid fa-bell"></i><span class="admin-row-label">Klíč pro notifikace<span class="admin-row-sub" id="notifyKeyStatus"></span></span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
       <button type="button" class="admin-row" id="openDriveKeyBtn"><i class="fa-brands fa-google-drive"></i><span class="admin-row-label">Google Drive API klíč<span class="admin-row-sub" id="driveKeyStatus"></span></span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
-      <button type="button" class="admin-row" id="backupLibraryBtn"><i class="fa-solid fa-download"></i><span class="admin-row-label">Stáhnout zálohu<span class="admin-row-sub" id="backupStatus">Knihovna, náhledy, tréninky, komentáře, tipy a nastavení</span></span></button>
+      <button type="button" class="admin-row" id="backupLibraryBtn"><i class="fa-solid fa-download"></i><span class="admin-row-label">Stáhnout zálohu<span class="admin-row-sub" id="backupStatus">Knihovna, náhledy, tréninky, komentáře, tipy, Deníčky a nastavení</span></span></button>
       <button type="button" class="admin-row" id="openRestoreBtn"><i class="fa-solid fa-clock-rotate-left"></i><span class="admin-row-label">Obnovit ze zálohy<span class="admin-row-sub">Porovná zálohu s dneškem, vrátí se jen to, co vybereš</span></span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
       <button type="button" class="admin-row" id="openAutoBackupBtn"><i class="fa-solid fa-folder-open"></i><span class="admin-row-label">Automatická záloha<span class="admin-row-sub" id="autoBackupStatus"></span></span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
     </div>
@@ -3435,7 +3435,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
         </button>
       </div>
       <div class="field" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-        <label for="denikToggle" style="margin:0;text-transform:none;font-size:13px;letter-spacing:0;font-weight:500;">Vést deníček<span style="display:block;font-size:12px;font-weight:400;color:var(--ink-faint);margin-top:2px;line-height:1.35;">Po tréninku se tě aplikace zeptá, jestli proběhl, a můžeš si připsat poznámku. Vidíš ho jen ty.</span></label>
+        <label for="denikToggle" style="margin:0;text-transform:none;font-size:13px;letter-spacing:0;font-weight:500;">Vést deníček<span style="display:block;font-size:12px;font-weight:400;color:var(--ink-faint);margin-top:2px;line-height:1.35;">Po tréninku se tě aplikace zeptá, jestli proběhl, a můžeš si připsat poznámku. Vidíš ho jen ty. Kvůli bezpečí se ukládá i do zálohy aplikace.</span></label>
         <button type="button" class="theme-toggle plain" id="denikToggle" role="switch" aria-checked="false" aria-label="Vést deníček odtrénovaných tréninků">
           <span class="theme-toggle-knob"></span>
         </button>
@@ -3916,7 +3916,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-10-13 12:24";
+const APP_VERSION = "2026-10-13 15:47";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -13826,7 +13826,7 @@ function dlNazev(trainingId) { const t = state.trainings[trainingId]; return (t 
 function dlDotaz(trainingId) {
   dlStav = { trainingId, zaznamId: null };
   dlUkaz(dlHlava("Chceš si vést deníček?", "")
-    + '<p class="dl-popis">Po tréninku se tě aplikace zeptá, jestli proběhl, a můžeš si připsat krátkou poznámku. Vidíš ho jen ty. Kdykoli to změníš v profilu.</p>'
+    + '<p class="dl-popis">Po tréninku se tě aplikace zeptá, jestli proběhl, a můžeš si připsat krátkou poznámku. Vidíš ho jen ty. Kvůli bezpečí se ukládá i do zálohy aplikace. Kdykoli to změníš v profilu.</p>'
     + '<div class="dl-akce"><button type="button" class="dl-hl" data-dl="dotaz-ano">Ano, chci</button><button type="button" data-dl="dotaz-ne">Ne, děkuji</button></div>', true);
 }
 function dlOtazka(trainingId) {
@@ -18739,11 +18739,31 @@ document.getElementById("confirmCropBtn").addEventListener("click", () => {
    cizích věcí pravidla Firestore dovolí adminovi jen s novým razítkem obnovy (restoredAt).
    ========================================================= */
 const ZALOHA_FORMAT = "trener-zaloha";
-const ZALOHA_VERZE = 3;          // 1 = 21. 9. (knihovna, seznamy, tréninky); 2 = 1. kolo obnovy; 3 = komentáře, tipy, profily
+const ZALOHA_VERZE = 4;          // 1 = 21. 9. (knihovna, seznamy, tréninky); 2 = 1. kolo obnovy; 3 = komentáře, tipy, profily; 4 = Deníčky (13. 10. 2026)
 const PRIPOMINKA_ZALOHY_DNI = 7;
 /** Pole profilu, která záloha nese a obnova umí vrátit. Adresy zařízení pro notifikace ani
     nastavení notifikací se nezálohují — patří k telefonu, ne k účtu. */
-const OBNOVA_PROFIL_POLE = ["username", "category", "club", "avatarUrl", "colorPrimary", "colorAccent", "darkMode", "trainingStartTime"];
+const OBNOVA_PROFIL_POLE = ["username", "category", "club", "avatarUrl", "colorPrimary", "colorAccent", "darkMode", "trainingStartTime", "denikZapnuty", "denikVzhled"];
+/* Deníček v záloze (kolo 17, 13. 10. 2026, Mek): zálohují se Deníčky VŠECH trenérů. Zapnutí
+   a vzhled jdou s profilem (výš), čekající otázky „Proběhl trénink?“ (denikCeka) ne — po obnově
+   by vyskočily prošlé. Vlastní záznamy obnova ukazuje po jednom (chybí = předem zaškrtnuté,
+   změněno = nezaškrtnuté); Deníčky kolegů jen po trenérech, bez obsahu, a vrací jen chybějící
+   záznamy (zápis s razítkem obnovy — pravidla ho adminovi jinak nedovolí). */
+const OBNOVA_DENIK_IGNOROVAT = ["upraveno", "cas", "restoredAt"];
+const OBNOVA_DENIK_POPISKY = { pozn: "poznámka", hodnoceni: "smajlík", vzkaz: "vzkaz", den: "datum" };
+/** Záznamy Deníčku jednoho trenéra přímo ze serveru → { id: data }. */
+async function nactiDenikTrenera(u) {
+  const snap = await getDocsFromServer(collection(db, "users", u, "denik"));
+  const out = {};
+  snap.forEach(d => { out[d.id] = d.data(); });
+  return out;
+}
+/** Začátek poznámky jako prostý text (do okna obnovy u vlastních záznamů). */
+function obnovaUkazkaPoznamky(html) {
+  const t = String(html || "").replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
+  return t.length > 70 ? t.slice(0, 70) + "…" : t;
+}
 
 /** Profil trenéra tak, jak ho záloha nese: pole OBNOVA_PROFIL_POLE, oblíbené tréninky
     a oblíbená cvičení. */
@@ -18795,6 +18815,16 @@ async function sestavZalohu() {
   }));
   const profile = {};
   OBNOVA_PROFIL_POLE.forEach(k => { if (state.profile && state.profile[k] !== undefined) profile[k] = state.profile[k]; });
+  // Deníček (kolo 17): nastavení ze stavu aplikace, záznamy všech trenérů přímo ze serveru.
+  // Když se některý Deníček nenačte, záloha nevznikne (radši žádná než neúplná).
+  if (state.denik && typeof state.denik.zapnuty === "boolean") profile.denikZapnuty = state.denik.zapnuty;
+  if (state.denik && state.denik.vzhled) profile.denikVzhled = structuredClone(state.denik.vzhled);
+  const deniky = {};
+  let denik = {};
+  await Promise.all(Object.keys(approved).concat(approved[uidCurrent] ? [] : [uidCurrent]).map(async u => {
+    const z = await nactiDenikTrenera(u);
+    if (u === uidCurrent) denik = z; else deniky[u] = z;
+  }));
   return {
     format: ZALOHA_FORMAT,
     formatVersion: ZALOHA_VERZE,
@@ -18823,7 +18853,9 @@ async function sestavZalohu() {
     cueMemory: state.cueMemory || {},
     comments,
     tips,
-    profiles
+    profiles,
+    denik,
+    deniky
   };
 }
 /** trener-zaloha-2026-09-24.json (ruční), trener-zaloha-auto-2026-09-24.json (automatická —
@@ -18843,7 +18875,7 @@ function zapisCasZalohy() {
     .catch(e => console.warn("Uložení času zálohy selhalo:", e));
 }
 
-const BACKUP_STATUS_TEXT = "Knihovna, náhledy, tréninky, komentáře, tipy a nastavení";
+const BACKUP_STATUS_TEXT = "Knihovna, náhledy, tréninky, komentáře, tipy, Deníčky a nastavení";
 document.getElementById("backupLibraryBtn").addEventListener("click", async () => {
   if (uidCurrent !== ADMIN_UID) return;
   const btn = document.getElementById("backupLibraryBtn");
@@ -18858,8 +18890,8 @@ document.getElementById("backupLibraryBtn").addEventListener("click", async () =
   status.textContent = BACKUP_STATUS_TEXT;
   if (!zaloha) {
     toast(chyba && chyba.code === "permission-denied"
-      ? "Záloha se nestáhla — Firestore nedovolil načíst komentáře. Jsou ve Firebase konzoli nasazená nová pravidla?"
-      : "Něco se nepodařilo načíst (tréninky, komentáře, tipy…), záloha se nestáhla. Zkontroluj připojení a zkus to znovu.", 8000, "err");
+      ? "Záloha se nestáhla — Firestore nedovolil načíst komentáře nebo Deníčky. Jsou ve Firebase konzoli nasazená nová pravidla?"
+      : "Něco se nepodařilo načíst (tréninky, komentáře, tipy, Deníčky…), záloha se nestáhla. Zkontroluj připojení a zkus to znovu.", 8000, "err");
     return;
   }
   downloadTextFile(nazevZalohy("rucni"), JSON.stringify(zaloha, null, 2), "application/json");
@@ -18903,7 +18935,8 @@ const OBNOVA_TRENINK_IGNOROVAT = ["share", "shareSnapshot", "restoredAt", "dateM
 const OBNOVA_TRENINK_POPISKY = { name: "název", items: "cvičení", focus: "zaměření", public: "Tržiště", visibilityDecided: "Tržiště", archived: "archiv" };
 const OBNOVA_SEZNAM_POPISKY = { label: "název", color: "barva", note: "poznámka", hiddenFromMain: "schování", _slozky: "složky v Knihovně",
   tags: "štítky pro navrhování", noSuggest: "navrhování tréninku" };
-const OBNOVA_PROFIL_POPISKY = { username: "jméno", category: "kategorie", club: "klub", avatarUrl: "fotka", colorPrimary: "barvy", colorAccent: "barvy", darkMode: "tmavý režim", trainingStartTime: "začátek tréninku" };
+const OBNOVA_PROFIL_POPISKY = { username: "jméno", category: "kategorie", club: "klub", avatarUrl: "fotka", colorPrimary: "barvy", colorAccent: "barvy", darkMode: "tmavý režim", trainingStartTime: "začátek tréninku",
+  denikZapnuty: "Deníček zapnutý", denikVzhled: "vzhled Deníčku" };
 const OBNOVA_OBLASTI = [
   { id: "videa", nazev: "Videa", tvary: ["video", "videa", "videí"] },
   { id: "nahledy", nazev: "Náhledy", tvary: ["náhled", "náhledy", "náhledů"] },
@@ -18916,6 +18949,8 @@ const OBNOVA_OBLASTI = [
   { id: "treninkyOstatnich", nazev: "Tréninky ostatních", tvary: ["cizí trénink", "cizí tréninky", "cizích tréninků"] },
   { id: "komentare", nazev: "Komentáře", tvary: ["komentář", "komentáře", "komentářů"] },
   { id: "tipy", nazev: "Tipy", tvary: ["tip", "tipy", "tipů"] },
+  { id: "denik", nazev: "Tvůj Deníček", tvary: ["záznam Deníčku", "záznamy Deníčku", "záznamů Deníčku"] },
+  { id: "denikyOstatnich", nazev: "Deníčky ostatních", tvary: ["Deníček kolegy", "Deníčky kolegů", "Deníčků kolegů"] },
   { id: "clenove", nazev: "Trenéři a role", tvary: ["trenér", "trenéři", "trenérů"] },
   { id: "profil", nazev: "Tvůj profil", tvary: ["profil", "profily", "profilů"] },
   { id: "profily", nazev: "Profily ostatních", tvary: ["profil kolegy", "profily kolegů", "profilů kolegů"] },
@@ -19155,6 +19190,34 @@ function sestavPlanObnovy(zaloha, dnes) {
     pribylo.tipy = Object.keys(dTp).filter(id => dTp[id] && !zTp[id]).length;
   }
 
+  // --- Deníček (kolo 17) ---
+  // Vlastní: po záznamech jako tréninky. Kolegové: jeden řádek na trenéra, bez obsahu, jen
+  // chybějící záznamy, nikdy předem zaškrtnutý. Obnova účty nezakládá — Deníček se nabídne jen
+  // trenérovi, který dnes v aplikaci je (nebo se mu tou samou obnovou vrací přístup).
+  if (zaloha.denik) {
+    const zD = zaloha.denik, dD = dnes.denik || {};
+    Object.keys(zD).forEach(id => {
+      const z = zD[id];
+      if (!z) return;
+      const nazev = `${denikDenText(z.den) || z.den || "?"} · ${z.nazev || "(bez názvu)"}`;
+      const d = dD[id];
+      if (!d) { pridej("denik", id, "chybi", nazev, obnovaUkazkaPoznamky(z.pozn)); return; }
+      const pole = obnovaRozdilnaPole(z, d, OBNOVA_DENIK_IGNOROVAT);
+      if (pole.length) pridej("denik", id, "zmeneno", nazev, obnovaPopisky(pole, OBNOVA_DENIK_POPISKY).join(" · "));
+    });
+    pribylo.denik = Object.keys(dD).filter(id => dD[id] && !zD[id]).length;
+  }
+  if (zaloha.deniky) {
+    const dA = (dnes.members && dnes.members.approved) || {}, zA = (zaloha.members && zaloha.members.approved) || {};
+    Object.keys(zaloha.deniky).forEach(u => {
+      if (u === dnes.uid || !(dA[u] || zA[u])) return;
+      const zD = zaloha.deniky[u] || {}, dD = (dnes.deniky || {})[u] || {};
+      const chybi = Object.keys(zD).filter(id => zD[id] && !dD[id]).length;
+      if (!chybi) return;
+      pridej("denikyOstatnich", u, "chybi", jmenoTrenera(u), `Deníček: chybí ${chybi} ${czPlural(chybi, "záznam", "záznamy", "záznamů")}`, { vychozi: false });
+    });
+  }
+
   // --- Trenéři a role ---
   if (zaloha.members && dnes.members) {
     const zA = zaloha.members.approved || {}, dA = dnes.members.approved || {};
@@ -19233,6 +19296,7 @@ function sestavPlanObnovy(zaloha, dnes) {
   if (!zaloha.comments) chybiVZaloze.push("komentáře");
   if (!zaloha.tips) chybiVZaloze.push("tipy");
   if (!zaloha.profiles) chybiVZaloze.push("profily ostatních");
+  if (!zaloha.deniky) chybiVZaloze.push("Deníčky");
   return { polozky, pribylo, poznamky, chybiVZaloze };
 }
 
@@ -19268,6 +19332,10 @@ function zavislostiObnovy(plan, vybrane, zaloha) {
       if (rodic && rodic.skupina === "chybi") vynut(rodic.key);
       const v = podleKlice.get(`videa:${p.videoId}`);
       if (v && (v.skupina === "chybi" || v.vKosi)) vynut(v.key);
+    } else if (p.oblast === "denikyOstatnich") {
+      // Deníček trenéra, který dnes v aplikaci není, má smysl jen s vráceným přístupem.
+      const c = podleKlice.get(`clenove:${p.id}`);
+      if (c && c.skupina === "chybi") vynut(c.key);
     }
   }
   return povinne;
@@ -19281,7 +19349,7 @@ function zavislostiObnovy(plan, vybrane, zaloha) {
     se promítnou až po úspěšném zápisu. dnes = čerstvá data ze serveru (sdílení, oblíbené). */
 function prenesObnovuDoStavu(klice, zaloha, st, uidJa, razitko, dnes) {
   const vysl = { pocty: {}, nahledy: {}, clenove: {}, profil: null, klice: {}, doplnenoDoNabidky: 0,
-    ciziTreninky: {}, komentare: [], tipy: {}, profily: {} };
+    ciziTreninky: {}, komentare: [], tipy: {}, profily: {}, denik: {}, deniky: [] };
   const vraceneVidea = [];
   const nahradVSeznamu = (seznam, z) => {
     const i = seznam.findIndex(x => x && x.key === z.key);
@@ -19379,6 +19447,17 @@ function prenesObnovuDoStavu(klice, zaloha, st, uidJa, razitko, dnes) {
       hotovo = true;
     } else if (oblast === "klice") {
       if (zaloha[id]) { vysl.klice[id] = zaloha[id]; hotovo = true; }
+    } else if (oblast === "denik") {
+      const z = (zaloha.denik || {})[id];
+      if (z) { vysl.denik[id] = Object.assign(structuredClone(z), { id }); hotovo = true; }
+    } else if (oblast === "denikyOstatnich") {
+      // Jen chybějící záznamy (Mek, otázka 1: A) — co kolega dnes má, zůstává, jak je.
+      const zD = (zaloha.deniky || {})[id] || {}, dD = ((dnes && dnes.deniky) || {})[id] || {};
+      const chybi = Object.keys(zD).filter(z => zD[z] && !dD[z]);
+      if (id !== uidJa && chybi.length) {
+        chybi.forEach(zid => vysl.deniky.push({ u: id, id: zid, data: Object.assign(structuredClone(zD[zid]), { id: zid, restoredAt: razitko }) }));
+        hotovo = true;
+      }
     }
     if (hotovo) vysl.pocty[oblast] = (vysl.pocty[oblast] || 0) + 1;
   });
@@ -19503,6 +19582,19 @@ async function nactiDnesniStavProObnovu(zaloha) {
     try { const snap = await getDoc(doc(db, "users", u)); if (snap.exists()) profiles[u] = vyberProfil(snap.data()); }
     catch (e) { /* profil, který nejde přečíst, obnova nenabídne */ }
   }));
+  // Deníčky (kolo 17) — čerstvě ze serveru: vlastní vždy, kolegů jen ty, které záloha nese.
+  let denik = {};
+  const deniky = {};
+  try {
+    denik = await nactiDenikTrenera(uidCurrent);
+    await Promise.all(Object.keys((zaloha && zaloha.deniky) || {}).filter(u => u !== uidCurrent).map(async u => { deniky[u] = await nactiDenikTrenera(u); }));
+  } catch (e) {
+    if (e && e.code === "permission-denied") throw new Error("Firestore nedovolil načíst Deníčky. Jsou ve Firebase konzoli nasazená nová pravidla?");
+    throw new Error("Nejde se spojit se serverem. Obnova potřebuje spojení — zkus to, až budeš online.");
+  }
+  const profilDnes = Object.assign({}, state.profile || {});
+  if (state.denik && typeof state.denik.zapnuty === "boolean") profilDnes.denikZapnuty = state.denik.zapnuty;
+  if (state.denik && state.denik.vzhled) profilDnes.denikVzhled = state.denik.vzhled;
   return {
     uid: uidCurrent,
     library: state.library, thumbnails: state.thumbnails || {},
@@ -19510,11 +19602,11 @@ async function nactiDnesniStavProObnovu(zaloha) {
     trainingFocus: state.trainingFocus, focusLibraryMap: state.focusLibraryMap || {},
     trainings,
     members: { approved }, jmena,
-    profile: state.profile || {}, favoriteTrainings: [...(state.favoriteTrainings || [])],
+    profile: profilDnes, favoriteTrainings: [...(state.favoriteTrainings || [])],
     favoriteVideos: [...(state.favoriteVideos || [])],
     cueMemory: state.cueMemory || {},
     driveApiKey: state.driveApiKey || "", vapidKey: state.vapidKey || "",
-    comments: komentare, tips: tipy, profiles
+    comments: komentare, tips: tipy, profiles, denik, deniky
   };
 }
 
@@ -19721,8 +19813,17 @@ async function provedObnovu(klice, zaloha, hlas, dnes) {
       state.favoriteVideos = new Set(vysl.profil.cviceni);
       if (!state.cueMemory) state.cueMemory = {};
       Object.entries(pamet).forEach(([id, z]) => { state.cueMemory[id] = Object.assign({}, state.cueMemory[id], z); });
-      state.profile = Object.assign({}, state.profile, vysl.profil.pole);
+      const { denikZapnuty, denikVzhled, ...poleProfilu } = vysl.profil.pole;
+      state.profile = Object.assign({}, state.profile, poleProfilu);
       state.favoriteTrainings = new Set(vysl.profil.oblibene);
+      // Deníček (kolo 17): zapnutí a vzhled bydlí ve state.denik, ne v profilu.
+      if (denikVzhled !== undefined) { state.denik.vzhled = denikVzhledZ(denikVzhled); denikPouzijVzhled(); }
+      if (typeof denikZapnuty === "boolean" && denikZapnuty !== state.denik.zapnuty) {
+        state.denik.zapnuty = denikZapnuty;
+        state.denik.znamo = true;
+        if (denikZapnuty) denikNacti(); else dlZavri();
+      }
+      denikPoZmene();
       applyColorScheme();
       renderTopbarIdentity();
     } catch (e) { console.error(e); problemy.push("Profil se nepodařilo zapsat."); }
@@ -19763,7 +19864,24 @@ async function provedObnovu(klice, zaloha, hlas, dnes) {
     await setDoc(doc(db, "users", u), { ...p.pole, favoriteTrainings: p.oblibene, ...(p.cviceni ? { favoriteVideos: p.cviceni } : {}), ...(Object.keys(pamet).length ? { cueMemory: pamet } : {}), restoredAt: razitko }, { merge: true });
     delete profileCache[u];   // jméno a fotka se příště načtou znovu
   });
-  if (odmitnuto) problemy.push("Firestore část zápisů odmítl — nejspíš ještě nejsou ve Firebase konzoli nasazená nová pravidla (2. kolo obnovy).");
+  await zapisVse("Deníčky ostatních", vysl.deniky, async ({ u, id, data }) => {
+    await setDoc(doc(db, "users", u, "denik", id), data);
+  });
+  // Vlastní Deníček: běžný zápis majitele (bez razítka), pak hned do aplikace.
+  const vlastniDenik = Object.entries(vysl.denik);
+  if (vlastniDenik.length) {
+    let chybD = 0;
+    hlas(`Zapisuju Deníček (${vlastniDenik.length})…`);
+    for (let i = 0; i < vlastniDenik.length; i += 8) {
+      await Promise.all(vlastniDenik.slice(i, i + 8).map(async ([id, z]) => {
+        try { await setDoc(doc(db, "users", uidCurrent, "denik", id), z); state.denik.zaznamy[id] = z; }
+        catch (e) { chybD++; console.error("Obnova záznamu Deníčku selhala:", id, e); }
+      }));
+    }
+    if (chybD) problemy.push(`Nepodařilo se zapsat: Deníček (${chybD}).`);
+    denikPoZmene();
+  }
+  if (odmitnuto) problemy.push("Firestore část zápisů odmítl — nejspíš ještě nejsou ve Firebase konzoli nasazená nová pravidla.");
 
   /* Kontrola, že vybrané seznamy a tréninky v datech aplikace po uložení opravdu jsou. Když
      do ukládání vstoupila změna odjinud, seznamy mohla přepsat — obnova to pak musí říct,
@@ -19778,6 +19896,7 @@ async function provedObnovu(klice, zaloha, hlas, dnes) {
     if (oblast === "vybaveni") return !state.equipmentPool.includes(id);
     if (oblast === "videa") return !state.library[id] || state.library[id].restoredAt !== razitko;
     if (oblast === "treninky") return !state.trainings[id] || state.trainings[id].restoredAt !== razitko;
+    if (oblast === "denik") return !state.denik.zaznamy[id];
     return false;
   });
   if (okUlozeni && nezapsano.length) problemy.push(`${nezapsano.length} ${czPlural(nezapsano.length, "položka se", "položky se", "položek se")} nezapsala — mezitím přišla změna odjinud. Otevři obnovu znovu se stejným souborem, ukáže, co ještě chybí.`);
@@ -20974,7 +21093,7 @@ const HELP_DATA = [
       { q: "Co je „skupina“ cvičení a k čemu je dobrá?", a: "Skupina spojuje víc cvičení dohromady tak, aby se v Tréninkovém režimu střídala v jednom bloku (třeba tři varianty přihrávky za sebou) — vybereš víc položek a použiješ „Seskupit“." }
     ]},
     { title: "Deníček odtrénovaných tréninků", icon: "fa-solid fa-book-open", qa: [
-      { q: "Co je Deníček?", a: "Tvůj soukromý záznam o tom, které tréninky jsi doopravdy odtrénoval(a) a jak to šlo. Ke každému odtrénování si můžeš připsat krátkou poznámku a smajlíkem označit, jak se povedl. Deníček je dobrovolný — kdo ho nevede, v aplikaci o něm neuvidí nic.", kw: "denicek denik odtrenovano poznamka zaznam" },
+      { q: "Co je Deníček?", a: "Tvůj osobní záznam o tom, které tréninky jsi doopravdy odtrénoval(a) a jak to šlo. Ke každému odtrénování si můžeš připsat krátkou poznámku a smajlíkem označit, jak se povedl. Deníček je dobrovolný — kdo ho nevede, v aplikaci o něm neuvidí nic.", kw: "denicek denik odtrenovano poznamka zaznam" },
       { q: "Jak si Deníček zapnu nebo vypnu?", a: "Poprvé se tě aplikace zeptá sama, když odejdeš z Přehledu tréninku (z obrazovky po „Začít trénovat“). Kdykoli později to změníš v profilu přepínačem „Vést deníček“. Vypnutím se záznamy nemažou, jen se přestanou ukazovat; po zapnutí je máš zpátky.", kw: "denicek zapnout vypnout profil vest denicek prepinac" },
       { q: "Jak zapíšu, že trénink proběhl?", a: "Když odejdeš z Přehledu tréninku, sjede shora na deset vteřin karta „Odtrénováno dnes?“. Ťukni na „Ano, odtrénováno“ a je zapsáno; hned potom můžeš jedním ze tří smajlíků označit, jak se trénink povedl, a ťuknout na „Přidat poznámku“ a napsat, jak to šlo, a pod to do žlutého pole krátký vzkaz pro příště. Když ses na plán jen díval(a), nedělej nic — karta sama zmizí a nic se nezapíše. Křížkem ji zavřeš hned. Trénink, který už dnes zapsaný máš, se znovu neptá.", kw: "odtrenovano dnes lista karta ano poznamka prehled zacit trenovat smajlik hodnoceni povedl" },
       { q: "Kde najdu všechno odtrénované pohromadě?", a: "V Deníčku. Na záložce Tréninky je vpravo nahoře oranžové tlačítko s knihou (vidí ho jen ten, kdo si deníček vede). Otevře sešit na poslední popsané stránce. Píše se do něj jako do opravdového: od nejstaršího tréninku po nejnovější, každý měsíc začíná na nové stránce razítkem. Na okraji je datum, vedle název podtržený barvami zaměření a pod ním tvoje poznámka. Číslo „2ד na okraji znamená, že jsi ten trénink odtrénoval(a) podruhé.", kw: "denicek sesit obrazovka kniha tlacitko vsechno pohromade prehled odtrenovanych dvoustrana poradi nejstarsi" },
@@ -20989,10 +21108,10 @@ const HELP_DATA = [
       { q: "Jak smažu záznam?", a: "V Deníčku ťukni na poznámku toho záznamu a vpravo pod ní na koš; aplikace se nejdřív zeptá. Maže se vždy jeden záznam, samotný trénink zůstává. Hned po zapsání jde zápis taky vzít zpět tlačítkem „Vrátit zpět“ přímo na kartě.", kw: "smazat zaznam kos odstranit vratit zpet" },
       { q: "Jak se z Deníčku dostanu k tréninku?", a: "Ťukni v sešitu na název tréninku — otevře se v editoru a tlačítko „Zpět do deníčku“ tě vrátí na stejné místo. Název není nijak zvýrazněný, aby sešit vypadal jako sešit. U tréninku, který už neexistuje, název odkazem není; záznam i poznámka ale zůstávají.", kw: "nazev odkaz otevrit trenink z denicku editor zpet do denicku" },
       { q: "Jak uvidím všechna odtrénování jednoho tréninku?", a: "V editoru tréninku ťukni na hlavičku žlutého lepíku („odtrénováno 4× · 9. 10.“). Otevře se Deníček jen s tímto tréninkem — nahoře je místo „Deníček“ jeho název a u záznamů se název neopakuje (ukáže se jen tam, kde se trénink tehdy jmenoval jinak). Upravuje se v něm stejně jako v celém Deníčku. Šipka vlevo nahoře, Esc nebo Zpět v telefonu tě vrátí do editoru.", kw: "vsechna odtrenovani jeden trenink historie filtr editor radek odtrenovano zaznamy" },
-      { q: "Co je žlutý lepík v editoru tréninku?", a: "Vzkaz sám sobě pro příště — třeba „kužely na 3 kroky rozběhu“. Lepík má trénink, který máš v Deníčku aspoň jednou odtrénovaný. Nahoře je, kolikrát a kdy naposledy trénink proběhl, a smajlík posledního hodnocení; ťuknutím otevřeš všechna jeho odtrénování. Pod tím je vzkaz posledního odtrénování. Když ho poslední odtrénování nemá, ukáže se vybledle ten předchozí s datem — ťukni na něj a ulož ho (Enter), ať platí dál, nebo ho přepiš. Na telefonu je lepík sbalený na jeden řádek, šipkou nebo ťuknutím na text se rozbalí; na počítači je vlevo nad „Přidat z knihovny“. Vidíš ho jen ty.", kw: "lepik zluty vzkaz pro priste pripominka editor sbalit rozbalit papirek" },
+      { q: "Co je žlutý lepík v editoru tréninku?", a: "Vzkaz sám sobě pro příště — třeba „kužely na 3 kroky rozběhu“. Lepík má trénink, který máš v Deníčku aspoň jednou odtrénovaný. Nahoře je, kolikrát a kdy naposledy trénink proběhl, a smajlík posledního hodnocení; ťuknutím otevřeš všechna jeho odtrénování. Pod tím je vzkaz posledního odtrénování. Když ho poslední odtrénování nemá, ukáže se vybledle ten předchozí s datem — ťukni na něj a ulož ho (Enter), ať platí dál, nebo ho přepiš. Na telefonu je lepík sbalený na jeden řádek, šipkou nebo ťuknutím na text se rozbalí; na počítači je vlevo nad „Přidat z knihovny“. V aplikaci ho vidíš jen ty.", kw: "lepik zluty vzkaz pro priste pripominka editor sbalit rozbalit papirek" },
       { q: "Jak napíšu nebo změním vzkaz pro příště?", a: "Kdekoli z těchhle míst: hned po tréninku na kartě „Zapsáno“ → „Přidat poznámku“ (pod poznámkou je žluté pole na vzkaz); kdykoli v editoru tréninku ťuknutím na text lepíku; v Deníčku u záznamu — vzkaz je schovaný pod žlutou značkou na okraji pod smajlíkem, ťuknutím ho rozbalíš a dalším ťuknutím na text upravíš. K záznamu bez vzkazu ho v Deníčku přidáš, když píšeš poznámku: žluté tlačítko s plusem vedle koše. Vzkaz má nejvýš 180 znaků (posledních 40 se odpočítává) a je bez formátování. Uloží se sám, když z pole odejdeš, nebo klávesou Enter; Esc psaní zruší. Smazáním celého textu vzkaz zmizí.", kw: "vzkaz pro priste napsat zmenit smazat lepik znacka okraj 180 znaku" },
       { q: "Jde změnit vzhled sešitu, velikost písma, rychlost listování a vypnout zvuky?", a: "Ano. V Deníčku ťukni na tlačítko s posuvníky vpravo nahoře. Nahoře vybereš papír jedním ze čtyř vzorků (tlumený nebo bílý, s linkami nebo se čtverečky), pod ním rukopis podle ukázky „Aa“ (Úhledný, Rychlý, Fixou) a vedle něj posuvníkem velikost písma. Reproduktor v rohu zapíná a vypíná zvuky při listování a mazání. Dole je rychlost listování: Pomalu, Středně, Rychle, nebo Vypnuto — pak se list neotáčí a stránka se jen prolne (stejně se chová i telefon, který má v nastavení omezené animace). Na vzorek nebo tlačítko stačí najet myší a ukáže se, co znamená. Papír, rukopis, zvuky a rychlost listování se ukládají k tvému účtu, takže je máš na všech zařízeních. Velikost písma si pamatuje každé zařízení zvlášť — na telefonu můžeš mít větší než na monitoru. Čára u data a razítko měsíce berou hlavní barvu z tvého profilu. Papír zůstává světlý i v tmavém režimu.", kw: "vzhled sesit papir linkovany ctvereckovany rukopis pismo barva papiru zvuk zvuky vypnout ticho velikost pisma vetsi mensi posuvnik rychlost listovani otaceni listu animace pomalu rychle vzorek" },
-      { q: "Kdo moje záznamy a poznámky vidí?", a: "Jen ty — i vzkazy pro příště. Kolegové je nevidí ani u tréninků, které máš na Tržišti, a při klonování tréninku se nepřenášejí. Když si kolega odtrénuje tvůj trénink z Tržiště, má vlastní záznam ve vlastním Deníčku. Záznam si pamatuje, jak trénink vypadal v den odtrénování, takže zůstane, i když trénink později upravíš nebo smažeš.", kw: "soukrome kdo vidi kolegove trziste klon poznamky" },
+      { q: "Kdo moje záznamy a poznámky vidí?", a: "V aplikaci jen ty — i vzkazy pro příště. Kolegové je nevidí ani u tréninků, které máš na Tržišti, a při klonování tréninku se nepřenášejí. Když si kolega odtrénuje tvůj trénink z Tržiště, má vlastní záznam ve vlastním Deníčku. Záznam si pamatuje, jak trénink vypadal v den odtrénování, takže zůstane, i když trénink později upravíš nebo smažeš. Kvůli bezpečí dat jsou Deníčky všech trenérů i v záloze, kterou stahuje správce aplikace; v aplikaci je ale nečte ani on.", kw: "soukrome kdo vidi kolegove trziste klon poznamky zaloha spravce" },
       { q: "Jeden trénink jsem odtrénoval(a) víckrát, třeba i dvakrát za den. Jde to zapsat?", a: "Ano. Každé odtrénování je samostatný záznam s vlastním datem a poznámkou, i když jsou dvě ve stejný den (třeba se dvěma kategoriemi po sobě). Když je trénink dnes už zapsaný, karta „Odtrénováno dnes znovu?“ se zeptá až po půl hodině od posledního zápisu — kdo se do Přehledu jen vrátí, otázku nedostane. Na lepíku v editoru pak vidíš, kolikrát trénink proběhl a kdy naposledy.", kw: "vickrat opakovane dvakrat znovu dve kategorie stejny den" }
     ]},
     { title: "Navrhnout trénink", icon: "fa-solid fa-wand-magic-sparkles", qa: [
