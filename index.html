@@ -207,6 +207,9 @@ body.dark-mode{
 .denik-lista .rte-btn:hover{background:var(--dl-cara);}
 .denik-lista .rte-editor{min-height:66px;max-height:30vh;overflow-y:auto;padding:9px 12px;font:400 16px/1.4 var(--font-body);color:var(--dl-pismo);}
 .denik-lista .rte-editor:empty::before{color:#8A8F99;}
+.dl-lepik{position:relative;}
+.dl-lepik textarea{display:block;width:100%;min-height:58px;margin:0;padding:8px 12px 20px;border:1.5px solid #E2C55A;border-radius:10px 10px 10px 18px;background:#FFF1A6;color:#1F3A7A;font:400 16px/1.4 var(--font-body);resize:none;}
+.dl-lepik textarea::placeholder{color:#8A8360;}
 .denik-lista textarea:focus{outline:2px solid var(--chalk);outline-offset:1px;}
 @media (prefers-reduced-motion: reduce){
   .denik-lista.in{animation:none;transform:none;}
@@ -218,6 +221,38 @@ body.dark-mode{
 .denik-radek .dr-text{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .denik-radek .dr-kdy{color:var(--ink-faint);font-weight:500;}
 .denik-radek > .fa-chevron-right{color:var(--ink-faint);font-size:12px;}
+/* Lepík se vzkazem pro příště (kolo 15) — v editoru místo řádku „Odtrénováno…“, jakmile trénink
+   aspoň jednou proběhl. Papír má pevné barvy (stejné ve světlém i tmavém režimu). Ohnutý roh vlevo
+   dole je skutečný ohyb: roh papíru chybí (clip-path) a cíp .lp-roh leží na papíře se stínem;
+   stín celého lepíku (filter) kopíruje i chybějící roh. Rukopis je z Vzhledu Deníčku. */
+.denik-lepik{--lp-ohyb:28px;--lp-f:"Patrick Hand","Segoe Print",cursive;--lp-v:19.5px;--lp-r:27px;position:relative;margin:4px 6px 16px;transform:rotate(-.7deg);filter:drop-shadow(0 6px 6px rgba(0,0,0,.18)) drop-shadow(0 1px 1px rgba(0,0,0,.10));}
+.denik-lepik[data-pismo="caveat"],.ds-lepik[data-pismo="caveat"]{--lp-f:"Caveat","Segoe Print",cursive;--lp-v:23px;--lp-r:30px;}
+.denik-lepik[data-pismo="kalam"],.ds-lepik[data-pismo="kalam"]{--lp-f:"Kalam","Segoe Print",cursive;--lp-v:17.5px;--lp-r:28px;}
+.lp-papir{position:relative;color:#1F3A7A;font:400 var(--lp-v)/var(--lp-r) var(--lp-f);padding:7px 14px 26px;background:linear-gradient(180deg,#FFF6C2 0%,#FFEFA0 60%,#FCE58A 100%);clip-path:polygon(0 0,100% 0,100% 100%,var(--lp-ohyb) 100%,0 calc(100% - var(--lp-ohyb)));}
+.lp-roh{position:absolute;left:0;bottom:0;width:var(--lp-ohyb);height:var(--lp-ohyb);clip-path:polygon(0 0,100% 0,100% 100%);background:linear-gradient(225deg,#FFF7CF 0%,#F3DD7C 55%,#E2C55A 100%);filter:drop-shadow(2px -2px 2px rgba(0,0,0,.25));pointer-events:none;}
+.lp-hlava{display:flex;align-items:center;gap:8px;width:100%;margin:0 0 1px;padding:2px 0;border:0;background:transparent;font:inherit;font-size:calc(var(--lp-v) - 3px);line-height:1.3;color:#6F6845;cursor:pointer;text-align:left;white-space:nowrap;}
+.lp-hlava .fa-book-open{font-size:14px;color:var(--chalk);flex:none;}
+.lp-hlava .lp-kdy{min-width:0;overflow:hidden;text-overflow:ellipsis;}
+.lp-hlava .smajl{width:20px;height:20px;flex:none;}
+.lp-hlava .fa-chevron-right{margin-left:auto;font-size:12px;flex:none;}
+.lp-text{cursor:text;overflow-wrap:anywhere;min-height:var(--lp-r);}
+.lp-text.stary{color:rgba(31,58,122,.45);}
+.lp-text.prazdny{color:rgba(111,104,69,.6);}
+.lp-text small{font-size:.8em;color:#8A8360;margin-left:6px;white-space:nowrap;}
+.denik-lepik.sbaleny .lp-text{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;}
+.lp-sbal{position:absolute;right:4px;bottom:1px;width:36px;height:26px;margin:0;padding:0;border:0;background:transparent;color:#8A8360;cursor:pointer;font-size:13px;}
+.lp-pole{display:block;width:100%;margin:0;padding:0;border:0;background:transparent;resize:none;overflow:hidden;font:inherit;color:inherit;outline:none;box-shadow:none;}
+.lp-zbyva{position:absolute;right:12px;bottom:5px;font:600 12px var(--font-body);color:#8A8360;}
+.lp-zbyva.malo{color:#C0392B;}
+.denik-lepik :focus-visible,.ds-lepik :focus-visible{outline:2px solid #1F3A7A;outline-offset:2px;border-radius:3px;}
+/* počítač: lepík nahoře v levém sloupci, nad „Přidat z knihovny“ (panel se dál drží při posouvání) */
+@media(min-width:860px){
+  /* druhý řádek pružný: výška seznamu cvičení se nerozloží do řádku s lepíkem (panel by odjel dolů) */
+  .editor-layout.s-lepikem{grid-template-rows:auto 1fr;}
+  .editor-layout.s-lepikem > .denik-lepik{grid-column:1;grid-row:1;margin:0 4px 0 2px;}
+  .editor-layout.s-lepikem > .picker-panel{grid-column:1;grid-row:2;}
+  .editor-layout.s-lepikem > .editor-seq-col{grid-column:2;grid-row:1 / span 2;}
+}
 .dd-jen{margin:0 0 14px;font:600 15px var(--font-body);color:var(--ink);overflow-wrap:anywhere;}
 
 /* ——— DENÍČEK: obrazovka se sešitem (kolo 7, 11. 10. 2026) ———
@@ -332,6 +367,18 @@ body.dark-mode .sesit{box-shadow:0 8px 20px rgba(0,0,0,.5);}
 .sesit .dz-hodn .smajl{width:calc(var(--radek) - 4px);height:calc(var(--radek) - 4px);}
 .sesit .dz-hodn .smajl.prazdny{opacity:.5;}
 .sesit .dz-hodn:focus-visible{outline:2px solid var(--s-inkoust);outline-offset:-2px;border-radius:50%;}
+/* Vzkaz pro příště (kolo 15): na okraji pod smajlíkem ručně kreslená značka lepíku; ťuknutí rozbalí
+   lepík pod poznámkou (sešit se přeskládá), další ťuknutí ho zase sbalí. */
+.sesit .zapis:has(.dz-vzkaz){min-height:calc(var(--radek)*4);}
+.sesit .zapis:has(.dz-vzkaz):has(.okraj .dvakrat){min-height:calc(var(--radek)*5);}
+.sesit .dz-vzkaz{display:flex;align-items:center;justify-content:center;width:100%;height:var(--radek);margin:0;padding:0;border:0;background:transparent;cursor:pointer;color:var(--s-inkoust);-webkit-tap-highlight-color:transparent;}
+.sesit .dz-vzkaz svg{width:calc(var(--radek) - 5px);height:calc(var(--radek) - 5px);}
+.sesit .dz-vzkaz[aria-expanded="true"] svg{filter:drop-shadow(0 0 2.5px rgba(31,58,122,.55));}
+.sesit .dz-vzkaz:focus-visible{outline:2px solid var(--s-inkoust);outline-offset:-2px;border-radius:4px;}
+.sesit .ds-lepik{--lp-ohyb:22px;--lp-f:var(--f-ruka);position:relative;margin:calc(var(--radek)*.3) 10px calc(var(--radek)*.5) 0;transform:rotate(-.8deg);filter:drop-shadow(0 5px 5px rgba(0,0,0,.18)) drop-shadow(0 1px 1px rgba(0,0,0,.10));break-inside:avoid;}
+.sesit .ds-lepik .lp-papir{font:400 calc(var(--v-text) - 1px)/calc(var(--radek) - 3px) var(--f-ruka);padding:6px 12px 20px;}
+.sesit .upravy button.vzkaz-plus{width:36px;padding:0;border-color:#E2C55A;background:#FFF1A6;color:#6F6845;}
+.sesit .upravy button.vzkaz-plus svg{width:22px;height:22px;}
 .sesit .dz-nabidka{position:absolute;z-index:5;display:flex;gap:4px;padding:5px;background:#FFFFFF;border:1.5px solid #DCDFD9;border-radius:12px;box-shadow:0 8px 22px rgba(0,0,0,.25);}
 .sesit .dz-nabidka button{width:40px;height:40px;border-radius:9px;border:0;background:transparent;cursor:pointer;display:grid;place-items:center;padding:0;color:var(--s-tuzka);}
 .sesit .dz-nabidka button .smajl{width:30px;height:30px;}
@@ -2326,6 +2373,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
         <button type="button" class="btn btn-sm editor-focus-btn" id="editorFocusBtn" style="margin-bottom:0;"></button>
       </div>
       <button type="button" class="denik-radek hidden" id="denikRadek"><i class="fa-solid fa-book-open"></i><span class="dr-text"></span><i class="fa-solid fa-chevron-right"></i></button>
+      <div class="denik-lepik hidden" id="denikLepik"></div>
       <div style="display:flex;gap:8px;margin-bottom:12px;">
         <button type="button" class="btn btn-primary" id="openOverviewBtn" style="flex:1;" title="Otevře Přehled tréninku — celý plán na jedné obrazovce; z něj se dá spustit prezentace"><i class="fa-solid fa-play"></i> Začít trénovat</button>
       </div>
@@ -2335,6 +2383,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
         <button class="btn btn-sm btn-accent" id="cloneFromReadOnlyBtn"><i class="fa-regular fa-copy"></i> Naklonovat do mých</button>
       </div>
       <div class="editor-layout" id="editorLayout">
+        <div class="denik-lepik hidden" id="denikLepikBok"></div>
         <div class="picker-panel">
           <h3>Přidat z knihovny</h3>
           <input type="search" id="pickerSearch" class="picker-search" placeholder="Hledat…">
@@ -3855,7 +3904,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-10-13 03:23";
+const APP_VERSION = "2026-10-13 10:40";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -7097,12 +7146,14 @@ let editorZDeniku = false;   // editor otevřený z Deníčku (Zpět vrací tam)
 /* Filtrovaný Deníček (kolo 14): sešit jen s jedním tréninkem, otevřený z editoru. */
 let denikFiltr = null;          // id tréninku, na který je sešit vyfiltrovaný, nebo null
 let denikFiltrNavrat = null;    // { id, zDeniku, y, kotva } — kam se z filtrovaného sešitu vrátit
+let denikVzkazOtevrene = new Set();   // kolo 15: záznamy, jejichž lepík je v sešitu rozbalený
+let denikVzkazUprava = null;          // id záznamu, jehož vzkaz se v sešitu právě píše
 let denikNavratY = 0;
 function switchView(view) {
   // Do filtrovaného Deníčku se z editoru jen odskakuje — prázdný nový trénink se ještě nemaže.
   if (currentView === "editor" && view !== "editor" && !(view === "denik" && denikFiltr)) uklidNedotcenyTrenink();
   if (currentView === "denik" && denikFiltr && view !== "editor") uklidNedotcenyTrenink();
-  if (view !== "denik") denikFiltr = null;
+  if (view !== "denik") { denikFiltr = null; denikVzkazOtevrene.clear(); }
   currentView = view;
   document.querySelectorAll("nav.tabs button").forEach(b => b.classList.toggle("active", b.dataset.view === view));
   document.getElementById("libraryView").classList.toggle("hidden", view !== "library");
@@ -13388,6 +13439,41 @@ const DENIK_HODNOCENI = {
   spatne: { barva: "#c0392b", usta: "M9.3 21.5 C12 17.5 18.6 17.4 21 21.3", popis: "Nepovedl se" }
 };
 const DENIK_HODNOCENI_PORADI = ["dobre", "stredne", "spatne"];
+/* Vzkaz pro příště (kolo 15): volitelné pole vzkaz v záznamu — prostý text, nejvýš 180 znaků. */
+const DENIK_VZKAZ_MAX = 180;
+const DENIK_LEPIK_KLIC = "trener.lepik.";   // + "uzky" / "siroky": sbalený lepík v editoru (k zařízení)
+/** Platný vzkaz: prostý text na jednom řádku, oříznutý na 180 znaků; jinak "". */
+function denikVzkazZ(v) { return typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, DENIK_VZKAZ_MAX) : ""; }
+/** Záznam s novým vzkazem ("" = bez vzkazu: pole zmizí, Firestore nesnese undefined). */
+function denikSVzkazem(z, text) {
+  const n = Object.assign({}, z, { upraveno: Date.now() });
+  text = denikVzkazZ(text);
+  if (text) n.vzkaz = text; else delete n.vzkaz;
+  return n;
+}
+/** Co ukáže lepík v editoru: poslední odtrénování a vzkaz — jeho, nebo (vybledle) nejbližší starší.
+    zaznamy = záznamy jednoho tréninku, nejnovější první. null = trénink ještě neproběhl. */
+function denikLepikData(zaznamy) {
+  if (!zaznamy || !zaznamy.length) return null;
+  const posl = zaznamy[0], vz = denikVzkazZ(posl.vzkaz);
+  if (vz) return { posl, text: vz, stary: null, pocet: zaznamy.length };
+  const st = zaznamy.find(z => denikVzkazZ(z.vzkaz));
+  return { posl, text: st ? denikVzkazZ(st.vzkaz) : "", stary: st || null, pocet: zaznamy.length };
+}
+/** Ručně kreslená značka lepíku na okraji sešitu (styl smajlíku), volitelně s plusem. */
+function denikVzkazZnacka(plus) {
+  return '<svg viewBox="0 0 30 30" aria-hidden="true"><path d="M4.5 4.2 C11 3.6 19 3.9 25.6 4.4 C26 11 25.8 18.5 25.4 25.3 C19 25.8 14 25.7 10.2 25.6 C7.6 23.2 5.6 21 4 18.6 C4.2 13.5 4.1 8.5 4.5 4.2Z" fill="#FFF1A6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>'
+    + '<path d="M4 18.6 C6.6 18.2 8.9 18.4 10.4 18.7 C10.6 21 10.5 23.4 10.2 25.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>'
+    + (plus ? '<path d="M17 9.5 V18.5 M12.5 14 H21.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' : "") + "</svg>";
+}
+/** Odpočet znaků u pole vzkazu: ukáže se až u posledních 40. */
+function denikVzkazZbyva(pole, el) {
+  if (!el) return;
+  const zbyva = DENIK_VZKAZ_MAX - pole.value.length;
+  el.hidden = zbyva > 40;
+  el.textContent = String(zbyva);
+  el.classList.toggle("malo", zbyva <= 10);
+}
 /* Rychlost listování (kolo 12): jak dlouho trvá otočení listu v ms [dvoustrana na počítači,
    jedna stránka na telefonu]; null = bez otáčení, stránka se jen prolne. */
 const DENIK_RYCHLOSTI = { pomalu: [950, 700], stredne: [760, 560], rychle: [550, 420], vypnuto: null };
@@ -13754,7 +13840,10 @@ function dlPoznamka() {
   dlUkaz(dlHlava("Jak to šlo?", denikDenText(z.den) + " · " + (z.nazev || dlNazev(z.trainingId)), true)
     + dlHodnHtml(z.hodnoceni)
     + denikRtePole("", "Třeba: příjem šel líp, příště víc času na hru", "dlPozn")
-    + '<div class="dl-akce"><button type="button" class="dl-hl" data-dl="ulozit">Uložit poznámku</button><button type="button" data-dl="bez">Bez poznámky</button></div>');
+    + `<div class="dl-lepik"><textarea id="dlVzkaz" rows="2" maxlength="${DENIK_VZKAZ_MAX}" placeholder="Vzkaz pro příště…" aria-label="Vzkaz pro příště"></textarea><span class="lp-zbyva" hidden></span></div>`
+    + '<div class="dl-akce"><button type="button" class="dl-hl" data-dl="ulozit">Uložit</button><button type="button" data-dl="bez">Teď ne</button></div>');
+  const vz = document.getElementById("dlVzkaz");
+  if (vz) vz.addEventListener("input", () => denikVzkazZbyva(vz, vz.nextElementSibling));
   const ta = document.getElementById("dlPozn");
   if (ta) ta.focus();
 }
@@ -13803,9 +13892,10 @@ document.getElementById("denikLista").addEventListener("click", async (e) => {
     const z = state.denik.zaznamy[dlStav.zaznamId];
     const text = denikPoznZPole(document.getElementById("dlPozn"));
     if (text === null) return;
-    if (z && !denikPoznStejna(text, z.pozn)) denikUloz(Object.assign({}, z, { pozn: text, upraveno: Date.now() }));
+    const vzPole = document.getElementById("dlVzkaz"), vzkaz = vzPole ? denikVzkazZ(vzPole.value) : "";
+    if (z && (!denikPoznStejna(text, z.pozn) || vzkaz !== denikVzkazZ(z.vzkaz))) denikUloz(denikSVzkazem(Object.assign({}, z, { pozn: text }), vzkaz));
     dlZavri();
-    if (text) toast("Poznámka uložena.", 2500);
+    if (text || vzkaz) toast("Uloženo.", 2500);
   }
 });
 /** Volá se po skutečném odchodu z Přehledu tréninku. */
@@ -13822,8 +13912,11 @@ function renderDenikRadek() {
   const el = document.getElementById("denikRadek");
   const zap = state.denik.zapnuty === true && !!state.trainings[currentTrainingId];
   el.classList.toggle("hidden", !zap);
-  if (!zap) return;
+  if (!zap) { renderDenikLepik(); return; }
   const z = denikZaznamyTreninku(state.denik.zaznamy, currentTrainingId);
+  // Odtrénovaný trénink má místo řádku lepík (kolo 15); řádek zůstává jen pro „Zatím neodtrénováno“.
+  el.classList.toggle("hidden", z.length > 0);
+  renderDenikLepik();
   el.querySelector(".dr-text").innerHTML = z.length
     ? `Odtrénováno ${z.length}× <span class="dr-kdy">· naposledy ${esc(denikDenText(z[0].den))}</span>`
     : '<span class="dr-kdy">Zatím neodtrénováno</span>';
@@ -13879,6 +13972,115 @@ function denikHlava() {
   dop.title = dt;
 }
 document.getElementById("denikRadek").addEventListener("click", () => { if (state.trainings[currentTrainingId]) denikOtevriFiltr(currentTrainingId); });
+
+/* ---- Lepík v editoru (kolo 15) ----
+   Telefon: místo řádku „Odtrénováno…“; počítač: nahoře v levém sloupci nad „Přidat z knihovny“
+   (u cizího tréninku bez panelu knihovny jako na telefonu). Hlavička vede do filtrovaného Deníčku,
+   ťuknutí na text otevře psaní vzkazu k poslednímu odtrénování (Enter nebo odchod z pole uloží,
+   Esc zruší). Sbalený lepík ukazuje jen první řádek; stav si pamatuje zařízení zvlášť pro telefon
+   a počítač (výchozí: telefon sbalený, počítač rozbalený). */
+let denikLepikPise = false;
+function denikLepikSiroko() { return window.matchMedia("(min-width: 860px)").matches && !editorReadOnly; }
+function denikLepikSbaleny(siroko) {
+  try { const v = localStorage.getItem(DENIK_LEPIK_KLIC + (siroko ? "siroky" : "uzky")); if (v === "1" || v === "0") return v === "1"; } catch (e) {}
+  return !siroko;
+}
+function denikLepikNastavSbaleny(siroko, ano) {
+  try { localStorage.setItem(DENIK_LEPIK_KLIC + (siroko ? "siroky" : "uzky"), ano ? "1" : "0"); } catch (e) {}
+}
+function denikBezDne(den) { return denikDenText(den).replace(/^\S+\s/, ""); }
+function renderDenikLepik() {
+  if (denikLepikPise) return;   // rozepsaný vzkaz se nepřekresluje
+  const uzky = document.getElementById("denikLepik"), bok = document.getElementById("denikLepikBok"), lay = document.getElementById("editorLayout");
+  const zap = state.denik.zapnuty === true && !!state.trainings[currentTrainingId];
+  const d = zap ? denikLepikData(denikZaznamyTreninku(state.denik.zaznamy, currentTrainingId)) : null;
+  const siroko = denikLepikSiroko(), el = siroko ? bok : uzky, jiny = siroko ? uzky : bok;
+  jiny.classList.add("hidden");
+  jiny.innerHTML = "";
+  lay.classList.toggle("s-lepikem", !!d && siroko);
+  if (!d) { el.classList.add("hidden"); el.innerHTML = ""; return; }
+  const sb = denikLepikSbaleny(siroko), h = denikHodnoceniZ(d.posl.hodnoceni);
+  el.classList.remove("hidden");
+  el.classList.toggle("sbaleny", sb);
+  el.dataset.pismo = state.denik.vzhled.pismo;
+  denikNactiPismo(state.denik.vzhled.pismo);
+  el.innerHTML = '<div class="lp-papir">'
+    + `<button type="button" class="lp-hlava" data-lp="denik" aria-label="Všechna odtrénování tohoto tréninku: ${d.pocet}×, naposledy ${esc(denikDenText(d.posl.den))}"><i class="fa-solid fa-book-open"></i><span class="lp-kdy">odtrénováno ${d.pocet}× · ${esc(denikBezDne(d.posl.den))}</span>${h ? denikSmajl(h) : ""}<i class="fa-solid fa-chevron-right"></i></button>`
+    + `<div class="lp-text${d.stary ? " stary" : ""}${d.text ? "" : " prazdny"}" data-lp="psat" role="button" tabindex="0" aria-label="${d.text ? "Upravit vzkaz pro příště" : "Napsat vzkaz pro příště"}">${d.text ? esc(d.text) : "Vzkaz pro příště…"}${d.stary ? `<small>z ${esc(denikBezDne(d.stary.den))}</small>` : ""}</div>`
+    + `<button type="button" class="lp-sbal" data-lp="sbalit" aria-expanded="${!sb}" aria-label="${sb ? "Rozbalit lepík" : "Sbalit lepík"}"><i class="fa-solid fa-chevron-${sb ? "down" : "up"}"></i></button>`
+    + '</div><span class="lp-roh"></span>';
+  denikLepikSbalTlacitko(el);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (el.isConnected) denikLepikSbalTlacitko(el); });
+}
+/** Šipka sbalení jen když je co sbalovat (vzkaz se nevejde na jeden řádek). */
+function denikLepikSbalTlacitko(el) {
+  const t = el.querySelector(".lp-text"), b = el.querySelector(".lp-sbal");
+  if (!t || !b || !t.clientWidth) return;
+  const jeden = el.classList.contains("sbaleny") ? t.scrollWidth <= t.clientWidth + 1
+    : t.scrollHeight <= (parseFloat(getComputedStyle(t).lineHeight) || 27) * 1.5;
+  b.classList.toggle("hidden", jeden);
+}
+function denikLepikPsat(el) {
+  const d = denikLepikData(denikZaznamyTreninku(state.denik.zaznamy, currentTrainingId));
+  const t = el.querySelector(".lp-text");
+  if (!d || !t) return;
+  denikLepikPise = true;
+  el.classList.remove("sbaleny");
+  const pole = document.createElement("textarea");
+  pole.className = "lp-pole";
+  pole.maxLength = DENIK_VZKAZ_MAX;
+  pole.rows = 1;
+  pole.value = d.text;
+  pole.setAttribute("aria-label", "Vzkaz pro příště");
+  const zb = document.createElement("span");
+  zb.className = "lp-zbyva";
+  zb.hidden = true;
+  t.replaceWith(pole);
+  el.querySelector(".lp-papir").appendChild(zb);
+  el.querySelector(".lp-sbal").classList.add("hidden");
+  const vyska = () => { pole.style.height = "auto"; pole.style.height = pole.scrollHeight + "px"; denikVzkazZbyva(pole, zb); };
+  vyska();
+  pole.focus({ preventScroll: true });
+  pole.setSelectionRange(pole.value.length, pole.value.length);
+  let hotovo = false;
+  const konec = (ulozit) => {
+    if (hotovo) return;
+    hotovo = true;
+    denikLepikPise = false;
+    const z = state.denik.zaznamy[d.posl.id];
+    // Uložení starého (vybledlého) vzkazu beze změny = převzetí k poslednímu odtrénování.
+    if (ulozit && z && denikVzkazZ(pole.value) !== denikVzkazZ(z.vzkaz)) denikUloz(denikSVzkazem(z, pole.value));
+    else renderDenikLepik();
+  };
+  pole.addEventListener("input", vyska);
+  pole.addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); konec(true); }
+    else if (ev.key === "Escape") { ev.preventDefault(); konec(false); }
+  });
+  pole.addEventListener("blur", () => konec(true));
+}
+function denikLepikKlik(e) {
+  const b = e.target.closest("[data-lp]");
+  if (!b) return;
+  const el = e.currentTarget, siroko = el.id === "denikLepikBok", a = b.dataset.lp;
+  if (a === "denik") { if (state.trainings[currentTrainingId]) denikOtevriFiltr(currentTrainingId); return; }
+  if (a === "sbalit") { denikLepikNastavSbaleny(siroko, !el.classList.contains("sbaleny")); renderDenikLepik(); return; }
+  if (a === "psat") {
+    const sb = el.querySelector(".lp-sbal");
+    // sbalený lepík s delším vzkazem se ťuknutím nejdřív rozbalí
+    if (el.classList.contains("sbaleny") && sb && !sb.classList.contains("hidden")) { denikLepikNastavSbaleny(siroko, false); renderDenikLepik(); return; }
+    denikLepikPsat(el);
+  }
+}
+["denikLepik", "denikLepikBok"].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener("click", denikLepikKlik);
+  el.addEventListener("keydown", (e) => {
+    const t = e.target.closest('[data-lp="psat"]');
+    if (t && e.target === t && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); t.click(); }
+  });
+});
+window.matchMedia("(min-width: 860px)").addEventListener("change", () => { if (currentView === "editor") renderDenikLepik(); });
 document.getElementById("denikToggle").addEventListener("click", async () => {
   const tl = document.getElementById("denikToggle"), on = !tl.classList.contains("active");
   tl.classList.toggle("active", on);
@@ -14029,14 +14231,14 @@ function denikNazevHtml(nazev, zamereni, trainingId) {
   return `<span class="dz-nazev${jde ? " dz-odkaz" : ""}" style="background-image:${esc(denikPodtrzeni(zamereni))}"${jde ? ' data-ds="otevrit" role="link" tabindex="0"' : ""}>${esc(nazev || "Trénink")}</span>`;
 }
 /** hodn: undefined = bez místa na hodnocení (čekající řádek), jinak hodnocení záznamu nebo null. */
-function denikOkrajHtml(den, kolikrat, datumJde, hodn) {
+function denikOkrajHtml(den, kolikrat, datumJde, hodn, vzkaz) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(den), d = new Date(+m[1], +m[2] - 1, +m[3]);
   let smajl = "";
   if (hodn !== undefined) {
     const h = denikHodnoceniZ(hodn), popis = h ? `Hodnocení: ${DENIK_HODNOCENI[h].popis}. Změnit` : "Ohodnotit, jak se trénink povedl";
     smajl = `<button type="button" class="dz-hodn" data-ds="hodnotit" aria-haspopup="true" aria-label="${popis}" title="${popis}">${denikSmajl(h)}</button>`;
   }
-  return `<div class="okraj"><b>${+m[3]}. ${+m[2]}.</b><span>${DENIK_DNY[d.getDay()]}</span>${kolikrat > 1 ? `<span class="dvakrat">${kolikrat}×</span>` : ""}${smajl}${datumJde ? `<input type="date" class="dz-datum" value="${esc(den)}" max="${denikDen()}" aria-label="Změnit datum, teď ${esc(denikDenText(den))}">` : ""}</div>`;
+  return `<div class="okraj"><b>${+m[3]}. ${+m[2]}.</b><span>${DENIK_DNY[d.getDay()]}</span>${kolikrat > 1 ? `<span class="dvakrat">${kolikrat}×</span>` : ""}${smajl}${vzkaz ? `<button type="button" class="dz-vzkaz" data-ds="vzkaz" aria-expanded="${vzkaz.otevreny}" aria-label="${vzkaz.otevreny ? "Sbalit vzkaz pro příště" : "Vzkaz pro příště"}" title="Vzkaz pro příště">${denikVzkazZnacka()}</button>` : ""}${datumJde ? `<input type="date" class="dz-datum" value="${esc(den)}" max="${denikDen()}" aria-label="Změnit datum, teď ${esc(denikDenText(den))}">` : ""}</div>`;
 }
 /** tridy = " novy-mesic" u prvního záznamu měsíce (začíná novou stránku), mesic = "RRRR-MM" listu. */
 function denikZapisHtml(z, kolikrat, tridy, mesic) {
@@ -14047,11 +14249,16 @@ function denikZapisHtml(z, kolikrat, tridy, mesic) {
   const ma = richHasContent(z.pozn);
   // Ve filtrovaném sešitu je název tréninku nahoře; u záznamu jen když se tehdy jmenoval jinak.
   const nadpis = !denikFiltr || !t || (z.nazev && z.nazev !== t.name);
+  const vz = denikVzkazZ(z.vzkaz), vzPise = denikVzkazUprava === z.id, vzOtevreny = vzPise || (!!vz && denikVzkazOtevrene.has(z.id));
+  const lepik = !vzOtevreny ? "" : `<div class="ds-lepik"><div class="lp-papir">${vzPise
+    ? `<textarea class="lp-pole" id="dsVzkaz" rows="1" maxlength="${DENIK_VZKAZ_MAX}" aria-label="Vzkaz pro příště">${esc(vz)}</textarea><span class="lp-zbyva" hidden></span>`
+    : `<div class="lp-text" data-ds="vzkaz-psat" role="button" tabindex="0" aria-label="Upravit vzkaz pro příště">${esc(vz)}</div>`}</div><span class="lp-roh"></span></div>`;
+  const plus = !vz && !vzPise ? `<button type="button" class="vzkaz-plus" data-ds="vzkaz-novy" aria-label="Přidat vzkaz pro příště" title="Přidat vzkaz pro příště">${denikVzkazZnacka(true)}</button>` : "";
   const telo = denikSesitUprava === z.id
     ? denikRtePole(z.pozn, "", "", "ds-rte").replace('class="rte-btn" data-rte-cmd="insertUnorderedList"', 'class="rte-btn sep" data-rte-cmd="insertUnorderedList"')
-      + '<div class="upravy vpravo"><button type="button" class="kos" data-ds="smazat" aria-label="Smazat záznam" title="Smazat záznam"><i class="fa-solid fa-trash"></i></button></div>'
+      + `<div class="upravy vpravo">${plus}<button type="button" class="kos" data-ds="smazat" aria-label="Smazat záznam" title="Smazat záznam"><i class="fa-solid fa-trash"></i></button></div>`
     : `<div class="pozn rte-display${ma ? "" : " prazdna"}" data-ds="upravit" tabindex="0" role="button" aria-label="Upravit poznámku">${ma ? richValueToHtml(z.pozn) : "dopsat poznámku…"}</div>`;
-  return `<article class="zapis${tridy}" data-id="${esc(z.id)}" data-mesic="${esc(mesic)}">${denikOkrajHtml(z.den, kolikrat, true, z.hodnoceni || null)}<div class="obsah">${nadpis ? `<h3>${denikNazevHtml(z.nazev, z.zamereni, z.trainingId)}</h3>` : ""}${meta.length ? `<div class="meta">${meta.join("")}</div>` : ""}${telo}</div></article>`;
+  return `<article class="zapis${tridy}" data-id="${esc(z.id)}" data-mesic="${esc(mesic)}">${denikOkrajHtml(z.den, kolikrat, true, z.hodnoceni || null, vz ? { otevreny: vzOtevreny } : null)}<div class="obsah">${nadpis ? `<h3>${denikNazevHtml(z.nazev, z.zamereni, z.trainingId)}</h3>` : ""}${meta.length ? `<div class="meta">${meta.join("")}</div>` : ""}${telo}${lepik}</div></article>`;
 }
 function denikCekaHtml(c, tridy, mesic) {
   const t = state.trainings[c.trainingId];
@@ -14077,6 +14284,9 @@ function renderDenik() {
   // Rozepsaná poznámka musí přežít překreslení (přijde samo, třeba po návratu do aplikace).
   const stare = denikPoleSesitu();
   const rozepsano = stare ? { html: stare.innerHTML, fokus: document.activeElement === stare } : null;
+  const stareVz = document.getElementById("dsVzkaz");
+  const rozVz = stareVz && denikVzkazUprava ? { v: stareVz.value, fokus: document.activeElement === stareVz } : null;
+  if (denikVzkazUprava && !state.denik.zaznamy[denikVzkazUprava]) denikVzkazUprava = null;
   denikNactiPismo(state.denik.vzhled.pismo);
   denikHlava();
   const listy = denikListyVzestupne(denikJenFiltr(state.denik.zaznamy, denikFiltr), denikJenFiltr(state.denik.ceka, denikFiltr), denikDen());
@@ -14101,6 +14311,12 @@ function renderDenik() {
   if (nove && rozepsano) {
     nove.innerHTML = rozepsano.html;
     if (rozepsano.fokus) { nove.focus({ preventScroll: true }); denikKurzorNaKonec(nove); }
+  }
+  const noveVz = document.getElementById("dsVzkaz");
+  if (noveVz) {
+    if (rozVz) noveVz.value = rozVz.v;
+    if (!rozVz || rozVz.fokus) { noveVz.focus({ preventScroll: true }); noveVz.setSelectionRange(noveVz.value.length, noveVz.value.length); }
+    denikVzkazVyska(noveVz);
   }
   denikRozvrh();
 }
@@ -14187,6 +14403,7 @@ function denikPas() {
     Vrací false, když poznámku uložit nešlo (moc dlouhá) a pole zůstává otevřené — to se stane
     jen při obyčejném odchodu z pole. S nasilu=true (odchod z obrazovky) se uloží vždy. */
 function denikSesitZavriUpravu(ulozit, nasilu) {
+  if (denikVzkazUprava) { denikVzkazZavri(ulozit); if (!denikSesitUprava) { renderDenik(); return true; } }
   const id = denikSesitUprava;
   if (!id) return true;
   const pole = denikPoleSesitu(), z = state.denik.zaznamy[id];
@@ -14221,6 +14438,34 @@ function denikSesitZavriUpravu(ulozit, nasilu) {
   }
   renderDenik();
   return true;
+}
+/* ---- Vzkaz pro příště v sešitu (kolo 15) ---- */
+function denikVzkazUprav(id) {
+  if (denikVzkazUprava === id) return;
+  if (!denikSesitZavriUpravu(true)) return;   // uloží rozepsanou poznámku i jiný vzkaz
+  if (!state.denik.zaznamy[id]) return;
+  denikVzkazUprava = id;
+  denikVzkazOtevrene.add(id);
+  renderDenik();
+  const p = document.getElementById("dsVzkaz");
+  if (p) { p.focus({ preventScroll: true }); p.setSelectionRange(p.value.length, p.value.length); denikVzkazVyska(p); denikRozvrh(); }
+}
+function denikVzkazVyska(p) {
+  p.style.height = "auto";
+  p.style.height = p.scrollHeight + "px";
+  denikVzkazZbyva(p, p.nextElementSibling);
+}
+/** Konec psaní vzkazu v sešitu; s uložením zapíše změnu (prázdný = vzkaz zmizí). Nepřekresluje. */
+function denikVzkazZavri(ulozit) {
+  const id = denikVzkazUprava;
+  if (!id) return;
+  const p = document.getElementById("dsVzkaz"), z = state.denik.zaznamy[id];
+  denikVzkazUprava = null;
+  if (!p) return;
+  const text = denikVzkazZ(p.value);
+  p.closest(".ds-lepik").remove();   // ať si překreslení nevezme rozepsaný text zpátky
+  if (!text && !(z && denikVzkazZ(z.vzkaz) && !ulozit)) denikVzkazOtevrene.delete(id);
+  if (ulozit && z && text !== denikVzkazZ(z.vzkaz)) denikUloz(denikSVzkazem(z, text));
 }
 function denikSesitUprav(id) {
   if (denikSesitUprava === id) return;
@@ -14462,6 +14707,17 @@ async function denikSesitAkce(akce, el) {
     return;
   }
   if (akce === "upravit") { denikSesitUprav(id); return; }
+  if (akce === "vzkaz") {
+    // značka na okraji: rozbalit / sbalit lepík (rozepsaná poznámka nebo vzkaz se nejdřív uloží)
+    const byl = denikVzkazOtevrene.has(id) || denikVzkazUprava === id;
+    if (!denikSesitZavriUpravu(true)) return;
+    if (byl) denikVzkazOtevrene.delete(id); else denikVzkazOtevrene.add(id);
+    renderDenik();
+    const zn = document.querySelector(`#denikList .zapis[data-id="${CSS.escape(id)}"] .dz-vzkaz`);
+    if (zn) zn.focus({ preventScroll: true });
+    return;
+  }
+  if (akce === "vzkaz-psat" || akce === "vzkaz-novy") { denikVzkazUprav(id); return; }
   if (akce === "smazat") {
     const z = state.denik.zaznamy[id];
     if (!z) return;
@@ -14498,7 +14754,7 @@ const denikListEl = document.getElementById("denikList"), denikSesitEl = documen
 // překreslil dřív, než ťuknutí dopadne, a ťuknutí by se ztratilo (na telefonu prst drží déle).
 // Totéž datum na okraji, když se právě píše poznámka: výběr data otevře až ťuknutí (viz click níž).
 denikListEl.addEventListener("mousedown", (e) => {
-  if (e.target.closest('[data-ds="smazat"], [data-ds="hodnotit"]') || (denikSesitUprava && e.target.closest(".dz-datum"))) e.preventDefault();
+  if (e.target.closest('[data-ds="smazat"], [data-ds="hodnotit"], [data-ds="vzkaz"], [data-ds="vzkaz-novy"]') || ((denikSesitUprava || denikVzkazUprava) && e.target.closest(".dz-datum"))) e.preventDefault();
 });
 // Nabídka hodnocení se zavře ťuknutím kamkoli mimo ni (i mimo sešit) a klávesou Escape.
 document.addEventListener("pointerdown", (e) => {
@@ -14539,6 +14795,21 @@ denikListEl.addEventListener("keydown", (e) => {
 });
 // Psaní mění délku poznámky a tím i sazbu stránek: sešit se přepočítá a drží se kurzoru.
 denikListEl.addEventListener("input", (e) => { if (e.target.closest(".ds-rte")) denikRozvrh(); });
+denikListEl.addEventListener("input", (e) => { if (e.target.id === "dsVzkaz") { denikVzkazVyska(e.target); denikRozvrh(); } });
+denikListEl.addEventListener("keydown", (e) => {
+  if (e.target.id !== "dsVzkaz") return;
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); denikVzkazZavri(true); renderDenik(); }
+  else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); denikVzkazZavri(false); renderDenik(); }
+});
+denikListEl.addEventListener("focusout", (e) => {
+  if (e.target.id !== "dsVzkaz") return;
+  const p = e.target;
+  setTimeout(() => {
+    if (!denikVzkazUprava || !p.isConnected || document.activeElement === p || denikMazani) return;
+    denikVzkazZavri(true);
+    renderDenik();
+  }, 0);
+});
 /* Poznámka se ukládá SAMA, jakmile z ní trenér odejde (Mek 11. 10.: bez tlačítka Uložit).
    Lišta formátování a koš fokus neberou, takže odchod = ťuknutí kamkoli jinam. */
 denikListEl.addEventListener("focusout", (e) => {
@@ -20641,22 +20912,24 @@ const HELP_DATA = [
     { title: "Deníček odtrénovaných tréninků", icon: "fa-solid fa-book-open", qa: [
       { q: "Co je Deníček?", a: "Tvůj soukromý záznam o tom, které tréninky jsi doopravdy odtrénoval(a) a jak to šlo. Ke každému odtrénování si můžeš připsat krátkou poznámku a smajlíkem označit, jak se povedl. Deníček je dobrovolný — kdo ho nevede, v aplikaci o něm neuvidí nic.", kw: "denicek denik odtrenovano poznamka zaznam" },
       { q: "Jak si Deníček zapnu nebo vypnu?", a: "Poprvé se tě aplikace zeptá sama, když odejdeš z Přehledu tréninku (z obrazovky po „Začít trénovat“). Kdykoli později to změníš v profilu přepínačem „Vést deníček“. Vypnutím se záznamy nemažou, jen se přestanou ukazovat; po zapnutí je máš zpátky.", kw: "denicek zapnout vypnout profil vest denicek prepinac" },
-      { q: "Jak zapíšu, že trénink proběhl?", a: "Když odejdeš z Přehledu tréninku, sjede shora na deset vteřin karta „Odtrénováno dnes?“. Ťukni na „Ano, odtrénováno“ a je zapsáno; hned potom můžeš jedním ze tří smajlíků označit, jak se trénink povedl, a ťuknout na „Přidat poznámku“ a napsat, jak to šlo. Když ses na plán jen díval(a), nedělej nic — karta sama zmizí a nic se nezapíše. Křížkem ji zavřeš hned. Trénink, který už dnes zapsaný máš, se znovu neptá.", kw: "odtrenovano dnes lista karta ano poznamka prehled zacit trenovat smajlik hodnoceni povedl" },
+      { q: "Jak zapíšu, že trénink proběhl?", a: "Když odejdeš z Přehledu tréninku, sjede shora na deset vteřin karta „Odtrénováno dnes?“. Ťukni na „Ano, odtrénováno“ a je zapsáno; hned potom můžeš jedním ze tří smajlíků označit, jak se trénink povedl, a ťuknout na „Přidat poznámku“ a napsat, jak to šlo, a pod to do žlutého pole krátký vzkaz pro příště. Když ses na plán jen díval(a), nedělej nic — karta sama zmizí a nic se nezapíše. Křížkem ji zavřeš hned. Trénink, který už dnes zapsaný máš, se znovu neptá.", kw: "odtrenovano dnes lista karta ano poznamka prehled zacit trenovat smajlik hodnoceni povedl" },
       { q: "Kde najdu všechno odtrénované pohromadě?", a: "V Deníčku. Na záložce Tréninky je vpravo nahoře oranžové tlačítko s knihou (vidí ho jen ten, kdo si deníček vede). Otevře sešit na poslední popsané stránce. Píše se do něj jako do opravdového: od nejstaršího tréninku po nejnovější, každý měsíc začíná na nové stránce razítkem. Na okraji je datum, vedle název podtržený barvami zaměření a pod ním tvoje poznámka. Číslo „2ד na okraji znamená, že jsi ten trénink odtrénoval(a) podruhé.", kw: "denicek sesit obrazovka kniha tlacitko vsechno pohromade prehled odtrenovanych dvoustrana poradi nejstarsi" },
       { q: "Jak v Deníčku listuju?", a: "Šipkami v horních rozích sešitu: doleva je o stránku zpět (starší), doprava dál (novější). Na telefonu stačí táhnout prstem po sešitu do strany, na počítači fungují šipky na klávesnici. Sešit má vždy výšku okna a neroluje se; dlouhý měsíc prostě pokračuje na dalších stránkách a nahoře je tužkou napsané, který měsíc čteš. Na počítači se otáčí celá dvoustrana.", kw: "listovat listovani mesic stranka sipky swipe tahnout prstem starsi novejsi otocit stranku rolovat" },
       { q: "Karta zmizela dřív, než jsem stihl(a) odpovědět. Co teď?", a: "Nic se neztratilo. Trénink, u kterého jsi otevřel(a) Přehled a neodpověděl(a), si aplikace poznamená: na tlačítku Deníčku se rozsvítí oranžová tečka a v Deníčku je za posledním záznamem tužkou řádek „… odtrénováno?“. Ťukni na „Ano“ a je zapsáno i se správným datem, nebo na „Ne“ a řádek zmizí. Platí to i tehdy, když jsi telefon zamkl(a) přímo v Přehledu a karta vůbec nevyjela. Po týdnu řádek zmizí sám.", kw: "zmizela nestihl tecka ceka potvrzeni odtrenovano otaznik tuzkou" },
       { q: "Co znamená oranžová tečka na tlačítku Deníčku?", a: "Že aspoň jeden trénink čeká na tvoji odpověď, jestli proběhl. Otevři Deníček a u řádku psaného tužkou ťukni na „Ano“ nebo „Ne“. Kdo nechce odpovídat, nemusí — řádek i tečka po týdnu zmizí. Křížek na kartě „Odtrénováno dnes?“ znamená „ne“ a tečku nerozsvítí.", kw: "tecka oranzova ceka potvrzeni ikona denicek" },
-      { q: "Jak dopíšu trénink zpětně?", a: "V Deníčku ťukni nahoře na „Dopsat trénink“ (na telefonu je to tlačítko s plusem), vyber trénink (jde hledat podle názvu; při hledání se nabídnou i tréninky z Tržiště), nastav den a případně připiš poznámku. Sešit pak nalistuje na stránku, kde záznam je. Druhá cesta vede z editoru tréninku: ťukni na řádek „Odtrénováno…“ (nebo „Zatím neodtrénováno“) nad tlačítkem „Začít trénovat“ a v Deníčku tohoto tréninku na „Dopsat odtrénování“ (na telefonu plus) — trénink už je vybraný, nastavíš jen den a poznámku.", kw: "dopsat zpetne minuly tyden pridat odtrenovani datum plus" },
+      { q: "Jak dopíšu trénink zpětně?", a: "V Deníčku ťukni nahoře na „Dopsat trénink“ (na telefonu je to tlačítko s plusem), vyber trénink (jde hledat podle názvu; při hledání se nabídnou i tréninky z Tržiště), nastav den a případně připiš poznámku. Sešit pak nalistuje na stránku, kde záznam je. Druhá cesta vede z editoru tréninku: ťukni na hlavičku žlutého lepíku („odtrénováno 4× · 9. 10.“; u tréninku, který ještě neproběhl, na řádek „Zatím neodtrénováno“) a v Deníčku tohoto tréninku na „Dopsat odtrénování“ (na telefonu plus) — trénink už je vybraný, nastavíš jen den a poznámku.", kw: "dopsat zpetne minuly tyden pridat odtrenovani datum plus" },
       { q: "Jak napíšu nebo opravím poznámku? Kde je tlačítko Uložit?", a: "Žádné není. V Deníčku ťukni na poznámku (nebo na šedé „dopsat poznámku…“) a piš přímo do sešitu. Jakmile ťukneš kamkoli jinam, poznámka se uloží sama a dole se na pár vteřin ukáže „Uloženo“ s tlačítkem „Vrátit“, kdyby to byl omyl. Uloží se i tehdy, když aplikaci zavřeš nebo přepneš jinam. Na počítači klávesa Escape rozepsané změny zahodí.", kw: "poznamka ulozit ulozeni samo automaticky vratit opravit prepsat tlacitko ulozit" },
       { q: "Jak označím, jak se trénink povedl?", a: "Smajlíkem: usměvavý (povedl se), rovný (šlo to), nebo smutný (nepovedl se). Hned po zapsání ho vybereš v kartě „Zapsáno“ nahoře. Později v Deníčku: pod datem a dnem na okraji je smajlík, u neohodnoceného tréninku slabý prázdný kroužek — ťukni na něj a vyber z nabídky, nebo zvol „bez hodnocení“. Hodnocení je dobrovolné a vidíš ho jen ty.", kw: "hodnoceni smajlik povedl nepovedl jak to slo usmev kroužek krouzek znamka" },
       { q: "Jde text poznámky zvýraznit nebo udělat seznam?", a: "Ano, stejně jako u popisu cvičení. Nad rozepsanou poznámkou je lišta: tučně, kurzíva, odrážky, číslovaný seznam a odsazení doleva a doprava. Na počítači fungují i Ctrl+B a Ctrl+I. Lišta je všude, kde se poznámka do Deníčku píše — v sešitu, na kartě po tréninku i v „Dopsat trénink zpětně“.", kw: "tucne kurziva bold italic seznam odrazky cislovani odsazeni formatovani poznamka" },
       { q: "Jak změním datum záznamu?", a: "V Deníčku ťukni na datum na okraji a vyber jiný den; sešit pak nalistuje na stránku, kam se záznam přesunul. Datum není nijak zvýrazněné, aby sešit vypadal jako sešit.", kw: "datum zmenit opravit den spatne datum okraj" },
       { q: "Jak smažu záznam?", a: "V Deníčku ťukni na poznámku toho záznamu a vpravo pod ní na koš; aplikace se nejdřív zeptá. Maže se vždy jeden záznam, samotný trénink zůstává. Hned po zapsání jde zápis taky vzít zpět tlačítkem „Vrátit zpět“ přímo na kartě.", kw: "smazat zaznam kos odstranit vratit zpet" },
       { q: "Jak se z Deníčku dostanu k tréninku?", a: "Ťukni v sešitu na název tréninku — otevře se v editoru a tlačítko „Zpět do deníčku“ tě vrátí na stejné místo. Název není nijak zvýrazněný, aby sešit vypadal jako sešit. U tréninku, který už neexistuje, název odkazem není; záznam i poznámka ale zůstávají.", kw: "nazev odkaz otevrit trenink z denicku editor zpet do denicku" },
-      { q: "Jak uvidím všechna odtrénování jednoho tréninku?", a: "V editoru tréninku ťukni na řádek „Odtrénováno…“ nad tlačítkem „Začít trénovat“. Otevře se Deníček jen s tímto tréninkem — nahoře je místo „Deníček“ jeho název a u záznamů se název neopakuje (ukáže se jen tam, kde se trénink tehdy jmenoval jinak). Upravuje se v něm stejně jako v celém Deníčku. Šipka vlevo nahoře, Esc nebo Zpět v telefonu tě vrátí do editoru.", kw: "vsechna odtrenovani jeden trenink historie filtr editor radek odtrenovano zaznamy" },
+      { q: "Jak uvidím všechna odtrénování jednoho tréninku?", a: "V editoru tréninku ťukni na hlavičku žlutého lepíku („odtrénováno 4× · 9. 10.“). Otevře se Deníček jen s tímto tréninkem — nahoře je místo „Deníček“ jeho název a u záznamů se název neopakuje (ukáže se jen tam, kde se trénink tehdy jmenoval jinak). Upravuje se v něm stejně jako v celém Deníčku. Šipka vlevo nahoře, Esc nebo Zpět v telefonu tě vrátí do editoru.", kw: "vsechna odtrenovani jeden trenink historie filtr editor radek odtrenovano zaznamy" },
+      { q: "Co je žlutý lepík v editoru tréninku?", a: "Vzkaz sám sobě pro příště — třeba „kužely na 3 kroky rozběhu“. Lepík má trénink, který máš v Deníčku aspoň jednou odtrénovaný. Nahoře je, kolikrát a kdy naposledy trénink proběhl, a smajlík posledního hodnocení; ťuknutím otevřeš všechna jeho odtrénování. Pod tím je vzkaz posledního odtrénování. Když ho poslední odtrénování nemá, ukáže se vybledle ten předchozí s datem — ťukni na něj a ulož ho (Enter), ať platí dál, nebo ho přepiš. Na telefonu je lepík sbalený na jeden řádek, šipkou nebo ťuknutím na text se rozbalí; na počítači je vlevo nad „Přidat z knihovny“. Vidíš ho jen ty.", kw: "lepik zluty vzkaz pro priste pripominka editor sbalit rozbalit papirek" },
+      { q: "Jak napíšu nebo změním vzkaz pro příště?", a: "Kdekoli z těchhle míst: hned po tréninku na kartě „Zapsáno“ → „Přidat poznámku“ (pod poznámkou je žluté pole na vzkaz); kdykoli v editoru tréninku ťuknutím na text lepíku; v Deníčku u záznamu — vzkaz je schovaný pod žlutou značkou na okraji pod smajlíkem, ťuknutím ho rozbalíš a dalším ťuknutím na text upravíš. K záznamu bez vzkazu ho v Deníčku přidáš, když píšeš poznámku: žluté tlačítko s plusem vedle koše. Vzkaz má nejvýš 180 znaků (posledních 40 se odpočítává) a je bez formátování. Uloží se sám, když z pole odejdeš, nebo klávesou Enter; Esc psaní zruší. Smazáním celého textu vzkaz zmizí.", kw: "vzkaz pro priste napsat zmenit smazat lepik znacka okraj 180 znaku" },
       { q: "Jde změnit vzhled sešitu, velikost písma, rychlost listování a vypnout zvuky?", a: "Ano. V Deníčku ťukni na tlačítko s posuvníky vpravo nahoře. Nahoře vybereš papír jedním ze čtyř vzorků (tlumený nebo bílý, s linkami nebo se čtverečky), pod ním rukopis podle ukázky „Aa“ (Úhledný, Rychlý, Fixou) a vedle něj posuvníkem velikost písma. Reproduktor v rohu zapíná a vypíná zvuky při listování a mazání. Dole je rychlost listování: Pomalu, Středně, Rychle, nebo Vypnuto — pak se list neotáčí a stránka se jen prolne (stejně se chová i telefon, který má v nastavení omezené animace). Na vzorek nebo tlačítko stačí najet myší a ukáže se, co znamená. Papír, rukopis, zvuky a rychlost listování se ukládají k tvému účtu, takže je máš na všech zařízeních. Velikost písma si pamatuje každé zařízení zvlášť — na telefonu můžeš mít větší než na monitoru. Čára u data a razítko měsíce berou hlavní barvu z tvého profilu. Papír zůstává světlý i v tmavém režimu.", kw: "vzhled sesit papir linkovany ctvereckovany rukopis pismo barva papiru zvuk zvuky vypnout ticho velikost pisma vetsi mensi posuvnik rychlost listovani otaceni listu animace pomalu rychle vzorek" },
-      { q: "Kdo moje záznamy a poznámky vidí?", a: "Jen ty. Kolegové je nevidí ani u tréninků, které máš na Tržišti, a při klonování tréninku se nepřenášejí. Když si kolega odtrénuje tvůj trénink z Tržiště, má vlastní záznam ve vlastním Deníčku. Záznam si pamatuje, jak trénink vypadal v den odtrénování, takže zůstane, i když trénink později upravíš nebo smažeš.", kw: "soukrome kdo vidi kolegove trziste klon poznamky" },
-      { q: "Jeden trénink jsem odtrénoval(a) víckrát, třeba i dvakrát za den. Jde to zapsat?", a: "Ano. Každé odtrénování je samostatný záznam s vlastním datem a poznámkou, i když jsou dvě ve stejný den (třeba se dvěma kategoriemi po sobě). Když je trénink dnes už zapsaný, karta „Odtrénováno dnes znovu?“ se zeptá až po půl hodině od posledního zápisu — kdo se do Přehledu jen vrátí, otázku nedostane. Na řádku v editoru pak vidíš, kolikrát trénink proběhl a kdy naposledy.", kw: "vickrat opakovane dvakrat znovu dve kategorie stejny den" }
+      { q: "Kdo moje záznamy a poznámky vidí?", a: "Jen ty — i vzkazy pro příště. Kolegové je nevidí ani u tréninků, které máš na Tržišti, a při klonování tréninku se nepřenášejí. Když si kolega odtrénuje tvůj trénink z Tržiště, má vlastní záznam ve vlastním Deníčku. Záznam si pamatuje, jak trénink vypadal v den odtrénování, takže zůstane, i když trénink později upravíš nebo smažeš.", kw: "soukrome kdo vidi kolegove trziste klon poznamky" },
+      { q: "Jeden trénink jsem odtrénoval(a) víckrát, třeba i dvakrát za den. Jde to zapsat?", a: "Ano. Každé odtrénování je samostatný záznam s vlastním datem a poznámkou, i když jsou dvě ve stejný den (třeba se dvěma kategoriemi po sobě). Když je trénink dnes už zapsaný, karta „Odtrénováno dnes znovu?“ se zeptá až po půl hodině od posledního zápisu — kdo se do Přehledu jen vrátí, otázku nedostane. Na lepíku v editoru pak vidíš, kolikrát trénink proběhl a kdy naposledy.", kw: "vickrat opakovane dvakrat znovu dve kategorie stejny den" }
     ]},
     { title: "Navrhnout trénink", icon: "fa-solid fa-wand-magic-sparkles", qa: [
       { q: "Nevím, co trénovat, nebo pospíchám. Umí mi aplikace trénink navrhnout?", a: "Ano. Založ nový trénink a v prázdném tréninku ťukni na „🤷‍♂️ Navrhnout trénink“ (hned pod „Začít trénovat“). Odpovíš na čtyři otázky — zaměření, celkový čas, vybavení, které máš, a obtížnost — a aplikace z Knihovny poskládá tři návrhy celého tréninku. Nic se neuloží, dokud nedáš „Použít“.", kw: "navrh navrhnout trenink dotaznik nevim pospicham automaticky" },
