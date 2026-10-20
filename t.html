@@ -149,6 +149,24 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
 .tmf-phases button{border:none;background:none;font-family:var(--font-display);font-size:13px;letter-spacing:.08em;color:#4A5564;padding:5px 14px;border-radius:999px;cursor:pointer;white-space:nowrap;}
 .tmf-phases button[aria-pressed="true"]{background:var(--court);color:#fff;}
 .tmf-phases button:focus-visible{outline:2px solid var(--court);outline-offset:2px;}
+/* Ukázky pro hráčky (kolo 18, 20. 10. 2026): díl přepínače fází s ikonkou filmu, ukázka na
+   ploše prezentace, volba stanoviště, ikonka v Přehledu a okno přes obrazovku. Barvy jen
+   z proměnných — zvýrazňovací barvu si volí každý trenér sám. */
+.tmf-phases button.tmf-uk-ph{color:var(--chalk-dark,#C4501F);padding-left:12px;padding-right:12px;}
+.tmf-phases button.tmf-uk-ph[aria-pressed="true"]{background:var(--chalk);color:#fff;}
+.uk-faze{display:flex;flex-direction:column;align-items:center;gap:12px;width:100%;}
+.uk-video{position:relative;border-radius:12px;overflow:hidden;background:#000;border:2px solid #fff;box-shadow:0 4px 16px rgba(0,0,0,.22);flex-shrink:0;}
+.uk-video .embed{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;}
+.uk-stany{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
+.uk-stan{display:inline-flex;align-items:center;gap:7px;border:2px solid #DDE1D8;background:#fff;border-radius:999px;padding:4px 12px 4px 4px;font-family:var(--font-display);font-size:15px;letter-spacing:.04em;color:#4A5564;cursor:pointer;}
+.uk-stan.jen-cislo{padding-right:4px;}
+.uk-stan.on{border-color:var(--chalk);background:color-mix(in srgb,var(--chalk) 12%,#fff);color:var(--chalk-dark,#C4501F);}
+.ov-ukbtn{flex-shrink:0;background:none;border:none;color:var(--chalk);font-size:15px;align-self:center;padding:6px 2px 6px 6px;cursor:pointer;line-height:1;}
+.ov-member .ov-ukbtn{padding:4px 4px 4px 2px;font-size:13px;}
+#ukazkaOknoBackdrop{z-index:300;background:rgba(12,14,18,.94);flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px;}
+#ukazkaOknoBackdrop .uk-video{border:none;box-shadow:none;}
+.uk-okno-x{position:absolute;top:14px;right:14px;width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.14);border:none;color:#fff;font-size:20px;cursor:pointer;}
+.uk-okno-nazev{color:#fff;font-family:var(--font-display);font-size:20px;letter-spacing:.04em;opacity:.9;text-align:center;max-width:90vw;overflow-wrap:anywhere;padding:0 50px;}
 
 .tmf-stage{flex:1;min-height:0;position:relative;display:flex;}
 /* "safe center" místo prostého center: zarovnává na střed, ale jakmile by obsah přetekl,
@@ -524,6 +542,7 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
       <div class="tmf-metarow">
         <div class="tmf-phases" id="tmfPhases">
           <button type="button" data-p="brief" aria-pressed="true">Zadání</button>
+          <button type="button" data-p="ukazka" aria-pressed="false" class="tmf-uk-ph hidden" id="tmfUkazkaBtn" aria-label="Ukázka" title="Ukázka"><i class="fa-solid fa-film"></i></button>
           <button type="button" data-p="run" aria-pressed="false">Průběh</button>
           <button type="button" data-p="wrap" aria-pressed="false">Konec</button>
         </div>
@@ -600,6 +619,13 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;backgroun
     .catch(function () { hint.classList.remove("hidden"); });
 })();
 </script>
+<!-- Ukázka pro hráčky přes celou obrazovku (kolo 18) — pouští ji ikonka filmu v Přehledu
+     a v editoru. V prezentaci se ukázka pouští na ploše (díl přepínače), ne tady. -->
+<div id="ukazkaOknoBackdrop" class="modal-backdrop hidden">
+  <button type="button" class="uk-okno-x" id="closeUkazkaOknoBtn" aria-label="Zavřít"><i class="fa-solid fa-xmark"></i></button>
+  <div class="uk-okno-nazev" id="ukazkaOknoNazev"></div>
+  <div class="uk-video" id="ukazkaOknoVideo"></div>
+</div>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
 import { initializeFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
@@ -649,6 +675,9 @@ function jeTextove(item) { return !!item && !String(item.url || "").trim(); }
 const PH_TEXT_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 90" preserveAspectRatio="xMidYMid slice" class="tx-thumb" width="100%" height="100%" aria-hidden="true"><rect x="0" y="0" width="160" height="90" style="fill:#E9ECE4"/><rect x="40" y="30" width="4" height="16" rx="2" style="fill:#339933"/><text x="50" y="46" style="fill:#6B7684;font-family:'Bebas Neue',Impact,sans-serif;font-size:22px;letter-spacing:2.5px">TEXT</text><rect x="40" y="56" width="80" height="6" rx="3" style="fill:#ADB5A9"/><rect x="40" y="67" width="56" height="6" rx="3" style="fill:#ADB5A9"/></svg>`;
 const PH_VIDEO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 90" preserveAspectRatio="xMidYMid slice" class="tx-thumb" width="100%" height="100%" aria-hidden="true"><rect x="0" y="0" width="160" height="90" style="fill:#E9ECE4"/><circle cx="51" cy="38" r="11" style="fill:#339933"/><path d="M47.8 33.2V42.8Q47.8 44.2 49 43.5L56.4 38.9Q57.5 38 56.4 37.1L49 32.5Q47.8 31.8 47.8 33.2Z" style="fill:#FFFFFF"/><text x="68" y="46" style="fill:#6B7684;font-family:'Bebas Neue',Impact,sans-serif;font-size:22px;letter-spacing:2.5px">VIDEO</text><rect x="40" y="61" width="80" height="5" rx="2.5" style="fill:#ADB5A9"/><rect x="40" y="61" width="28" height="5" rx="2.5" style="fill:#339933"/></svg>`;
 function zastupnyObrazekHtml(item) { return jeTextove(item) ? PH_TEXT_SVG : PH_VIDEO_SVG; }
+/* Ukázky pro hráčky (kolo 18): ve snímku jsou jen ukázky, které šly v aplikaci pustit, s příznakem
+   `ukazka` — složky tu nejsou, takže se rozhoduje podle něj. */
+function ukazkaLzePustit(item) { return !!item && item.ukazka === true && !jeTextove(item); }
 // Stanoviště (kolo 3): česká množná čísla „1 kolo / 2 kola / 5 kol“ — stejné jako v index.html.
 function czPlural(n, one, few, many) { return n === 1 ? one : (n >= 2 && n <= 4 ? few : many); }
 function pdfFmtClock(totalSeconds) {
@@ -1897,7 +1926,7 @@ function getFazeCurrentEntry() {
       shortDesc: v.isText ? (v.shortDesc || "") : (lib ? lib.shortDesc : ""),
       longDesc: v.isText ? (v.longDesc || "") : (lib ? lib.longDesc : ""),
       equipment: v.isText ? (v.equipment || []) : [...new Set([...((lib && lib.equipment) || []), ...(v.extraEquipment || [])])],
-      isText: !!v.isText || jeTextove(lib), broken: !!(lib && !jeTextove(lib) && (lib.brokenAt || lib.goneAt)), gone: !!(lib && lib.goneAt), lib, videoId: v.isText ? null : v.videoId
+      isText: !!v.isText || jeTextove(lib), broken: !!(lib && !jeTextove(lib) && (lib.brokenAt || lib.goneAt)), gone: !!(lib && lib.goneAt), lib, videoId: v.isText ? null : v.videoId, ukazka: ukazkaPolozky(v)
     };
   }
   const lib = row.isText ? null : state.library[row.videoId];
@@ -1909,7 +1938,7 @@ function getFazeCurrentEntry() {
     shortDesc: row.isText ? (row.shortDesc || "") : (lib ? lib.shortDesc : ""),
     longDesc: row.isText ? (row.longDesc || "") : (lib ? lib.longDesc : ""),
     equipment: row.isText ? (row.equipment || []) : [...new Set([...((lib && lib.equipment) || []), ...(row.extraEquipment || [])])],
-    isText: !!row.isText || jeTextove(lib), broken: !!(lib && !jeTextove(lib) && (lib.brokenAt || lib.goneAt)), gone: !!(lib && lib.goneAt), lib, videoId: row.isText ? null : row.videoId
+    isText: !!row.isText || jeTextove(lib), broken: !!(lib && !jeTextove(lib) && (lib.brokenAt || lib.goneAt)), gone: !!(lib && lib.goneAt), lib, videoId: row.isText ? null : row.videoId, ukazka: ukazkaPolozky(row)
   };
 }
 /** Stejná větvící logika jako getUpNextLabel/getUpNextColor výš (další video ve skupině →
@@ -2347,6 +2376,116 @@ function stanUkazStridame(kolo, kol) {
   stanUkazStridame._t = setTimeout(() => el.classList.add("hidden"), 3500);
 }
 
+/* =========================================================
+   UKÁZKY PRO HRÁČKY — Přehled a prezentace (kolo 18, 20. 10. 2026)
+   Ke cvičení v tréninku jde připojit jedno video ze složky s ukázkami (Správa složek →
+   „Ukázky pro hráčky“). V položce tréninku (i u člena skupiny a stanoviště) je jako
+   `ukazky: [idVidea]` — seznam, kdyby jich jednou mělo být víc; Mek zatím chtěl jednu.
+   Přehled: ikonka filmu na kartě → okno přes obrazovku. Prezentace: díl přepínače mezi
+   Zadáním a Průběhem → ukázka přímo na ploše, u stanovišť s volbou stanoviště. Hraje hned,
+   bez zvuku a dokola; odpočet běží dál (Mekovy odpovědi 2–4 a 6).
+   Tenhle blok je stejný v index.html i v t.html; ukazkaLzePustit() má každý soubor svoje
+   (aplikace se ptá složky, sdílená stránka příznaku ve snímku).
+   ========================================================= */
+/** Připojená ukázka položky tréninku nebo člena skupiny — video, nebo null, když žádná
+    není, nebo už nejde pustit (smazaná, přesunutá z ukázek, nefunkční). */
+function ukazkaPolozky(obj) {
+  const id = obj && Array.isArray(obj.ukazky) ? obj.ukazky[0] : null;
+  const lib = id ? state.library[id] : null;
+  return lib && ukazkaLzePustit(lib) ? lib : null;
+}
+/** Přehrávač ukázky: hned, bez zvuku, dokola. YouTube dokola umí jen od začátku videa (parametr
+    loop s playlistem start ignoruje); u Facebooku a Instagramu opakování ani ztlumení zvenku
+    ovládat nejde, tam se jen zkusí spustit. Disk a soubory řeší ukazkaVlozDo níž. */
+function ukazkaEmbedHtml(lib) {
+  if (lib.platform === "youtube" && lib.videoId) {
+    const p = ["autoplay=1", "mute=1", "playsinline=1", "rel=0", "loop=1", `playlist=${encodeURIComponent(lib.videoId)}`];
+    if (lib.timestamp) p.push(`start=${lib.timestamp}`);
+    return `<iframe class="embed" src="https://www.youtube-nocookie.com/embed/${esc(lib.videoId)}?${p.join("&")}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+  }
+  if (lib.platform === "facebook") {
+    return `<iframe class="embed" src="https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(lib.url)}&show_text=false&autoplay=true&mute=true" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+  }
+  if (lib.platform === "tiktok" && lib.videoId) {
+    return `<iframe class="embed" src="https://www.tiktok.com/player/v1/${esc(lib.videoId)}?autoplay=1&loop=1&muted=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+  }
+  return renderEmbedHtml(lib, { muted: true, preload: "auto" });
+}
+/** Vloží ukázku do rámečku a velikost spočítá tak, aby se vešla do maxW × maxH. Video
+    z Disku / soubor (<video>) se pustí samo, ztlumené, a po skončení se vrátí na zadaný čas. */
+function ukazkaVlozDo(box, lib, maxW, maxH) {
+  box.style.aspectRatio = ""; box.style.maxHeight = "";
+  box.innerHTML = ukazkaEmbedHtml(lib);
+  if (lib.platform === "drive") setupDriveVideoPlayback(box, lib, { box: { maxW, maxH } });
+  else {
+    const fit = fitBoxForRatio(lib.aspectRatio, maxW, maxH);
+    box.style.width = fit.w + "px";
+    box.style.height = fit.h + "px";
+  }
+  const v = box.querySelector("video");
+  if (!v) return;
+  const zacatek = lib.timestamp || 0;
+  const pust = () => { try { const p = v.play(); if (p && p.catch) p.catch(() => {}); } catch (e) {} };
+  v.muted = true;
+  v.playsInline = true;
+  v.addEventListener("loadedmetadata", () => { if (zacatek && v.currentTime < zacatek) { try { v.currentTime = zacatek; } catch (e) {} } }, { once: true });
+  v.addEventListener("ended", () => { try { v.currentTime = zacatek; } catch (e) {} pust(); });
+  pust();
+}
+/** Okno s ukázkou přes celou obrazovku (Přehled, editor). */
+function ukazkaOtevriOkno(videoId) {
+  const lib = state.library[videoId];
+  if (!lib || !ukazkaLzePustit(lib)) return;
+  const bd = document.getElementById("ukazkaOknoBackdrop");
+  document.getElementById("ukazkaOknoNazev").textContent = lib.title || "";
+  bd.classList.remove("hidden");
+  const maxW = Math.round(window.innerWidth * 0.92);
+  const maxH = Math.max(160, window.innerHeight - 140);
+  ukazkaVlozDo(document.getElementById("ukazkaOknoVideo"), lib, maxW, maxH);
+}
+function ukazkaZavriOkno() {
+  document.getElementById("ukazkaOknoBackdrop").classList.add("hidden");
+  document.getElementById("ukazkaOknoVideo").innerHTML = "";   // zastaví přehrávání
+}
+document.getElementById("closeUkazkaOknoBtn").addEventListener("click", ukazkaZavriOkno);
+/** Ikonka filmu na kartě v Přehledu — jen když ukázka je (Mekova varianta B: bez kroužku). */
+function ovUkazkaBtnHtml(obj) {
+  if (!ukazkaPolozky(obj)) return "";
+  return `<button type="button" class="ov-ukbtn" data-uk-video="${esc(obj.ukazky[0])}" aria-label="Ukázka" title="Ukázka"><i class="fa-solid fa-film"></i></button>`;
+}
+let tmfUkazkaStan = 0;   // kolikátá ukázka se ukazuje, když jich má položka víc (stanoviště)
+/** Ukázky aktuální položky prezentace: [{ lib, cislo, kdo }]. U stanovišť jen ta s ukázkou. */
+function fazeUkazky(entry) {
+  if (!entry || entry.isBreak) return [];
+  if (entry.isStations) {
+    return (entry.clenove || []).map((c, i) => ({ lib: ukazkaPolozky(c), cislo: i + 1, kdo: String(c.stanovistePopisek || "").trim() })).filter(x => x.lib);
+  }
+  return entry.ukazka ? [{ lib: entry.ukazka, cislo: 0, kdo: "" }] : [];
+}
+/** Fáze Ukázka: video přes plochu (mezi hlavičkou a spodní lištou). Při opakovaném kreslení
+    stejné položky (nové kolo stanovišť, přetočení) se video nerestartuje. */
+function renderFazeUkazka(main, entry) {
+  const ukazky = fazeUkazky(entry);
+  if (!ukazky.length) { renderFazeBrief(main, entry); return; }
+  if (tmfUkazkaStan >= ukazky.length) tmfUkazkaStan = 0;
+  const u = ukazky[tmfUkazkaStan];
+  const klic = `${u.cislo}|${u.lib.url || ""}|${u.lib.videoId || ""}`;
+  const stavajici = main.querySelector(".uk-faze");
+  if (stavajici && stavajici.dataset.ukKlic === klic) return;
+  const hlava = entry.isStations
+    ? `<div class="uk-stany">${ukazky.map((x, i) => `<button type="button" class="uk-stan${i === tmfUkazkaStan ? " on" : ""}${x.kdo ? "" : " jen-cislo"}" data-uk-stan="${i}" aria-label="Stanoviště ${x.cislo}"><span class="stan-tile-num">${x.cislo}</span>${x.kdo ? esc(x.kdo) : ""}</button>`).join("")}</div>`
+    : `<div class="tmf-run-title">${esc(u.lib.title || "")}</div>`;
+  main.innerHTML = `<div class="uk-faze" data-uk-klic="${esc(klic)}">${hlava}<div class="uk-video" id="tmfUkazkaVideo"></div></div>`;
+  main.querySelectorAll("[data-uk-stan]").forEach(b => b.addEventListener("click", () => {
+    tmfUkazkaStan = parseInt(b.dataset.ukStan, 10) || 0;
+    renderFazeItem();
+  }));
+  const vyskaHlavy = (main.querySelector(".uk-stany, .tmf-run-title") || { offsetHeight: 0 }).offsetHeight;
+  const maxW = Math.max(160, main.clientWidth - 40);
+  const maxH = Math.max(100, main.clientHeight - vyskaHlavy - 40);
+  ukazkaVlozDo(document.getElementById("tmfUkazkaVideo"), u.lib, maxW, maxH);
+}
+
 function renderFazeItem() {
   if (trainingModeFinished) { renderFazeFinished(); return; }
   document.getElementById("tmfExpired").classList.toggle("hidden", !tmfAlertActive);
@@ -2355,6 +2494,10 @@ function renderFazeItem() {
   // trénink v téže relaci pak běžel bez nich. Tady se vrací BEZPODMÍNEČNĚ: během pauzy mezi
   // sériemi se schovávat nemají (na rozdíl od dřívějška), takže tu není co podmiňovat.
   document.getElementById("tmfPhases").classList.remove("hidden");
+  // Ukázka (kolo 18): díl přepínače jen u položky, která nějakou ukázku má.
+  const maUkazku = !trainingModeInSeriesPause && fazeUkazky(getFazeCurrentEntry()).length > 0;
+  if (tmfPhase === "ukazka" && !maUkazku) tmfPhase = "brief";
+  document.getElementById("tmfUkazkaBtn").classList.toggle("hidden", !maUkazku);
   document.querySelectorAll("#tmfPhases button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.p === tmfPhase)));
   document.getElementById("tmfPrevBtn").disabled = trainingModeIndex === 0 && !trainingModeInSeriesPause;
   document.getElementById("tmfNextBtn").innerHTML = 'Další cvičení <i class="fa-solid fa-arrow-right"></i>';
@@ -2379,7 +2522,8 @@ function renderFazeItem() {
     return;
   }
 
-  if (tmfPhase === "run") renderFazeRun(main, entry);
+  if (tmfPhase === "ukazka") renderFazeUkazka(main, entry);
+  else if (tmfPhase === "run") renderFazeRun(main, entry);
   else if (tmfPhase === "wrap") renderFazeWrap(main, entry);
   else renderFazeBrief(main, entry);
 }
@@ -2408,6 +2552,7 @@ function renderFazeFinished() {
 function paintFazeForNewItem() {
   tmfPhase = "brief";
   tmfDetailSeen = false;
+  tmfUkazkaStan = 0;
   fazeDismissAlert();
   renderFazeItem();
 }
@@ -2529,7 +2674,7 @@ function ovMemberHtml(row, v) {
   const dur = isReps ? (v.reps || "opakování") : ovMinText(valueToSeconds(v.duration != null ? v.duration : 1, v.durationUnit || "min"));
   return `<div class="ov-mwrap">
     <div class="ov-member" data-itemid="${esc(row.itemId)}" data-vid="${esc(v.videoId || "")}" data-text="${v.isText ? "1" : ""}" data-mid="${esc(v.memberId || "")}">
-      ${ovThumbHtml(lib, v.isText)}<span class="ov-mtitle">${esc(title)}</span>
+      ${ovThumbHtml(lib, v.isText)}<span class="ov-mtitle">${esc(title)}</span>${ovUkazkaBtnHtml(v)}
       <span class="ov-dur${isReps ? " ov-reps" : ""}">${esc(dur)}</span>
     </div>
     ${v.cue ? `<div class="ov-cue ov-mcue"><i class="fa-solid fa-comment"></i>${esc(v.cue)}</div>` : ""}
@@ -2579,6 +2724,7 @@ function ovCardHtml(row) {
     <div class="ov-top">
       ${ovThumbHtml(lib, row.isText)}
       <span class="ov-title">${esc(title)}</span>
+      ${ovUkazkaBtnHtml(row)}
       ${isReps ? `<span class="ov-dur ov-reps">${esc(row.reps || "opakování")}</span>` : ""}
     </div>
     ${row.cue ? `<div class="ov-cue"><i class="fa-solid fa-comment"></i>${esc(row.cue)}</div>` : ""}
@@ -2712,6 +2858,8 @@ document.getElementById("ovList").addEventListener("click", (e) => {
     noteBtn.nextElementSibling.classList.toggle("hidden");
     return;
   }
+  const ukBtn = e.target.closest(".ov-ukbtn");
+  if (ukBtn) { ukazkaOtevriOkno(ukBtn.dataset.ukVideo); return; }
   const member = e.target.closest(".ov-member");
   const card = e.target.closest(".ov-card");
   const src = member && !member.classList.contains("ov-mbreak") ? member : card;
@@ -2770,6 +2918,7 @@ function setupSharedBackNav() {
     if (!detail.classList.contains("hidden")) { closeDetailModal(); return; }
     if (!info.classList.contains("hidden")) { closeExerciseInfoModal(); return; }
     if (!ask.classList.contains("hidden")) { document.getElementById("ovAskSkipBtn").click(); return; }
+    if (!document.getElementById("ukazkaOknoBackdrop").classList.contains("hidden")) { ukazkaZavriOkno(); return; }
     if (!document.getElementById("trainingModeView").classList.contains("hidden")) { closeTrainingMode(); return; }
   });
   history.pushState({ shared: 1 }, "");
@@ -2778,6 +2927,7 @@ function setupSharedBackNav() {
     const info = document.getElementById("exerciseInfoModalBackdrop");
     if (!detail.classList.contains("hidden")) closeDetailModal();
     else if (!info.classList.contains("hidden")) closeExerciseInfoModal();
+    else if (!document.getElementById("ukazkaOknoBackdrop").classList.contains("hidden")) ukazkaZavriOkno();
     else if (!document.getElementById("trainingModeView").classList.contains("hidden")) closeTrainingMode();
     history.pushState({ shared: 1 }, "");
   });
