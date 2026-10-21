@@ -2053,6 +2053,21 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
 .stan-run-head{display:flex;align-items:center;gap:16px;justify-content:center;}
 .stan-run-head .tmf-clock{font-size:clamp(40px,9vw,72px);}
 .stan-kolo{font-family:var(--font-display);font-size:clamp(20px,3.4vw,30px);color:#C74F1E;letter-spacing:.03em;}
+.stan-blok-cue{font-size:clamp(14px,3.6vh,19px);}
+.stan-blok-note{font-size:13px;max-height:4.2em;overflow:auto;line-height:1.35;}
+.stan-blok-note p{margin:0;}
+/* S cue/poznámkou bloku musí zbýt místo na dlaždice i na nízké obrazovce na šířku — hodiny se řídí výškou. */
+.stan-faze.s-pozn{gap:4px;}
+.stan-faze.s-pozn .stan-run-head .tmf-clock{font-size:clamp(36px,min(9vw,15vh),72px);}
+/* Průběh s 5–6 stanovišti (dvě řady): číslo a název na jednom řádku, popisek „pro koho“ a cue
+   pod nimi — jinak se spodní řada na telefonu na šířku nevejde (bylo useknuté už před kolem 19). */
+.stan-faze.s-pozn.dve-rady .stan-run-head .tmf-clock{font-size:clamp(32px,min(9vw,12vh),72px);}
+.stan-run.dve-rady .stan-tile{flex-direction:row;flex-wrap:wrap;align-items:center;gap:3px 6px;padding:6px 9px;}
+.stan-run.dve-rady .stan-tile-head{display:contents;}
+.stan-run.dve-rady .stan-tile-num{order:0;}
+.stan-run.dve-rady .stan-tile-title{order:1;flex:1 1 calc(100% - 34px);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.stan-run.dve-rady .stan-tile-kdo{order:2;}
+.stan-run.dve-rady .stan-tile-list,.stan-run.dve-rady .stan-tile-cue{order:3;flex:1 1 0;min-width:0;}
 .stan-grid{display:grid;grid-template-columns:repeat(var(--stan-cols,3),minmax(0,1fr));gap:8px;width:100%;max-width:1100px;}
 .stan-tile{background:#fff;border:2px solid #DCDFD9;border-radius:10px;padding:7px 9px;text-align:left;display:flex;flex-direction:column;gap:4px;min-width:0;}
 .stan-tile.klik{cursor:pointer;}
@@ -3979,7 +3994,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-10-20 10:17";
+const APP_VERSION = "2026-10-21 14:35";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -13137,7 +13152,9 @@ function stanRenderFaze(main, entry, faze) {
   const hlava = faze === "run"
     ? `<div class="stan-run-head"><div class="tmf-clock${trainingModeSeconds < 0 ? " tmf-warn" : ""}" id="tmfClockRun">${fazeClockText(trainingModeSeconds)}</div>${rotace ? `<div class="stan-kolo">Kolo ${kolo}/${kol}</div>` : ""}</div>`
     : `<div class="stan-brief-head"><span class="tmf-title">${esc(entry.title)}</span><span class="stan-rezim">${esc(stanPopisRezimu(blok))}</span></div>`;
-  main.innerHTML = `<div class="stan-faze stan-${faze}">${hlava}<div class="stan-grid" style="--stan-cols:${sloupce}">${dlazdice}</div></div>`;
+  // Cue a poznámka celého bloku: jako u běžného cvičení až v Průběhu, pod hodinami (Mek, 21. 10.).
+  const blokPoznamky = faze !== "run" ? "" : `${entry.cue ? `<div class="tmf-cue-line stan-blok-cue"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M4 4.5h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-9.5L6 22v-4.5H4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2z" fill="var(--chalk)"/></svg>${esc(entry.cue)}</div>` : ""}${richHasContent(entry.note) ? `<div class="tmf-note-line stan-blok-note">${richValueToHtml(entry.note)}</div>` : ""}`;
+  main.innerHTML = `<div class="stan-faze stan-${faze}${blokPoznamky ? " s-pozn" : ""}${n > 4 ? " dve-rady" : ""}">${hlava}${blokPoznamky}<div class="stan-grid" style="--stan-cols:${sloupce}">${dlazdice}</div></div>`;
   main.querySelectorAll("[data-stan-tile]").forEach(el => el.addEventListener("click", () => {
     const d = entry.dlazdice[parseInt(el.dataset.stanTile, 10)];
     if (!d) return;
@@ -17718,6 +17735,11 @@ function renderSequence() {
         </div>
         ${varovani}
         ${clockBadgeHtml(row.itemId)}
+        <button type="button" class="seq-notes-toggle stan-notes-toggle${(row.cue || richHasContent(row.poznamka)) ? " has-content" : ""}" data-notes-toggle="${esc(row.itemId)}"><i class="fa-solid fa-chevron-down"></i> Cue a poznámka</button>
+        <div class="seq-item-fields" data-notes-panel="${esc(row.itemId)}">
+          <input type="text" placeholder="Cue (co říct nahlas)" value="${esc(row.cue || "")}" data-field="cue" data-itemid="${esc(row.itemId)}" ${dis}>
+          ${renderRichField(row.poznamka, "Poznámka", `data-field="poznamka" data-itemid="${esc(row.itemId)}"`, ro, "rte-sm")}
+        </div>
         <div class="stan-list" data-stanblok="${esc(row.itemId)}">${clenove.map(radekHtml).join("")}</div>
         ${ro ? "" : `<button type="button" class="manage-link stan-zrusit" data-stan-zrusit="${esc(row.itemId)}"><i class="fa-solid fa-object-ungroup"></i> Zrušit stanoviště (cvičení zůstanou v tréninku)</button>`}
       </div>`;
@@ -18104,10 +18126,10 @@ document.getElementById("sequenceList").addEventListener("input", (e) => {
     row.estimate = parseInt(e.target.value) || null;
   } else if (field === "poznamka") {
     row.poznamka = sanitizeRichHtml(e.target.innerHTML);
-    if (!row.isText && !row.isGroup) pametObnovSpendlik(e.target, row.poznamka);
+    if (!row.isText && !row.isGroup && !row.isStations) pametObnovSpendlik(e.target, row.poznamka);
   } else if (field === "cue") {
     row.cue = e.target.value;
-    if (!row.isText && !row.isGroup && row.part !== "prestavka") pametZapamatujCue(row.videoId, row.cue);
+    if (!row.isText && !row.isGroup && !row.isStations && row.part !== "prestavka") pametZapamatujCue(row.videoId, row.cue);
   } else {
     row[field] = numericFields.includes(field) ? (parseInt(e.target.value) || 0) : e.target.value;
   }
@@ -21495,7 +21517,8 @@ const HELP_DATA = [
       { q: "Jak se počítá čas stanovišť?", a: "Nastavuješ čas na jedno stanoviště. Při střídání se násobí počtem kol — když políčko „Kol“ necháš prázdné, je kol tolik, kolik je stanovišť. Celkový čas bloku vidíš vpravo (= …) a s ním počítá i délka tréninku. Mezi koly žádná pauza není. Když má některé cvičení samo o sobě delší čas, aplikace na to upozorní.", kw: "cas kola delka stanoviste" },
       { q: "K čemu je políčko „Pro koho“?", a: "Nepovinný popisek skupiny, která na stanovišti začíná — třeba „Nahrávačky“ nebo „Skupina A“. V prezentaci se při střídání popisky posouvají s koly, takže je vždycky vidět, kdo kde zrovna je.", kw: "popisek pro koho skupina hracky" },
       { q: "Jak stanoviště zruším?", a: "Tlačítko „Zrušit stanoviště“ pod blokem zruší jen stanoviště — cvičení zůstanou v tréninku jako obyčejná cvičení. Křížek u bloku naopak odebere blok i se všemi cvičeními v něm (aplikace se předem zeptá).", kw: "zrusit odebrat smazat stanoviste" },
-      { q: "Jak vypadají stanoviště v prezentaci?", a: "Všechna stanoviště jsou vidět najednou jako dlaždice vedle sebe. V Zadání s náhledy a popisem, v Průběhu nad nimi běží jedny hodiny za celý blok a číslo kola. Při přechodu do dalšího kola zazní zvonek a na chvíli se ukáže „Střídáme!“. Ťuknutím na dlaždici otevřeš detail cvičení.", kw: "prezentace stanoviste stridame kolo dlazdice" }
+      { q: "Jak vypadají stanoviště v prezentaci?", a: "Všechna stanoviště jsou vidět najednou jako dlaždice vedle sebe. V Zadání s náhledy a popisem, v Průběhu nad nimi běží jedny hodiny za celý blok a číslo kola. Při přechodu do dalšího kola zazní zvonek a na chvíli se ukáže „Střídáme!“. Ťuknutím na dlaždici otevřeš detail cvičení.", kw: "prezentace stanoviste stridame kolo dlazdice" },
+      { q: "Jde dát cue a poznámku k celým stanovištím?", a: "Ano. V editoru u bloku stanovišť rozbal „Cue a poznámka“ (je hned pod nastavením času). Platí pro celý blok — v prezentaci se ukážou v Průběhu pod hodinami a jsou vidět i v Přehledu. Každé stanoviště má dál i svoje vlastní cue a poznámku.", kw: "cue poznamka stanoviste blok cele" }
     ]},
     { title: "Ukázky pro hráčky", icon: "fa-solid fa-film", qa: [
       { q: "Co jsou ukázky pro hráčky?", a: "Krátká videa, na kterých hráčkám ukážeš, jak má cvičení nebo pohyb vypadat. Jsou ve složce, která má ve Správě složek zaškrtnuté „Ukázky pro hráčky“ (u nás „Videa na ukazování hráčkám“). Ke každému cvičení v tréninku jde připojit jednu ukázku — cvičení v Knihovně se tím nemění.", kw: "ukazka ukazky video hracky ukazat slozka" },
