@@ -4024,7 +4024,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-10-25 17:03";
+const APP_VERSION = "2026-10-25 17:19";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -4747,10 +4747,12 @@ function flattenRichHtmlToLines(html, indentSize) {
   //    <li> položek přímo v rodičovském seznamu, ne obalený v žádném <li>. Bez větve níž by
   //    se tenhle (běžný) tvar tiše přeskočil a vnořené body by v PDF/exportu úplně zmizely.
   function walkList(listEl, depth) {
+    let cislo = 0;   // číslovaný seznam (<ol>) dostane 1., 2., … (kolo 25; dřív i on pomlčky)
     [...listEl.children].forEach(child => {
       if (child.tagName === "LI") {
+        cislo++;
         const text = ownText(child);
-        if (text) lines.push(" ".repeat(depth * step) + "- " + text);
+        if (text) lines.push(" ".repeat(depth * step) + (listEl.tagName === "OL" ? cislo + ". " : "- ") + text);
         walk(child, depth + 1);
       } else if (child.tagName === "UL" || child.tagName === "OL") {
         walkList(child, depth + 1);
@@ -12510,7 +12512,7 @@ document.addEventListener("fullscreenchange", () => {
 function pushPoznamkaLines(lines, indent, poznamka) {
   const flat = flattenRichHtmlToLines(poznamka, 2);
   if (!flat.length) return;
-  if (flat.length === 1 && !flat[0].startsWith("- ")) {
+  if (flat.length === 1 && !/^(- |\d+\. )/.test(flat[0])) {
     lines.push(`${indent}Poznámka: ${flat[0]}`);
   } else {
     lines.push(`${indent}Poznámka:`);
@@ -16420,8 +16422,32 @@ function pdfDrawTableHeader(doc, y, cols, withClock, contentW, margin) {
 
 /** Vykreslí celý PDF trénink při dané velikosti písma — vrací hotový dokument (jde ho rovnou
     uložit, nebo jen zjistit počet stránek při zkoušení, jestli se trénink vejde na jednu). */
+/* EMOJI V PDF (kolo 25, Mek 25. 10. 2026: A). Šipky, fajfky a křížky se nahradí textem, ostatní
+   obrázkové znaky mezerou (aby se neslévala slova); víc mezer za sebou se sloučí. Platí pro všechen
+   text v PDF — proto se to děje přímo na dokumentu (text, měření i lámání), ne u každého pole zvlášť. */
+const PDF_EMOJI_NAHRADY = [
+  [/[\u27A1\u2192\u279C\u279D\u279E\u27A4\u25B6\u21D2]/g, "->"], [/[\u2B05\u2190\u25C0\u21D0]/g, "<-"],
+  [/[\u2B06\u2191]/g, "^"], [/[\u2B07\u2193]/g, "v"], [/[\u2194\u2B0C]/g, "<->"],
+  [/[\u2705\u2714\u2713\u2611]/g, "+"], [/[\u274C\u2716\u2717\u2718\u274E]/g, "x"], [/\u26A0/g, "!"]
+];
+function pdfBezEmoji(s) {
+  if (typeof s !== "string" || !/[\u2000-\uFFFF]|[\uD800-\uDFFF]/.test(s)) return s;
+  let t = s;
+  PDF_EMOJI_NAHRADY.forEach(([re, za]) => { t = t.replace(re, za); });
+  t = t.replace(/[\uFE0E\uFE0F\u200D\u20E3]/g, "")                                   // variační znaky, spojovače
+       .replace(/(?:\p{Extended_Pictographic}|\p{Regional_Indicator}|[\u{1F3FB}-\u{1F3FF}])+/gu, ch => ch.codePointAt(0) < 0x2000 ? ch : " ")
+       .replace(/ {2,}/g, " ");
+  return t;
+}
+function pdfDokumentBezEmoji(doc) {
+  const proved = (fn) => (txt, ...zbytek) => fn(Array.isArray(txt) ? txt.map(pdfBezEmoji) : pdfBezEmoji(txt), ...zbytek);
+  doc.text = proved(doc.text.bind(doc));
+  doc.splitTextToSize = proved(doc.splitTextToSize.bind(doc));
+  doc.getTextWidth = proved(doc.getTextWidth.bind(doc));
+  return doc;
+}
 function buildPdfDocAtSize(entries, meta, fs, withClock, startClock) {
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const doc = pdfDokumentBezEmoji(new jsPDF({ unit: "mm", format: "a4" }));
   registerPdfFonts(doc);
   const margin = 12, pageW = 210, pageH = 297;
   const contentW = pageW - margin * 2;
