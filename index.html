@@ -4024,7 +4024,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-10-25 16:45";
+const APP_VERSION = "2026-10-25 17:03";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -15890,11 +15890,119 @@ function pdfLineHeight(fs) { return fs * 0.44; }
     doplňkový, prostorově omezený výstup, takže se seznam rozloží na plochý text s pomlčkami
     a odsazením (flattenRichHtmlToLines) a každý takový řádek se pak ještě doláme na šířku
     sloupce přes splitTextToSize, ať se nic neusekne. */
-function pdfRichTextToWrappedLines(doc, raw, innerW) {
-  const flat = flattenRichHtmlToLines(raw, 3);
+/* KOLO 24 (Mek 25. 10. 2026, varianta C): PDF přenáší tučné a kurzívu z popisů a poznámek
+   a číslovaný seznam tiskne s čísly (1., 2., …), ne s pomlčkou. Řádek je teď pole úseků
+   { t: text, f: "normal" | "bold" | "italic" }. Písmo podle základu pole:
+   - poznámka (základ normal): tučné → bold, kurzíva → italic, obojí → bold (tučnou kurzívu PDF nemá);
+   - popis cvičení (základ italic, celý kurzívou): tučné → bold (rovně), jinak italic.
+   Dlouhý řádek se láme po slovech jako dřív (pokračování od kraje, bez předsazení). */
+function pdfPismoUseku(zaklad, b, i) {
+  if (b) return "bold";
+  return zaklad === "italic" ? "italic" : (i ? "italic" : "normal");
+}
+/** Jako flattenRichHtmlToLines, ale každý řádek nese úseky s tučným/kurzívou a <ol> má čísla. */
+function flattenRichHtmlToRunLines(html, indentSize) {
+  const step = indentSize || 2;
+  const tmp = document.createElement("div");
+  tmp.innerHTML = richValueToHtml(html);
+  const lines = [];
+  function useky(nodes, bezSeznamu) {
+    const out = [];
+    (function jdi(list, b, i) {
+      list.forEach(nd => {
+        if (nd.nodeType === 3) out.push({ t: nd.textContent, b, i });
+        else if (nd.nodeType === 1) {
+          if (bezSeznamu && (nd.tagName === "UL" || nd.tagName === "OL")) return;
+          if (nd.tagName === "BR") { out.push({ t: " ", b, i }); return; }
+          jdi([...nd.childNodes], b || /^(B|STRONG)$/.test(nd.tagName), i || /^(I|EM)$/.test(nd.tagName));
+        }
+      });
+    })(nodes, false, false);
+    // Mezery jako u textContent.replace(/\s+/g, " ").trim() — jen přes hranice úseků.
+    const r = out.map(x => ({ ...x, t: x.t.replace(/\s+/g, " ") })).filter(x => x.t);
+    for (let k = 1; k < r.length; k++) if (r[k - 1].t.endsWith(" ") && r[k].t.startsWith(" ")) r[k].t = r[k].t.slice(1);
+    while (r.length && !r[0].t.trim()) r.shift();
+    while (r.length && !r[r.length - 1].t.trim()) r.pop();
+    if (r.length) { r[0].t = r[0].t.replace(/^ /, ""); r[r.length - 1].t = r[r.length - 1].t.replace(/ $/, ""); }
+    return r.filter(x => x.t);
+  }
+  const pridej = (depth, prefix, r) => { if (r.length) lines.push({ odsazeni: " ".repeat(depth * step) + prefix, useky: r }); };
+  function walk(node, depth) {
+    [...node.children].forEach(child => {
+      if (child.tagName === "UL" || child.tagName === "OL") walkList(child, depth);
+      else if (child.tagName === "P" || child.tagName === "DIV") pridej(depth, "", useky([...child.childNodes], false));
+    });
+  }
+  // Stejné dvě podoby vnořeného seznamu jako ve flattenRichHtmlToLines (viz tam).
+  function walkList(listEl, depth) {
+    let cislo = 0;
+    [...listEl.children].forEach(child => {
+      if (child.tagName === "LI") {
+        cislo++;
+        pridej(depth, listEl.tagName === "OL" ? cislo + ". " : "- ", useky([...child.childNodes], true));
+        walk(child, depth + 1);
+      } else if (child.tagName === "UL" || child.tagName === "OL") {
+        walkList(child, depth + 1);
+      }
+    });
+  }
+  const koren = [];
+  tmp.childNodes.forEach(nd => {
+    if (nd.nodeType === 3 || (nd.nodeType === 1 && /^(B|STRONG|I|EM|U|BR)$/.test(nd.tagName))) koren.push(nd);
+  });
+  pridej(0, "", useky(koren, false));
+  walk(tmp, 0);
+  // Kořenový text patří na začátek (jako ve flattenRichHtmlToLines: rootText se přidá před walk).
+  return lines;
+}
+/** Rozdělí řádky s úseky na šířku sloupce. Vrací pole řádků, řádek = pole { t, f }. */
+function pdfRichTextToWrappedLines(doc, raw, innerW, zaklad) {
+  zaklad = zaklad || "normal";
   const out = [];
-  flat.forEach(line => { doc.splitTextToSize(line, innerW).forEach(w => out.push(w)); });
-  return out;
+  const sirka = (t, f) => { doc.setFont("LibSans", f); return doc.getTextWidth(t); };
+  flattenRichHtmlToRunLines(raw, 3).forEach(radek => {
+    const kusy = [{ t: radek.odsazeni, f: zaklad }];
+    radek.useky.forEach(u => {
+      const f = pdfPismoUseku(zaklad, u.b, u.i);
+      u.t.split(/( )/).forEach(x => { if (x) kusy.push({ t: x, f }); });
+    });
+    let akt = [], w = 0;
+    const zalom = () => {
+      while (akt.length && akt[akt.length - 1].t === " ") { w -= sirka(" ", akt[akt.length - 1].f); akt.pop(); }
+      out.push(pdfSlozUseky(akt)); akt = []; w = 0;
+    };
+    kusy.forEach((k, idx) => {
+      if (!k.t) return;
+      if (k.t === " " && !akt.length && idx > 0) return;   // mezera na začátku zalomeného řádku
+      let kw = sirka(k.t, k.f);
+      if (w + kw > innerW && akt.length && k.t !== " ") zalom();
+      if (kw > innerW && k.t !== " " && !/^ +$/.test(k.t)) {
+        // Slovo delší než sloupec: po znacích (jako splitTextToSize).
+        let kus = "";
+        for (const ch of k.t) {
+          const cw = sirka(kus + ch, k.f);
+          if (w + cw > innerW && (kus || akt.length)) { if (kus) { akt.push({ t: kus, f: k.f }); } zalom(); kus = ch; }
+          else kus += ch;
+        }
+        if (kus) { akt.push({ t: kus, f: k.f }); w += sirka(kus, k.f); }
+        return;
+      }
+      akt.push(k); w += kw;
+    });
+    if (akt.length) zalom();
+  });
+  return out.filter(r => r.length);
+}
+/** Sloučí sousední kusy se stejným písmem. */
+function pdfSlozUseky(kusy) {
+  const r = [];
+  kusy.forEach(k => { const p = r[r.length - 1]; if (p && p.f === k.f) p.t += k.t; else r.push({ t: k.t, f: k.f }); });
+  return r;
+}
+/** Nakreslí jeden řádek s úseky (kolo 24). Barvu a velikost písma nastavuje volající. */
+function pdfKresliRadekUseku(doc, radek, x, y) {
+  let xx = x;
+  radek.forEach(u => { doc.setFont("LibSans", u.f); doc.text(u.t, xx, y); xx += doc.getTextWidth(u.t); });
 }
 
 /** Jednoduché vektorové ikonky náhradou za FontAwesome (jsPDF neumí kreslit FA glyfy přímo —
@@ -15996,7 +16104,7 @@ function pdfLayoutEntry(doc, entry, fs, cols, withClock) {
   let longLines = [];
   if (entry.longDesc) {
     doc.setFont("LibSans", "italic"); doc.setFontSize(longSize);
-    longLines = pdfRichTextToWrappedLines(doc, entry.longDesc, contentInnerW);
+    longLines = pdfRichTextToWrappedLines(doc, entry.longDesc, contentInnerW, "italic");
     contentH += longLines.length * pdfLineHeight(longSize);
   }
 
@@ -16009,7 +16117,7 @@ function pdfLayoutEntry(doc, entry, fs, cols, withClock) {
   // Poznámka i u hlavičky skupiny a bloku stanovišť (kolo 21, Mek 25. 10. 2026); dřív jen cue.
   const noteStr = entry.note || "";
   doc.setFont("LibSans", "normal"); doc.setFontSize(noteSize);
-  const noteLines = noteStr ? pdfRichTextToWrappedLines(doc, noteStr, cueInnerW) : [];
+  const noteLines = noteStr ? pdfRichTextToWrappedLines(doc, noteStr, cueInnerW, "normal") : [];
 
   const equipList = entry.equipment && entry.equipment.length ? entry.equipment : [];
   const equipText = equipList.join(", ");
@@ -16112,7 +16220,7 @@ function pdfDrawEntry(doc, entry, layout, x, y, cols, withClock, timeLabel, durL
   }
   if (layout.longLines.length) {
     doc.setFont("LibSans", "italic"); doc.setFontSize(layout.longSize); pdfSetText(doc, "#5B6472");
-    layout.longLines.forEach(line => { doc.text(line, cx, ty); ty += pdfLineHeight(layout.longSize); });
+    layout.longLines.forEach(line => { pdfKresliRadekUseku(doc, line, cx, ty); ty += pdfLineHeight(layout.longSize); });
   }
 
   let cy = y + layout.padY + layout.cueSize * 0.32;
@@ -16128,7 +16236,7 @@ function pdfDrawEntry(doc, entry, layout, x, y, cols, withClock, timeLabel, durL
   }
   if (layout.noteLines.length) {
     doc.setFont("LibSans", "normal"); doc.setFontSize(layout.noteSize); pdfSetText(doc, "#5B6472");
-    layout.noteLines.forEach(line => { doc.text(line, cueColX + layout.padX, cy); cy += pdfLineHeight(layout.noteSize); });
+    layout.noteLines.forEach(line => { pdfKresliRadekUseku(doc, line, cueColX + layout.padX, cy); cy += pdfLineHeight(layout.noteSize); });
     cy += 1.6;
   }
   if (layout.equipLines.length) {
@@ -21672,7 +21780,7 @@ const HELP_DATA = [
     ]},
     { title: "Export a tisk", icon: "fa-solid fa-file-export", qa: [
       { q: "Jak stáhnu trénink jako PDF?", a: "Nejrychleji rovnou z přehledu Tréninků — u tréninku otevři nabídku (⋮) a vyber „Stáhnout PDF“, bez nutnosti trénink otevírat. Stejná volba je i uvnitř editoru tréninku, když ho zrovna máš otevřený." },
-      { q: "Co všechno PDF obsahuje?", a: "Kartu tréninku s pořadím cvičení, časy/opakování, sériemi, cue a poznámkami, a souhrn vybavení potřebného na celý trénink nahoře." },
+      { q: "Co všechno PDF obsahuje?", a: "Kartu tréninku s pořadím cvičení, časy/opakování, sériemi, cue a poznámkami (i s tučným písmem, kurzívou a číslovanými seznamy), a souhrn vybavení potřebného na celý trénink nahoře." },
       { q: "Jak trénink exportuju jako obyčejný text?", a: "Stejně jako PDF — buď z nabídky (⋮) u tréninku přímo v přehledu Tréninků, nebo tlačítkem „Export jako text“ v editoru. Hodí se, když chceš trénink rychle vložit třeba do zprávy nebo e-mailu." },
       { q: "Aplikace píše, že se nenačetla knihovna pro PDF. Co s tím?", a: "PDF a přetahování pořadí si aplikace stahuje z internetu při každém otevření. Když je zrovna mizerné připojení nebo je stahování něčím blokované, tyhle dvě věci nefungují — všechno ostatní ano, včetně vedení tréninku. Připoj se a obnov stránku.", kw: "pdf nejde knihovna offline pretahovani poradi" }
     ]},
