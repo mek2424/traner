@@ -463,6 +463,13 @@ body.dark-mode .sesit{box-shadow:0 8px 20px rgba(0,0,0,.5);}
 .dd-pol.vybrano{background:rgba(51,153,51,.12);background:color-mix(in srgb,var(--court) 13%,transparent);}
 .dd-pol.vybrano .fa-check{visibility:visible;}
 .dd-nic{margin:0;padding:14px 12px;font-size:13.5px;color:var(--ink-faint);text-align:center;}
+/* Hodnocení v „Dopsat trénink zpětně“ (kolo 23): stejné smajlíky jako v kartě „Zapsáno“ (.dl-hodn). */
+.dd-hodn{display:flex;gap:8px;}
+.dd-hodn button{flex:none;width:46px;height:46px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);cursor:pointer;display:grid;place-items:center;padding:0;color:var(--ink-faint);}
+.dd-hodn button .smajl{width:32px;height:32px;}
+.dd-hodn button.on{border-color:var(--chalk);box-shadow:0 0 0 2px var(--chalk);}
+.dd-hodn:has(.on) button:not(.on){opacity:.45;}
+.dd-hodn button:focus-visible{outline:2px solid var(--chalk-dark);outline-offset:2px;}
 /* ---------- Notifikace (23. 9. 2026) ----------
    Řádek v profilu má schválně stejný tvar jako řádky ve Správě (.admin-row), jen bez čáry
    pod sebou — v profilu stojí sám, ne v seznamu. */
@@ -3434,6 +3441,7 @@ body.dark-mode .seq-group-video-duration{background:var(--paper);color:var(--cou
     <div class="field" id="ddHledatPole"><label for="ddHledat">Který trénink</label><input type="search" id="ddHledat" placeholder="Hledat podle názvu…" autocomplete="off"></div>
     <div class="dd-seznam" id="ddSeznam" role="listbox" aria-label="Tréninky"></div>
     <div class="field"><label for="ddDatum">Kdy proběhl</label><input type="date" id="ddDatum"></div>
+    <div class="field"><label id="ddHodnPopis">Jak se povedl?</label><div class="dd-hodn" id="ddHodn" role="group" aria-labelledby="ddHodnPopis"></div></div>
     <div class="field"><label>Poznámka</label><div id="ddPoznObal"></div></div>
     <button type="button" class="btn btn-primary btn-block" id="ddUlozitBtn" style="margin-bottom:0;">Zapsat do deníčku</button>
   </div>
@@ -4016,7 +4024,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-10-25 16:28";
+const APP_VERSION = "2026-10-25 16:45";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -15235,6 +15243,11 @@ document.getElementById("denikZpetBtn").addEventListener("click", () => {
 
 /* ---- Dopsat trénink zpětně ---- */
 let ddVybrany = null;
+/* Hodnocení zpětně dopsaného tréninku (kolo 23): nepovinné, druhé ťuknutí na vybraný smajlík ho zruší. */
+let ddHodnoceni = null;
+function renderDdHodnoceni() {
+  document.getElementById("ddHodn").innerHTML = DENIK_HODNOCENI_PORADI.map(k => `<button type="button" data-h="${k}" class="${ddHodnoceni === k ? "on" : ""}" aria-pressed="${ddHodnoceni === k}" aria-label="${DENIK_HODNOCENI[k].popis}" title="${DENIK_HODNOCENI[k].popis}">${denikSmajl(k)}</button>`).join("");
+}
 /** Tréninky k výběru: moje (archivované až za ostatními), při hledání i cizí z Tržiště. */
 function denikDopsatKandidati(treninky, mujUid, hledat) {
   const q = helpNorm(hledat).trim();
@@ -15268,6 +15281,8 @@ function openDenikDopsat() {
   document.getElementById("ddDatum").max = dnes;
   document.getElementById("ddDatum").value = dnes;
   document.getElementById("ddPoznObal").innerHTML = denikRtePole("", "Jak to šlo? Nemusíš psát nic.", "ddPozn");
+  ddHodnoceni = null;
+  renderDdHodnoceni();
   renderDenikDopsat();
   const bd = document.getElementById("denikDopsatBackdrop");
   bd.classList.remove("hidden");
@@ -15278,6 +15293,12 @@ function closeDenikDopsat() { document.getElementById("denikDopsatBackdrop").cla
 document.getElementById("denikDopsatBtn").addEventListener("click", openDenikDopsat);
 document.getElementById("closeDenikDopsatBtn").addEventListener("click", closeDenikDopsat);
 document.getElementById("ddHledat").addEventListener("input", renderDenikDopsat);
+document.getElementById("ddHodn").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-h]");
+  if (!b) return;
+  ddHodnoceni = ddHodnoceni === b.dataset.h ? null : denikHodnoceniZ(b.dataset.h);
+  renderDdHodnoceni();
+});
 document.getElementById("ddSeznam").addEventListener("click", (e) => {
   const b = e.target.closest(".dd-pol");
   if (!b) return;
@@ -15293,6 +15314,7 @@ document.getElementById("ddUlozitBtn").addEventListener("click", () => {
   const pozn = denikPoznZPole(document.getElementById("ddPozn"));
   if (pozn === null) return;
   const novy = denikNovyZaznam(ddVybrany, den, pozn);
+  if (denikHodnoceniZ(ddHodnoceni)) novy.hodnoceni = ddHodnoceni;
   denikKotva = { id: novy.id, posun: 0 };   // sešit nalistuje tam, kde nový záznam je
   denikUloz(novy);
   closeDenikDopsat();
@@ -21583,7 +21605,7 @@ const HELP_DATA = [
       { q: "Co znamená oranžová tečka na tlačítku Deníčku?", a: "Že aspoň jeden trénink čeká na tvoji odpověď, jestli proběhl. Otevři Deníček a u řádku psaného tužkou ťukni na „Ano“ nebo „Ne“. Kdo nechce odpovídat, nemusí — řádek i tečka po týdnu zmizí. Křížek na kartě „Odtrénováno dnes?“ znamená „ne“ a tečku nerozsvítí.", kw: "tecka oranzova ceka potvrzeni ikona denicek" },
       { q: "Jak dopíšu trénink zpětně?", a: "V Deníčku ťukni nahoře na „Dopsat trénink“ (na telefonu je to tlačítko s plusem), vyber trénink (jde hledat podle názvu; při hledání se nabídnou i tréninky z Tržiště), nastav den a případně připiš poznámku. Sešit pak nalistuje na stránku, kde záznam je. Druhá cesta vede z editoru tréninku: ťukni na hlavičku žlutého lepíku („odtrénováno 4× · 9. 10.“; u tréninku, který ještě neproběhl, na řádek „Zatím neodtrénováno“) a v Deníčku tohoto tréninku na „Dopsat odtrénování“ (na telefonu plus) — trénink už je vybraný, nastavíš jen den a poznámku.", kw: "dopsat zpetne minuly tyden pridat odtrenovani datum plus" },
       { q: "Jak napíšu nebo opravím poznámku? Kde je tlačítko Uložit?", a: "Žádné není. V Deníčku ťukni na poznámku (nebo na šedé „dopsat poznámku…“) a piš přímo do sešitu. Jakmile ťukneš kamkoli jinam, poznámka se uloží sama a dole se na pár vteřin ukáže „Uloženo“ s tlačítkem „Vrátit“, kdyby to byl omyl. Uloží se i tehdy, když aplikaci zavřeš nebo přepneš jinam. Na počítači klávesa Escape rozepsané změny zahodí.", kw: "poznamka ulozit ulozeni samo automaticky vratit opravit prepsat tlacitko ulozit" },
-      { q: "Jak označím, jak se trénink povedl?", a: "Smajlíkem: usměvavý (povedl se), rovný (šlo to), nebo smutný (nepovedl se). Hned po zapsání ho vybereš v kartě „Zapsáno“ nahoře. Později v Deníčku: pod datem a dnem na okraji je smajlík, u neohodnoceného tréninku slabý prázdný kroužek — ťukni na něj a vyber z nabídky, nebo zvol „bez hodnocení“. Hodnocení je dobrovolné a vidíš ho jen ty.", kw: "hodnoceni smajlik povedl nepovedl jak to slo usmev kroužek krouzek znamka" },
+      { q: "Jak označím, jak se trénink povedl?", a: "Smajlíkem: usměvavý (povedl se), rovný (šlo to), nebo smutný (nepovedl se). Hned po zapsání ho vybereš v kartě „Zapsáno“ nahoře, u tréninku dopsaného zpětně přímo v okně „Dopsat trénink zpětně“. Později v Deníčku: pod datem a dnem na okraji je smajlík, u neohodnoceného tréninku slabý prázdný kroužek — ťukni na něj a vyber z nabídky, nebo zvol „bez hodnocení“. Hodnocení je dobrovolné a vidíš ho jen ty.", kw: "hodnoceni smajlik povedl nepovedl jak to slo usmev kroužek krouzek znamka" },
       { q: "Jde text poznámky zvýraznit nebo udělat seznam?", a: "Ano, stejně jako u popisu cvičení. Nad rozepsanou poznámkou je lišta: tučně, kurzíva, odrážky, číslovaný seznam a odsazení doleva a doprava. Na počítači fungují i Ctrl+B a Ctrl+I. Lišta je všude, kde se poznámka do Deníčku píše — v sešitu, na kartě po tréninku i v „Dopsat trénink zpětně“.", kw: "tucne kurziva bold italic seznam odrazky cislovani odsazeni formatovani poznamka" },
       { q: "Jak změním datum záznamu?", a: "V Deníčku ťukni na datum na okraji a vyber jiný den; sešit pak nalistuje na stránku, kam se záznam přesunul. Datum není nijak zvýrazněné, aby sešit vypadal jako sešit.", kw: "datum zmenit opravit den spatne datum okraj" },
       { q: "Jak smažu záznam?", a: "V Deníčku ťukni na poznámku toho záznamu a vpravo pod ní na koš; aplikace se nejdřív zeptá. Maže se vždy jeden záznam, samotný trénink zůstává. Hned po zapsání jde zápis taky vzít zpět tlačítkem „Vrátit zpět“ přímo na kartě.", kw: "smazat zaznam kos odstranit vratit zpet" },
