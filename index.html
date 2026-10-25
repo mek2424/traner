@@ -1890,6 +1890,9 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
 .seq-group-video-title{font-size:12px;font-weight:600;flex:1;min-width:120px;overflow-wrap:anywhere;}
 .seq-group-video-reps{width:66px;flex-shrink:0;border:1px solid var(--line);border-radius:5px;padding:5px 7px;font-size:13px;font-weight:700;color:var(--chalk-dark);}
 .seq-group-video-duration{width:50px;flex-shrink:0;border:1px solid var(--line);border-radius:5px;padding:5px 7px;font-size:13px;font-weight:700;color:var(--court-dark);text-align:center;}
+/* Tmavý režim: políčko délky u člena skupiny mělo bílé pozadí prohlížeče (kolo 22, Mek 25. 10.: A —
+   jako „Sérií“, číslo zůstává zelené). Světlý režim beze změny. */
+body.dark-mode .seq-group-video-duration{background:var(--paper);color:var(--court);}
 .seq-group-dosage-pair{display:inline-flex;align-items:center;gap:4px;flex-shrink:0;}
 .seq-group-video-cue{width:100%;border:1px solid var(--line);border-radius:5px;padding:5px 7px;font-size:12.5px;font-style:italic;background:var(--paper);color:var(--ink);}
 /* Tmavý režim: pole cue ve skupině mělo bílé pozadí prohlížeče (nález 8. 10., Mek: opravit). */
@@ -4013,7 +4016,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-10-25 16:20";
+const APP_VERSION = "2026-10-25 16:28";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
