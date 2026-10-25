@@ -4013,7 +4013,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-10-25 15:43";
+const APP_VERSION = "2026-10-25 16:20";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -15981,7 +15981,8 @@ function pdfLayoutEntry(doc, entry, fs, cols, withClock) {
   doc.setFont("LibSans", "italic"); doc.setFontSize(cueSize);
   const cueLines = cueStr ? doc.splitTextToSize(cueStr, cueInnerW - PDF_CUE_ICON_W) : [];
 
-  const noteStr = entry.kind === "groupHead" ? "" : (entry.note || "");
+  // Poznámka i u hlavičky skupiny a bloku stanovišť (kolo 21, Mek 25. 10. 2026); dřív jen cue.
+  const noteStr = entry.note || "";
   doc.setFont("LibSans", "normal"); doc.setFontSize(noteSize);
   const noteLines = noteStr ? pdfRichTextToWrappedLines(doc, noteStr, cueInnerW) : [];
 
@@ -16169,7 +16170,7 @@ function buildPdfEntries(t) {
     if (row.isStations) {
       // Stanoviště (kolo 3): hlavička s režimem a celkovým časem, pod ní stanoviště. Stanoviště
       // běží souběžně, takže hodiny neposouvají (noClock) — čas posune až celý blok.
-      entries.push({ kind: "groupHead", part, title: `${row.name || "Stanoviště"} — ${stanPopisRezimu(row)}`, cue: row.cue || "", stanCelkem: stanCelkem(row) });
+      entries.push({ kind: "groupHead", part, title: `${row.name || "Stanoviště"} — ${stanPopisRezimu(row)}`, cue: row.cue || "", note: row.poznamka || "", stanCelkem: stanCelkem(row) });
       const clenove = clenoveBloku(t.items, row);
       const naSt = stanSekundyNaStanoviste(row);
       clenove.forEach((c, ci) => {
@@ -16199,7 +16200,7 @@ function buildPdfEntries(t) {
       const videos = row.videos || [];
       const isReps = (row.mode || "time") === "reps";
       let membersShownSeconds = 0;
-      entries.push({ kind: "groupHead", part, title: row.name || "Skupina", cue: row.cue || "" });
+      entries.push({ kind: "groupHead", part, title: row.name || "Skupina", cue: row.cue || "", note: row.poznamka || "" });
       videos.forEach((v, vi) => {
         if (v.isBreak) {
           const brkSeconds = valueToSeconds(v.duration != null ? v.duration : 1, v.durationUnit || "min");
@@ -21634,7 +21635,7 @@ const HELP_DATA = [
       { q: "K čemu je políčko „Pro koho“?", a: "Nepovinný popisek skupiny, která na stanovišti začíná — třeba „Nahrávačky“ nebo „Skupina A“. V prezentaci se při střídání popisky posouvají s koly, takže je vždycky vidět, kdo kde zrovna je.", kw: "popisek pro koho skupina hracky" },
       { q: "Jak stanoviště zruším?", a: "Tlačítko „Zrušit stanoviště“ pod blokem zruší jen stanoviště — cvičení zůstanou v tréninku jako obyčejná cvičení. Křížek u bloku naopak odebere blok i se všemi cvičeními v něm (aplikace se předem zeptá).", kw: "zrusit odebrat smazat stanoviste" },
       { q: "Jak vypadají stanoviště v prezentaci?", a: "Všechna stanoviště jsou vidět najednou jako dlaždice vedle sebe. V Zadání s náhledy a popisem, v Průběhu nad nimi běží jedny hodiny za celý blok a číslo kola. Při přechodu do dalšího kola zazní zvonek a na chvíli se ukáže „Střídáme!“. Ťuknutím na dlaždici otevřeš detail cvičení.", kw: "prezentace stanoviste stridame kolo dlazdice" },
-      { q: "Jde dát cue a poznámku k celým stanovištím?", a: "Ano. V editoru u bloku stanovišť rozbal „Cue a poznámka“ (je hned pod nastavením času). Platí pro celý blok — v prezentaci se ukážou v Průběhu pod hodinami a jsou vidět i v Přehledu. Každé stanoviště má dál i svoje vlastní cue a poznámku.", kw: "cue poznamka stanoviste blok cele" }
+      { q: "Jde dát cue a poznámku k celým stanovištím?", a: "Ano. V editoru u bloku stanovišť rozbal „Cue a poznámka“ (je hned pod nastavením času). Platí pro celý blok — v prezentaci se ukážou v Průběhu pod hodinami a jsou vidět i v Přehledu a v PDF. Každé stanoviště má dál i svoje vlastní cue a poznámku.", kw: "cue poznamka stanoviste blok cele" }
     ]},
     { title: "Ukázky pro hráčky", icon: "fa-solid fa-film", qa: [
       { q: "Co jsou ukázky pro hráčky?", a: "Krátká videa, na kterých hráčkám ukážeš, jak má cvičení nebo pohyb vypadat. Jsou ve složce, která má ve Správě složek zaškrtnuté „Ukázky pro hráčky“ (u nás „Videa na ukazování hráčkám“). Ke každému cvičení v tréninku jde připojit jednu ukázku — cvičení v Knihovně se tím nemění.", kw: "ukazka ukazky video hracky ukazat slozka" },
