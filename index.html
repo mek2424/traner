@@ -868,8 +868,10 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .koncept-kapsle .kdo{font-weight:600;text-transform:none;letter-spacing:0;overflow:hidden;text-overflow:ellipsis;}
 .card-title.bez-nazvu{font-style:italic;color:var(--ink-faint);font-weight:500;}
 #toggleKonceptFilterBtn{position:relative;}
-#toggleKonceptFilterBtn .pocet{position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;padding:0 4px;border-radius:999px;
-  background:var(--chalk);color:#fff;font:700 10.5px/17px var(--font-body);border:2px solid var(--card);}
+/* Odznak uvnitř tlačítka: .icon-group má overflow:hidden, přes okraj by se usekl (v68). */
+#toggleKonceptFilterBtn .pocet{position:absolute;top:3px;right:3px;min-width:15px;height:15px;padding:0 3px;border-radius:999px;
+  background:var(--chalk);color:#fff;font:700 10px/15px var(--font-body);}
+#toggleKonceptFilterBtn.on .pocet{background:#fff;color:var(--chalk);}
 #toggleKonceptFilterBtn.on{background:var(--chalk);color:#fff;border-color:var(--chalk);}
 .koncept-znacka{color:var(--chalk);margin-right:5px;}
 .chip.chip-koncept{border-color:var(--chalk);color:var(--chalk);border-style:dashed;}
@@ -4011,7 +4013,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-10-25 15:29";
+const APP_VERSION = "2026-10-25 15:43";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
