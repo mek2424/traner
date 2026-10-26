@@ -368,11 +368,13 @@ body.dark-mode .sesit{box-shadow:0 8px 20px rgba(0,0,0,.5);}
 .sesit .dz-hodn .smajl.prazdny{opacity:.5;}
 .sesit .dz-hodn:focus-visible{outline:2px solid var(--s-inkoust);outline-offset:-2px;border-radius:50%;}
 /* Vzkaz pro příště (kolo 15): na okraji pod smajlíkem ručně kreslená značka lepíku; ťuknutí rozbalí
-   lepík pod poznámkou (sešit se přeskládá), další ťuknutí ho zase sbalí. */
+   lepík pod poznámkou (sešit se přeskládá), další ťuknutí ho zase sbalí. Sbalená značka je tužkou
+   jako smajlík, rozbalená inkoustem (kolo 26, Mek 26. 10.: C). */
 .sesit .zapis:has(.dz-vzkaz){min-height:calc(var(--radek)*4);}
 .sesit .zapis:has(.dz-vzkaz):has(.okraj .dvakrat){min-height:calc(var(--radek)*5);}
-.sesit .dz-vzkaz{display:flex;align-items:center;justify-content:center;width:100%;height:var(--radek);margin:0;padding:0;border:0;background:transparent;cursor:pointer;color:var(--s-inkoust);-webkit-tap-highlight-color:transparent;}
+.sesit .dz-vzkaz{display:flex;align-items:center;justify-content:center;width:100%;height:var(--radek);margin:0;padding:0;border:0;background:transparent;cursor:pointer;color:var(--s-tuzka);-webkit-tap-highlight-color:transparent;}
 .sesit .dz-vzkaz svg{width:calc(var(--radek) - 5px);height:calc(var(--radek) - 5px);}
+.sesit .dz-vzkaz[aria-expanded="true"]{color:var(--s-inkoust);}
 .sesit .dz-vzkaz[aria-expanded="true"] svg{filter:drop-shadow(0 0 2.5px rgba(31,58,122,.55));}
 .sesit .dz-vzkaz:focus-visible{outline:2px solid var(--s-inkoust);outline-offset:-2px;border-radius:4px;}
 .sesit .ds-lepik{--lp-ohyb:22px;--lp-f:var(--f-ruka);position:relative;margin:calc(var(--radek)*.3) 10px calc(var(--radek)*.5) 0;transform:rotate(-.8deg);filter:drop-shadow(0 5px 5px rgba(0,0,0,.18)) drop-shadow(0 1px 1px rgba(0,0,0,.10));break-inside:avoid;}
@@ -4024,7 +4026,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-10-25 17:19";
+const APP_VERSION = "2026-10-26 13:27";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
