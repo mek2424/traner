@@ -284,6 +284,9 @@ exports.onSharedDataChange = onDocumentUpdated("shared/data", async (event) => {
    Mekova volba A (25. 9.): změna víc videí najednou se nesčítá — první video se pojmenuje,
    další spolkne tlumení („a mezitím N dalších změn“ u příští hlášky stejného druhu).
    Automatickou kontrolu videí hlásí dál onVideoAutoCheck níž.
+   KONCEPTY (kolo 26 aplikace, Mek 26. 10. 2026: A, A): video s koncept: true je rozpracované
+   a vidí ho jen autor a admin — nehlásí se nic (uložení, úpravy, zpětná vazba, koš ani návrat
+   z koše). Dokončení konceptu (pole koncept zmizí) se hlásí jako přidání: ostatní ho vidí poprvé.
    ========================================================= */
 /** Pole videa, která nejsou jeho obsahem. Jejich změna není „úprava videa“: zpětná vazba má
     vlastní hlášky, hlášení a kontroly jiné cesty, hvězdička oblíbených je jen značka. */
@@ -324,6 +327,7 @@ exports.onVideoChange = onDocumentWritten("videos/{videoId}", async (event) => {
   if (!editorUid || !po.lastEditedAt) return;
   if (pred && pred.lastEditedAt === po.lastEditedAt) return;
   if (editorUid === ADMIN_UID) return;
+  if (po.koncept === true) return;
 
   const nazev = po.title || (pred && pred.title) || "video";
   const odkaz = `${APP_URL}?open=video&id=${encodeURIComponent(id)}`;
@@ -333,12 +337,14 @@ exports.onVideoChange = onDocumentWritten("videos/{videoId}", async (event) => {
   const zivePred = !!pred && !pred.deletedAt;
   const zivePo = !po.deletedAt;
   const kdo = await jmeno(editorUid);
+  const dokonceny = !!pred && pred.koncept === true;
+  if (dokonceny && !zivePo) return;   // dokončení v koši aplikace nedělá; kdyby, nehlásí se
 
-  if (!zivePred && zivePo) {
+  if ((!zivePred || dokonceny) && zivePo) {
     await notifikuj(ADMIN_UID, {
       type: "videoAdded",
       title: "Trenér — změna v knihovně",
-      body: pred ? `${kdo} vrátil(a) „${nazev}“ z koše.`
+      body: (pred && !dokonceny) ? `${kdo} vrátil(a) „${nazev}“ z koše.`
         : `${kdo} přidal(a) ${textPo ? "textové cvičení" : "video"} „${nazev}“.`,
       url: odkaz
     });
