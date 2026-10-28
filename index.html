@@ -410,6 +410,9 @@ body.dark-mode .sesit{box-shadow:0 8px 20px rgba(0,0,0,.5);}
 .sesit .ds-rte .rte-btn{width:30px;height:min(26px,calc(var(--radek) - 2px));font-size:12.5px;color:var(--s-inkoust);border-radius:5px;}
 .sesit .ds-rte .rte-btn:hover{background:rgba(31,58,122,.12);}
 .sesit .ds-rte .rte-btn.sep{margin-left:8px;}
+.sesit .ds-rte .rte-btn.on{background:rgba(31,58,122,.18);background:color-mix(in srgb,var(--s-inkoust) 18%,transparent);}
+/* Na dotykovém displeji je lišta Deníčku pod textem, aby ji nezakrylo systémové menu výběru (Kopírovat…). */
+@media (pointer:coarse){.sesit .ds-rte.rte-wrap{display:flex;flex-direction:column;}.sesit .ds-rte .rte-toolbar{order:2;break-after:auto;break-before:avoid;}}
 .sesit .ds-rte .rte-editor{padding:0;min-height:var(--radek);border-radius:4px;outline:none;overflow-wrap:anywhere;
   background:rgba(232,98,44,.1);background:color-mix(in srgb,var(--chalk) 10%,transparent);box-shadow:0 0 0 2px var(--chalk);
   color:var(--s-inkoust);font:400 var(--v-text)/var(--radek) var(--f-ruka);}
@@ -1716,6 +1719,7 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
 .rte-toolbar{display:flex;gap:2px;padding:3px;border-bottom:1px solid var(--line);background:var(--card);}
 .rte-btn{width:24px;height:24px;border:none;background:none;border-radius:4px;color:var(--ink-soft);font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .rte-btn:hover{background:var(--line);}
+.rte-btn.on{background:var(--line);color:var(--ink);}
 .rte-btn:disabled{opacity:.4;cursor:not-allowed;}
 /* Špendlík „pamatovat poznámku“ (paměť cue a poznámek, 8. 10. 2026): šedý = nic, oranžový =
    zapamatováno a shoduje se, zešedlý s oranžovou tečkou = zapamatovaná poznámka je jiná. */
@@ -4026,7 +4030,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-10-26 13:27";
+const APP_VERSION = "2026-10-28 11:13";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -18602,6 +18606,33 @@ document.addEventListener("click", (e) => {
   }
   document.execCommand(btn.dataset.rteCmd, false, null);
   editor.dispatchEvent(new Event("input", { bubbles: true }));
+  rteStav();
+});
+// Zapnuté formátování (tučně, kurzíva, seznamy) je na liště podbarvené podle místa kurzoru —
+// po klepnutí na tlačítko i při pohybu kurzoru. Ostatní lišty se zhasnou.
+const RTE_STAV = ["bold", "italic", "insertUnorderedList", "insertOrderedList"];
+function rteStav() {
+  const sel = window.getSelection();
+  const n = sel && sel.rangeCount ? sel.anchorNode : null;
+  const el = n && (n.nodeType === 1 ? n : n.parentElement);
+  const editor = el && el.closest ? el.closest('.rte-editor[contenteditable="true"]') : null;
+  const wrap = editor && editor.closest(".rte-wrap");
+  document.querySelectorAll(".rte-btn.on").forEach(b => {
+    if (!wrap || !wrap.contains(b)) { b.classList.remove("on"); b.setAttribute("aria-pressed", "false"); }
+  });
+  if (!wrap) return;
+  wrap.querySelectorAll("[data-rte-cmd]").forEach(b => {
+    const c = b.dataset.rteCmd;
+    if (!RTE_STAV.includes(c)) return;
+    let on = false;
+    try { on = document.queryCommandState(c); } catch (_) {}
+    b.classList.toggle("on", on);
+    b.setAttribute("aria-pressed", String(on));
+  });
+}
+document.addEventListener("selectionchange", rteStav);
+document.addEventListener("keyup", (e) => {
+  if (e.target.classList && e.target.classList.contains("rte-editor")) rteStav();
 });
 // Sjednotí, jak prohlížeč zalamuje odstavce v contenteditable na Enter (jinak Chrome typicky
 // dělá <div>, Firefox <p>) — bez tohohle by chování záviselo na prohlížeči.
@@ -21637,7 +21668,7 @@ const HELP_DATA = [
       { q: "Můžu přidat cvičení bez videa, jen popisem?", a: "Ano, jako textové cvičení. V Knihovně dej Přidat → „Přidat textové cvičení“, vyplň název, popis, složku, štítky a vybavení a můžeš nahrát i ilustrační fotku. Textové cvičení je plnohodnotné: jde hodnotit, komentovat, sdílet odkazem, dávat do tréninků a bere ho i Navrhnout trénink.", kw: "textove cviceni bez videa popis pridat" },
       { q: "Jak poznám video od textového cvičení?", a: "Textové cvičení bez fotky má obrázek s nápisem TEXT, video bez náhledu obrázek s nápisem VIDEO. Přes fotky je dole malý vodoznak VIDEO nebo TEXT a textové cvičení má vpravo dole odznak s řádky textu. V malých náhledech (v tréninku a v panelu videí) má značku jen textové cvičení. Všechna textová cvičení navíc mají štítek „Textové cvičení“, takže je najdeš i filtrem štítků.", kw: "vodoznak text video poznat odznak stitek textove cviceni" },
       { q: "Můžu k textovému cvičení později doplnit video?", a: "Ano. Otevři ho k úpravě a do pole „Odkaz na video“ vlož odkaz. Uložením se z něj stane video a ve všech trénincích, kde je, se začne přehrávat. Funguje to i obráceně: když u videa odkaz smažeš, aplikace se zeptá a udělá z něj textové cvičení.", kw: "doplnit video textove cviceni odkaz zmenit" },
-      { q: "Jak v popisu nebo poznámce zvýrazním text a udělám seznam?", a: "Nad každým polem s delším textem (popis cvičení, poznámky v tréninku, poznámky v Deníčku) je lišta: tučně, kurzíva, odrážky, číslovaný seznam a odsazení doleva a doprava. Označ text a ťukni na tlačítko; na počítači fungují i Ctrl+B a Ctrl+I. V tisku do PDF se tučné a kurzíva nepropíšou, seznamy a odsazení ano.", kw: "tucne kurziva bold italic seznam odrazky cislovani odsazeni formatovani lista" },
+      { q: "Jak v popisu nebo poznámce zvýrazním text a udělám seznam?", a: "Nad každým polem s delším textem (popis cvičení, poznámky v tréninku, poznámky v Deníčku) je lišta: tučně, kurzíva, odrážky, číslovaný seznam a odsazení doleva a doprava. Označ text a ťukni na tlačítko; na počítači fungují i Ctrl+B a Ctrl+I. Zapnuté formátování v místě kurzoru má tlačítko podbarvené. V Deníčku je lišta na telefonu pod textem, aby ji nezakrylo menu Kopírovat/Vložit. V tisku do PDF se tučné a kurzíva nepropíšou, seznamy a odsazení ano.", kw: "tucne kurziva bold italic seznam odrazky cislovani odsazeni formatovani lista aktivni podbarvene denicek telefon kopirovat" },
       { q: "Co je pole „Popiš cvičení“?", a: "Je to hlavní popis cvičení — nahradilo dřívější rozdělení na krátký a dlouhý popis. Píše se tam, v čem cvičení spočívá, ideálně tak podrobně, aby ho podle toho zvládl vést i kolega, co ho nikdy neviděl." },
       { q: "Proč mi aplikace řekne, ať popis rozepíšu víc, i když jsem něco napsal?", a: "Když je popis hodně krátký (pod pár slov), aplikace se jen jednou zeptá, jestli by nešlo přidat víc detailů, a ukáže konkrétní příklad, jak by to mohlo vypadat. Uložit se dá i tak, jak je — je to jen jemné doporučení, ne povinnost." }
     ]},
