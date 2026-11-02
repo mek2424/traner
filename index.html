@@ -1474,7 +1474,6 @@ body.popout-mode .popout-btn{display:none !important;}
 .detail-text-thumb{width:100%;height:100%;position:relative;background-color:var(--paper);background-size:cover;background-position:center;}
 .detail-text-thumb > svg.tx-thumb{position:absolute;inset:0;}
 .chip.chip-texttag i{font-size:.85em;opacity:.8;}
-.manage-link.seq-save-lib{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:12px;text-align:left;line-height:1.3;}
 /* ---------- Rozpadací řádek pod videem (17. 9.) ---------- */
 .detail-titlerow{display:flex;align-items:flex-start;gap:8px;}
 .detail-titlerow .detail-title{flex:1;min-width:0;margin-bottom:8px;}
@@ -1815,6 +1814,22 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
 .seq-item.is-break .seq-copy-btn{background:var(--break-chip);}
 .seq-item.is-group .seq-copy-btn{top:10px;right:10px;}
 .seq-item.is-group .seq-remove{top:10px;right:38px;}
+/* Uložit do knihovny (kolo 28, Mek 2. 11. 2026): u textového cvičení disketa vlevo od kopírování,
+   ve skupině vedle tužky. Zelená = jde uložit, šedá = něco chybí (ťuknutí řekne co). */
+.seq-lib-btn{background:var(--paper);border:none;border-radius:50%;width:22px;height:22px;font-size:12px;color:var(--court);line-height:1;display:flex;align-items:center;justify-content:center;}
+.seq-lib-btn.chybi,.seq-item-kebab-menu button.seq-lib-menu.chybi{color:var(--ink-faint);}
+.seq-item > .seq-lib-btn{position:absolute;top:6px;right:58px;}
+.seq-item.seq-item-text{padding-right:88px;}
+.seq-group-video-row .seq-lib-btn{background:none;width:auto;height:auto;flex-shrink:0;padding:2px;}
+.seq-item-kebab-menu button.seq-lib-menu{color:var(--court);}
+/* Telefon: vpravo nahoře jen ⋮ (Mek 2. 11.: A) — disketa i kopírování jsou v menu. Pravidlo
+   .seq-copy-btn výš kopírování na telefonu zase ukazovalo, proto se skrývá až tady. Karta má
+   overflow:hidden; otevřené menu by u nízké karty (textové cvičení se třemi položkami) uřízla. */
+@media(max-width:640px){
+  .seq-copy-btn,.seq-item > .seq-lib-btn{display:none;}
+  .seq-item.seq-item-text{padding-right:34px;}
+  .seq-item:has(> .seq-item-kebab-menu.open){overflow:visible;z-index:9;}
+}
 .seq-select-box{width:22px;height:22px;border-radius:var(--radius-sm);border:2px solid var(--line);background:var(--card);
   display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0;font-size:11px;cursor:pointer;}
 .seq-select-box.checked{background:var(--court);border-color:var(--court);}
@@ -2799,14 +2814,14 @@ body.dark-mode .seq-group-video-duration{background:var(--paper);color:var(--cou
       </div>
     </div>
     <div class="field" style="position:relative;">
-      <label>Štítky (nepovinné)</label>
+      <label>Štítky</label>
       <div class="tag-input-wrap" id="textExerciseTagWrap">
         <input type="text" id="textExerciseTagInput" placeholder="napiš a Enter…" autocomplete="off">
       </div>
       <div class="autocomplete-list hidden" id="textExerciseTagAutocomplete"></div>
     </div>
     <div class="field" style="position:relative;">
-      <label>Vybavení (nepovinné)</label>
+      <label>Vybavení</label>
       <div class="tag-input-wrap" id="textExerciseEquipWrap">
         <input type="text" id="textExerciseEquipInput" placeholder="napiš a Enter…" autocomplete="off">
       </div>
@@ -2814,7 +2829,6 @@ body.dark-mode .seq-group-video-duration{background:var(--paper);color:var(--cou
     </div>
     <div class="modal-actions">
       <button type="button" class="btn btn-primary" id="saveTextExerciseDetailBtn"><i class="fa-solid fa-floppy-disk"></i> Uložit</button>
-      <button type="button" class="btn" id="saveTextExerciseToLibraryBtn"><i class="fa-solid fa-book-medical"></i> <span>Uložit do knihovny</span></button>
     </div>
   </div>
 </div>
@@ -4030,7 +4044,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-10-28 11:20";
+const APP_VERSION = "2026-11-02 23:17";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -17030,11 +17044,53 @@ function otevriUlozeniDoKnihovny(itemId, memberId) {
   if (isEditor()) openLinkModal(null, { text: true, prefill, zTreninku: { trainingId: currentTrainingId, itemId, memberId: memberId || null } });
   else openLinkModal(null, { mode: "tip", text: true, prefill });
 }
-const ULOZIT_DO_KNIHOVNY_TEXT = () => isEditor()
-  ? "Ulož do knihovny, ať si aplikace pamatuje cue a poznámku"
-  : "Pošli jako tip do knihovny";
-function ulozitDoKnihovnyHtml(itemId, memberId) {
-  return `<button type="button" class="manage-link seq-save-lib" data-ulozit-item="${esc(itemId)}"${memberId ? ` data-ulozit-member="${esc(memberId)}"` : ""}><i class="fa-solid fa-book-medical"></i> ${ULOZIT_DO_KNIHOVNY_TEXT()}</button>`;
+/* Disketa „Uložit do knihovny“ (kolo 28, Mek 2. 11. 2026). Zelená, jen když cvičení má všechno,
+   co formulář knihovny stejně vyžaduje (název, štítky, vybavení); prohlížeči na tip stačí název.
+   Šedá jde ťuknout taky — okno řekne, co chybí. */
+function knihovnaChybi(c) {
+  const chybi = [];
+  if (!String(c.title || "").trim()) chybi.push("název");
+  if (isEditor()) {
+    if (!(c.tags || []).length) chybi.push("štítky");
+    if (!(c.equipment || []).length) chybi.push("vybavení");
+  }
+  return chybi;
+}
+const ULOZIT_DO_KNIHOVNY_TEXT = () => isEditor() ? "Uložit do knihovny" : "Poslat jako tip";
+function ulozitDataHtml(itemId, memberId) {
+  return ` data-ulozit-item="${esc(itemId)}"${memberId ? ` data-ulozit-member="${esc(memberId)}"` : ""}`;
+}
+function ulozitDoKnihovnyHtml(itemId, memberId, c) {
+  return `<button type="button" class="seq-lib-btn${knihovnaChybi(c).length ? " chybi" : ""}"${ulozitDataHtml(itemId, memberId)} title="${ULOZIT_DO_KNIHOVNY_TEXT()}"><i class="fa-solid fa-floppy-disk"></i></button>`;
+}
+/** Položka v menu ⋮ (telefon). */
+function ulozitDoKnihovnyMenuHtml(itemId, c) {
+  return `<button type="button" class="seq-lib-menu${knihovnaChybi(c).length ? " chybi" : ""}"${ulozitDataHtml(itemId, null)}><i class="fa-solid fa-floppy-disk"></i> ${ULOZIT_DO_KNIHOVNY_TEXT()}</button>`;
+}
+/** Po přepsání názvu přebarví disketu bez překreslení karty (to by vzalo kurzor). */
+function obnovDisketu(itemId, memberId, c) {
+  const sel = `[data-ulozit-item="${CSS.escape(itemId)}"]` + (memberId ? `[data-ulozit-member="${CSS.escape(memberId)}"]` : ":not([data-ulozit-member])");
+  const chybi = knihovnaChybi(c).length > 0;
+  document.querySelectorAll(sel).forEach(b => b.classList.toggle("chybi", chybi));
+}
+async function ulozitDoKnihovnyKlik(itemId, memberId) {
+  const t = state.trainings[currentTrainingId];
+  const row = t && (t.items || []).find(it => it.itemId === itemId);
+  const c = row && (memberId ? (row.videos || []).find(v => v.memberId === memberId) : row);
+  if (!c || editorReadOnly) return;
+  const chybi = knihovnaChybi(c);
+  if (!chybi.length) { otevriUlozeniDoKnihovny(itemId, memberId); return; }
+  const text = chybi.join(", ");
+  const zprava = text.charAt(0).toUpperCase() + text.slice(1);
+  // Název se píše přímo v kartě, „Doplnit“ vede jen do okna se štítky a vybavením.
+  if (!chybi.some(k => k !== "název")) { await alertDialog(zprava, { title: "Do knihovny chybí" }); return; }
+  if (!(await confirmDialog(zprava, { title: "Do knihovny chybí", confirmLabel: "Doplnit", cancelLabel: "Zavřít" }))) return;
+  openTextExerciseDetailModal(itemId, memberId);
+  const pole = [["štítky", "textExerciseTagWrap", "textExerciseTagInput"], ["vybavení", "textExerciseEquipWrap", "textExerciseEquipInput"]].filter(([k]) => chybi.includes(k));
+  pole.forEach(([, wrap]) => document.getElementById(wrap).classList.add("field-missing"));
+  // Zavřené okno „Do knihovny chybí“ vrací fokus na disketu až v dalším snímku (vrácení fokusu
+  // u oken) — kurzor do štítků proto až po něm.
+  requestAnimationFrame(() => document.getElementById(pole[0][2]).focus());
 }
 
 /** Do jaké části tréninku spadne nově přidané video. Má-li výchozí část, platí ta (jako dřív).
@@ -17763,7 +17819,7 @@ function renderSequence() {
     return r && r.part !== "prestavka" && !r.isStations && !r.stanoviste;
   }).length;
   stanBtn.disabled = stanCount < 2 || stanCount > STAN_MAX;
-  function seqActionsHtml(itemId) {
+  function seqActionsHtml(itemId, navic) {
     if (copySelectMode) return "";
     const removeBtn = ro ? "" : `<button class="seq-remove" data-remove="${esc(itemId)}" aria-label="Odebrat"><i class="fa-solid fa-xmark"></i></button>`;
     const copyBtn = `<button type="button" class="seq-copy-btn" data-copy-item="${esc(itemId)}" title="Kopírovat do tréninku"><i class="fa-solid fa-copy"></i></button>`;
@@ -17772,6 +17828,7 @@ function renderSequence() {
     // odchytí ten samý delegovaný click listener beze změny.
     const kebab = `<button type="button" class="seq-item-kebab-btn" data-kebab-toggle="${esc(itemId)}" aria-label="Další akce"><i class="fa-solid fa-ellipsis-vertical"></i></button>
       <div class="seq-item-kebab-menu" data-kebab-menu="${esc(itemId)}">
+        ${navic || ""}
         <button type="button" data-copy-item="${esc(itemId)}"><i class="fa-solid fa-copy"></i> Kopírovat do tréninku</button>
         ${ro ? "" : `<button type="button" class="danger" data-remove="${esc(itemId)}"><i class="fa-solid fa-xmark"></i> Odebrat</button>`}
       </div>`;
@@ -17865,12 +17922,12 @@ function renderSequence() {
                 </span>
                 <button type="button" class="seq-group-notes-toggle${hasNotes ? " has-content" : ""}" data-notes-toggle="${notesKey}" title="Cue a poznámka">${ukazkaZnackaHtml(v)}<i class="fa-solid fa-chevron-down"></i></button>
                 ${ro ? "" : `<button type="button" class="seq-group-video-detail-btn${hasDetail ? " has-content" : ""}" data-detail-item="${esc(row.itemId)}" data-detail-video="${esc(v.memberId)}" title="Popis, štítky, nářadí"><i class="fa-solid fa-pen"></i></button>`}
+                ${ro ? "" : ulozitDoKnihovnyHtml(row.itemId, v.memberId, v)}
                 ${ro ? "" : `<button type="button" class="seq-group-video-remove" data-groupvideo-remove-item="${esc(row.itemId)}" data-groupvideo-remove-video="${esc(v.memberId)}" aria-label="Odebrat ze skupiny"><i class="fa-solid fa-xmark"></i></button>`}
                 <div class="seq-group-video-fields" data-notes-panel="${notesKey}">
                   <input type="text" class="seq-group-video-cue" placeholder="cue" value="${esc(v.cue || "")}" data-groupcue-item="${esc(row.itemId)}" data-groupcue-video="${esc(v.memberId)}" ${dis}>
                   ${renderRichField(v.note || "", "poznámka", `data-groupnote-item="${esc(row.itemId)}" data-groupnote-video="${esc(v.memberId)}"`, ro, "rte-xs")}
                   ${ukazkaEditorHtml(v, row.itemId, v.memberId, ro)}
-                  ${ro ? "" : ulozitDoKnihovnyHtml(row.itemId, v.memberId)}
                 </div>
               </div>`;
             }
@@ -17915,7 +17972,8 @@ function renderSequence() {
       const hasDetail = row.shortDesc || row.longDesc || (row.tags && row.tags.length) || (row.equipment && row.equipment.length);
       return `
       <div class="seq-item seq-item-text" data-itemid="${esc(row.itemId)}" style="border-left-color:${esc(part.color)}">
-        ${seqActionsHtml(row.itemId)}
+        ${seqActionsHtml(row.itemId, ro ? "" : ulozitDoKnihovnyMenuHtml(row.itemId, row))}
+        ${ro || copySelectMode ? "" : ulozitDoKnihovnyHtml(row.itemId, null, row)}
         ${stanHlavickaHtml(row)}
         <div class="seq-item-top">
           ${seqLeadHtml(row.itemId)}
@@ -17936,7 +17994,6 @@ function renderSequence() {
           <input type="text" placeholder="Cue (co říct nahlas)" value="${esc(row.cue)}" data-field="cue" data-itemid="${esc(row.itemId)}" ${dis}>
           ${renderRichField(row.poznamka, "Poznámka", `data-field="poznamka" data-itemid="${esc(row.itemId)}"`, ro, "rte-sm")}
           ${ukazkaEditorHtml(row, row.itemId, null, ro)}
-          ${ro ? "" : ulozitDoKnihovnyHtml(row.itemId)}
         </div>
         ${clockBadgeHtml(row.itemId)}
       </div>`;
@@ -18382,7 +18439,7 @@ document.getElementById("sequenceList").addEventListener("input", (e) => {
     const t = state.trainings[currentTrainingId];
     const row = t.items.find(it => it.itemId === groupTitleItem);
     const v = row && row.videos.find(x => x.memberId === groupTitleVideo);
-    if (v) { v.title = e.target.value; t.dateModified = Date.now(); scheduleSave(); }
+    if (v) { v.title = e.target.value; t.dateModified = Date.now(); scheduleSave(); if (v.isText) obnovDisketu(groupTitleItem, groupTitleVideo, v); }
     return;
   }
   // Popisek stanoviště „pro koho“ (kolo 3).
@@ -18414,6 +18471,7 @@ document.getElementById("sequenceList").addEventListener("input", (e) => {
   }
   t.dateModified = Date.now();
   scheduleSave();
+  if (field === "title" && row.isText) obnovDisketu(itemId, null, row);
   if (["duration", "durationUnit", "seriesPause", "seriesPauseUnit", "estimate", "estimateUnit", "rounds"].includes(field)) updateClockBadges();
   if (row.isStations && ["duration", "durationUnit", "rounds"].includes(field)) {
     const celkem = document.querySelector(`[data-stan-celkem="${CSS.escape(row.itemId)}"]`);
@@ -18445,7 +18503,11 @@ document.getElementById("sequenceList").addEventListener("click", (e) => {
   const stanZrusit = e.target.closest("[data-stan-zrusit]");
   if (stanZrusit) { zrusStanoviste(stanZrusit.dataset.stanZrusit); return; }
   const ulozit = e.target.closest("[data-ulozit-item]");
-  if (ulozit) { otevriUlozeniDoKnihovny(ulozit.dataset.ulozitItem, ulozit.dataset.ulozitMember || null); return; }
+  if (ulozit) {
+    e.currentTarget.querySelectorAll(".seq-item-kebab-menu.open").forEach(m => m.classList.remove("open"));
+    ulozitDoKnihovnyKlik(ulozit.dataset.ulozitItem, ulozit.dataset.ulozitMember || null);
+    return;
+  }
   const kebabToggle = e.target.closest("[data-kebab-toggle]");
   if (kebabToggle) {
     const menu = e.currentTarget.querySelector(`[data-kebab-menu="${CSS.escape(kebabToggle.dataset.kebabToggle)}"]`);
@@ -18683,6 +18745,7 @@ function renderTextExerciseTagPills() {
     pill.querySelector("button").addEventListener("click", () => { textExerciseFormTags = textExerciseFormTags.filter(x => x !== v); renderTextExerciseTagPills(); });
     wrap.insertBefore(pill, input);
   });
+  if (textExerciseFormTags.length) wrap.classList.remove("field-missing");
 }
 function renderTextExerciseEquipPills() {
   const wrap = document.getElementById("textExerciseEquipWrap");
@@ -18695,6 +18758,7 @@ function renderTextExerciseEquipPills() {
     pill.querySelector("button").addEventListener("click", () => { textExerciseFormEquip = textExerciseFormEquip.filter(x => x !== v); renderTextExerciseEquipPills(); });
     wrap.insertBefore(pill, input);
   });
+  if (textExerciseFormEquip.length) wrap.classList.remove("field-missing");
 }
 function addTextExerciseTag(v) {
   if (odmitniTextTag(v)) return;
@@ -18718,9 +18782,7 @@ function openTextExerciseDetailModal(itemId, videoId) {
   textExerciseFormEquip = [...(target.equipment || [])];
   renderTextExerciseTagPills();
   renderTextExerciseEquipPills();
-  const doKnihovnyBtn = document.getElementById("saveTextExerciseToLibraryBtn");
-  doKnihovnyBtn.classList.toggle("hidden", editorReadOnly);
-  doKnihovnyBtn.querySelector("span").textContent = isEditor() ? "Uložit do knihovny" : "Poslat jako tip";
+  ["textExerciseTagWrap", "textExerciseEquipWrap"].forEach(id => document.getElementById(id).classList.remove("field-missing"));
   document.getElementById("textExerciseDetailModalBackdrop").classList.remove("hidden");
   resetModalScroll(document.getElementById("textExerciseDetailModalBackdrop"));
   if (!editorReadOnly) document.getElementById("textExerciseShortDesc").focus();
@@ -18730,13 +18792,6 @@ function closeTextExerciseDetailModal() {
   textExerciseDetailTarget = null;
 }
 document.getElementById("closeTextExerciseDetailModalBtn").addEventListener("click", closeTextExerciseDetailModal);
-/** Z okna popisu: nejdřív uložit rozepsané změny do tréninku, pak otevřít formulář knihovny. */
-document.getElementById("saveTextExerciseToLibraryBtn").addEventListener("click", () => {
-  if (!textExerciseDetailTarget || editorReadOnly) return;
-  const { itemId, videoId } = textExerciseDetailTarget;
-  document.getElementById("saveTextExerciseDetailBtn").click();
-  otevriUlozeniDoKnihovny(itemId, videoId);
-});
 document.getElementById("saveTextExerciseDetailBtn").addEventListener("click", () => {
   if (!textExerciseDetailTarget || editorReadOnly) return;
   const target = findTextExerciseTarget(textExerciseDetailTarget.itemId, textExerciseDetailTarget.videoId);
@@ -21803,7 +21858,7 @@ const HELP_DATA = [
       { q: "Co jsou série a jak funguje pauza mezi nimi?", a: "Série znamená, že se stejné cvičení zopakuje víckrát za sebou (např. 3×) s automatickou pauzou mezi jednotlivými koly — nastavuje se to u dané položky nebo skupiny." },
       { q: "Jak přidám poznámku nebo instrukci ke cvičení?", a: "U položky rozklikni „Cue a poznámka“ — cue je krátký pokyn, co hráčům říct nahlas, poznámka je prostor pro delší vysvětlení, co si má trenér pamatovat." },
       { q: "Co je „cue“ a čím se liší od poznámky?", a: "Cue je krátká věta, kterou trenér řekne nahlas hráčům přímo při cvičení (např. „ruce nahoru“). Poznámka je delší text jen pro trenéra samotného — třeba na co si dát pozor při vedení cvičení. Liší se i tím, jak si je aplikace pamatuje: cue sama, poznámku jen když ji připíchneš špendlíkem.", kw: "cue vs poznamka" },
-      { q: "Jak dostanu textové cvičení z tréninku do knihovny?", a: "U textového cvičení v tréninku rozklikni „Cue a poznámka“ a ťukni na „Ulož do knihovny…“ (nebo v okně „Popis, štítky, nářadí“ na „Uložit do knihovny“). Otevře se formulář knihovny předvyplněný z tréninku — doplň složku, případně fotku, a ulož. V tomhle tréninku se cvičení propojí s knihovnou; kopie stejného cvičení v jiných trénincích zůstanou samostatné. Jako Prohlížeč cvičení pošleš adminovi jako tip.", kw: "ulozit do knihovny textove cviceni z treninku tip" },
+      { q: "Jak dostanu textové cvičení z tréninku do knihovny?", a: "U textového cvičení v tréninku ťukni na disketu (na telefonu je v nabídce ⋮). Zelená znamená, že jde uložit; šedá, že ještě chybí štítky nebo vybavení — ťuknutím uvidíš, co doplnit. Otevře se formulář knihovny předvyplněný z tréninku — doplň složku, případně fotku, a ulož. V tomhle tréninku se cvičení propojí s knihovnou; kopie stejného cvičení v jiných trénincích zůstanou samostatné. Jako Prohlížeč cvičení pošleš adminovi jako tip (stačí mu název).", kw: "ulozit do knihovny textove cviceni z treninku tip disketa" },
       { q: "Pamatuje si aplikace cue a poznámky?", a: "Ano, jen pro tebe — ostatní trenéři tvoje zapamatované cue ani poznámky v aplikaci nevidí. Cue, které k videu napíšeš, si aplikace zapamatuje sama a předvyplní ho, až to video příště vložíš do tréninku (z Knihovny, z panelu v editoru, do nové skupiny i z návrhu tréninku). Poznámka se pamatuje, jen když ťukneš na špendlík v její liště: oranžový znamená zapamatovaná, šedý s tečkou znamená, že text se od zapamatovaného liší. Změnu nebo smazání zapamatované poznámky aplikace vždycky potvrdí. Předvyplněný text v tréninku klidně přepiš — u cue se tím zapamatuje nový, u poznámky jen když znovu ťukneš na špendlík. Pamatuje se u všech cvičení z Knihovny (videí i textových cvičení), ne u textových cvičení psaných jen v tréninku — ta stačí uložit do knihovny.", kw: "pamet zapamatovat predvyplnit spendlik pripichnout cue poznamka minule" },
       { q: "Jak přidám vybavení, které platí jen pro tenhle konkrétní trénink?", a: "U položky je pole „Další vybavení (jen pro tenhle trénink, nemění knihovnu)“ — přidané vybavení se počítá do souhrnu jen u tohodle tréninku, ve videu samotném v knihovně zůstane beze změny." }
     ]},
