@@ -986,6 +986,26 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   background:rgba(0,0,0,.45);color:rgba(255,255,255,.55);border:none;display:flex;align-items:center;justify-content:center;font-size:13px;
 }
 .card-fav-btn.on{color:#F4C542;}
+/* Přidání do oblíbených v Knihovně (kolo 29, Mek 3. 11.: F): uprostřed obrázku vyskočí velká hvězda
+   a rozletí se z ní jiskry, malá hvězdička udělá pop s otočkou a jiskrami. Odebrání bez animace. */
+.card-fav-btn::after{content:"";position:absolute;left:50%;top:50%;width:4px;height:4px;margin:-2px;border-radius:50%;opacity:0;pointer-events:none;}
+.card-fav-btn.pulz{animation:favPop .55s cubic-bezier(.3,1.6,.5,1);}
+.card-fav-btn.pulz::after{animation:favJiskry .6s ease-out;}
+@keyframes favPop{0%{transform:scale(1) rotate(0)}35%{transform:scale(1.75) rotate(-18deg)}60%{transform:scale(1.5) rotate(14deg)}80%{transform:scale(1.15) rotate(-4deg)}100%{transform:scale(1) rotate(0)}}
+@keyframes favJiskry{0%{opacity:1;box-shadow:0 0 #F4C542,0 0 #F4C542,0 0 #F4C542,0 0 #F4C542,0 0 #F4C542,0 0 #F4C542,0 0 #F4C542,0 0 #F4C542}
+  100%{opacity:0;box-shadow:0 -22px #F4C542,16px -16px #FFE08A,22px 0 #F4C542,16px 16px #FFE08A,0 22px #F4C542,-16px 16px #FFE08A,-22px 0 #F4C542,-16px -16px #FFE08A}}
+.fav-velka{position:absolute;left:50%;top:50%;font-size:46px;color:#F4C542;opacity:0;pointer-events:none;z-index:6;
+  transform:translate(-50%,-50%) scale(.2);filter:drop-shadow(0 2px 6px rgba(0,0,0,.45));animation:favVelka .8s ease-out;}
+.fav-velka::after{content:"";position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px;border-radius:50%;opacity:0;animation:favJiskryVelke .7s ease-out .12s;}
+@keyframes favVelka{0%{opacity:0;transform:translate(-50%,-50%) scale(.2) rotate(-25deg)}30%{opacity:1;transform:translate(-50%,-50%) scale(1.15) rotate(8deg)}
+  55%{opacity:1;transform:translate(-50%,-50%) scale(1) rotate(0)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.3)}}
+@keyframes favJiskryVelke{0%{opacity:1;box-shadow:0 0 #F4C542,0 0 #F4C542,0 0 #F4C542,0 0 #F4C542,0 0 #F4C542,0 0 #F4C542,0 0 #F4C542,0 0 #F4C542}
+  100%{opacity:0;box-shadow:0 -44px #F4C542,31px -31px #FFE08A,44px 0 #F4C542,31px 31px #FFE08A,0 44px #F4C542,-31px 31px #FFE08A,-44px 0 #F4C542,-31px -31px #FFE08A}}
+@media (prefers-reduced-motion: reduce){.card-fav-btn.pulz,.card-fav-btn.pulz::after{animation:none;}.fav-velka{display:none;}}
+/* Dlouhé podržení karty (kolo 29): na dotyku nesmí vybrat text ani otevřít systémové menu obrázku. */
+@media(pointer:coarse){
+  #libraryGrid .card{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;}
+}
 .card-context-menu{
   position:absolute;z-index:60;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);
   box-shadow:var(--shadow);min-width:170px;overflow:hidden;
@@ -4044,7 +4064,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-11-02 23:17";
+const APP_VERSION = "2026-11-03 01:07";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -7638,15 +7658,78 @@ function konceptKapsleHtml(item) {
 }
 document.getElementById("clearFolderFilterBtn").addEventListener("click", () => { activeFolderFilter = null; clearTagEquipFilters(); renderLibrary(); });
 document.getElementById("clearTagEquipFilterBtn").addEventListener("click", () => { clearTagEquipFilters(); renderLibrary(); toast("Filtry štítků a vybavení zrušeny."); });
+/** Po přidání do oblíbených (kolo 29, Mek: F) — jakoukoli cestou v Knihovně: hvězdička, menu ⋮,
+    podržení, pravé tlačítko. Volá se po renderLibrary (karta je nová). Odebrání animaci nemá. */
+function oblibenaAnimace(id) {
+  if (!isFavoriteVideo(id)) return;
+  const card = document.querySelector(`#libraryGrid .card[data-id="${CSS.escape(id)}"]`);
+  if (!card) return;
+  const hv = card.querySelector(".card-fav-btn");
+  if (hv) hv.classList.add("pulz");
+  const th = card.querySelector(".card-thumb");
+  if (!th) return;
+  const velka = document.createElement("i");
+  velka.className = "fa-solid fa-star fav-velka";
+  velka.addEventListener("animationend", (e) => { if (e.target === velka) velka.remove(); });
+  th.appendChild(velka);
+}
+/* Oblíbené zkratkou (kolo 29, Mek 2. 11. 2026): na dotyku dlouhé podržení karty, na počítači pravé
+   tlačítko myši. Zkratka k hvězdičce na kartě, menu ⋮ zůstává. Telefon při podržení cvrnkne;
+   puštění po podržení kartu neotevře. Pohyb prstem (posun stránky) podržení zruší. Ve výběru
+   více karet ani na tlačítkách karty (hvězdička, ⋮) zkratka neplatí. */
+const PODRZENI_KARTY_MS = 500;
+let podrzeniKarty = null, podrzeniKartyHotovo = false, podrzeniKartyDotyk = false;
+{
+  const grid = document.getElementById("libraryGrid");
+  const zrus = () => { if (podrzeniKarty) { clearTimeout(podrzeniKarty.tm); podrzeniKarty = null; } };
+  const kartaProZkratku = (e) => {
+    const card = e.target.closest(".card");
+    return card && !selectMode && !e.target.closest("button") && state.library[card.dataset.id] ? card.dataset.id : null;
+  };
+  const oblib = (id) => {
+    prepniOblibeneCviceni(id);
+    renderLibrary();
+    oblibenaAnimace(id);
+  };
+  grid.addEventListener("pointerdown", (e) => {
+    podrzeniKartyHotovo = false;
+    podrzeniKartyDotyk = e.pointerType !== "mouse";
+    zrus();
+    const id = podrzeniKartyDotyk ? kartaProZkratku(e) : null;
+    if (!id) return;
+    podrzeniKarty = { x: e.clientX, y: e.clientY, tm: setTimeout(() => {
+      podrzeniKarty = null;
+      if (!state.library[id]) return;
+      podrzeniKartyHotovo = true;
+      oblib(id);
+      try { if (navigator.vibrate) navigator.vibrate(15); } catch (err) {}
+    }, PODRZENI_KARTY_MS) };
+  });
+  grid.addEventListener("pointermove", (e) => {
+    if (podrzeniKarty && Math.hypot(e.clientX - podrzeniKarty.x, e.clientY - podrzeniKarty.y) > 10) zrus();
+  });
+  ["pointerup", "pointercancel", "pointerleave"].forEach(t => grid.addEventListener(t, zrus));
+  // Na dotyku jen potlačit systémové menu po podržení (Android u obrázku); myš = oblíbit.
+  grid.addEventListener("contextmenu", (e) => {
+    if (!e.target.closest(".card")) return;
+    if (podrzeniKartyDotyk) { e.preventDefault(); return; }
+    const id = kartaProZkratku(e);
+    if (!id) return;
+    e.preventDefault();
+    oblib(id);
+  });
+}
 document.getElementById("libraryGrid").addEventListener("click", (e) => {
   const card = e.target.closest(".card");
   if (!card) return;
+  if (podrzeniKartyHotovo) { podrzeniKartyHotovo = false; return; }
   const id = card.dataset.id;
   if (e.target.closest("[data-action='open-menu']")) { openCardContextMenu(id, e.target.closest("[data-action='open-menu']")); return; }
   if (e.target.closest("[data-action='toggle-fav']")) {
     if (state.library[id]) {
       prepniOblibeneCviceni(id);
       renderLibrary();
+      oblibenaAnimace(id);
     }
     return;
   }
@@ -7894,6 +7977,7 @@ function openCardContextMenu(itemId, anchorBtn) {
     closeCardContextMenu();
     prepniOblibeneCviceni(itemId);
     renderLibrary();
+    oblibenaAnimace(itemId);
   });
   menu.querySelector("[data-act='edit']")?.addEventListener("click", () => { closeCardContextMenu(); openLinkModal(itemId); });
   menu.querySelector("[data-act='share']")?.addEventListener("click", () => {
@@ -21761,7 +21845,7 @@ const HELP_DATA = [
       { q: "Jak najdu konkrétní video v knihovně?", a: "Použij vyhledávací pole nahoře — hledá podle názvu, štítku i složky zároveň, živě při psaní." },
       { q: "Jak si knihovnu vyfiltruju podle složky, štítku nebo obtížnosti?", a: "V horní liště Knihovny jsou filtry pro složku a řazení (mimo jiné podle obtížnosti od nejsnazší po nejtěžší)." },
       { q: "Jak vyfiltruju knihovnu podle toho, kdo video nahrál?", a: "V horní liště Knihovny je vedle Štítků a Vybavení i filtr „Kdo nahrál“ — rozbalí seznam kolegů, co do knihovny něco přidali, a jde podle nich filtrovat stejně jako podle štítků.", kw: "autor nahral kolega filtr" },
-      { q: "Co znamená hvězdička/oblíbené u cvičení?", a: "Označíš si jí cvičení, ke kterému se chceš rychle vracet — dá se pak filtrovat jen na oblíbená, hlavně při výběru cvičení do tréninku. Hvězdičky jsou jen tvoje: nikdo jiný je nevidí a nikomu jinému se tím nic nezmění. Dát si je může každý, i prohlížeč. Když cvičení upravíš, hvězdička u něj zůstane. Oblíbená cvičení mají taky přednost v Osvědčeném návrhu tréninku.", kw: "hvezdicka oblibene oblibena cviceni video filtr moje osobni" },
+      { q: "Co znamená hvězdička/oblíbené u cvičení?", a: "Označíš si jí cvičení, ke kterému se chceš rychle vracet — dá se pak filtrovat jen na oblíbená, hlavně při výběru cvičení do tréninku. V Knihovně ji přidáš nebo odebereš ťuknutím na hvězdičku na kartě, v nabídce ⋮, nebo dlouhým podržením karty (na počítači pravým tlačítkem myši). Hvězdičky jsou jen tvoje: nikdo jiný je nevidí a nikomu jinému se tím nic nezmění. Dát si je může každý, i prohlížeč. Když cvičení upravíš, hvězdička u něj zůstane. Oblíbená cvičení mají taky přednost v Osvědčeném návrhu tréninku.", kw: "hvezdicka oblibene oblibena cviceni video filtr moje osobni" },
       { q: "Jak přepnu knihovnu ze dlaždic na seznam?", a: "V horní liště Knihovny je přepínač zobrazení mezi mřížkou (dlaždice) a seznamem — na počítači, na mobilu zůstává jen mřížka." }
     ]},
     { title: "Úprava, obtížnost a mazání videí", icon: "fa-solid fa-pen", qa: [
