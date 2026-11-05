@@ -2648,10 +2648,10 @@ body.dark-mode .seq-group-video-duration{background:var(--paper);color:var(--cou
           <div class="rte-toolbar">
             <button type="button" class="rte-btn" data-rte-cmd="bold" title="Tučně (Ctrl+B)"><i class="fa-solid fa-bold"></i></button>
       <button type="button" class="rte-btn" data-rte-cmd="italic" title="Kurzíva (Ctrl+I)"><i class="fa-solid fa-italic"></i></button>
-      <button type="button" class="rte-btn" data-rte-cmd="insertUnorderedList" title="Odrážky"><i class="fa-solid fa-list-ul"></i></button>
-            <button type="button" class="rte-btn" data-rte-cmd="insertOrderedList" title="Číslovaný seznam"><i class="fa-solid fa-list-ol"></i></button>
-            <button type="button" class="rte-btn" data-rte-cmd="outdent" title="Zmenšit odsazení"><i class="fa-solid fa-outdent"></i></button>
-            <button type="button" class="rte-btn" data-rte-cmd="indent" title="Zvětšit odsazení"><i class="fa-solid fa-indent"></i></button>
+      <button type="button" class="rte-btn" data-rte-cmd="insertUnorderedList" title="Odrážky (napiš * a mezeru)"><i class="fa-solid fa-list-ul"></i></button>
+            <button type="button" class="rte-btn" data-rte-cmd="insertOrderedList" title="Číslovaný seznam (napiš 1. a mezeru)"><i class="fa-solid fa-list-ol"></i></button>
+            <button type="button" class="rte-btn" data-rte-cmd="outdent" title="Zmenšit odsazení (Shift+Tab)"><i class="fa-solid fa-outdent"></i></button>
+            <button type="button" class="rte-btn" data-rte-cmd="indent" title="Zvětšit odsazení (Tab)"><i class="fa-solid fa-indent"></i></button>
           </div>
           <div class="rte-editor" contenteditable="true" id="linkLongDesc" data-placeholder="Např. Trenér hází střídavě krátké a dlouhé balony, hráčky rotují v zadní řadě."></div>
         </div>
@@ -2825,10 +2825,10 @@ body.dark-mode .seq-group-video-duration{background:var(--paper);color:var(--cou
         <div class="rte-toolbar">
           <button type="button" class="rte-btn" data-rte-cmd="bold" title="Tučně (Ctrl+B)"><i class="fa-solid fa-bold"></i></button>
       <button type="button" class="rte-btn" data-rte-cmd="italic" title="Kurzíva (Ctrl+I)"><i class="fa-solid fa-italic"></i></button>
-      <button type="button" class="rte-btn" data-rte-cmd="insertUnorderedList" title="Odrážky"><i class="fa-solid fa-list-ul"></i></button>
-          <button type="button" class="rte-btn" data-rte-cmd="insertOrderedList" title="Číslovaný seznam"><i class="fa-solid fa-list-ol"></i></button>
-          <button type="button" class="rte-btn" data-rte-cmd="outdent" title="Zmenšit odsazení"><i class="fa-solid fa-outdent"></i></button>
-          <button type="button" class="rte-btn" data-rte-cmd="indent" title="Zvětšit odsazení"><i class="fa-solid fa-indent"></i></button>
+      <button type="button" class="rte-btn" data-rte-cmd="insertUnorderedList" title="Odrážky (napiš * a mezeru)"><i class="fa-solid fa-list-ul"></i></button>
+          <button type="button" class="rte-btn" data-rte-cmd="insertOrderedList" title="Číslovaný seznam (napiš 1. a mezeru)"><i class="fa-solid fa-list-ol"></i></button>
+          <button type="button" class="rte-btn" data-rte-cmd="outdent" title="Zmenšit odsazení (Shift+Tab)"><i class="fa-solid fa-outdent"></i></button>
+          <button type="button" class="rte-btn" data-rte-cmd="indent" title="Zvětšit odsazení (Tab)"><i class="fa-solid fa-indent"></i></button>
         </div>
         <div class="rte-editor" contenteditable="true" id="textExerciseLongDesc" data-placeholder="Dlouhý popis (nepovinné)"></div>
       </div>
@@ -4064,7 +4064,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-11-03 01:07";
+const APP_VERSION = "2026-11-05 12:00";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -4819,10 +4819,10 @@ function renderRichField(value, placeholder, attrsHtml, ro, extraClass, toolbarE
     <div class="rte-toolbar">
       <button type="button" class="rte-btn" data-rte-cmd="bold" title="Tučně (Ctrl+B)"><i class="fa-solid fa-bold"></i></button>
       <button type="button" class="rte-btn" data-rte-cmd="italic" title="Kurzíva (Ctrl+I)"><i class="fa-solid fa-italic"></i></button>
-      <button type="button" class="rte-btn" data-rte-cmd="insertUnorderedList" title="Odrážky"><i class="fa-solid fa-list-ul"></i></button>
-      <button type="button" class="rte-btn" data-rte-cmd="insertOrderedList" title="Číslovaný seznam"><i class="fa-solid fa-list-ol"></i></button>
-      <button type="button" class="rte-btn" data-rte-cmd="outdent" title="Zmenšit odsazení"><i class="fa-solid fa-outdent"></i></button>
-      <button type="button" class="rte-btn" data-rte-cmd="indent" title="Zvětšit odsazení"><i class="fa-solid fa-indent"></i></button>
+      <button type="button" class="rte-btn" data-rte-cmd="insertUnorderedList" title="Odrážky (napiš * a mezeru)"><i class="fa-solid fa-list-ul"></i></button>
+      <button type="button" class="rte-btn" data-rte-cmd="insertOrderedList" title="Číslovaný seznam (napiš 1. a mezeru)"><i class="fa-solid fa-list-ol"></i></button>
+      <button type="button" class="rte-btn" data-rte-cmd="outdent" title="Zmenšit odsazení (Shift+Tab)"><i class="fa-solid fa-outdent"></i></button>
+      <button type="button" class="rte-btn" data-rte-cmd="indent" title="Zvětšit odsazení (Tab)"><i class="fa-solid fa-indent"></i></button>
       ${toolbarExtra || ""}
     </div>`;
   return `<div class="rte-wrap${extraClass ? " " + extraClass : ""}">
@@ -18780,6 +18780,116 @@ document.addEventListener("selectionchange", rteStav);
 document.addEventListener("keyup", (e) => {
   if (e.target.classList && e.target.classList.contains("rte-editor")) rteStav();
 });
+/* KLÁVESOVÉ ZKRATKY A AUTOMATICKÉ SEZNAMY v rich textu (kolo 80)
+   - Tab / Shift+Tab v seznamu = odsadit / vrátit odsazení (vnořený seznam). Mimo seznam se
+     Tab nechává prohlížeči (skok na další pole) — odsazení obyčejného odstavce appka neukládá.
+   - „* “ nebo „- “ na začátku řádku = odrážky, „1. “ (libovolné číslo s tečkou) = číslovaný
+     seznam. Hlídá se přes `input`, ne `keydown`, protože mobilní klávesnice (Gboard apod.)
+     u mezery často žádný použitelný keydown nepošlou.
+   - Backspace hned po takovém převodu ho vrátí zpátky na obyčejný text i se značkou
+     (kdyby šlo třeba o „3. března“ na začátku řádku). */
+let rteAutoBusy = false;   // naše vlastní execCommandy vyvolávají `input` — nesmí spustit převod znovu
+let rteAutoPosledni = null; // { li, cmd, prefix } — co šlo naposled převést, kvůli vrácení Backspacem
+function rteEditorZVyberu() {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return null;
+  const n = sel.anchorNode;
+  const el = n && (n.nodeType === 1 ? n : n.parentElement);
+  return el && el.closest ? el.closest('.rte-editor[contenteditable="true"]') : null;
+}
+function rteLiUKurzoru(editor) {
+  const sel = window.getSelection();
+  const n = sel.anchorNode;
+  const el = n && (n.nodeType === 1 ? n : n.parentElement);
+  const li = el && el.closest("li");
+  return li && editor.contains(li) ? li : null;
+}
+// Text bloku (odstavce / položky / holého kořene editoru) od jeho začátku po kurzor.
+function rteTextPredKurzorem(blok) {
+  const sel = window.getSelection();
+  const r = document.createRange();
+  r.setStart(blok, 0);
+  r.setEnd(sel.anchorNode, sel.anchorOffset);
+  return r.toString().replace(/ /g, " ");
+}
+function rteBlokUKurzoru(editor) {
+  const sel = window.getSelection();
+  const n = sel.anchorNode;
+  const el = n.nodeType === 1 ? n : n.parentElement;
+  const blok = el.closest("p, div, li");
+  return blok && editor.contains(blok) && blok !== editor ? blok : editor;
+}
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Tab" || e.ctrlKey || e.metaKey || e.altKey || e.isComposing) return;
+  const editor = e.target.closest && e.target.closest('.rte-editor[contenteditable="true"]');
+  if (!editor || rteEditorZVyberu() !== editor || !rteLiUKurzoru(editor)) return;
+  e.preventDefault();
+  rteAutoPosledni = null;
+  document.execCommand(e.shiftKey ? "outdent" : "indent", false, null);
+  rteStav();
+});
+function rteAutoSeznam(editor) {
+  if (rteAutoBusy) return;
+  const sel = window.getSelection();
+  if (!sel.rangeCount || !sel.isCollapsed || rteEditorZVyberu() !== editor) return;
+  if (rteLiUKurzoru(editor)) return; // uvnitř seznamu nic nepřevádíme
+  const blok = rteBlokUKurzoru(editor);
+  const m = rteTextPredKurzorem(blok).match(/^\s*([*-]|\d{1,3}\.) $/);
+  if (!m) return;
+  const cmd = /\d/.test(m[1]) ? "insertOrderedList" : "insertUnorderedList";
+  rteAutoBusy = true;
+  try {
+    // Smaže napsanou značku („* “, „1. “) — přes execCommand, ať funguje i Ctrl+Z.
+    const r = document.createRange();
+    r.setStart(blok, 0);
+    r.setEnd(sel.anchorNode, sel.anchorOffset);
+    sel.removeAllRanges();
+    sel.addRange(r);
+    document.execCommand("delete", false, null);
+    // Na úplně prázdném poli by execCommand seznam nezaložil (viz obsluha lišty výš).
+    if (!editor.firstChild) {
+      editor.innerHTML = "<p><br></p>";
+      const r2 = document.createRange();
+      r2.setStart(editor.firstChild, 0);
+      r2.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(r2);
+    }
+    document.execCommand(cmd, false, null);
+    const li = rteLiUKurzoru(editor);
+    rteAutoPosledni = li ? { li, cmd, prefix: m[1] + " " } : null;
+  } finally { rteAutoBusy = false; }
+  rteStav();
+}
+document.addEventListener("input", (e) => {
+  const editor = e.target;
+  if (!(editor.classList && editor.classList.contains("rte-editor")) || rteAutoBusy) return;
+  rteAutoPosledni = null;
+  if (e.isComposing) return; // dokončí se v compositionend
+  if (e.inputType && !/^insert(Text|CompositionText|ReplacementText)$/.test(e.inputType)) return;
+  rteAutoSeznam(editor);
+});
+document.addEventListener("compositionend", (e) => {
+  const editor = e.target;
+  if (editor.classList && editor.classList.contains("rte-editor")) setTimeout(() => rteAutoSeznam(editor), 0);
+});
+// Backspace hned po automatickém převodu: místo seznamu zase obyčejný text i se značkou.
+document.addEventListener("beforeinput", (e) => {
+  if (e.inputType !== "deleteContentBackward" || !rteAutoPosledni) return;
+  const editor = e.target;
+  if (!(editor.classList && editor.classList.contains("rte-editor"))) return;
+  const { li, cmd, prefix } = rteAutoPosledni;
+  const sel = window.getSelection();
+  if (!li.isConnected || !sel.isCollapsed || rteLiUKurzoru(editor) !== li || rteTextPredKurzorem(li) !== "") return;
+  e.preventDefault();
+  rteAutoPosledni = null;
+  rteAutoBusy = true;
+  try {
+    document.execCommand(cmd, false, null);           // zruší seznam (položka zase odstavcem)
+    document.execCommand("insertText", false, prefix); // a vrátí napsanou značku
+  } finally { rteAutoBusy = false; }
+  rteStav();
+});
 // Sjednotí, jak prohlížeč zalamuje odstavce v contenteditable na Enter (jinak Chrome typicky
 // dělá <div>, Firefox <p>) — bez tohohle by chování záviselo na prohlížeči.
 document.addEventListener("focusin", (e) => {
@@ -21807,7 +21917,7 @@ const HELP_DATA = [
       { q: "Můžu přidat cvičení bez videa, jen popisem?", a: "Ano, jako textové cvičení. V Knihovně dej Přidat → „Přidat textové cvičení“, vyplň název, popis, složku, štítky a vybavení a můžeš nahrát i ilustrační fotku. Textové cvičení je plnohodnotné: jde hodnotit, komentovat, sdílet odkazem, dávat do tréninků a bere ho i Navrhnout trénink.", kw: "textove cviceni bez videa popis pridat" },
       { q: "Jak poznám video od textového cvičení?", a: "Textové cvičení bez fotky má obrázek s nápisem TEXT, video bez náhledu obrázek s nápisem VIDEO. Přes fotky je dole malý vodoznak VIDEO nebo TEXT a textové cvičení má vpravo dole odznak s řádky textu. V malých náhledech (v tréninku a v panelu videí) má značku jen textové cvičení. Všechna textová cvičení navíc mají štítek „Textové cvičení“, takže je najdeš i filtrem štítků.", kw: "vodoznak text video poznat odznak stitek textove cviceni" },
       { q: "Můžu k textovému cvičení později doplnit video?", a: "Ano. Otevři ho k úpravě a do pole „Odkaz na video“ vlož odkaz. Uložením se z něj stane video a ve všech trénincích, kde je, se začne přehrávat. Funguje to i obráceně: když u videa odkaz smažeš, aplikace se zeptá a udělá z něj textové cvičení.", kw: "doplnit video textove cviceni odkaz zmenit" },
-      { q: "Jak v popisu nebo poznámce zvýrazním text a udělám seznam?", a: "Nad každým polem s delším textem (popis cvičení, poznámky v tréninku, poznámky v Deníčku) je lišta: tučně, kurzíva, odrážky, číslovaný seznam a odsazení doleva a doprava. Označ text a ťukni na tlačítko; na počítači fungují i Ctrl+B a Ctrl+I. Zapnuté formátování v místě kurzoru má tlačítko podbarvené. V Deníčku je lišta na telefonu pod textem, aby ji nezakrylo menu Kopírovat/Vložit. Do PDF se propíše tučné písmo, kurzíva, seznamy i odsazení.", kw: "tucne kurziva bold italic seznam odrazky cislovani odsazeni formatovani lista aktivni podbarvene denicek telefon kopirovat" },
+      { q: "Jak v popisu nebo poznámce zvýrazním text a udělám seznam?", a: "Nad každým polem s delším textem (popis cvičení, poznámky v tréninku, poznámky v Deníčku) je lišta: tučně, kurzíva, odrážky, číslovaný seznam a odsazení doleva a doprava. Označ text a ťukni na tlačítko; na počítači fungují i Ctrl+B a Ctrl+I a v seznamu Tab (odsadit) a Shift+Tab (vrátit odsazení). Seznam jde založit i psaním, na počítači i na telefonu: na začátku řádku napiš „* “ nebo „- “ (hvězdička nebo pomlčka a mezera) pro odrážky, „1. “ (číslo, tečka a mezera) pro číslovaný seznam. Když to nechceš, hned stiskni Backspace a vrátí se obyčejný text. Zapnuté formátování v místě kurzoru má tlačítko podbarvené. V Deníčku je lišta na telefonu pod textem, aby ji nezakrylo menu Kopírovat/Vložit. Do PDF se propíše tučné písmo, kurzíva, seznamy i odsazení.", kw: "tucne kurziva bold italic seznam odrazky cislovani odsazeni formatovani tabulator tab zkratky hvezdicka lista aktivni podbarvene denicek telefon kopirovat" },
       { q: "Co je pole „Popiš cvičení“?", a: "Je to hlavní popis cvičení — nahradilo dřívější rozdělení na krátký a dlouhý popis. Píše se tam, v čem cvičení spočívá, ideálně tak podrobně, aby ho podle toho zvládl vést i kolega, co ho nikdy neviděl." },
       { q: "Proč mi aplikace řekne, ať popis rozepíšu víc, i když jsem něco napsal?", a: "Když je popis hodně krátký (pod pár slov), aplikace se jen jednou zeptá, jestli by nešlo přidat víc detailů, a ukáže konkrétní příklad, jak by to mohlo vypadat. Uložit se dá i tak, jak je — je to jen jemné doporučení, ne povinnost." }
     ]},
@@ -21912,7 +22022,7 @@ const HELP_DATA = [
       { q: "Jak dopíšu trénink zpětně?", a: "V Deníčku ťukni nahoře na „Dopsat trénink“ (na telefonu je to tlačítko s plusem), vyber trénink (jde hledat podle názvu; při hledání se nabídnou i tréninky z Tržiště), nastav den a případně připiš poznámku. Sešit pak nalistuje na stránku, kde záznam je. Druhá cesta vede z editoru tréninku: ťukni na hlavičku žlutého lepíku („odtrénováno 4× · 9. 10.“; u tréninku, který ještě neproběhl, na řádek „Zatím neodtrénováno“) a v Deníčku tohoto tréninku na „Dopsat odtrénování“ (na telefonu plus) — trénink už je vybraný, nastavíš jen den a poznámku.", kw: "dopsat zpetne minuly tyden pridat odtrenovani datum plus" },
       { q: "Jak napíšu nebo opravím poznámku? Kde je tlačítko Uložit?", a: "Žádné není. V Deníčku ťukni na poznámku (nebo na šedé „dopsat poznámku…“) a piš přímo do sešitu. Jakmile ťukneš kamkoli jinam, poznámka se uloží sama a dole se na pár vteřin ukáže „Uloženo“ s tlačítkem „Vrátit“, kdyby to byl omyl. Uloží se i tehdy, když aplikaci zavřeš nebo přepneš jinam. Na počítači klávesa Escape rozepsané změny zahodí.", kw: "poznamka ulozit ulozeni samo automaticky vratit opravit prepsat tlacitko ulozit" },
       { q: "Jak označím, jak se trénink povedl?", a: "Smajlíkem: usměvavý (povedl se), rovný (šlo to), nebo smutný (nepovedl se). Hned po zapsání ho vybereš v kartě „Zapsáno“ nahoře, u tréninku dopsaného zpětně přímo v okně „Dopsat trénink zpětně“. Později v Deníčku: pod datem a dnem na okraji je smajlík, u neohodnoceného tréninku slabý prázdný kroužek — ťukni na něj a vyber z nabídky, nebo zvol „bez hodnocení“. Hodnocení je dobrovolné a vidíš ho jen ty.", kw: "hodnoceni smajlik povedl nepovedl jak to slo usmev kroužek krouzek znamka" },
-      { q: "Jde text poznámky zvýraznit nebo udělat seznam?", a: "Ano, stejně jako u popisu cvičení. Nad rozepsanou poznámkou je lišta: tučně, kurzíva, odrážky, číslovaný seznam a odsazení doleva a doprava. Na počítači fungují i Ctrl+B a Ctrl+I. Lišta je všude, kde se poznámka do Deníčku píše — v sešitu, na kartě po tréninku i v „Dopsat trénink zpětně“.", kw: "tucne kurziva bold italic seznam odrazky cislovani odsazeni formatovani poznamka" },
+      { q: "Jde text poznámky zvýraznit nebo udělat seznam?", a: "Ano, stejně jako u popisu cvičení. Nad rozepsanou poznámkou je lišta: tučně, kurzíva, odrážky, číslovaný seznam a odsazení doleva a doprava. Na počítači fungují i Ctrl+B a Ctrl+I, v seznamu Tab a Shift+Tab pro odsazení. Seznam založíš i psaním: „* “ na začátku řádku udělá odrážky, „1. “ číslovaný seznam. Lišta je všude, kde se poznámka do Deníčku píše — v sešitu, na kartě po tréninku i v „Dopsat trénink zpětně“.", kw: "tucne kurziva bold italic seznam odrazky cislovani odsazeni formatovani poznamka" },
       { q: "Jak změním datum záznamu?", a: "V Deníčku ťukni na datum na okraji a vyber jiný den; sešit pak nalistuje na stránku, kam se záznam přesunul. Datum není nijak zvýrazněné, aby sešit vypadal jako sešit.", kw: "datum zmenit opravit den spatne datum okraj" },
       { q: "Jak smažu záznam?", a: "V Deníčku ťukni na poznámku toho záznamu a vpravo pod ní na koš; aplikace se nejdřív zeptá. Maže se vždy jeden záznam, samotný trénink zůstává. Hned po zapsání jde zápis taky vzít zpět tlačítkem „Vrátit zpět“ přímo na kartě.", kw: "smazat zaznam kos odstranit vratit zpet" },
       { q: "Jak se z Deníčku dostanu k tréninku?", a: "Ťukni v sešitu na název tréninku — otevře se v editoru a tlačítko „Zpět do deníčku“ tě vrátí na stejné místo. Název není nijak zvýrazněný, aby sešit vypadal jako sešit. U tréninku, který už neexistuje, název odkazem není; záznam i poznámka ale zůstávají.", kw: "nazev odkaz otevrit trenink z denicku editor zpet do denicku" },
