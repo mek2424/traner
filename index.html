@@ -2648,6 +2648,7 @@ body.dark-mode .seq-group-video-duration{background:var(--paper);color:var(--cou
           <div class="rte-toolbar">
             <button type="button" class="rte-btn" data-rte-cmd="bold" title="Tučně (Ctrl+B)"><i class="fa-solid fa-bold"></i></button>
       <button type="button" class="rte-btn" data-rte-cmd="italic" title="Kurzíva (Ctrl+I)"><i class="fa-solid fa-italic"></i></button>
+      <button type="button" class="rte-btn" data-rte-cmd="underline" title="Podtržení (Ctrl+U)"><i class="fa-solid fa-underline"></i></button>
       <button type="button" class="rte-btn" data-rte-cmd="insertUnorderedList" title="Odrážky (napiš * a mezeru)"><i class="fa-solid fa-list-ul"></i></button>
             <button type="button" class="rte-btn" data-rte-cmd="insertOrderedList" title="Číslovaný seznam (napiš 1. a mezeru)"><i class="fa-solid fa-list-ol"></i></button>
             <button type="button" class="rte-btn" data-rte-cmd="outdent" title="Zmenšit odsazení (Shift+Tab)"><i class="fa-solid fa-outdent"></i></button>
@@ -2825,6 +2826,7 @@ body.dark-mode .seq-group-video-duration{background:var(--paper);color:var(--cou
         <div class="rte-toolbar">
           <button type="button" class="rte-btn" data-rte-cmd="bold" title="Tučně (Ctrl+B)"><i class="fa-solid fa-bold"></i></button>
       <button type="button" class="rte-btn" data-rte-cmd="italic" title="Kurzíva (Ctrl+I)"><i class="fa-solid fa-italic"></i></button>
+      <button type="button" class="rte-btn" data-rte-cmd="underline" title="Podtržení (Ctrl+U)"><i class="fa-solid fa-underline"></i></button>
       <button type="button" class="rte-btn" data-rte-cmd="insertUnorderedList" title="Odrážky (napiš * a mezeru)"><i class="fa-solid fa-list-ul"></i></button>
           <button type="button" class="rte-btn" data-rte-cmd="insertOrderedList" title="Číslovaný seznam (napiš 1. a mezeru)"><i class="fa-solid fa-list-ol"></i></button>
           <button type="button" class="rte-btn" data-rte-cmd="outdent" title="Zmenšit odsazení (Shift+Tab)"><i class="fa-solid fa-outdent"></i></button>
@@ -4064,7 +4066,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-11-05 12:00";
+const APP_VERSION = "2026-11-05 13:00";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -4819,6 +4821,7 @@ function renderRichField(value, placeholder, attrsHtml, ro, extraClass, toolbarE
     <div class="rte-toolbar">
       <button type="button" class="rte-btn" data-rte-cmd="bold" title="Tučně (Ctrl+B)"><i class="fa-solid fa-bold"></i></button>
       <button type="button" class="rte-btn" data-rte-cmd="italic" title="Kurzíva (Ctrl+I)"><i class="fa-solid fa-italic"></i></button>
+      <button type="button" class="rte-btn" data-rte-cmd="underline" title="Podtržení (Ctrl+U)"><i class="fa-solid fa-underline"></i></button>
       <button type="button" class="rte-btn" data-rte-cmd="insertUnorderedList" title="Odrážky (napiš * a mezeru)"><i class="fa-solid fa-list-ul"></i></button>
       <button type="button" class="rte-btn" data-rte-cmd="insertOrderedList" title="Číslovaný seznam (napiš 1. a mezeru)"><i class="fa-solid fa-list-ol"></i></button>
       <button type="button" class="rte-btn" data-rte-cmd="outdent" title="Zmenšit odsazení (Shift+Tab)"><i class="fa-solid fa-outdent"></i></button>
@@ -16014,16 +16017,16 @@ function flattenRichHtmlToRunLines(html, indentSize) {
   const lines = [];
   function useky(nodes, bezSeznamu) {
     const out = [];
-    (function jdi(list, b, i) {
+    (function jdi(list, b, i, u) {
       list.forEach(nd => {
-        if (nd.nodeType === 3) out.push({ t: nd.textContent, b, i });
+        if (nd.nodeType === 3) out.push({ t: nd.textContent, b, i, u });
         else if (nd.nodeType === 1) {
           if (bezSeznamu && (nd.tagName === "UL" || nd.tagName === "OL")) return;
-          if (nd.tagName === "BR") { out.push({ t: " ", b, i }); return; }
-          jdi([...nd.childNodes], b || /^(B|STRONG)$/.test(nd.tagName), i || /^(I|EM)$/.test(nd.tagName));
+          if (nd.tagName === "BR") { out.push({ t: " ", b, i, u }); return; }
+          jdi([...nd.childNodes], b || /^(B|STRONG)$/.test(nd.tagName), i || /^(I|EM)$/.test(nd.tagName), u || nd.tagName === "U");
         }
       });
-    })(nodes, false, false);
+    })(nodes, false, false, false);
     // Mezery jako u textContent.replace(/\s+/g, " ").trim() — jen přes hranice úseků.
     const r = out.map(x => ({ ...x, t: x.t.replace(/\s+/g, " ") })).filter(x => x.t);
     for (let k = 1; k < r.length; k++) if (r[k - 1].t.endsWith(" ") && r[k].t.startsWith(" ")) r[k].t = r[k].t.slice(1);
@@ -16070,7 +16073,7 @@ function pdfRichTextToWrappedLines(doc, raw, innerW, zaklad) {
     const kusy = [{ t: radek.odsazeni, f: zaklad }];
     radek.useky.forEach(u => {
       const f = pdfPismoUseku(zaklad, u.b, u.i);
-      u.t.split(/( )/).forEach(x => { if (x) kusy.push({ t: x, f }); });
+      u.t.split(/( )/).forEach(x => { if (x) kusy.push({ t: x, f, u: !!u.u }); });
     });
     let akt = [], w = 0;
     const zalom = () => {
@@ -16087,10 +16090,10 @@ function pdfRichTextToWrappedLines(doc, raw, innerW, zaklad) {
         let kus = "";
         for (const ch of k.t) {
           const cw = sirka(kus + ch, k.f);
-          if (w + cw > innerW && (kus || akt.length)) { if (kus) { akt.push({ t: kus, f: k.f }); } zalom(); kus = ch; }
+          if (w + cw > innerW && (kus || akt.length)) { if (kus) { akt.push({ t: kus, f: k.f, u: k.u }); } zalom(); kus = ch; }
           else kus += ch;
         }
-        if (kus) { akt.push({ t: kus, f: k.f }); w += sirka(kus, k.f); }
+        if (kus) { akt.push({ t: kus, f: k.f, u: k.u }); w += sirka(kus, k.f); }
         return;
       }
       akt.push(k); w += kw;
@@ -16099,16 +16102,30 @@ function pdfRichTextToWrappedLines(doc, raw, innerW, zaklad) {
   });
   return out.filter(r => r.length);
 }
-/** Sloučí sousední kusy se stejným písmem. */
+/** Sloučí sousední kusy se stejným písmem a podtržením. */
 function pdfSlozUseky(kusy) {
   const r = [];
-  kusy.forEach(k => { const p = r[r.length - 1]; if (p && p.f === k.f) p.t += k.t; else r.push({ t: k.t, f: k.f }); });
+  kusy.forEach(k => { const p = r[r.length - 1]; if (p && p.f === k.f && !!p.u === !!k.u) p.t += k.t; else r.push({ t: k.t, f: k.f, u: !!k.u }); });
   return r;
 }
 /** Nakreslí jeden řádek s úseky (kolo 24). Barvu a velikost písma nastavuje volající. */
 function pdfKresliRadekUseku(doc, radek, x, y) {
   let xx = x;
-  radek.forEach(u => { doc.setFont("LibSans", u.f); doc.text(u.t, xx, y); xx += doc.getTextWidth(u.t); });
+  radek.forEach(u => {
+    doc.setFont("LibSans", u.f); doc.text(u.t, xx, y);
+    const w = doc.getTextWidth(u.t);
+    if (u.u && u.t.trim()) {
+      // Podtržení (kolo 81): tenká čára v barvě textu kousek pod účařím; mezery na krajích úseku se nepodtrhují.
+      const mm = doc.getFontSize() * 0.3528;
+      const x0 = xx + doc.getTextWidth(u.t.match(/^ */)[0]);
+      const x1 = xx + w - doc.getTextWidth(u.t.match(/ *$/)[0]);
+      const pero = doc.getDrawColor(), tloustka = doc.getLineWidth();
+      doc.setDrawColor(doc.getTextColor()); doc.setLineWidth(mm * 0.06);
+      doc.line(x0, y + mm * 0.14, x1, y + mm * 0.14);
+      doc.setDrawColor(pero); doc.setLineWidth(tloustka);
+    }
+    xx += w;
+  });
 }
 
 /** Jednoduché vektorové ikonky náhradou za FontAwesome (jsPDF neumí kreslit FA glyfy přímo —
@@ -18756,7 +18773,7 @@ document.addEventListener("click", (e) => {
 });
 // Zapnuté formátování (tučně, kurzíva, seznamy) je na liště podbarvené podle místa kurzoru —
 // po klepnutí na tlačítko i při pohybu kurzoru. Ostatní lišty se zhasnou.
-const RTE_STAV = ["bold", "italic", "insertUnorderedList", "insertOrderedList"];
+const RTE_STAV = ["bold", "italic", "underline", "insertUnorderedList", "insertOrderedList"];
 function rteStav() {
   const sel = window.getSelection();
   const n = sel && sel.rangeCount ? sel.anchorNode : null;
@@ -21917,7 +21934,7 @@ const HELP_DATA = [
       { q: "Můžu přidat cvičení bez videa, jen popisem?", a: "Ano, jako textové cvičení. V Knihovně dej Přidat → „Přidat textové cvičení“, vyplň název, popis, složku, štítky a vybavení a můžeš nahrát i ilustrační fotku. Textové cvičení je plnohodnotné: jde hodnotit, komentovat, sdílet odkazem, dávat do tréninků a bere ho i Navrhnout trénink.", kw: "textove cviceni bez videa popis pridat" },
       { q: "Jak poznám video od textového cvičení?", a: "Textové cvičení bez fotky má obrázek s nápisem TEXT, video bez náhledu obrázek s nápisem VIDEO. Přes fotky je dole malý vodoznak VIDEO nebo TEXT a textové cvičení má vpravo dole odznak s řádky textu. V malých náhledech (v tréninku a v panelu videí) má značku jen textové cvičení. Všechna textová cvičení navíc mají štítek „Textové cvičení“, takže je najdeš i filtrem štítků.", kw: "vodoznak text video poznat odznak stitek textove cviceni" },
       { q: "Můžu k textovému cvičení později doplnit video?", a: "Ano. Otevři ho k úpravě a do pole „Odkaz na video“ vlož odkaz. Uložením se z něj stane video a ve všech trénincích, kde je, se začne přehrávat. Funguje to i obráceně: když u videa odkaz smažeš, aplikace se zeptá a udělá z něj textové cvičení.", kw: "doplnit video textove cviceni odkaz zmenit" },
-      { q: "Jak v popisu nebo poznámce zvýrazním text a udělám seznam?", a: "Nad každým polem s delším textem (popis cvičení, poznámky v tréninku, poznámky v Deníčku) je lišta: tučně, kurzíva, odrážky, číslovaný seznam a odsazení doleva a doprava. Označ text a ťukni na tlačítko; na počítači fungují i Ctrl+B a Ctrl+I a v seznamu Tab (odsadit) a Shift+Tab (vrátit odsazení). Seznam jde založit i psaním, na počítači i na telefonu: na začátku řádku napiš „* “ nebo „- “ (hvězdička nebo pomlčka a mezera) pro odrážky, „1. “ (číslo, tečka a mezera) pro číslovaný seznam. Když to nechceš, hned stiskni Backspace a vrátí se obyčejný text. Zapnuté formátování v místě kurzoru má tlačítko podbarvené. V Deníčku je lišta na telefonu pod textem, aby ji nezakrylo menu Kopírovat/Vložit. Do PDF se propíše tučné písmo, kurzíva, seznamy i odsazení.", kw: "tucne kurziva bold italic seznam odrazky cislovani odsazeni formatovani tabulator tab zkratky hvezdicka lista aktivni podbarvene denicek telefon kopirovat" },
+      { q: "Jak v popisu nebo poznámce zvýrazním text a udělám seznam?", a: "Nad každým polem s delším textem (popis cvičení, poznámky v tréninku, poznámky v Deníčku) je lišta: tučně, kurzíva, podtržení, odrážky, číslovaný seznam a odsazení doleva a doprava. Označ text a ťukni na tlačítko; na počítači fungují i Ctrl+B, Ctrl+I a Ctrl+U (podtržení) a v seznamu Tab (odsadit) a Shift+Tab (vrátit odsazení). Seznam jde založit i psaním, na počítači i na telefonu: na začátku řádku napiš „* “ nebo „- “ (hvězdička nebo pomlčka a mezera) pro odrážky, „1. “ (číslo, tečka a mezera) pro číslovaný seznam. Když to nechceš, hned stiskni Backspace a vrátí se obyčejný text. Zapnuté formátování v místě kurzoru má tlačítko podbarvené. V Deníčku je lišta na telefonu pod textem, aby ji nezakrylo menu Kopírovat/Vložit. Do PDF se propíše tučné písmo, kurzíva, podtržení, seznamy i odsazení.", kw: "tucne kurziva podtrzeni underline bold italic seznam odrazky cislovani odsazeni formatovani tabulator tab zkratky hvezdicka lista aktivni podbarvene denicek telefon kopirovat" },
       { q: "Co je pole „Popiš cvičení“?", a: "Je to hlavní popis cvičení — nahradilo dřívější rozdělení na krátký a dlouhý popis. Píše se tam, v čem cvičení spočívá, ideálně tak podrobně, aby ho podle toho zvládl vést i kolega, co ho nikdy neviděl." },
       { q: "Proč mi aplikace řekne, ať popis rozepíšu víc, i když jsem něco napsal?", a: "Když je popis hodně krátký (pod pár slov), aplikace se jen jednou zeptá, jestli by nešlo přidat víc detailů, a ukáže konkrétní příklad, jak by to mohlo vypadat. Uložit se dá i tak, jak je — je to jen jemné doporučení, ne povinnost." }
     ]},
@@ -22022,7 +22039,7 @@ const HELP_DATA = [
       { q: "Jak dopíšu trénink zpětně?", a: "V Deníčku ťukni nahoře na „Dopsat trénink“ (na telefonu je to tlačítko s plusem), vyber trénink (jde hledat podle názvu; při hledání se nabídnou i tréninky z Tržiště), nastav den a případně připiš poznámku. Sešit pak nalistuje na stránku, kde záznam je. Druhá cesta vede z editoru tréninku: ťukni na hlavičku žlutého lepíku („odtrénováno 4× · 9. 10.“; u tréninku, který ještě neproběhl, na řádek „Zatím neodtrénováno“) a v Deníčku tohoto tréninku na „Dopsat odtrénování“ (na telefonu plus) — trénink už je vybraný, nastavíš jen den a poznámku.", kw: "dopsat zpetne minuly tyden pridat odtrenovani datum plus" },
       { q: "Jak napíšu nebo opravím poznámku? Kde je tlačítko Uložit?", a: "Žádné není. V Deníčku ťukni na poznámku (nebo na šedé „dopsat poznámku…“) a piš přímo do sešitu. Jakmile ťukneš kamkoli jinam, poznámka se uloží sama a dole se na pár vteřin ukáže „Uloženo“ s tlačítkem „Vrátit“, kdyby to byl omyl. Uloží se i tehdy, když aplikaci zavřeš nebo přepneš jinam. Na počítači klávesa Escape rozepsané změny zahodí.", kw: "poznamka ulozit ulozeni samo automaticky vratit opravit prepsat tlacitko ulozit" },
       { q: "Jak označím, jak se trénink povedl?", a: "Smajlíkem: usměvavý (povedl se), rovný (šlo to), nebo smutný (nepovedl se). Hned po zapsání ho vybereš v kartě „Zapsáno“ nahoře, u tréninku dopsaného zpětně přímo v okně „Dopsat trénink zpětně“. Později v Deníčku: pod datem a dnem na okraji je smajlík, u neohodnoceného tréninku slabý prázdný kroužek — ťukni na něj a vyber z nabídky, nebo zvol „bez hodnocení“. Hodnocení je dobrovolné a vidíš ho jen ty.", kw: "hodnoceni smajlik povedl nepovedl jak to slo usmev kroužek krouzek znamka" },
-      { q: "Jde text poznámky zvýraznit nebo udělat seznam?", a: "Ano, stejně jako u popisu cvičení. Nad rozepsanou poznámkou je lišta: tučně, kurzíva, odrážky, číslovaný seznam a odsazení doleva a doprava. Na počítači fungují i Ctrl+B a Ctrl+I, v seznamu Tab a Shift+Tab pro odsazení. Seznam založíš i psaním: „* “ na začátku řádku udělá odrážky, „1. “ číslovaný seznam. Lišta je všude, kde se poznámka do Deníčku píše — v sešitu, na kartě po tréninku i v „Dopsat trénink zpětně“.", kw: "tucne kurziva bold italic seznam odrazky cislovani odsazeni formatovani poznamka" },
+      { q: "Jde text poznámky zvýraznit nebo udělat seznam?", a: "Ano, stejně jako u popisu cvičení. Nad rozepsanou poznámkou je lišta: tučně, kurzíva, podtržení, odrážky, číslovaný seznam a odsazení doleva a doprava. Na počítači fungují i Ctrl+B, Ctrl+I a Ctrl+U, v seznamu Tab a Shift+Tab pro odsazení. Seznam založíš i psaním: „* “ na začátku řádku udělá odrážky, „1. “ číslovaný seznam. Lišta je všude, kde se poznámka do Deníčku píše — v sešitu, na kartě po tréninku i v „Dopsat trénink zpětně“.", kw: "tucne kurziva podtrzeni underline bold italic seznam odrazky cislovani odsazeni formatovani poznamka" },
       { q: "Jak změním datum záznamu?", a: "V Deníčku ťukni na datum na okraji a vyber jiný den; sešit pak nalistuje na stránku, kam se záznam přesunul. Datum není nijak zvýrazněné, aby sešit vypadal jako sešit.", kw: "datum zmenit opravit den spatne datum okraj" },
       { q: "Jak smažu záznam?", a: "V Deníčku ťukni na poznámku toho záznamu a vpravo pod ní na koš; aplikace se nejdřív zeptá. Maže se vždy jeden záznam, samotný trénink zůstává. Hned po zapsání jde zápis taky vzít zpět tlačítkem „Vrátit zpět“ přímo na kartě.", kw: "smazat zaznam kos odstranit vratit zpet" },
       { q: "Jak se z Deníčku dostanu k tréninku?", a: "Ťukni v sešitu na název tréninku — otevře se v editoru a tlačítko „Zpět do deníčku“ tě vrátí na stejné místo. Název není nijak zvýrazněný, aby sešit vypadal jako sešit. U tréninku, který už neexistuje, název odkazem není; záznam i poznámka ale zůstávají.", kw: "nazev odkaz otevrit trenink z denicku editor zpet do denicku" },
