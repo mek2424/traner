@@ -851,6 +851,14 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .chip-vse{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:6px;padding:6px 0 2px;border:0;
   border-top:1px solid var(--line);background:none;color:var(--court);font-size:12px;font-weight:700;}
 .chip-vse i{font-size:10px;}
+/* Kolo 31 (Mek 8. 11.: C + A): přepínač Video | Text nahoře ve formuláři „Přidat cvičení“.
+   Na Textu se schová všechno, co patří jen videu (odkaz, varování k odkazu, návrhy náhledu). */
+.druh-prepinac{display:flex;gap:4px;padding:4px;margin:0 0 14px;border:1px solid var(--line);border-radius:999px;background:var(--paper);}
+.druh-prepinac button{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;border:0;border-radius:999px;padding:8px 0;
+  background:none;font-size:14px;font-weight:700;color:var(--ink-soft);}
+.druh-prepinac button.on{background:var(--court);color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.18);}
+#linkForm.druh-text #linkUrlField,#linkForm.druh-text #fbShareWarning,#linkForm.druh-text #duplicateWarning,
+#linkForm.druh-text #thumbSuggestions{display:none !important;}
 .chip-collapse.chip-panel-card.open.ma-vse{max-height:182px;}
 .chip-collapse.chip-panel-card.open.vse{max-height:none;}
 .chip-collapse.chip-panel-card.vse .chip-panel-scroll{max-height:none;}
@@ -2419,8 +2427,7 @@ body.dark-mode .seq-group-video-duration{background:var(--paper);color:var(--cou
       <div class="add-link-menu-wrap" id="addLinkMenuWrap">
         <button class="btn btn-accent" id="openAddLinkMenuBtn"><i class="fa-solid fa-cloud-arrow-up"></i> <span class="add-link-btn-label">Přidat</span> <i class="fa-solid fa-chevron-down add-link-btn-chevron"></i></button>
         <div class="add-link-menu hidden" id="addLinkMenu">
-          <button type="button" class="add-link-item" id="openAddLinkBtn"><i class="fa-solid fa-link add-link-icon"></i><span class="add-link-label">Přidat odkaz</span></button>
-          <button type="button" class="add-link-item" id="openAddTextBtn"><i class="fa-solid fa-align-left add-link-icon"></i><span class="add-link-label">Přidat textové cvičení</span></button>
+          <button type="button" class="add-link-item" id="openAddLinkBtn"><i class="fa-solid fa-plus add-link-icon"></i><span class="add-link-label">Přidat cvičení</span></button>
           <button type="button" class="add-link-item hidden" id="openBulkDriveBtn"><i class="fa-brands fa-google-drive add-link-icon"></i><span class="add-link-label">Hromadně ze složky Disku</span></button>
         </div>
       </div>
@@ -2603,6 +2610,7 @@ body.dark-mode .seq-group-video-duration{background:var(--paper);color:var(--cou
       <button class="btn btn-icon btn-ghost" id="closeLinkModalBtn"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <form id="linkForm">
+      <div class="druh-prepinac hidden" id="druhPrepinac" role="tablist" aria-label="Druh cvičení"><button type="button" role="tab" data-druh="video"><i class="fa-solid fa-video"></i> Video</button><button type="button" role="tab" data-druh="text"><i class="fa-solid fa-align-left"></i> Text</button></div>
       <div class="duplicate-warning hidden" id="viewerLockNotice" style="background:var(--info-bg);border-color:var(--info-border);color:var(--info-ink);">
         <i class="fa-solid fa-eye"></i>
         <span>Jako prohlížeč můžeš upravit jen svoje hodnocení a obtížnost — zbytek je jen ke čtení. Komentovat můžeš v detailu videa.</span>
@@ -4074,7 +4082,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-11-08 22:27";
+const APP_VERSION = "2026-11-08 23:47";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -4640,7 +4648,7 @@ const isEditor = () => state.myRole !== "viewer";
     prohlížeč knihovnu jen čte a tvoří si vlastní tréninky. */
 function applyRoleUI() {
   const editor = isEditor();
-  ["openAddLinkMenuBtn", "openAddLinkBtn", "openAddTextBtn", "toggleSelectModeBtn", "openTrashBtn", "openBulkDriveBtn"]
+  ["openAddLinkMenuBtn", "openAddLinkBtn", "toggleSelectModeBtn", "openTrashBtn", "openBulkDriveBtn"]
     .forEach(id => { const el = document.getElementById(id); if (el) el.classList.toggle("hidden", !editor); });
   /* Tyhle tři ovlivňují úplně všechny trenéry najednou — barvy a pořadí složek, sloučení
      štítku napříč celou knihovnou, části tréninku v PDF. Proto je smí jen admin, ne každý
@@ -8086,8 +8094,68 @@ document.addEventListener("click", (e) => {
   const menu = document.getElementById("addLinkMenu");
   if (!menu.classList.contains("hidden") && !e.target.closest(".add-link-menu-wrap")) setAddLinkMenuOpen(false);
 });
-document.getElementById("openAddLinkBtn").addEventListener("click", () => { setAddLinkMenuOpen(false); openLinkModal(null); });
-document.getElementById("openAddTextBtn").addEventListener("click", () => { setAddLinkMenuOpen(false); openLinkModal(null, { text: true }); });
+// Kolo 31: jedna položka „Přidat cvičení“ — video i textové cvičení, volí se přepínačem ve formuláři.
+document.getElementById("openAddLinkBtn").addEventListener("click", () => { setAddLinkMenuOpen(false); openLinkModal(null, { prepinac: true }); });
+/* Kolo 31 (Mek 8. 11.: C + A): „Přidat cvičení“ z nabídky „+“ má nahoře přepínač Video | Text.
+   Video = dosavadní „Přidat odkaz“ (odkaz povinný), Text = dosavadní textové cvičení, ale bez pole
+   pro odkaz (kdo chce video, přepne). Přepnutí nic nesmaže: odkaz a obrázek načtený z videa se na
+   Textu jen odloží a na Videu se vrátí; název, popis, štítky, vlastní nahraná fotka… zůstávají.
+   Při úpravě, tipu, zařazení tipu a „Uložit do knihovny“ z tréninku přepínač není. */
+let druhPrepinacAktivni = false;
+let druhOdlozeno = null; // co patří Videu, když je zapnutý Text: { url, meta, platform, videoId, thumb?, bg?, html? }
+/** Odloží z formuláře to, co patří jen Videu (odkaz, platformu, obrázek z videa). Volá se při přepnutí
+    na Text a znovu po dokončení načítání údajů o videu, kdyby trenér přepnul dřív, než doběhlo —
+    načítání by jinak vrátilo odkaz do skrytého pole a textové cvičení by se uložilo jako video. */
+function odlozVideo() {
+  const urlEl = document.getElementById("linkUrl"), tp = document.getElementById("thumbPreview");
+  const o = druhOdlozeno || { url: "", meta: metaFetchedForUrl, platform: "", videoId: "" };
+  if (urlEl.value) { o.url = urlEl.value; o.meta = metaFetchedForUrl; urlEl.value = ""; }
+  if (tp.dataset.platform) { o.platform = tp.dataset.platform; tp.dataset.platform = ""; }
+  if (tp.dataset.videoId) { o.videoId = tp.dataset.videoId; tp.dataset.videoId = ""; }
+  if (!pendingThumbUpload && tp.dataset.thumb) {
+    Object.assign(o, { thumb: tp.dataset.thumb, bg: tp.style.backgroundImage, html: tp.innerHTML });
+    tp.dataset.thumb = "";
+    tp.style.backgroundImage = "none";
+    tp.innerHTML = PH_TEXT_SVG;
+  }
+  druhOdlozeno = o;
+}
+function nastavDruhCviceni(druh) {
+  const text = druh === "text";
+  const urlEl = document.getElementById("linkUrl"), tp = document.getElementById("thumbPreview");
+  if (text && !linkFormText) {
+    odlozVideo();
+  } else if (!text && linkFormText) {
+    const o = druhOdlozeno;
+    druhOdlozeno = null;
+    if (o) {
+      urlEl.value = o.url;
+      metaFetchedForUrl = o.meta;
+      tp.dataset.platform = o.platform;
+      tp.dataset.videoId = o.videoId;
+      if (o.thumb !== undefined && !pendingThumbUpload) {
+        tp.dataset.thumb = o.thumb;
+        tp.style.backgroundImage = o.bg;
+        tp.innerHTML = o.html;
+      }
+    }
+  }
+  linkFormText = text;
+  document.getElementById("linkForm").classList.toggle("druh-text", text);
+  document.querySelectorAll("#druhPrepinac button").forEach(b => {
+    const on = b.dataset.druh === (text ? "text" : "video");
+    b.classList.toggle("on", on);
+    b.setAttribute("aria-selected", on ? "true" : "false");
+  });
+  document.getElementById("linkLongDesc").dataset.placeholder = text
+    ? "Popiš cvičení tak, aby ho podle textu zvládl vést i kolega, který ho nikdy neviděl."
+    : pickRandomDescPlaceholder();
+  aktualizujTextovyRezimFormulare();
+  updateFbShareWarning();
+}
+document.querySelectorAll("#druhPrepinac button").forEach(b => b.addEventListener("click", () => {
+  if (b.dataset.druh !== (linkFormText ? "text" : "video")) nastavDruhCviceni(b.dataset.druh);
+}));
 document.getElementById("closeLinkModalBtn").addEventListener("click", closeLinkModal);
 // Kliknutí mimo formulář ho záměrně nezavírá (na rozdíl od ostatních oken aplikace) — u
 // rozepsaného přidávání/úpravy videa by to jinak snadno vedlo k nechtěné ztrátě práce.
@@ -8141,8 +8209,8 @@ function openLinkModal(id, opts) {
   pendingThumbUpload = null;
   document.getElementById("thumbFileInput").value = "";
   const item = id ? state.library[id] : null;
-  // Textové cvičení (kolo 2): upravované bez odkazu, nové z „Přidat textové cvičení“ nebo
-  // z tréninku, zařazovaný tip bez odkazu.
+  // Textové cvičení (kolo 2): upravované bez odkazu, nové z „Přidat cvičení“ → Text (kolo 31)
+  // nebo z tréninku, zařazovaný tip bez odkazu.
   linkFormText = item ? jeTextove(item)
     : (linkModalMode === "approve" ? !String((approvingTip && approvingTip.url) || "").trim() : !!opts.text);
   linkFormZTreninku = (!item && opts.zTreninku) ? opts.zTreninku : null;
@@ -8283,6 +8351,15 @@ function openLinkModal(id, opts) {
     document.getElementById("popoutLinkBtn").classList.add("hidden");
   } else {
     submitBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Uložit';
+  }
+  // Kolo 31: přepínač Video | Text jen u „Přidat cvičení“ z nabídky „+“; začíná se na Videu.
+  druhPrepinacAktivni = !item && linkModalMode === "normal" && !!opts.prepinac && !linkFormZTreninku;
+  druhOdlozeno = null;
+  document.getElementById("druhPrepinac").classList.toggle("hidden", !druhPrepinacAktivni);
+  document.getElementById("linkForm").classList.remove("druh-text");
+  if (druhPrepinacAktivni) {
+    nastavDruhCviceni("video");
+    document.getElementById("linkModalTitle").textContent = "Přidat cvičení";
   }
 
   linkModalBackdrop.classList.remove("hidden");
@@ -8526,6 +8603,8 @@ async function fetchLinkMeta() {
   } finally {
     fetchMetaInProgress = false;
     btn.disabled = false;
+    // Kolo 31: trenér mezitím přepnul na Text → co se dotáhlo k videu, patří Videu, ne textovému cvičení.
+    if (druhPrepinacAktivni && linkFormText) odlozVideo();
   }
 }
 document.getElementById("fetchMetaBtn").addEventListener("click", () => { fetchLinkMeta(); });
@@ -22003,11 +22082,11 @@ const HELP_DATA = [
   ]},
   { group: "Knihovna videí", blocks: [
     { title: "Přidávání videí", icon: "fa-solid fa-plus", qa: [
-      { q: "Jak přidám nové video do knihovny?", a: "V Knihovně klikni na tlačítko pro přidání a vlož odkaz na video. Aplikace platformu (YouTube, Google Drive, Facebook, Instagram, TikTok) pozná sama podle adresy a hned po vložení si sama načte název, náhled i tvar videa. Kdyby se to nepovedlo, klepni na „Načíst znovu“ vedle odkazu." },
+      { q: "Jak přidám nové video do knihovny?", a: "V Knihovně dej Přidat → „Přidat cvičení“, nahoře nech „Video“ a vlož odkaz na video. Aplikace platformu (YouTube, Google Drive, Facebook, Instagram, TikTok) pozná sama podle adresy a hned po vložení si sama načte název, náhled i tvar videa. Kdyby se to nepovedlo, klepni na „Načíst znovu“ vedle odkazu." },
       { q: "Co je „Výchozí část tréninku“ a co když ji nevyberu?", a: "Určuje, do které části tréninku video spadne, když ho do tréninku přidáš. Když necháš „— vyber —“, přidá se do stejné části jako poslední cvičení v tréninku (přestávky se přeskakují), v prázdném tréninku do první části. V tréninku ho pak můžeš kdykoli přehodit.", kw: "vychozi cast treninku vyber nezaraditelne" },
       { q: "Jaké odkazy/platformy aplikace podporuje?", a: "YouTube, Google Drive, Facebook, Instagram a TikTok. U videí, která nejdou vložit žádnou z těchhle cest, jde použít i platformu „Soubor“ (přímý odkaz na video)." },
       { q: "Proč mi nejde vložit sdílený odkaz z Facebooku?", a: "Krátké odkazy typu „/share/…“, které dává aplikace Facebook, Trenér neumí — Facebook je přehrát nedovolí a rozbalit je umí jen jeho vlastní aplikace nebo prohlížeč. Pod odkazem se v tu chvíli ukáže upozornění. Otevři reel v Chromu (ne v aplikaci Facebook) a sdílej ho odtamtud, nebo zkopíruj adresu, která obsahuje „/reel/“ a dlouhé číslo." },
-      { q: "Můžu přidat cvičení bez videa, jen popisem?", a: "Ano, jako textové cvičení. V Knihovně dej Přidat → „Přidat textové cvičení“, vyplň název, popis, složku, štítky a vybavení a můžeš nahrát i ilustrační fotku. Textové cvičení je plnohodnotné: jde hodnotit, komentovat, sdílet odkazem, dávat do tréninků a bere ho i Navrhnout trénink.", kw: "textove cviceni bez videa popis pridat" },
+      { q: "Můžu přidat cvičení bez videa, jen popisem?", a: "Ano, jako textové cvičení. V Knihovně dej Přidat → „Přidat cvičení“ a nahoře přepni na „Text“. Vyplň název, popis, složku, štítky a vybavení a můžeš nahrát i ilustrační fotku. Když si to rozmyslíš, přepni zpátky na „Video“ — nic z vyplněného se neztratí. Textové cvičení je plnohodnotné: jde hodnotit, komentovat, sdílet odkazem, dávat do tréninků a bere ho i Navrhnout trénink.", kw: "textove cviceni bez videa popis pridat" },
       { q: "Jak poznám video od textového cvičení?", a: "Textové cvičení bez fotky má obrázek s nápisem TEXT, video bez náhledu obrázek s nápisem VIDEO. Přes fotky je dole malý vodoznak VIDEO nebo TEXT a textové cvičení má vpravo dole odznak s řádky textu. V malých náhledech (v tréninku a v panelu videí) má značku jen textové cvičení. Všechna textová cvičení navíc mají štítek „Textové cvičení“, takže je najdeš i filtrem štítků.", kw: "vodoznak text video poznat odznak stitek textove cviceni" },
       { q: "Můžu k textovému cvičení později doplnit video?", a: "Ano. Otevři ho k úpravě a do pole „Odkaz na video“ vlož odkaz. Uložením se z něj stane video a ve všech trénincích, kde je, se začne přehrávat. Funguje to i obráceně: když u videa odkaz smažeš, aplikace se zeptá a udělá z něj textové cvičení.", kw: "doplnit video textove cviceni odkaz zmenit" },
       { q: "Jak v popisu nebo poznámce zvýrazním text a udělám seznam?", a: "Nad každým polem s delším textem (popis cvičení, poznámky v tréninku, poznámky v Deníčku) je lišta: tučně, kurzíva, podtržení, odrážky, číslovaný seznam a odsazení doleva a doprava. Označ text a ťukni na tlačítko; na počítači fungují i Ctrl+B, Ctrl+I a Ctrl+U (podtržení) a v seznamu Tab (odsadit) a Shift+Tab (vrátit odsazení). Seznam jde založit i psaním, na počítači i na telefonu: na začátku řádku napiš „* “ nebo „- “ (hvězdička nebo pomlčka a mezera) pro odrážky, „1. “ (číslo, tečka a mezera) pro číslovaný seznam. Když to nechceš, hned stiskni Backspace a vrátí se obyčejný text. Zapnuté formátování v místě kurzoru má tlačítko podbarvené. V Deníčku je lišta na telefonu pod textem, aby ji nezakrylo menu Kopírovat/Vložit. Do PDF se propíše tučné písmo, kurzíva, podtržení, seznamy i odsazení.", kw: "tucne kurziva podtrzeni underline bold italic seznam odrazky cislovani odsazeni formatovani tabulator tab zkratky hvezdicka lista aktivni podbarvene denicek telefon kopirovat" },
