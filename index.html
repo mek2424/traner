@@ -846,6 +846,14 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
   border-radius:var(--radius-sm);font-size:12.5px;background:var(--paper);color:var(--ink);
 }
 .chip-search-input:focus{outline:2px solid var(--court);outline-offset:1px;border-color:var(--court);}
+/* Kolo 30 (Mek 8. 11.: A, všude): když se seznam do dvou řádků nevejde, pod ním je „Vše“ — rozbalí
+   celý seznam bez posouvání, „Méně“ ho zase zmenší. Tlačítko přidává chipPanelVse(). */
+.chip-vse{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:6px;padding:6px 0 2px;border:0;
+  border-top:1px solid var(--line);background:none;color:var(--court);font-size:12px;font-weight:700;}
+.chip-vse i{font-size:10px;}
+.chip-collapse.chip-panel-card.open.ma-vse{max-height:182px;}
+.chip-collapse.chip-panel-card.open.vse{max-height:none;}
+.chip-collapse.chip-panel-card.vse .chip-panel-scroll{max-height:none;}
 
 #bulkActionBar{
   display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--paper);border:1px solid var(--line);
@@ -4066,7 +4074,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-11-05 13:00";
+const APP_VERSION = "2026-11-08 22:27";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -7927,7 +7935,42 @@ function setupFilterToggle(btnId, collapseId) {
   btn.addEventListener("click", () => {
     const open = collapse.classList.toggle("open");
     btn.classList.toggle("open", open);
+    // Kolo 30: zavřený panel se příště otevře zase na dva řádky.
+    if (!open && collapse.classList.contains("vse")) {
+      collapse.classList.remove("vse");
+      collapse.querySelectorAll(".chip-panel-scroll").forEach(chipPanelVse);
+    }
   });
+}
+/* Kolo 30 (Mek 8. 11.: A, všude): pod panelem štítků, vybavení nebo jmen je „Vše“, když se seznam
+   do dvou řádků nevejde; rozbalí ho celý, „Méně“ ho zase zmenší. */
+function chipPanelVse(row) {
+  const col = row.closest(".chip-collapse"), inner = row.parentElement;
+  if (!col || !inner || !row.clientHeight) return;
+  const rozbaleno = col.classList.contains("vse");
+  if (!row.dataset.limit && !rozbaleno) row.dataset.limit = parseFloat(getComputedStyle(row).maxHeight) || 76;
+  let btn = inner.querySelector(":scope > .chip-vse");
+  if (row.scrollHeight <= (+row.dataset.limit || 76) + 1) {
+    if (btn) btn.remove();
+    col.classList.remove("vse", "ma-vse");
+    return;
+  }
+  if (!btn) {
+    btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "chip-vse";
+    btn.addEventListener("click", () => { col.classList.toggle("vse"); chipPanelVse(row); });
+    inner.appendChild(btn);
+  }
+  col.classList.add("ma-vse");
+  btn.innerHTML = rozbaleno ? `Méně <i class="fa-solid fa-chevron-up"></i>` : `Vše <i class="fa-solid fa-chevron-down"></i>`;
+  btn.setAttribute("aria-expanded", rozbaleno ? "true" : "false");
+}
+// Stačí hlídat velikost řádku: změna obsahu, která rozhoduje o „Vše“, vždycky změní i jeho výšku
+// (víc než dva řádky = pevná výška, méně = menší), a skrytý panel se změří, až se ukáže.
+if (window.ResizeObserver) {
+  const ro = new ResizeObserver(zaznamy => zaznamy.forEach(z => chipPanelVse(z.target)));
+  document.querySelectorAll(".chip-panel-card .chip-panel-scroll").forEach(row => ro.observe(row));
 }
 setupFilterToggle("toggleTagFilterBtn", "tagFilterCollapse");
 setupFilterToggle("toggleEquipFilterBtn", "equipFilterCollapse");
@@ -8579,6 +8622,8 @@ function addEquip(v) {
 /** zavritPoPridani (jen hromadná úprava videí): po přidání položky se nabídka schová a znovu
     se otevře až psaním. Jinak by po přidání štítku zůstala viset přes tlačítko „Použít na
     vybraná videa“ — formulář videa má pod poli dost místa, tam se nabídka nechává otevřená. */
+/** Kolo 30: o kolik px se smí prst při ťuknutí na položku nabídky pohnout, aby to ještě bylo ťuknutí. */
+const NABIDKA_POSUN_PX = 10;
 function setupAutocomplete(inputId, dropId, getPool, getCurrent, addFn, orderFn, zavritPoPridani) {
   const input = document.getElementById(inputId);
   const drop = document.getElementById(dropId);
@@ -8629,13 +8674,33 @@ function setupAutocomplete(inputId, dropId, getPool, getCurrent, addFn, orderFn,
     if (input.value.trim()) { commit(input.value); input.value = ""; }
     drop.classList.add("hidden");
   }, 200));
+  // Kolo 30 (Mek 8. 11.: A): položka se přidá až po zvednutí prstu, a jen když se prst mezitím
+  // nepohnul. Dřív se přidávala hned při dotyku — a posouvání nabídky prstem začíná stejným
+  // dotykem, takže se štítek přidal omylem. Posun prohlížeč ohlásí pointercancel nebo pohybem.
+  let stisk = null;
+  const pridej = (btn) => { addFn(btn.dataset.v); input.value = ""; poPridani(); };
   drop.addEventListener("pointerdown", (e) => {
+    stisk = null;
     const btn = e.target.closest("button[data-v]");
     if (!btn) return;
     e.preventDefault(); // ať input neztratí focus (jinak by blur schoval nabídku dřív, než stihne proběhnout klik)
-    addFn(btn.dataset.v);
-    input.value = "";
-    poPridani();
+    stisk = { btn, x: e.clientX, y: e.clientY, id: e.pointerId };
+  });
+  drop.addEventListener("pointermove", (e) => {
+    if (stisk && e.pointerId === stisk.id && Math.hypot(e.clientX - stisk.x, e.clientY - stisk.y) > NABIDKA_POSUN_PX) stisk = null;
+  });
+  drop.addEventListener("pointercancel", () => { stisk = null; });
+  drop.addEventListener("pointerup", (e) => {
+    const s = stisk;
+    stisk = null;
+    if (!s || e.pointerId !== s.id || e.target.closest("button[data-v]") !== s.btn) return;
+    if (Math.hypot(e.clientX - s.x, e.clientY - s.y) > NABIDKA_POSUN_PX) return;
+    pridej(s.btn);
+  });
+  // Klávesnice (Tab na položku a Enter) pošle jen click bez pointerdown.
+  drop.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-v]");
+    if (btn && e.detail === 0) pridej(btn);
   });
   return showMatches;
 }
@@ -21379,6 +21444,17 @@ function closeFolderSidebar() {
   folderSidebarBackdrop.classList.add("hidden");
 }
 document.getElementById("closeFolderSidebarBtn").addEventListener("click", closeFolderSidebar);
+/* Kolo 30 (Mek 8. 11.: A, A): ťuknutí prstem vedle panelu Složky ho zavře — jen zavře, nic pod
+   ztmavením se neklikne. Výjimka jen pro dotyk: myší se okna v aplikaci klepnutím vedle nezavírají. */
+let slozkyVedleDotyk = false;
+folderSidebarBackdrop.addEventListener("pointerdown", (e) => {
+  slozkyVedleDotyk = e.target === folderSidebarBackdrop && e.pointerType !== "mouse";
+});
+folderSidebarBackdrop.addEventListener("click", (e) => {
+  const zavrit = slozkyVedleDotyk && e.target === folderSidebarBackdrop;
+  slozkyVedleDotyk = false;
+  if (zavrit) closeFolderSidebar();
+});
 document.getElementById("folderRowAll").addEventListener("click", () => {
   activeFolderFilter = null;
   clearTagEquipFilters();
@@ -21961,7 +22037,7 @@ const HELP_DATA = [
       { q: "Aplikace napsala, že se část mých tréninků načetla až teď. Co to bylo?", a: "Při přihlášení se občas stane, že server vrátí neúplný seznam tvých tréninků a netváří se přitom, že by něco selhalo. Aplikace si toho teď všimne sama a chybějící tréninky dotáhne — hláška je jen upozornění, že se seznam mezitím doplnil. Nic se neztratilo a nemusíš nic dělat.", kw: "neuplny seznam treninku nacetly se pozdeji" },
       { q: "Jak na Tržišti najdu tréninky od konkrétního trenéra?", a: "Nad seznamem je vedle „Štítky“ tlačítko „Trenér“ — rozbalí se seznam všech, kdo na Tržiště něco dali, i s počtem tréninků. Klepnutím na jméno se seznam zúží; můžeš zaškrtnout i víc trenérů najednou a uvidíš tréninky od kohokoli z nich. Je to stejné jako „Kdo nahrál“ v Knihovně. Jméno trenéra navíc zabírá i obyčejné hledání — stačí ho napsat do políčka nahoře.", kw: "trziste filtr trener autor kdo" },
       { q: "Jak se hledá v trénincích, když nevím, ve kterém zaměření trénink je?", a: "Stačí začít psát do hledání nad dlaždicemi — dlaždice ustoupí a ukáže se rovnou seznam všeho, co sedí, napříč všemi zaměřeními. Modrým pruhem „Zpátky na zaměření“ se vrátíš k dlaždicím. Když hledáš uvnitř otevřeného zaměření, hledá se nejdřív jen v něm a aplikace ti sama nabídne „Hledat ve všech zaměřeních“, kdyby toho bylo víc jinde.", kw: "hledani treninky zamereni napric" },
-      { q: "Musím při psaní štítku trefit přesnou diakritiku, aby se mi nabídl ten správný?", a: "Ne — když píšeš štítek nebo vybavení do pole při úpravě videa, nabídka existujících hledá bez ohledu na diakritiku. Stačí napsat „mic“ a najde se i „Míč“.", kw: "diakritika hacky carky bez" }
+      { q: "Musím při psaní štítku trefit přesnou diakritiku, aby se mi nabídl ten správný?", a: "Ne — když píšeš štítek nebo vybavení do pole při úpravě videa, nabídka existujících hledá bez ohledu na diakritiku. Stačí napsat „mic“ a najde se i „Míč“. Nabídku můžeš klidně posouvat prstem — štítek se přidá, až když na něj ťukneš.", kw: "diakritika hacky carky bez posouvat nabidka omylem" }
     ]},
     { title: "Práce s víc videi najednou", icon: "fa-solid fa-square-check", qa: [
       { q: "Jak upravím víc videí najednou (přesun do složky, štítky, smazání)?", a: "V Knihovně zapni tlačítko „Vybrat více“, označ videa, co chceš upravit, a dole se objeví lišta s hromadnými akcemi — „Upravit vybraná“ (ikona štítku: přidání štítků a vybavení), přesun do složky nebo přesun do koše.", kw: "hromadne upravit vybrana stitky vybaveni" },
@@ -21970,7 +22046,7 @@ const HELP_DATA = [
     ]},
     { title: "Hledání a filtrování", icon: "fa-solid fa-magnifying-glass", qa: [
       { q: "Jak najdu konkrétní video v knihovně?", a: "Použij vyhledávací pole nahoře — hledá podle názvu, štítku i složky zároveň, živě při psaní." },
-      { q: "Jak si knihovnu vyfiltruju podle složky, štítku nebo obtížnosti?", a: "V horní liště Knihovny jsou filtry pro složku a řazení (mimo jiné podle obtížnosti od nejsnazší po nejtěžší)." },
+      { q: "Jak si knihovnu vyfiltruju podle složky, štítku nebo obtížnosti?", a: "V horní liště Knihovny jsou filtry pro složku a řazení (mimo jiné podle obtížnosti od nejsnazší po nejtěžší). Panel se složkami zavřeš křížkem, na telefonu nebo tabletu i ťuknutím vedle něj. Štítky a Vybavení se rozbalí ťuknutím; když se do dvou řádků nevejdou, ťukni dole na „Vše“ a ukážou se všechny najednou („Méně“ je zase schová). Stejně to funguje ve filtrech Tréninků a při výběru cvičení do tréninku.", kw: "vse mene rozbalit vsechny stitky panel slozky zavrit tuknout vedle" },
       { q: "Jak vyfiltruju knihovnu podle toho, kdo video nahrál?", a: "V horní liště Knihovny je vedle Štítků a Vybavení i filtr „Kdo nahrál“ — rozbalí seznam kolegů, co do knihovny něco přidali, a jde podle nich filtrovat stejně jako podle štítků.", kw: "autor nahral kolega filtr" },
       { q: "Co znamená hvězdička/oblíbené u cvičení?", a: "Označíš si jí cvičení, ke kterému se chceš rychle vracet — dá se pak filtrovat jen na oblíbená, hlavně při výběru cvičení do tréninku. V Knihovně ji přidáš nebo odebereš ťuknutím na hvězdičku na kartě, v nabídce ⋮, nebo dlouhým podržením karty (na počítači pravým tlačítkem myši). Hvězdičky jsou jen tvoje: nikdo jiný je nevidí a nikomu jinému se tím nic nezmění. Dát si je může každý, i prohlížeč. Když cvičení upravíš, hvězdička u něj zůstane. Oblíbená cvičení mají taky přednost v Osvědčeném návrhu tréninku.", kw: "hvezdicka oblibene oblibena cviceni video filtr moje osobni" },
       { q: "Jak přepnu knihovnu ze dlaždic na seznam?", a: "V horní liště Knihovny je přepínač zobrazení mezi mřížkou (dlaždice) a seznamem — na počítači, na mobilu zůstává jen mřížka." }
