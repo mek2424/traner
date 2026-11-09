@@ -874,6 +874,11 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .orez-ram{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;border-radius:var(--radius-sm);background:#000;
   box-shadow:0 0 0 2px var(--line);touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;}
 .orez-ram img,.fotka-cela img{position:absolute;left:0;top:0;transform-origin:0 0;max-width:none;user-select:none;-webkit-user-drag:none;pointer-events:none;}
+/* Kolo 38: „Pruhy“ — rozmazaná fotka za obrázkem v rámu ořezu (uložený výsledek ji kreslí sám, viz orezVystup). */
+.orez-pruhy-bg{position:absolute;inset:-24px;background-position:center;background-size:cover;filter:blur(14px) brightness(.85);pointer-events:none;}
+.orez-pruhy-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px;}
+.orez-pruhy-row label{margin:0;text-transform:none;font-size:13px;letter-spacing:0;font-weight:500;display:flex;align-items:center;gap:8px;}
+.orez-pruhy-row label i{color:var(--court);}
 #fotkaCelaBackdrop{z-index:645;background:rgba(8,10,12,.94);touch-action:none;overflow:hidden;}
 .fotka-cela-zavrit{position:absolute;top:calc(10px + env(safe-area-inset-top));right:10px;z-index:2;width:44px;height:44px;border-radius:50%;
   border:0;background:rgba(0,0,0,.55);color:#fff;font-size:20px;}
@@ -2925,10 +2930,14 @@ body.dark-mode .seq-group-video-duration{background:var(--paper);color:var(--cou
       <h2 style="font-size:22px;">Ořez fotky</h2>
       <button class="btn btn-icon btn-ghost" id="orezZavritBtn" aria-label="Zavřít"><i class="fa-solid fa-xmark"></i></button>
     </div>
-    <div class="orez-ram" id="orezRam"><img id="orezImg" alt="" draggable="false"></div>
+    <div class="orez-ram" id="orezRam"><div class="orez-pruhy-bg hidden" id="orezPruhyBg"></div><img id="orezImg" alt="" draggable="false"></div>
     <div class="field" style="margin-top:16px;">
       <label for="orezZoom">Přiblížení</label>
       <input type="range" id="orezZoom" min="100" max="500" value="100" style="width:100%;">
+    </div>
+    <div class="field orez-pruhy-row hidden" id="orezPruhyRow">
+      <label for="orezPruhyToggle"><i class="fa-solid fa-table-columns"></i>Pruhy</label>
+      <button type="button" class="theme-toggle plain" id="orezPruhyToggle" role="switch" aria-checked="false"><span class="theme-toggle-knob"></span></button>
     </div>
     <div class="modal-actions">
       <button type="button" class="btn btn-primary" id="orezPouzitBtn"><i class="fa-solid fa-check"></i> Použít ořez</button>
@@ -4134,7 +4143,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-11-09 17:16";
+const APP_VERSION = "2026-11-09 17:51";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -9138,11 +9147,13 @@ document.getElementById("thumbFileInput").addEventListener("change", async (e) =
 
 /* Kolo 32: posun a přiblížení obrázku v rámu — prst (jeden posouvá, dva přibližují), myš (táhnutí,
    kolečko), dvojklik. cover = obrázek vždy vyplní celý rám (ořez); jinak se vejde celý (prohlížení). */
-function vytvorPosun(ram, img, cover, poZmene) {
+function vytvorPosun(ram, img, coverArg, poZmene) {
   const st = { s: 1, x: 0, y: 0, sMin: 1, W: 0, H: 0, nw: 0, nh: 0 };
+  const jeCover = () => typeof coverArg === "function" ? !!coverArg() : !!coverArg;   // kolo 38
   const body = new Map();
   const meze = () => {
     const w = st.nw * st.s, h = st.nh * st.s;
+    const cover = jeCover();
     st.x = (!cover && w <= st.W) ? (st.W - w) / 2 : Math.min(0, Math.max(st.W - w, st.x));
     st.y = (!cover && h <= st.H) ? (st.H - h) / 2 : Math.min(0, Math.max(st.H - h, st.y));
     img.style.transform = `translate(${st.x}px,${st.y}px) scale(${st.s})`;
@@ -9183,7 +9194,7 @@ function vytvorPosun(ram, img, cover, poZmene) {
       // Přesné (necelé) rozměry rámu — clientWidth/Height by se zaokrouhlily a výřez by nebyl přesně 16:9.
       const r = ram.getBoundingClientRect();
       Object.assign(st, { W: r.width, H: r.height, nw: img.naturalWidth || 1, nh: img.naturalHeight || 1 });
-      st.sMin = cover ? Math.max(st.W / st.nw, st.H / st.nh) : Math.min(st.W / st.nw, st.H / st.nh);
+      st.sMin = jeCover() ? Math.max(st.W / st.nw, st.H / st.nh) : Math.min(st.W / st.nw, st.H / st.nh);
       st.s = st.sMin;
       st.x = (st.W - st.nw * st.s) / 2;
       st.y = (st.H - st.nh * st.s) / 2;
@@ -9196,7 +9207,21 @@ function vytvorPosun(ram, img, cover, poZmene) {
 /* Ořez náhledu (kolo 32, Mek 8. 11.: A): rámeček 16:9, obrázek ho vždy vyplní. Vrací Promise
    { nahled, ostra } (data URL; 640 a 1600 px na šířku, nikdy víc než zdroj), nebo null = Zrušit. */
 let orezHotovo = null;
-const orezPosun = vytvorPosun(document.getElementById("orezRam"), document.getElementById("orezImg"), true, (st) => {
+/* Kolo 38 (Mek 9. 11.: přepínač, C): u fotky užší než 16:9 je pod posuvníkem přepínač „Pruhy“, rovnou zapnutý —
+   fotka je v rámu celá (dá se přiblížit, pruhy se tím zužují) a volné místo vyplní tatáž fotka rozmazaná.
+   Vypnuto = ořez jako dřív. Pamatuje se jen po dobu jednoho ořezu. */
+let orezPruhy = false;
+const OREZ_UZSI_NEZ_16_9 = 16 / 9 * 0.98;
+function orezNastavPruhy(zap) {
+  orezPruhy = !!zap;
+  const t = document.getElementById("orezPruhyToggle");
+  t.classList.toggle("active", orezPruhy);
+  t.setAttribute("aria-checked", orezPruhy ? "true" : "false");
+  const bg = document.getElementById("orezPruhyBg");
+  bg.classList.toggle("hidden", !orezPruhy);
+  if (orezPruhy) bg.style.backgroundImage = `url("${document.getElementById("orezImg").src}")`;
+}
+const orezPosun = vytvorPosun(document.getElementById("orezRam"), document.getElementById("orezImg"), () => !orezPruhy, (st) => {
   document.getElementById("orezZoom").value = Math.round(100 * st.s / st.sMin);
 });
 function orezFotky(dataUrl) {
@@ -9204,6 +9229,9 @@ function orezFotky(dataUrl) {
     const img = document.getElementById("orezImg");
     orezHotovo = resolve;
     img.onload = () => {
+      const uzsi = img.naturalWidth / (img.naturalHeight || 1) < OREZ_UZSI_NEZ_16_9;
+      document.getElementById("orezPruhyRow").classList.toggle("hidden", !uzsi);
+      orezNastavPruhy(uzsi);
       document.getElementById("orezModalBackdrop").classList.remove("hidden");
       requestAnimationFrame(() => orezPosun.pripravit());
     };
@@ -9225,13 +9253,31 @@ function orezVystup() {
     const w = Math.max(1, Math.round(Math.min(maxW, sw))), hh = Math.max(1, Math.round(w * 9 / 16));
     const c = document.createElement("canvas");
     c.width = w; c.height = hh;
-    c.getContext("2d").drawImage(img, sx, sy, sw, sh, 0, 0, w, hh);
+    const g = c.getContext("2d");
+    if (orezPruhy) {
+      // Kolo 38: rozmazané pruhy — fotka zmenšená na pár desítek pixelů a zase zvětšená (stejně na všech
+      // zařízeních; filtr plátna Safari neumí spolehlivě), lehce ztmavená; přes ni fotka tak, jak je v rámu.
+      const nw = img.naturalWidth, nh = img.naturalHeight, k = w / st.W;
+      // 24 × 14 px odpovídá rozmazání, které trenér vidí v rámu (CSS blur 14 px na ~330 px šířky).
+      const mala = document.createElement("canvas"); mala.width = 24; mala.height = 14;
+      const gm = mala.getContext("2d"), sk = Math.max(24 / nw, 14 / nh);
+      gm.imageSmoothingEnabled = true; gm.imageSmoothingQuality = "high";
+      gm.drawImage(img, (24 - nw * sk) / 2, (14 - nh * sk) / 2, nw * sk, nh * sk);
+      const stredni = document.createElement("canvas"); stredni.width = 96; stredni.height = 54;
+      const gs = stredni.getContext("2d"); gs.imageSmoothingEnabled = true; gs.imageSmoothingQuality = "high";
+      gs.drawImage(mala, 0, 0, 96, 54);
+      g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high";
+      g.drawImage(stredni, 0, 0, w, hh);
+      g.fillStyle = "rgba(0,0,0,0.15)"; g.fillRect(0, 0, w, hh);
+      g.drawImage(img, 0, 0, nw, nh, st.x * k, st.y * k, nw * st.s * k, nh * st.s * k);
+    } else g.drawImage(img, sx, sy, sw, sh, 0, 0, w, hh);
     return c.toDataURL("image/jpeg", kvalita);
   };
   return { nahled: udelej(STORAGE_THUMB_MAX_PX, STORAGE_THUMB_QUALITY), ostra: udelej(STORAGE_OSTRA_MAX_PX, STORAGE_OSTRA_QUALITY) };
 }
 document.getElementById("orezPouzitBtn").addEventListener("click", () => orezKonec(orezVystup()));
 document.getElementById("orezZrusitBtn").addEventListener("click", () => orezKonec(null));
+document.getElementById("orezPruhyToggle").addEventListener("click", () => { orezNastavPruhy(!orezPruhy); orezPosun.pripravit(); });
 document.getElementById("orezZavritBtn").addEventListener("click", () => orezKonec(null));
 document.getElementById("orezZoom").addEventListener("input", (e) => {
   const st = orezPosun.st;
@@ -22671,7 +22717,7 @@ const HELP_DATA = [
       { q: "Proč mi aplikace nechce uložit video?", a: "Hotové video musí mít název, popis, aspoň jeden štítek a aspoň jednu položku vybavení (ukázka jen název a štítky). Když něco chybí, aplikace se zeptá, jestli ho chceš uložit jako koncept; po „Doplnit“ se chybějící pole orámují červeně. Když cvičení žádné pomůcky nepotřebuje, vyber „Bez vybavení“. U starších videí, která popis nemají, se při úpravě popis nevyžaduje.", kw: "nejde ulozit povinne stitky vybaveni nazev popis cerveny ramecek koncept" },
       { q: "Co je koncept a jak ho dokončím?", a: "Koncept je video, které sis zatím jen předuložil(a) — třeba když nemáš čas vyplnit štítky nebo popis. Pozná se podle přerušovaného okraje a kapsle „Koncept“; ikona tužky s číslem v liště ukáže jen tvoje koncepty. Koncept otevři, doplň, co chybí, a ulož — tím se z něj stane hotové video.", kw: "koncept rozpracovane predulozit dokoncit tuzka nedokoncene" },
       { q: "Kdo uvidí můj koncept?", a: "Jen ty a admin. Ostatní trenéři ho v knihovně ani v návrzích neuvidí, dokud ho nedokončíš. Do svého tréninku ho ale dát můžeš — a kdo se na tvůj trénink podívá, uvidí ho tam.", kw: "koncept viditelnost ostatni treneri admin skryte" },
-      { q: "Jak nahraju vlastní obrázek ke cvičení a co je „Původní“?", a: "Ve formuláři cvičení ťukni na „Nahrát vlastní náhled“ a vyber fotku. Hned se otevře ořez: fotku posuň prstem, přibliž dvěma prsty (na počítači kolečkem nebo posuvníkem) a dej „Použít ořez“. U textového cvičení se fotka uloží i v plné ostrosti — v detailu cvičení na ni ťukni a otevře se zvětšená, kde jde přibližovat. Ikonou vlevo od křížku ji dáš úplně přes celý displej (telefon se otočí na šířku), Zpět tenhle režim zase ukončí a křížek fotku zavře. Na iPhonu tahle ikona není — Safari to u obrázků neumí. Stejně tak v prezentaci tréninku: ve fázi Zadání je fotka vedle názvu cvičení. Vlastní obrázek se výměnou odkazu na video nepřepíše; obrázek nového videa se jen nabídne mezi návrhy. Když obrázek změníš, ten předchozí najdeš v úpravě cvičení mezi návrhy jako dlaždici „Původní“ a jedním ťuknutím ho vrátíš.", kw: "fotka obrazek nahled vlastni orez oriznout puvodni vratit ostra zvetsit priblizit cela obrazovka fullscreen displej" },
+      { q: "Jak nahraju vlastní obrázek ke cvičení a co je „Původní“?", a: "Ve formuláři cvičení ťukni na „Nahrát vlastní náhled“ a vyber fotku. Hned se otevře ořez: fotku posuň prstem, přibliž dvěma prsty (na počítači kolečkem nebo posuvníkem) a dej „Použít ořez“. U fotky na výšku je zapnutý přepínač „Pruhy“: fotka zůstane celá a po stranách ji doplní rozmazané pruhy; když ho vypneš, fotka se ořízne jako ostatní. U textového cvičení se fotka uloží i v plné ostrosti — v detailu cvičení na ni ťukni a otevře se zvětšená, kde jde přibližovat. Ikonou vlevo od křížku ji dáš úplně přes celý displej (telefon se otočí na šířku), Zpět tenhle režim zase ukončí a křížek fotku zavře. Na iPhonu tahle ikona není — Safari to u obrázků neumí. Stejně tak v prezentaci tréninku: ve fázi Zadání je fotka vedle názvu cvičení. Vlastní obrázek se výměnou odkazu na video nepřepíše; obrázek nového videa se jen nabídne mezi návrhy. Když obrázek změníš, ten předchozí najdeš v úpravě cvičení mezi návrhy jako dlaždici „Původní“ a jedním ťuknutím ho vrátíš.", kw: "fotka obrazek nahled vlastni orez oriznout puvodni vratit ostra zvetsit priblizit cela obrazovka fullscreen displej" },
       { q: "Musí mít video obrázek?", a: "Nemusí, ale hodí se. Když se obrázek nenačte a nic jiného nechybí, aplikace se zeptá, jestli video uložit jako koncept, nebo jako hotové.", kw: "obrazek nahled chybi koncept hotove" },
       { q: "Co znamená „vybavení“ u videa?", a: "Označuje, co je na cvičení potřeba (míče, obruče, švihadla...) — hodí se to hlavně při skládání tréninku, kdy aplikace umí ukázat souhrn všeho vybavení, co si na trénink vzít." },
       { q: "Jak přidám úplně nový štítek nebo vybavení, které ještě neexistuje?", a: "Stačí ho napsat do příslušného pole při úpravě videa a potvrdit — aplikace ho rovnou přidá do nabídky pro příště, není potřeba nic zvlášť zakládat." },
