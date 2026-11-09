@@ -493,6 +493,14 @@ body.dark-mode .sesit{box-shadow:0 8px 20px rgba(0,0,0,.5);}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{margin:0;padding:0;}
 html{overflow-x:hidden;}
+/* Kolo 35 (Mek 9. 11.: A): místo pro posuvník stránky je vždy volné — když okno stránku zamkne
+   a posuvník zmizí (Windows), obsah pod tmavým pozadím neposkočí do strany. Jen u zařízení s myší:
+   telefony a tablety mají posuvník přes obsah, nic jim neubírat. */
+@media (pointer:fine){html{scrollbar-gutter:stable;}}
+/* …kromě celoobrazovkového režimu (kolo 34) — tam by vyhrazené místo zůstalo u fotky jako pruh. */
+html.cela-obrazovka{scrollbar-gutter:auto;}
+/* Kolo 35: posouvání v okně se na jeho konci zarazí — nepřelije se dál (ani do stažení k obnovení). */
+.modal-backdrop,.modal,.folder-sidebar{overscroll-behavior:contain;}
 body{
   background:var(--paper);
   color:var(--ink);
@@ -4125,7 +4133,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-11-09 11:24";
+const APP_VERSION = "2026-11-09 13:32";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -4920,10 +4928,14 @@ document.querySelectorAll(".modal-backdrop").forEach(backdrop => {
     wasHidden = isHidden;
     // Aplikace zamkne posouvání stránky POD oknem, kdykoli je otevřené aspoň jedno — aplikace si
     // hlídá počet otevřených najednou, ať se to nerozbije při dvou oknech nad sebou.
-    document.body.style.overflow = openModalBackdrops.size > 0 ? "hidden" : "";
+    // Kolo 35: zamyká se <html>, ne <body>. <html> má overflow-x:hidden, takže overflow z <body> se
+    // na okno prohlížeče nepřenášel a zámek dřív nic nedělal — stránka pod oknem jela dál.
+    document.documentElement.style.overflow = openModalBackdrops.size > 0 ? "hidden" : "";
   }).observe(backdrop, { attributes: true, attributeFilter: ["class"] });
 });
 
+// Kolo 35: v celoobrazovkovém režimu se místo pro posuvník nevyhrazuje (viz html.cela-obrazovka v CSS).
+document.addEventListener("fullscreenchange", () => document.documentElement.classList.toggle("cela-obrazovka", !!document.fullscreenElement));
 const TOAST_ICONS = { ok: "fa-check", err: "fa-xmark", warn: "fa-exclamation", progress: "fa-arrows-rotate", info: "fa-info" };
 /** Heslo se ukáže jen po dobu držení (myš nebo prst), pusť a zase se schová — funguje na
     jednom místě pro všechna hesla na appce, stačí přidat tlačítko s .pass-reveal-btn a
