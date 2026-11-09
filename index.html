@@ -3131,7 +3131,7 @@ body.dark-mode .seq-group-video-duration{background:var(--paper);color:var(--cou
     <div class="admin-group">
       <button type="button" class="admin-row" id="openNotifyKeyBtn"><i class="fa-solid fa-bell"></i><span class="admin-row-label">Klíč pro notifikace<span class="admin-row-sub" id="notifyKeyStatus"></span></span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
       <button type="button" class="admin-row" id="openDriveKeyBtn"><i class="fa-brands fa-google-drive"></i><span class="admin-row-label">Google Drive API klíč<span class="admin-row-sub" id="driveKeyStatus"></span></span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
-      <button type="button" class="admin-row" id="backupLibraryBtn"><i class="fa-solid fa-download"></i><span class="admin-row-label">Stáhnout zálohu<span class="admin-row-sub" id="backupStatus">Knihovna, náhledy, tréninky, komentáře, tipy, Deníčky a nastavení</span></span></button>
+      <button type="button" class="admin-row" id="backupLibraryBtn"><i class="fa-solid fa-download"></i><span class="admin-row-label">Stáhnout zálohu<span class="admin-row-sub" id="backupStatus">Knihovna, fotky, tréninky, komentáře, tipy, Deníčky a nastavení</span></span></button>
       <button type="button" class="admin-row" id="openRestoreBtn"><i class="fa-solid fa-clock-rotate-left"></i><span class="admin-row-label">Obnovit ze zálohy<span class="admin-row-sub">Porovná zálohu s dneškem, vrátí se jen to, co vybereš</span></span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
       <button type="button" class="admin-row" id="openAutoBackupBtn"><i class="fa-solid fa-folder-open"></i><span class="admin-row-label">Automatická záloha<span class="admin-row-sub" id="autoBackupStatus"></span></span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
     </div>
@@ -4134,7 +4134,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-11-09 16:13";
+const APP_VERSION = "2026-11-09 17:16";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -20298,7 +20298,7 @@ document.getElementById("confirmCropBtn").addEventListener("click", () => {
    cizích věcí pravidla Firestore dovolí adminovi jen s novým razítkem obnovy (restoredAt).
    ========================================================= */
 const ZALOHA_FORMAT = "trener-zaloha";
-const ZALOHA_VERZE = 4;          // 1 = 21. 9. (knihovna, seznamy, tréninky); 2 = 1. kolo obnovy; 3 = komentáře, tipy, profily; 4 = Deníčky (13. 10. 2026)
+const ZALOHA_VERZE = 5;          // 1 = 21. 9. (knihovna, seznamy, tréninky); 2 = 1. kolo obnovy; 3 = komentáře, tipy, profily; 4 = Deníčky (13. 10. 2026); 5 = fotky ze Storage (9. 11. 2026)
 const PRIPOMINKA_ZALOHY_DNI = 7;
 /** Pole profilu, která záloha nese a obnova umí vrátit. Adresy zařízení pro notifikace ani
     nastavení notifikací se nezálohují — patří k telefonu, ne k účtu. */
@@ -20353,10 +20353,46 @@ async function nactiTipy() {
   snap.forEach(d => { out[d.id] = d.data(); });
   return out;
 }
+/* Kolo 37 (Mek 9. 11. 2026: 1 = A, 3 = C): záloha nese i fotky ze Storage — náhledy, „Původní“ náhledy
+   i ostré fotky textových cvičení, u všech cvičení včetně koše — jako data URL v části „fotky“ (adresa →
+   obrázek). Nestaženou fotku aplikace zkusí ještě dvakrát; pak ji vynechá (adresa jde do „fotkyChybi“)
+   a záloha vznikne i tak — jedna vadná fotka nesmí zablokovat zálohu ostatních dat. */
+function fotkyPolozky(it) {
+  if (!it) return [];
+  return [it.thumbnail, it.nahledPredchozi, it.fotka && it.fotka.url, it.fotka && it.fotka.nahled,
+    it.fotkaPredchozi && it.fotkaPredchozi.url, it.fotkaPredchozi && it.fotkaPredchozi.nahled].filter(jeStorageUrl);
+}
+function fotkyKZaloze(lib) {
+  return [...new Set(Object.values(lib || {}).flatMap(fotkyPolozky))];
+}
+async function stahniFotkuJakoData(url) {
+  for (let pokus = 0; pokus < 3; pokus++) {
+    try {
+      const r = await withTimeout(fetch(url), 30000, "stažení fotky");
+      if (r.ok) {
+        const blob = await r.blob();
+        return await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = () => rej(fr.error); fr.readAsDataURL(blob); });
+      }
+    } catch (e) { /* zkusí se znovu */ }
+    if (pokus < 2) await new Promise(r => setTimeout(r, 1000 * (pokus + 1)));
+  }
+  return null;
+}
+async function stahniFotkyDoZalohy(lib, naPrubeh) {
+  const adresy = fotkyKZaloze(lib);
+  const fotky = {}, chybi = [];
+  if (naPrubeh) naPrubeh(0, adresy.length);
+  await runWithConcurrency(adresy, 6, async (u) => {
+    const d = await stahniFotkuJakoData(u);
+    if (d) fotky[u] = d; else chybi.push(u);
+  }, naPrubeh ? (hotovo, celkem) => naPrubeh(hotovo, celkem) : null);
+  if (chybi.length) logDebug(`[záloha] ${chybi.length} ${czPlural(chybi.length, "fotku", "fotky", "fotek")} se nepodařilo stáhnout ani na třetí pokus:`, chybi.join(" "));
+  return { fotky, chybi };
+}
 /** Sestaví zálohu ze současného stavu aplikace. Tréninky ostatních, seznam členů, komentáře,
     tipy a profily se musí načíst — když se to nepovede, vyletí chyba a záloha nevznikne
     (radši žádná než neúplná). */
-async function sestavZalohu() {
+async function sestavZalohu(naPrubehFotek) {
   await ensureOthersTrainingsLoaded();
   const snap = await getDoc(doc(db, "shared", "members"));
   const approved = (snap.exists() ? snap.data().approved : null) || {};
@@ -20384,6 +20420,7 @@ async function sestavZalohu() {
     const z = await nactiDenikTrenera(u);
     if (u === uidCurrent) denik = z; else deniky[u] = z;
   }));
+  const { fotky, chybi: fotkyChybi } = await stahniFotkyDoZalohy(state.library, naPrubehFotek);
   return {
     format: ZALOHA_FORMAT,
     formatVersion: ZALOHA_VERZE,
@@ -20414,7 +20451,9 @@ async function sestavZalohu() {
     tips,
     profiles,
     denik,
-    deniky
+    deniky,
+    fotky,
+    fotkyChybi
   };
 }
 /** trener-zaloha-2026-09-24.json (ruční), trener-zaloha-auto-2026-09-24.json (automatická —
@@ -20434,7 +20473,7 @@ function zapisCasZalohy() {
     .catch(e => console.warn("Uložení času zálohy selhalo:", e));
 }
 
-const BACKUP_STATUS_TEXT = "Knihovna, náhledy, tréninky, komentáře, tipy, Deníčky a nastavení";
+const BACKUP_STATUS_TEXT = "Knihovna, fotky, tréninky, komentáře, tipy, Deníčky a nastavení";
 document.getElementById("backupLibraryBtn").addEventListener("click", async () => {
   if (uidCurrent !== ADMIN_UID) return;
   const btn = document.getElementById("backupLibraryBtn");
@@ -20443,7 +20482,7 @@ document.getElementById("backupLibraryBtn").addEventListener("click", async () =
   btn.disabled = true;
   status.textContent = "Připravuju zálohu…";
   let zaloha = null, chyba = null;
-  try { zaloha = await sestavZalohu(); }
+  try { zaloha = await sestavZalohu((hotovo, celkem) => { if (celkem) status.textContent = `Stahuji fotky… ${hotovo} / ${celkem}`; }); }
   catch (e) { chyba = e; logDebug("[záloha] nepodařilo se sestavit:", (e && (e.code || e.message)) || e); }
   btn.disabled = false;
   status.textContent = BACKUP_STATUS_TEXT;
@@ -20458,7 +20497,10 @@ document.getElementById("backupLibraryBtn").addEventListener("click", async () =
   const nV = Object.keys(zaloha.library || {}).length;
   const nT = Object.keys(zaloha.trainings || {}).length;
   const nN = Object.keys(zaloha.thumbnails || {}).length;
-  toast(`Záloha stažena — ${nV} ${czPlural(nV, "video", "videa", "videí")}, ${nT} ${czPlural(nT, "trénink", "tréninky", "tréninků")}, ${nN} ${czPlural(nN, "náhled", "náhledy", "náhledů")}.`);
+  const nF = Object.keys(zaloha.fotky || {}).length, nC = (zaloha.fotkyChybi || []).length;
+  const zaklad = `Záloha stažena — ${nV} ${czPlural(nV, "video", "videa", "videí")}, ${nT} ${czPlural(nT, "trénink", "tréninky", "tréninků")}, ${nF} ${czPlural(nF, "fotka", "fotky", "fotek")}${nN ? `, ${nN} ${czPlural(nN, "starý náhled", "staré náhledy", "starých náhledů")}` : ""}.`;
+  if (nC) toast(`${zaklad} ${nC} ${czPlural(nC, "fotku", "fotky", "fotek")} se nepodařilo stáhnout — detaily v 🐞.`, 10000, "warn");
+  else toast(zaklad);
 });
 
 /* ---- Obnova: čisté funkce ----
@@ -21029,6 +21071,7 @@ function prenesObnovuDoStavu(klice, zaloha, st, uidJa, razitko, dnes) {
     (v.tags || []).forEach(s => { if (!st.tagPool.includes(s)) { st.tagPool.push(s); vysl.doplnenoDoNabidky++; } });
     (v.equipment || []).forEach(s => { if (!st.equipmentPool.includes(s)) { st.equipmentPool.push(s); vysl.doplnenoDoNabidky++; } });
   });
+  vysl.vraceneVidea = vraceneVidea;   // kolo 37: fotky vrácených videí doplní provedObnovu
   return vysl;
 }
 /** „3 videa, 1 složka, 2 tréninky“ podle počtů po oblastech. */
@@ -21310,14 +21353,46 @@ async function ulozZalohuPredObnovou() {
 /** Samotná obnova. Pořadí: záloha dnešního stavu → přenesení do dat aplikace a hned běžné
     uložení (mezi nimi není žádné čekání, takže do toho nemůže vstoupit živá aktualizace
     zvenku) → náhledy → klíče → členové → profil → kontrola, že se vybrané opravdu zapsalo. */
+/* Kolo 37 (Mek, otázka 2 = A): fotky vracených videí. Co ve Storage pořád je, zůstane; co chybí, se nahraje
+   ze zálohy znovu (nová adresa). Dělá se PŘED přenesením do stavu aplikace — mezi přenesením a uložením
+   nesmí být žádné čekání (viz provedObnovu). */
+async function pripravFotkyKObnove(klice, zaloha, hlas) {
+  const dvojice = [];
+  klice.filter(k => k.startsWith("videa:")).forEach(k => { const id = k.slice(6); fotkyPolozky((zaloha.library || {})[id]).forEach(u => dvojice.push([id, u])); });
+  const nahrady = {}, chybi = [];
+  if (!dvojice.length) return { nahrady, chybi };
+  const hotove = new Set();
+  await runWithConcurrency(dvojice, 4, async ([id, u]) => {
+    if (hotove.has(u)) return;
+    hotove.add(u);
+    if (await overObrazek(u)) return;
+    const data = (zaloha.fotky || {})[u];
+    if (!data) { chybi.push(u); return; }
+    const slozka = /\/o\/fotky%2F/.test(u) ? "fotky" : "thumbs";
+    try { nahrady[u] = await nahrajObrazekDoStorage(`${slozka}/${id}/${Date.now()}-${Math.random().toString(36).slice(2, 6)}.jpg`, data); }
+    catch (e) { chybi.push(u); logDebug("[obnova] fotku se nepodařilo nahrát:", u, (e && (e.code || e.message)) || e); }
+  }, (hotovo, celkem) => hlas(`Kontroluju fotky… ${hotovo} / ${celkem}`));
+  if (chybi.length) logDebug(`[obnova] ${chybi.length} fotek se nepodařilo vrátit (nejsou ve Storage ani v záloze):`, chybi.join(" "));
+  return { nahrady, chybi };
+}
+function nahradFotkyVeVracenych(st, ids, nahrady) {
+  let n = 0;
+  const nahr = (o, k) => { if (o && nahrady[o[k]]) { o[k] = nahrady[o[k]]; n++; } };
+  (ids || []).forEach(id => { const v = st.library[id]; if (!v) return; nahr(v, "thumbnail"); nahr(v, "nahledPredchozi"); nahr(v.fotka, "url"); nahr(v.fotka, "nahled"); nahr(v.fotkaPredchozi, "url"); nahr(v.fotkaPredchozi, "nahled"); });
+  return n;
+}
 async function provedObnovu(klice, zaloha, hlas, dnes) {
   const razitko = Date.now();
   const problemy = [];
   hlas("Ukládám zálohu dnešního stavu…");
   const pred = await ulozZalohuPredObnovou();
 
+  const fotkyObnovy = await pripravFotkyKObnove(klice, zaloha, hlas);
+  if (fotkyObnovy.chybi.length) problemy.push(`${fotkyObnovy.chybi.length} ${czPlural(fotkyObnovy.chybi.length, "fotku", "fotky", "fotek")} se nepodařilo vrátit — nejsou ve Storage ani v záloze. Cvičení jsou zpátky bez nich.`);
+
   hlas("Zapisuju knihovnu a tréninky…");
   const vysl = prenesObnovuDoStavu(klice, zaloha, state, uidCurrent, razitko, dnes);
+  vysl.vracenoFotek = nahradFotkyVeVracenych(state, vysl.vraceneVidea, fotkyObnovy.nahrady);
   const okUlozeni = await saveUserData();
   if (!okUlozeni) problemy.push("Knihovnu a tréninky se nepodařilo zapsat (výpadek spojení nebo souběžná změna odjinud).");
 
@@ -21459,7 +21534,7 @@ async function provedObnovu(klice, zaloha, hlas, dnes) {
     return false;
   });
   if (okUlozeni && nezapsano.length) problemy.push(`${nezapsano.length} ${czPlural(nezapsano.length, "položka se", "položky se", "položek se")} nezapsala — mezitím přišla změna odjinud. Otevři obnovu znovu se stejným souborem, ukáže, co ještě chybí.`);
-  logDebug(`[obnova] hotovo: ${obnovaSouhrn(vysl.pocty) || "nic"}; náhledů ${nahledy.length}; doplněno do nabídky ${vysl.doplnenoDoNabidky}; záloha před obnovou ${pred.nazev} (${pred.kam}); problémy: ${problemy.length ? problemy.join(" | ") : "žádné"}`);
+  logDebug(`[obnova] hotovo: ${obnovaSouhrn(vysl.pocty) || "nic"}; náhledů ${nahledy.length}; fotek nahraných zpět do Storage ${vysl.vracenoFotek || 0}; doplněno do nabídky ${vysl.doplnenoDoNabidky}; záloha před obnovou ${pred.nazev} (${pred.kam}); problémy: ${problemy.length ? problemy.join(" | ") : "žádné"}`);
   return { pred, vysl, problemy };
 }
 
@@ -21578,7 +21653,7 @@ async function spustAutoZalohu(vynutit) {
       catch (e) { logDebug("[záloha] starou zálohu se nepodařilo smazat:", n, (e && (e.name || e.message)) || e); }
     }
     logDebug(`[záloha] automatická: ${nazev} do složky „${slozka.name}“, smazáno starých: ${pryc.length}`);
-    return { stav: "hotovo", nazev, slozka: slozka.name };
+    return { stav: "hotovo", nazev, slozka: slozka.name, fotkyChybi: (zaloha.fotkyChybi || []).length };
   } catch (e) {
     logDebug("[záloha] automatická selhala:", (e && (e.name || e.code || e.message)) || e);
     return { stav: "chyba", chyba: (e && (e.name || e.code || e.message)) || "neznámá chyba" };
@@ -21588,7 +21663,8 @@ async function spustAutoZalohu(vynutit) {
   }
 }
 function hlasVysledekAutoZalohy(r) {
-  if (r.stav === "hotovo") toast(`Záloha uložena do složky „${r.slozka}“.`, 4000);
+  if (r.stav === "hotovo" && r.fotkyChybi) toast(`Záloha uložena do složky „${r.slozka}“, ale ${r.fotkyChybi} ${czPlural(r.fotkyChybi, "fotku", "fotky", "fotek")} se nepodařilo stáhnout — detaily v 🐞.`, 10000, "warn");
+  else if (r.stav === "hotovo") toast(`Záloha uložena do složky „${r.slozka}“.`, 4000);
   else if (r.stav === "bez-slozky") toast("Bez povolení ke složce se záloha uložit nedá.", 5000, "warn");
   else if (r.stav === "chyba") toast(`Zálohu se nepodařilo uložit (${r.chyba}). Detaily v 🐞.`, 8000, "err");
 }
