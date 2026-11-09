@@ -869,6 +869,8 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 #fotkaCelaBackdrop{z-index:645;background:rgba(8,10,12,.94);touch-action:none;overflow:hidden;}
 .fotka-cela-zavrit{position:absolute;top:calc(10px + env(safe-area-inset-top));right:10px;z-index:2;width:44px;height:44px;border-radius:50%;
   border:0;background:rgba(0,0,0,.55);color:#fff;font-size:20px;}
+/* Kolo 34: ikona celé obrazovky — stejné tlačítko jako křížek, vlevo od něj. */
+.fotka-cela-zavrit.fotka-cela-rozsirit{right:64px;}
 .detail-text-thumb.lze-zvetsit{cursor:zoom-in;}
 .thumb-suggestion-item.puvodni{position:relative;}
 .thumb-suggestion-item.puvodni::after{content:"Původní";position:absolute;left:0;right:0;bottom:0;padding:2px 0;font-size:10.5px;font-weight:700;
@@ -2929,6 +2931,7 @@ body.dark-mode .seq-group-video-duration{background:var(--paper);color:var(--cou
 <!-- Kolo 32: fotka textového cvičení přes celou obrazovku. -->
 <div id="fotkaCelaBackdrop" class="modal-backdrop fotka-cela hidden">
   <button type="button" class="fotka-cela-zavrit" id="fotkaCelaZavritBtn" aria-label="Zavřít"><i class="fa-solid fa-xmark"></i></button>
+  <button type="button" class="fotka-cela-zavrit fotka-cela-rozsirit hidden" id="fotkaCelaRozsiritBtn" aria-label="Celá obrazovka"><i class="fa-solid fa-expand"></i></button>
   <img id="fotkaCelaImg" alt="" draggable="false">
 </div>
 
@@ -4122,7 +4125,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-11-09 01:48";
+const APP_VERSION = "2026-11-09 11:24";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -9103,15 +9106,63 @@ document.getElementById("orezZoom").addEventListener("input", (e) => {
 /* Fotka přes celou obrazovku (kolo 32): ostrá fotka textového cvičení, přiblížení prsty / kolečkem /
    dvojklikem, zavírá křížek nebo Zpět. */
 const fotkaCelaPosun = vytvorPosun(document.getElementById("fotkaCelaBackdrop"), document.getElementById("fotkaCelaImg"), false);
+/* Kolo 34 (Mek 9. 11.): ikona vlevo od křížku zapne skutečný celoobrazovkový režim (zmizí lišty prohlížeče
+   a systému) a telefon přepne na šířku; další ťuknutí (ikona „zmenšit“) ho vypne. Ikona je jen tam, kde to
+   prohlížeč umí (iPhone ne — Safari to dovolí jen videu) a kde už přes celou obrazovku není něco jiného
+   (prezentace spuštěná na výšku). Křížek zavře fotku úplně, Zpět jen ukončí celoobrazovkový režim —
+   Android to tak u Zpět dělá sám, pojistka pro ostatní prohlížeče je v setupBackButtonNav. */
+const fotkaCelaBackdrop = document.getElementById("fotkaCelaBackdrop");
+let fotkaCelaDomov = null;    // kam fotku vrátit, když si ji vzala k sobě prezentace na celé obrazovce
+let fotkaCelaZamceno = false; // orientaci zamkla fotka (a jen tehdy ji zase uvolní)
+const fotkaCelaNaCeleObrazovce = () => !!document.fullscreenElement && document.fullscreenElement === fotkaCelaBackdrop;
+function fotkaCelaIkona() {
+  const btn = document.getElementById("fotkaCelaRozsiritBtn");
+  const na = fotkaCelaNaCeleObrazovce();
+  btn.classList.toggle("hidden", !(document.fullscreenEnabled && (na || !document.fullscreenElement)));
+  btn.innerHTML = `<i class="fa-solid fa-${na ? "compress" : "expand"}"></i>`;
+  btn.setAttribute("aria-label", na ? "Zmenšit" : "Celá obrazovka");
+}
+function fotkaCelaVystup() {
+  if (!fotkaCelaNaCeleObrazovce()) return;
+  try { const p = document.exitFullscreen(); if (p && p.catch) p.catch(() => {}); } catch (e) {}
+}
+document.addEventListener("fullscreenchange", () => {
+  if (!fotkaCelaNaCeleObrazovce() && fotkaCelaZamceno) {
+    fotkaCelaZamceno = false;
+    try { screen.orientation.unlock(); } catch (e) {}
+  }
+  // Režim mohl skončit i sám (stažená lišta, přepnutí aplikace) — ikona se vrátí na „rozšířit“, fotka zůstane.
+  if (!fotkaCelaBackdrop.classList.contains("hidden")) { fotkaCelaIkona(); requestAnimationFrame(() => fotkaCelaPosun.pripravit()); }
+});
+document.getElementById("fotkaCelaRozsiritBtn").addEventListener("click", async () => {
+  if (fotkaCelaNaCeleObrazovce()) { fotkaCelaVystup(); return; }
+  try { await fotkaCelaBackdrop.requestFullscreen(); } catch (e) { return; }
+  try {
+    if (screen.orientation && screen.orientation.lock) { await screen.orientation.lock("landscape"); fotkaCelaZamceno = true; }
+  } catch (e) { /* Firefox pro Android zamykání odmítá — fotka zůstane, jak je telefon otočený */ }
+});
 function otevriFotkuCelou(url) {
   const img = document.getElementById("fotkaCelaImg");
   img.onload = () => {
-    document.getElementById("fotkaCelaBackdrop").classList.remove("hidden");
+    // Kolo 34: prezentace na celé obrazovce ukáže jen to, co je uvnitř ní — dřív se fotka otevřela
+    // schovaná pod ní. Teď si ji prezentace na dobu otevření vezme k sobě (stejně jako kartu videa).
+    const fs = document.fullscreenElement;
+    if (fs && fs !== fotkaCelaBackdrop && !fs.contains(fotkaCelaBackdrop)) {
+      if (!fotkaCelaDomov) fotkaCelaDomov = { parent: fotkaCelaBackdrop.parentElement, next: fotkaCelaBackdrop.nextSibling };
+      fs.appendChild(fotkaCelaBackdrop);
+    }
+    fotkaCelaIkona();
+    fotkaCelaBackdrop.classList.remove("hidden");
     requestAnimationFrame(() => fotkaCelaPosun.pripravit());
   };
   img.src = url;
 }
-document.getElementById("fotkaCelaZavritBtn").addEventListener("click", () => document.getElementById("fotkaCelaBackdrop").classList.add("hidden"));
+function zavriFotkuCelou() {
+  fotkaCelaVystup();
+  fotkaCelaBackdrop.classList.add("hidden");
+  if (fotkaCelaDomov) { const d = fotkaCelaDomov; fotkaCelaDomov = null; d.parent.insertBefore(fotkaCelaBackdrop, d.next); }
+}
+document.getElementById("fotkaCelaZavritBtn").addEventListener("click", zavriFotkuCelou);
 document.getElementById("detailEmbedWrap").addEventListener("click", (e) => {
   const el = e.target.closest(".detail-text-thumb.lze-zvetsit");
   if (el && el.dataset.fotka) otevriFotkuCelou(el.dataset.fotka);
@@ -12933,6 +12984,7 @@ function closeTrainingMode() {
   stopTrainingModeTimer();
   clearTimeout(tmUpNextTimeout);
   fazeReturnLibraryCardHome(); // karta videa nesmí zůstat zaparkovaná uvnitř schovaného režimu
+  if (fotkaCelaDomov) zavriFotkuCelou(); // kolo 34: totéž pro zvětšenou fotku
   exitTrainingLandscape();
   document.getElementById("trainingModeView").classList.add("hidden");
   document.body.style.background = "";
@@ -22408,7 +22460,7 @@ const HELP_DATA = [
       { q: "Proč mi aplikace nechce uložit video?", a: "Hotové video musí mít název, popis, aspoň jeden štítek a aspoň jednu položku vybavení (ukázka jen název a štítky). Když něco chybí, aplikace se zeptá, jestli ho chceš uložit jako koncept; po „Doplnit“ se chybějící pole orámují červeně. Když cvičení žádné pomůcky nepotřebuje, vyber „Bez vybavení“. U starších videí, která popis nemají, se při úpravě popis nevyžaduje.", kw: "nejde ulozit povinne stitky vybaveni nazev popis cerveny ramecek koncept" },
       { q: "Co je koncept a jak ho dokončím?", a: "Koncept je video, které sis zatím jen předuložil(a) — třeba když nemáš čas vyplnit štítky nebo popis. Pozná se podle přerušovaného okraje a kapsle „Koncept“; ikona tužky s číslem v liště ukáže jen tvoje koncepty. Koncept otevři, doplň, co chybí, a ulož — tím se z něj stane hotové video.", kw: "koncept rozpracovane predulozit dokoncit tuzka nedokoncene" },
       { q: "Kdo uvidí můj koncept?", a: "Jen ty a admin. Ostatní trenéři ho v knihovně ani v návrzích neuvidí, dokud ho nedokončíš. Do svého tréninku ho ale dát můžeš — a kdo se na tvůj trénink podívá, uvidí ho tam.", kw: "koncept viditelnost ostatni treneri admin skryte" },
-      { q: "Jak nahraju vlastní obrázek ke cvičení a co je „Původní“?", a: "Ve formuláři cvičení ťukni na „Nahrát vlastní náhled“ a vyber fotku. Hned se otevře ořez: fotku posuň prstem, přibliž dvěma prsty (na počítači kolečkem nebo posuvníkem) a dej „Použít ořez“. U textového cvičení se fotka uloží i v plné ostrosti — v detailu cvičení na ni ťukni a otevře se přes celou obrazovku, kde jde přibližovat. Stejně tak v prezentaci tréninku: ve fázi Zadání je fotka vedle názvu cvičení. Vlastní obrázek se výměnou odkazu na video nepřepíše; obrázek nového videa se jen nabídne mezi návrhy. Když obrázek změníš, ten předchozí najdeš v úpravě cvičení mezi návrhy jako dlaždici „Původní“ a jedním ťuknutím ho vrátíš.", kw: "fotka obrazek nahled vlastni orez oriznout puvodni vratit ostra zvetsit priblizit" },
+      { q: "Jak nahraju vlastní obrázek ke cvičení a co je „Původní“?", a: "Ve formuláři cvičení ťukni na „Nahrát vlastní náhled“ a vyber fotku. Hned se otevře ořez: fotku posuň prstem, přibliž dvěma prsty (na počítači kolečkem nebo posuvníkem) a dej „Použít ořez“. U textového cvičení se fotka uloží i v plné ostrosti — v detailu cvičení na ni ťukni a otevře se zvětšená, kde jde přibližovat. Ikonou vlevo od křížku ji dáš úplně přes celý displej (telefon se otočí na šířku), Zpět tenhle režim zase ukončí a křížek fotku zavře. Na iPhonu tahle ikona není — Safari to u obrázků neumí. Stejně tak v prezentaci tréninku: ve fázi Zadání je fotka vedle názvu cvičení. Vlastní obrázek se výměnou odkazu na video nepřepíše; obrázek nového videa se jen nabídne mezi návrhy. Když obrázek změníš, ten předchozí najdeš v úpravě cvičení mezi návrhy jako dlaždici „Původní“ a jedním ťuknutím ho vrátíš.", kw: "fotka obrazek nahled vlastni orez oriznout puvodni vratit ostra zvetsit priblizit cela obrazovka fullscreen displej" },
       { q: "Musí mít video obrázek?", a: "Nemusí, ale hodí se. Když se obrázek nenačte a nic jiného nechybí, aplikace se zeptá, jestli video uložit jako koncept, nebo jako hotové.", kw: "obrazek nahled chybi koncept hotove" },
       { q: "Co znamená „vybavení“ u videa?", a: "Označuje, co je na cvičení potřeba (míče, obruče, švihadla...) — hodí se to hlavně při skládání tréninku, kdy aplikace umí ukázat souhrn všeho vybavení, co si na trénink vzít." },
       { q: "Jak přidám úplně nový štítek nebo vybavení, které ještě neexistuje?", a: "Stačí ho napsat do příslušného pole při úpravě videa a potvrdit — aplikace ho rovnou přidá do nabídky pro příště, není potřeba nic zvlášť zakládat." },
@@ -22833,6 +22885,9 @@ document.getElementById("helpSearchInput").addEventListener("input", (e) => rend
     for (let i = navStack.length - 1; i >= 0; i--) {
       const el = navStack[i];
       if (isOpen(el)) {
+        // Kolo 34 (Mek: B): fotka na celé obrazovce — Zpět jen ukončí celoobrazovkový režim, fotka zůstane
+        // otevřená a její záznam v historii se vrátí (Android tohle dělá sám; pojistka pro ostatní).
+        if (el.id === "fotkaCelaBackdrop" && document.fullscreenElement === el) { fotkaCelaVystup(); pridejZaznam(); return; }
         closingViaBackButton = true;
         closeElement(el);
         queueMicrotask(() => { closingViaBackButton = false; });
