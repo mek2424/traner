@@ -4144,7 +4144,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-11-09 17:56";
+const APP_VERSION = "2026-11-09 18:57";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -20415,7 +20415,9 @@ function fotkyKZaloze(lib) {
 async function stahniFotkuJakoData(url) {
   for (let pokus = 0; pokus < 3; pokus++) {
     try {
-      const r = await withTimeout(fetch(url), 30000, "stažení fotky");
+      // Kolo 40: vždy ze serveru, ne z paměti prohlížeče — tam je fotka z Knihovny uložená bez povolení CORS
+      // a prohlížeč by stažení odmítl (v anonymním okně to fungovalo, v běžném ne).
+      const r = await withTimeout(fetch(url, { cache: "reload" }), 30000, "stažení fotky");
       if (r.ok) {
         const blob = await r.blob();
         return await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = () => rej(fr.error); fr.readAsDataURL(blob); });
