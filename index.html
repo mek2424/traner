@@ -4122,7 +4122,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-11-09 01:39";
+const APP_VERSION = "2026-11-09 01:48";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -7921,6 +7921,7 @@ document.getElementById("togglePinToolbarBtn").addEventListener("click", () => {
   const pinned = localStorage.getItem("trener_toolbar_pinned") === "1";
   localStorage.setItem("trener_toolbar_pinned", pinned ? "0" : "1");
   applyToolbarPinState();
+  if (typeof chipPanelyVse === "function") chipPanelyVse(); // kolo 33
   const heightAfter = document.documentElement.scrollHeight;
   window.scrollTo(0, Math.max(0, scrollYBefore + (heightAfter - heightBefore)));
 });
@@ -8074,7 +8075,23 @@ function chipPanelVse(row) {
   col.classList.add("ma-vse");
   btn.innerHTML = rozbaleno ? `Méně <i class="fa-solid fa-chevron-up"></i>` : `Vše <i class="fa-solid fa-chevron-down"></i>`;
   btn.setAttribute("aria-expanded", rozbaleno ? "true" : "false");
+  // Kolo 33 (Mek 9. 11.: A): přišpendlený panel drží s hlavičkou nahoře — rozbalený seznam smí být jen
+  // tak vysoký, aby se celý panel i s „Méně“ vešel na obrazovku. Zbytek se posouvá uvnitř seznamu
+  // a posouvání se nepřelévá na stránku pod panelem.
+  if (rozbaleno && row.closest(".pinned")) {
+    const zbyva = window.innerHeight - row.getBoundingClientRect().top - btn.offsetHeight - 32;
+    row.style.maxHeight = Math.max(90, Math.floor(zbyva)) + "px";
+    row.style.overflowY = "auto";
+    row.style.overscrollBehavior = "contain";
+  } else if (row.style.maxHeight) {
+    row.style.maxHeight = "";
+    row.style.overflowY = "";
+    row.style.overscrollBehavior = "";
+  }
 }
+// Kolo 33: výška rozbaleného seznamu se přepočítá při otočení / změně okna a při přepnutí špendlíku.
+const chipPanelyVse = () => document.querySelectorAll(".chip-panel-card .chip-panel-scroll").forEach(chipPanelVse);
+window.addEventListener("resize", chipPanelyVse);
 // Stačí hlídat velikost řádku: změna obsahu, která rozhoduje o „Vše“, vždycky změní i jeho výšku
 // (víc než dva řádky = pevná výška, méně = menší), a skrytý panel se změří, až se ukáže.
 if (window.ResizeObserver) {
