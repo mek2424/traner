@@ -859,6 +859,20 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .druh-prepinac button.on{background:var(--court);color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.18);}
 #linkForm.druh-text #linkUrlField,#linkForm.druh-text #fbShareWarning,#linkForm.druh-text #duplicateWarning,
 #linkForm.druh-text #thumbSuggestions{display:none !important;}
+/* Kolo 32: ořez náhledu (rámeček 16:9, stejná rodina jako ořez profilové fotky) a fotka přes celou
+   obrazovku (přiblížení prsty, kolečkem, dvojklikem). Obrázek se posouvá transformací z levého horního rohu. */
+#orezModalBackdrop{z-index:640;}
+/* Obrys místo okraje: okraj by ubral z vnitřku a ten by pak nebyl přesně 16:9. */
+.orez-ram{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;border-radius:var(--radius-sm);background:#000;
+  box-shadow:0 0 0 2px var(--line);touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;}
+.orez-ram img,.fotka-cela img{position:absolute;left:0;top:0;transform-origin:0 0;max-width:none;user-select:none;-webkit-user-drag:none;pointer-events:none;}
+#fotkaCelaBackdrop{z-index:645;background:rgba(8,10,12,.94);touch-action:none;overflow:hidden;}
+.fotka-cela-zavrit{position:absolute;top:calc(10px + env(safe-area-inset-top));right:10px;z-index:2;width:44px;height:44px;border-radius:50%;
+  border:0;background:rgba(0,0,0,.55);color:#fff;font-size:20px;}
+.detail-text-thumb.lze-zvetsit{cursor:zoom-in;}
+.thumb-suggestion-item.puvodni{position:relative;}
+.thumb-suggestion-item.puvodni::after{content:"Původní";position:absolute;left:0;right:0;bottom:0;padding:2px 0;font-size:10.5px;font-weight:700;
+  text-align:center;color:#fff;background:rgba(0,0,0,.6);border-radius:0 0 6px 6px;}
 .chip-collapse.chip-panel-card.open.ma-vse{max-height:182px;}
 .chip-collapse.chip-panel-card.open.vse{max-height:none;}
 .chip-collapse.chip-panel-card.vse .chip-panel-scroll{max-height:none;}
@@ -2113,6 +2127,8 @@ body.dark-mode .seq-group-video-duration{background:var(--paper);color:var(--cou
    YouTube vlastní klikatelné UI (odkaz na kanál autora) v takhle malém rámečku. */
 .tmf-thumb-catch{position:absolute;inset:0;cursor:pointer;}
 /* Stejný jemný vodoznak jako .detail-broken-thumb v Knihovně, jen zmenšený pro malý náhled. */
+/* Kolo 32 (Mek 9. 11.: A): fotka textového cvičení ve fázi Zadání — tam, kde je u videa náhled. */
+.tmf-thumb-foto{width:100%;height:100%;background-color:#2b2f36;background-size:cover;background-position:center;cursor:zoom-in;}
 .tmf-thumb-broken{width:100%;height:100%;background-color:#2b2f36;background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;cursor:pointer;}
 .tmf-thumb-watermark{font-family:var(--font-display);font-size:11px;letter-spacing:.04em;color:rgba(255,255,255,.88);background:rgba(20,22,20,.4);padding:4px 10px;border-radius:999px;text-align:center;}
 .tmf-brief-info{display:flex;flex-direction:column;gap:10px;align-items:flex-start;text-align:left;min-width:0;max-width:min(60vw,420px);}
@@ -2890,6 +2906,30 @@ body.dark-mode .seq-group-video-duration{background:var(--paper);color:var(--cou
       <button type="button" class="manage-link" id="openTrashBtn"><i class="fa-solid fa-trash-can"></i> Koš</button>
     </div>
   </div>
+</div>
+
+<!-- Kolo 32: ořez náhledu cvičení (16:9) — otevře se hned po výběru fotky. -->
+<div id="orezModalBackdrop" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 style="font-size:22px;">Ořez fotky</h2>
+      <button class="btn btn-icon btn-ghost" id="orezZavritBtn" aria-label="Zavřít"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="orez-ram" id="orezRam"><img id="orezImg" alt="" draggable="false"></div>
+    <div class="field" style="margin-top:16px;">
+      <label for="orezZoom">Přiblížení</label>
+      <input type="range" id="orezZoom" min="100" max="500" value="100" style="width:100%;">
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-primary" id="orezPouzitBtn"><i class="fa-solid fa-check"></i> Použít ořez</button>
+      <button type="button" class="btn btn-ghost" id="orezZrusitBtn">Zrušit</button>
+    </div>
+  </div>
+</div>
+<!-- Kolo 32: fotka textového cvičení přes celou obrazovku. -->
+<div id="fotkaCelaBackdrop" class="modal-backdrop fotka-cela hidden">
+  <button type="button" class="fotka-cela-zavrit" id="fotkaCelaZavritBtn" aria-label="Zavřít"><i class="fa-solid fa-xmark"></i></button>
+  <img id="fotkaCelaImg" alt="" draggable="false">
 </div>
 
 <!-- ===================== MANAGE FOLDERS MODAL ===================== -->
@@ -4082,7 +4122,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-11-08 23:47";
+const APP_VERSION = "2026-11-09 01:39";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -4126,6 +4166,8 @@ let saveTimer = null;
 let sortableInstance = null;
 let groupSortableInstances = [];
 let pendingThumbUpload = null; // data URL vlastního nahraného náhledu, čeká na uložení formuláře
+let pendingOstraFotka = null;   // kolo 32: { pro: <data URL náhledu>, data: <data URL ostré fotky> }
+let formNahledPuvodni = "";     // kolo 32: předchozí náhled upravovaného cvičení (dlaždice „Původní“)
 let metaFetchedForUrl = ""; // pro jaký přesně odkaz už načtení info proběhlo — podle toho se pozná, jestli načítat znovu (viz scheduleLinkAutoFetch)
 /* Krátké odkazy z aplikace Facebook (facebook.com/share/r/…, /share/v/…) Trenér neumí:
    přehrávač Facebooku je odmítne („Video není dostupné") a rozbalit je umí jen prohlížeč,
@@ -4426,7 +4468,8 @@ function fetchImageAsDataUrl(url) {
     vydrží“), jenže když autor video smaže, zmizí i náhled — a u videa, které zmizelo u zdroje,
     má náhled spolu s popisem připomínat, o jaké cvičení šlo (Mek). */
 function thumbsToFix(items) {
-  return items.filter(it => it && !it.deletedAt &&
+  // Kolo 32: fotka ve Storage už natrvalo uložená je — nestahovat a nepřepisovat.
+  return items.filter(it => it && !it.deletedAt && !jeStorageUrl(it.thumbnail) &&
     ((typeof it.thumbnail === "string" && /^https?:\/\//.test(it.thumbnail)) ||
      ((it.platform === "drive" || it.platform === "youtube") && it.videoId && !it.thumbnail)));
 }
@@ -4478,7 +4521,9 @@ async function saveThumbsPermanently(ids, { refreshDrive = false, onProgress = n
           logDebug(`[náhledy] „${title}“ — stažení se nepovedlo, zůstává adresa`);
         } else {
           try {
-            const local = await saveThumbnailToFirestore(id, dataUrl);
+            // Kolo 32: natrvalo do Storage, ne do sharedThumbnails — tam by se přepsal případný
+            // předchozí vlastní náhled („local:ID“), na který vede dlaždice „Původní“.
+            const local = await ulozNahledDoStorage(id, dataUrl);
             if (state.library[id]) { state.library[id].thumbnail = local; saved++; }
           } catch (err) {
             logDebug(`[náhledy] „${title}“ — uložení natrvalo selhalo:`, (err && err.message) || err);
@@ -4691,6 +4736,9 @@ function restoreLibraryItem(id) {
 }
 function hardDeleteLibraryItem(id) {
   const oldThumb = state.library[id] && state.library[id].thumbnail;
+  // Kolo 32: fotky cvičení ve Storage (náhled, předchozí náhled, ostré fotky) pryč s ním.
+  { const it = state.library[id] || {};
+    [it.thumbnail, it.nahledPredchozi, it.fotka && it.fotka.url, it.fotkaPredchozi && it.fotkaPredchozi.url].forEach(u => smazZeStorage(u)); }
   delete state.library[id];
   delete state.thumbnails[id];
   pendingLibraryDeletions.add(id);
@@ -5244,6 +5292,45 @@ const STORAGE_THUMB_MAX_PX = 640;   // šířka náhledu — karta v mřížce m
 const STORAGE_THUMB_QUALITY = 0.82;
 
 
+/* Kolo 32 (Mek 8.–9. 11. 2026): Storage je na projektu zapnuté (bucket trener-6d1b2.firebasestorage.app,
+   US-EAST1). Nové fotky jdou sem: náhled do thumbs/{id}/{čas}.jpg (640 px), ostrá fotka textového
+   cvičení do fotky/{id}/{čas}.jpg (1600 px). Staré náhledy zůstávají ve Firestore (sharedThumbnails),
+   jejich přestěhování je samostatné kolo (Mek: C). V knihovně je pak obyčejná https adresa. */
+const STORAGE_OSTRA_MAX_PX = 1600;
+const STORAGE_OSTRA_QUALITY = 0.85;
+let ulozisteMod = null, ulozisteInst = null;
+async function uloziste() {
+  if (!ulozisteInst) {
+    ulozisteMod = await sCasovymLimitem(import("https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js"), 20000, "knihovnu úložiště fotek se nepodařilo stáhnout včas");
+    ulozisteInst = ulozisteMod.getStorage(fbApp);
+  }
+  return { m: ulozisteMod, s: ulozisteInst };
+}
+function jeStorageUrl(u) { return typeof u === "string" && /^https:\/\/firebasestorage\.googleapis\.com\//.test(u); }
+/** Náhled, který si někdo vybral nebo nahrál sám (ne adresa náhledu z YouTube/Disku). */
+function jeVlastniNahled(v) { return typeof v === "string" && (v.startsWith(LOCAL_THUMB_PREFIX) || v.startsWith("data:") || jeStorageUrl(v)); }
+async function nahrajObrazekDoStorage(cesta, dataUrl) {
+  const { m, s } = await uloziste();
+  const r = m.ref(s, cesta);
+  await withTimeout(m.uploadString(r, dataUrl, "data_url", { contentType: "image/jpeg", cacheControl: "public,max-age=31536000" }), 60000, "nahrání fotky");
+  return await withTimeout(m.getDownloadURL(r), 20000, "adresa fotky");
+}
+async function ulozNahledDoStorage(id, dataUrl) {
+  return nahrajObrazekDoStorage(`thumbs/${id}/${Date.now()}.jpg`, await resizeDataUrlToMaxWidth(dataUrl));
+}
+async function ulozOstrouFotku(id, dataUrl) {
+  return nahrajObrazekDoStorage(`fotky/${id}/${Date.now()}.jpg`, dataUrl);
+}
+async function smazZeStorage(u) {
+  if (!jeStorageUrl(u)) return;
+  try { const { m, s } = await uloziste(); await m.deleteObject(m.ref(s, u)); }
+  catch (e) { logDebug("[fotky] smazání ze Storage se nepovedlo:", (e && e.message) || e); }
+}
+/** Ostrá fotka textového cvičení patří k jednomu konkrétnímu náhledu — po výměně náhledu se nepoužije. */
+function ostraFotkaUrl(item) { return item && item.fotka && item.fotka.url && item.fotka.nahled === item.thumbnail ? item.fotka.url : ""; }
+/** Hodnota náhledu (adresa nebo „local:ID“ upravovaného cvičení) → adresa k zobrazení. */
+function nahledKZobrazeni(v) { return v && v.startsWith(LOCAL_THUMB_PREFIX) ? (state.thumbnails[editingLinkId] || "") : (v || ""); }
+
 /** Zmenší fotku na rozumnou šířku pro náhled — na rozdíl od enforceThumbSizeBudget() necílí
     na počet bajtů, ale na rozměr. Používá se u snímků zachycených z videa. */
 function resizeDataUrlToMaxWidth(dataUrl, maxPx = STORAGE_THUMB_MAX_PX, quality = STORAGE_THUMB_QUALITY) {
@@ -5389,10 +5476,23 @@ function secondsToTimestamp(sec) {
 function renderThumbSuggestions(urls, platform) {
   const wrap = document.getElementById("thumbSuggestions");
   urls = urls.filter(Boolean);
-  if (!urls.length) { wrap.classList.add("hidden"); wrap.innerHTML = ""; return; }
+  // Kolo 32 (Mek 8. 11.: A): předchozí náhled cvičení jde vrátit dlaždicí „Původní“.
+  const puvodni = formNahledPuvodni && document.getElementById("thumbPreview").dataset.thumb !== formNahledPuvodni ? formNahledPuvodni : "";
+  if (!urls.length && !puvodni) { wrap.classList.add("hidden"); wrap.innerHTML = ""; return; }
   wrap.innerHTML = `<div class="thumb-suggestions-label">Navržené náhledy — klepnutím vyber:</div>
-    <div class="thumb-suggestions-row">${urls.map(u => `<div class="thumb-suggestion-item" style="background-image:url('${u}')" data-thumb-url="${esc(u)}"></div>`).join("")}</div>`;
+    <div class="thumb-suggestions-row">${urls.map(u => `<div class="thumb-suggestion-item" style="background-image:url('${u}')" data-thumb-url="${esc(u)}"></div>`).join("")}${puvodni
+      ? `<div class="thumb-suggestion-item puvodni" style="background-image:url('${esc(nahledKZobrazeni(puvodni))}')" data-puvodni="1" title="Původní náhled"></div>` : ""}</div>`;
   wrap.classList.remove("hidden");
+  const puvodniEl = wrap.querySelector("[data-puvodni]");
+  if (puvodniEl) puvodniEl.addEventListener("click", () => {
+    wrap.querySelectorAll(".thumb-suggestion-item").forEach(x => x.classList.toggle("selected", x === puvodniEl));
+    const tp = document.getElementById("thumbPreview");
+    tp.style.backgroundImage = `url('${nahledKZobrazeni(puvodni)}')`;
+    tp.textContent = "";
+    tp.dataset.thumb = puvodni;
+    pendingThumbUpload = null;
+    pendingOstraFotka = null;
+  });
   wrap.querySelectorAll("[data-thumb-url]").forEach(el => {
     el.addEventListener("click", async () => {
       const u = el.dataset.thumbUrl;
@@ -5402,6 +5502,7 @@ function renderThumbSuggestions(urls, platform) {
       tp.textContent = "";
       tp.dataset.thumb = u;
       pendingThumbUpload = null; // vybraný návrh má přednost před dřívějším ručním nahráním
+      pendingOstraFotka = null;
       // U Disku (a TikToku) aplikace rovnou zkusí náhled stáhnout a uložit si ho natrvalo k sobě —
       // tyhle adresy totiž mají tendenci časem přestat platit (viděli jsme to naostro). U
       // YouTube aplikace tohle záměrně nedělá, tamní adresy jsou samy o sobě dlouhodobě spolehlivé.
@@ -8207,8 +8308,10 @@ function openLinkModal(id, opts) {
   renderFolderOptions();
   renderPartSelectOptions();
   pendingThumbUpload = null;
+  pendingOstraFotka = null;
   document.getElementById("thumbFileInput").value = "";
   const item = id ? state.library[id] : null;
+  formNahledPuvodni = (item && item.nahledPredchozi && item.nahledPredchozi !== item.thumbnail) ? item.nahledPredchozi : "";
   // Textové cvičení (kolo 2): upravované bez odkazu, nové z „Přidat cvičení“ → Text (kolo 31)
   // nebo z tréninku, zařazovaný tip bez odkazu.
   linkFormText = item ? jeTextove(item)
@@ -8532,11 +8635,19 @@ async function fetchLinkMeta() {
     document.getElementById("thumbPreview").dataset.videoId = ytId || "";
     toast("Načítám info z YouTube…", 2200, "progress");
     const meta = await fetchYouTubeMeta(url);
+    // Kolo 32 (Mek 8. 11.: A): u uloženého cvičení s vlastním náhledem (nahraný, vybraný snímek)
+    // výměna odkazu náhled nepřepíše — náhled nového videa se jen nabídne mezi návrhy.
+    const tpNahled = document.getElementById("thumbPreview");
+    const chranitNahled = !!editingLinkId && (!!pendingThumbUpload || jeVlastniNahled(tpNahled.dataset.thumb || ""));
+    let nabidnoutNahled = "";
     if (meta) {
       if (!document.getElementById("linkTitle").value) document.getElementById("linkTitle").value = meta.title;
-      document.getElementById("thumbPreview").style.backgroundImage = `url('${meta.thumbnail}')`;
-      document.getElementById("thumbPreview").textContent = "";
-      document.getElementById("thumbPreview").dataset.thumb = meta.thumbnail;
+      if (chranitNahled) nabidnoutNahled = meta.thumbnail;
+      else {
+        tpNahled.style.backgroundImage = `url('${meta.thumbnail}')`;
+        tpNahled.textContent = "";
+        tpNahled.dataset.thumb = meta.thumbnail;
+      }
       document.getElementById("linkAspectRatio").value = meta.portrait ? "9/16" : "16/9";
       toast("Načteno.");
     } else {
@@ -8544,8 +8655,8 @@ async function fetchLinkMeta() {
     }
     if (ytId) {
       // YouTube si u většiny videí sám generuje náhledy ve třech různých okamžicích videa
-      renderThumbSuggestions([1, 2, 3].map(n => `https://img.youtube.com/vi/${ytId}/${n}.jpg`));
-    }
+      renderThumbSuggestions([nabidnoutNahled, ...[1, 2, 3].map(n => `https://img.youtube.com/vi/${ytId}/${n}.jpg`)]);
+    } else if (nabidnoutNahled) renderThumbSuggestions([nabidnoutNahled]);
   } else if (platform === "drive") {
     const driveId = extractDriveId(url) || "";
     document.getElementById("thumbPreview").dataset.videoId = driveId;
@@ -8855,13 +8966,142 @@ setupAutocomplete("bulkEquipInput", "bulkEquipAutocomplete", () => state.equipme
 document.getElementById("thumbFileInput").addEventListener("change", async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  const dataUrl = await fileToOrientedDataUrl(file, 480, "image/jpeg", 0.82);
+  e.target.value = ""; // ať jde stejnou fotku vybrat znovu (třeba po Zrušit)
+  // Kolo 32 (Mek 8. 11.: A): hned po výběru ořez 16:9; z ořezu vznikne náhled (640 px) a ostrá
+  // fotka (1600 px — uloží se jen u textového cvičení). Zrušit = fotka se nepoužije.
+  const velka = await fileToOrientedDataUrl(file, 2400, "image/jpeg", 0.92);
+  const orez = await orezFotky(velka);
+  if (!orez) return;
+  const dataUrl = orez.nahled;
   pendingThumbUpload = dataUrl;
+  pendingOstraFotka = { pro: dataUrl, data: orez.ostra };
   const tp = document.getElementById("thumbPreview");
   tp.style.backgroundImage = `url('${dataUrl}')`;
   tp.textContent = "";
   document.querySelectorAll("#thumbSuggestions .thumb-suggestion-item").forEach(x => x.classList.remove("selected"));
   toast("Náhled nahrán.");
+});
+
+/* Kolo 32: posun a přiblížení obrázku v rámu — prst (jeden posouvá, dva přibližují), myš (táhnutí,
+   kolečko), dvojklik. cover = obrázek vždy vyplní celý rám (ořez); jinak se vejde celý (prohlížení). */
+function vytvorPosun(ram, img, cover, poZmene) {
+  const st = { s: 1, x: 0, y: 0, sMin: 1, W: 0, H: 0, nw: 0, nh: 0 };
+  const body = new Map();
+  const meze = () => {
+    const w = st.nw * st.s, h = st.nh * st.s;
+    st.x = (!cover && w <= st.W) ? (st.W - w) / 2 : Math.min(0, Math.max(st.W - w, st.x));
+    st.y = (!cover && h <= st.H) ? (st.H - h) / 2 : Math.min(0, Math.max(st.H - h, st.y));
+    img.style.transform = `translate(${st.x}px,${st.y}px) scale(${st.s})`;
+    if (poZmene) poZmene(st);
+  };
+  const priblizit = (s2, px, py) => {
+    s2 = Math.max(st.sMin, Math.min(st.sMin * 5, s2));
+    st.x = px - (px - st.x) * s2 / st.s;
+    st.y = py - (py - st.y) * s2 / st.s;
+    st.s = s2;
+    meze();
+  };
+  const bod = (e) => { const r = ram.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+  ram.addEventListener("pointerdown", (e) => {
+    if (e.target.closest("button")) return;
+    try { ram.setPointerCapture(e.pointerId); } catch (_) {}
+    body.set(e.pointerId, bod(e));
+  });
+  ram.addEventListener("pointermove", (e) => {
+    if (!body.has(e.pointerId)) return;
+    const pred = [...body.values()].map(p => ({ ...p }));
+    body.set(e.pointerId, bod(e));
+    const ted = [...body.values()];
+    if (ted.length === 1) { st.x += ted[0].x - pred[0].x; st.y += ted[0].y - pred[0].y; meze(); return; }
+    const d = (a, b) => Math.hypot(a.x - b.x, a.y - b.y) || 1;
+    const m0 = { x: (pred[0].x + pred[1].x) / 2, y: (pred[0].y + pred[1].y) / 2 }, m1 = { x: (ted[0].x + ted[1].x) / 2, y: (ted[0].y + ted[1].y) / 2 };
+    st.x += m1.x - m0.x; st.y += m1.y - m0.y;
+    priblizit(st.s * d(ted[0], ted[1]) / d(pred[0], pred[1]), m1.x, m1.y);
+  });
+  const pust = (e) => body.delete(e.pointerId);
+  ram.addEventListener("pointerup", pust);
+  ram.addEventListener("pointercancel", pust);
+  ram.addEventListener("wheel", (e) => { e.preventDefault(); const p = bod(e); priblizit(st.s * Math.exp(-e.deltaY * 0.0015), p.x, p.y); }, { passive: false });
+  ram.addEventListener("dblclick", (e) => { const p = bod(e); priblizit(st.s > st.sMin * 1.05 ? st.sMin : st.sMin * 2.5, p.x, p.y); });
+  return {
+    st,
+    pripravit() {
+      // Přesné (necelé) rozměry rámu — clientWidth/Height by se zaokrouhlily a výřez by nebyl přesně 16:9.
+      const r = ram.getBoundingClientRect();
+      Object.assign(st, { W: r.width, H: r.height, nw: img.naturalWidth || 1, nh: img.naturalHeight || 1 });
+      st.sMin = cover ? Math.max(st.W / st.nw, st.H / st.nh) : Math.min(st.W / st.nw, st.H / st.nh);
+      st.s = st.sMin;
+      st.x = (st.W - st.nw * st.s) / 2;
+      st.y = (st.H - st.nh * st.s) / 2;
+      body.clear();
+      meze();
+    },
+    priblizit,
+  };
+}
+/* Ořez náhledu (kolo 32, Mek 8. 11.: A): rámeček 16:9, obrázek ho vždy vyplní. Vrací Promise
+   { nahled, ostra } (data URL; 640 a 1600 px na šířku, nikdy víc než zdroj), nebo null = Zrušit. */
+let orezHotovo = null;
+const orezPosun = vytvorPosun(document.getElementById("orezRam"), document.getElementById("orezImg"), true, (st) => {
+  document.getElementById("orezZoom").value = Math.round(100 * st.s / st.sMin);
+});
+function orezFotky(dataUrl) {
+  return new Promise((resolve) => {
+    const img = document.getElementById("orezImg");
+    orezHotovo = resolve;
+    img.onload = () => {
+      document.getElementById("orezModalBackdrop").classList.remove("hidden");
+      requestAnimationFrame(() => orezPosun.pripravit());
+    };
+    img.onerror = () => { orezHotovo = null; toast("Fotku se nepodařilo otevřít.", 3500, "err"); resolve(null); };
+    img.src = dataUrl;
+  });
+}
+function orezKonec(vysledek) {
+  document.getElementById("orezModalBackdrop").classList.add("hidden");
+  const r = orezHotovo;
+  orezHotovo = null;
+  if (r) r(vysledek);
+}
+function orezVystup() {
+  const st = orezPosun.st, img = document.getElementById("orezImg");
+  // Výřez přesně 16:9 (rám je 16:9 až na zlomky pixelu) — výstup se tak nikdy nedeformuje.
+  const sx = -st.x / st.s, sy = -st.y / st.s, sw = st.W / st.s, sh = sw * 9 / 16;
+  const udelej = (maxW, kvalita) => {
+    const w = Math.max(1, Math.round(Math.min(maxW, sw))), hh = Math.max(1, Math.round(w * 9 / 16));
+    const c = document.createElement("canvas");
+    c.width = w; c.height = hh;
+    c.getContext("2d").drawImage(img, sx, sy, sw, sh, 0, 0, w, hh);
+    return c.toDataURL("image/jpeg", kvalita);
+  };
+  return { nahled: udelej(STORAGE_THUMB_MAX_PX, STORAGE_THUMB_QUALITY), ostra: udelej(STORAGE_OSTRA_MAX_PX, STORAGE_OSTRA_QUALITY) };
+}
+document.getElementById("orezPouzitBtn").addEventListener("click", () => orezKonec(orezVystup()));
+document.getElementById("orezZrusitBtn").addEventListener("click", () => orezKonec(null));
+document.getElementById("orezZavritBtn").addEventListener("click", () => orezKonec(null));
+document.getElementById("orezZoom").addEventListener("input", (e) => {
+  const st = orezPosun.st;
+  orezPosun.priblizit(st.sMin * (+e.target.value || 100) / 100, st.W / 2, st.H / 2);
+});
+/* Fotka přes celou obrazovku (kolo 32): ostrá fotka textového cvičení, přiblížení prsty / kolečkem /
+   dvojklikem, zavírá křížek nebo Zpět. */
+const fotkaCelaPosun = vytvorPosun(document.getElementById("fotkaCelaBackdrop"), document.getElementById("fotkaCelaImg"), false);
+function otevriFotkuCelou(url) {
+  const img = document.getElementById("fotkaCelaImg");
+  img.onload = () => {
+    document.getElementById("fotkaCelaBackdrop").classList.remove("hidden");
+    requestAnimationFrame(() => fotkaCelaPosun.pripravit());
+  };
+  img.src = url;
+}
+document.getElementById("fotkaCelaZavritBtn").addEventListener("click", () => document.getElementById("fotkaCelaBackdrop").classList.add("hidden"));
+document.getElementById("detailEmbedWrap").addEventListener("click", (e) => {
+  const el = e.target.closest(".detail-text-thumb.lze-zvetsit");
+  if (el && el.dataset.fotka) otevriFotkuCelou(el.dataset.fotka);
+});
+window.addEventListener("resize", () => {
+  if (!document.getElementById("orezModalBackdrop").classList.contains("hidden")) orezPosun.pripravit();
+  if (!document.getElementById("fotkaCelaBackdrop").classList.contains("hidden")) fotkaCelaPosun.pripravit();
 });
 
 /** Obtížnost 0 = trenér ji ještě nezadal: nesvítí žádný dílek a nic se neukládá.
@@ -9149,9 +9389,13 @@ linkForm.addEventListener("submit", async (e) => {
   // knihovně po ní zůstane jen krátký odkaz. Beze změny (např. odkaz z YouTube, nebo fotka,
   // co už tam takhle byla) aplikace nechává tak, jak je.
   let thumbToSave = pendingThumbUpload || document.getElementById("thumbPreview").dataset.thumb || "";
+  let novaOstra = "";
   if (thumbToSave.startsWith("data:")) {
     try {
-      thumbToSave = await saveThumbnailToFirestore(id, thumbToSave);
+      // Kolo 32: nové fotky jdou do Storage (dřív saveThumbnailToFirestore do sharedThumbnails).
+      const ostra = (jeText && pendingOstraFotka && pendingOstraFotka.pro === thumbToSave) ? pendingOstraFotka.data : "";
+      thumbToSave = await ulozNahledDoStorage(id, thumbToSave);
+      if (ostra) novaOstra = await ulozOstrouFotku(id, ostra);
     } catch (err) {
       // Skutečný důvod dřív skončil jenom v konzoli prohlížeče, kam se na telefonu nikdo
       // nepodívá — proto to vypadalo, že appka jen tak "nechce". Teď jde kód i zpráva do
@@ -9160,9 +9404,9 @@ linkForm.addEventListener("submit", async (e) => {
       const msg = (err && err.message) || String(err);
       console.error("Uložení náhledu selhalo:", err);
       logDebug(`[náhled] ✗ NAHRÁNÍ SELHALO — kód: ${code || "(žádný)"} — ${msg}`);
-      if (code === "permission-denied") logDebug("[náhled] → pravidla Firestore zápis do sharedThumbnails nepovolují.");
-      if (code === "invalid-argument") logDebug("[náhled] → fotka je nejspíš moc velká na jeden dokument (limit 1 MB).");
-      if (code === "unavailable") logDebug("[náhled] → Firestore je zrovna nedostupný (síť).");
+      if (code === "storage/unauthorized") logDebug("[náhled] → pravidla Storage zápis nepovolují (nahrál Mek storage.rules?).");
+      if (code === "storage/retry-limit-exceeded" || code === "storage/unknown") logDebug("[náhled] → Storage se nedovolá (síť, nebo úložiště není zapnuté).");
+      if (code === "storage/quota-exceeded") logDebug("[náhled] → Storage hlásí vyčerpaný limit (strop útraty?).");
       toast(`Uložení náhledu se nepovedlo${code ? ` (${code})` : ""}. Detaily v 🐞.`, 9000, "err");
       return;
     }
@@ -9214,6 +9458,21 @@ linkForm.addEventListener("submit", async (e) => {
     ["share", "favorite"].forEach(f => {
       if (existing[f] !== undefined && existing[f] !== null) state.library[id][f] = existing[f];
     });
+  }
+  /* Kolo 32: předchozí náhled (dlaždice „Původní“, pamatuje se jeden) a ostrá fotka textového
+     cvičení. Při výměně náhledu se stávající stane předchozím; vrácením „Původního“ se prohodí. */
+  {
+    const it = state.library[id], stary = existing ? (existing.thumbnail || "") : "";
+    if (existing && stary && stary !== thumbToSave) {
+      it.nahledPredchozi = stary;
+      if (existing.fotka && existing.fotka.nahled === stary) it.fotkaPredchozi = existing.fotka;
+    } else if (existing) {
+      if (existing.nahledPredchozi) it.nahledPredchozi = existing.nahledPredchozi;
+      if (existing.fotkaPredchozi) it.fotkaPredchozi = existing.fotkaPredchozi;
+    }
+    if (novaOstra) it.fotka = { nahled: thumbToSave, url: novaOstra };
+    else if (existing && existing.fotka && existing.fotka.nahled === thumbToSave) it.fotka = existing.fotka;
+    else if (existing && existing.fotkaPredchozi && existing.fotkaPredchozi.nahled === thumbToSave) it.fotka = existing.fotkaPredchozi;
   }
   // Admin změnil odkaz u zmizelého videa = náhrada (stejně jako přes sdílení).
   if (replacedGone) {
@@ -9816,6 +10075,10 @@ async function replaceGoneVideo(id, rawUrl) {
   }
   const cur = state.library[id];
   if (!cur) return;
+  // Kolo 32 (Mek 8. 11.: A): vlastní náhled výměna videa nepřepíše. Jinak se nový použije a starý
+  // zůstane jako předchozí (dlaždice „Původní“ v úpravě cvičení).
+  if (jeVlastniNahled(cur.thumbnail || "")) thumbnail = cur.thumbnail;
+  else if (cur.thumbnail && cur.thumbnail !== thumbnail) cur.nahledPredchozi = cur.thumbnail;
   Object.assign(cur, {
     url, platform, videoId, thumbnail, aspectRatio, timestamp: null,
     brokenAt: null, goneAt: null, goneResolvedAt: Date.now(), autoCheck: null, autoCheckIgnoreUrl: null
@@ -10010,9 +10273,10 @@ function openDetailModal(id) {
     // Textové cvičení (kolo 2): místo přehrávače fotka, nebo zástupný obrázek TEXT. Popis je
     // hned pod tím jako u videa.
     embedWrap.style.aspectRatio = "16/9";
-    const fotka = resolveThumbnailUrl(item);
+    // Kolo 32: ostrá fotka (je-li), ťuknutím přes celou obrazovku.
+    const fotka = ostraFotkaUrl(item) || resolveThumbnailUrl(item);
     embedWrap.innerHTML = fotka
-      ? `<div class="detail-text-thumb" style="background-image:url('${esc(fotka)}')"></div>`
+      ? `<div class="detail-text-thumb lze-zvetsit" style="background-image:url('${esc(fotka)}')" data-fotka="${esc(fotka)}" role="button" aria-label="Zvětšit fotku"></div>`
       : `<div class="detail-text-thumb">${PH_TEXT_SVG}</div>`;
   } else if (item.brokenAt || item.goneAt) {
     // Video ručně označené jako nefunkční (#91/#95) — appka se ho ani nesnaží přehrát (byl by
@@ -13362,10 +13626,28 @@ function renderFazeVideoArea(entry) {
     wrap.appendChild(catcher);
   }
 }
+/** Kolo 32 (Mek 9. 11.: A): fotka textového cvičení z knihovny ve fázi Zadání — ve stejném rámečku
+    jako náhled videa (na šířku 16:9), ťuknutím ostrá fotka přes celou obrazovku. */
+function fotkaTextuVPrezentaci(entry) {
+  return entry && entry.isText && entry.lib ? (ostraFotkaUrl(entry.lib) || resolveThumbnailUrl(entry.lib)) : "";
+}
+function renderFazeFotka(url) {
+  const wrap = document.getElementById("tmfThumb");
+  if (!wrap || !url) return;
+  const isWide = document.getElementById("trainingModeView").classList.contains("tm-forced-landscape")
+    || window.matchMedia("(min-width:860px),(orientation:landscape) and (min-width:480px)").matches;
+  const box = isWide ? { maxW: 180, maxH: Math.round(window.innerHeight * 0.5) } : { maxW: 140, maxH: Math.round(window.innerHeight * 0.32) };
+  const fit = fitBoxForRatio("16/9", box.maxW, box.maxH);
+  wrap.style.width = fit.w + "px";
+  wrap.style.height = fit.h + "px";
+  wrap.innerHTML = `<div class="tmf-thumb-foto" style="background-image:url('${esc(url)}')" role="button" aria-label="Zvětšit fotku"></div>`;
+  wrap.onclick = () => otevriFotkuCelou(url);
+}
 function renderFazeBrief(main, entry) {
   if (entry.isStations) { stanRenderFaze(main, entry, "brief"); return; }
-  const hasThumb = !entry.isText && !!entry.lib;
-  const hasVid = hasThumb && !entry.broken;
+  const fotkaTextu = fotkaTextuVPrezentaci(entry);
+  const hasThumb = (!entry.isText && !!entry.lib) || !!fotkaTextu;
+  const hasVid = hasThumb && !entry.broken && !entry.isText;
   const hasDetail = !!((entry.shortDesc && entry.shortDesc.trim()) || (entry.longDesc && entry.longDesc.trim()));
   main.innerHTML = `
     <div class="tmf-brief-row">
@@ -13379,7 +13661,8 @@ function renderFazeBrief(main, entry) {
     </div>`;
   const detailBtn = document.getElementById("tmfDetailBtn");
   if (detailBtn) detailBtn.addEventListener("click", fazeOpenDetail);
-  if (hasThumb) renderFazeVideoArea(entry);
+  if (fotkaTextu) renderFazeFotka(fotkaTextu);
+  else if (hasThumb) renderFazeVideoArea(entry);
 }
 function renderFazeRun(main, entry) {
   if (entry.isStations) { stanRenderFaze(main, entry, "run"); return; }
@@ -22108,6 +22391,7 @@ const HELP_DATA = [
       { q: "Proč mi aplikace nechce uložit video?", a: "Hotové video musí mít název, popis, aspoň jeden štítek a aspoň jednu položku vybavení (ukázka jen název a štítky). Když něco chybí, aplikace se zeptá, jestli ho chceš uložit jako koncept; po „Doplnit“ se chybějící pole orámují červeně. Když cvičení žádné pomůcky nepotřebuje, vyber „Bez vybavení“. U starších videí, která popis nemají, se při úpravě popis nevyžaduje.", kw: "nejde ulozit povinne stitky vybaveni nazev popis cerveny ramecek koncept" },
       { q: "Co je koncept a jak ho dokončím?", a: "Koncept je video, které sis zatím jen předuložil(a) — třeba když nemáš čas vyplnit štítky nebo popis. Pozná se podle přerušovaného okraje a kapsle „Koncept“; ikona tužky s číslem v liště ukáže jen tvoje koncepty. Koncept otevři, doplň, co chybí, a ulož — tím se z něj stane hotové video.", kw: "koncept rozpracovane predulozit dokoncit tuzka nedokoncene" },
       { q: "Kdo uvidí můj koncept?", a: "Jen ty a admin. Ostatní trenéři ho v knihovně ani v návrzích neuvidí, dokud ho nedokončíš. Do svého tréninku ho ale dát můžeš — a kdo se na tvůj trénink podívá, uvidí ho tam.", kw: "koncept viditelnost ostatni treneri admin skryte" },
+      { q: "Jak nahraju vlastní obrázek ke cvičení a co je „Původní“?", a: "Ve formuláři cvičení ťukni na „Nahrát vlastní náhled“ a vyber fotku. Hned se otevře ořez: fotku posuň prstem, přibliž dvěma prsty (na počítači kolečkem nebo posuvníkem) a dej „Použít ořez“. U textového cvičení se fotka uloží i v plné ostrosti — v detailu cvičení na ni ťukni a otevře se přes celou obrazovku, kde jde přibližovat. Stejně tak v prezentaci tréninku: ve fázi Zadání je fotka vedle názvu cvičení. Vlastní obrázek se výměnou odkazu na video nepřepíše; obrázek nového videa se jen nabídne mezi návrhy. Když obrázek změníš, ten předchozí najdeš v úpravě cvičení mezi návrhy jako dlaždici „Původní“ a jedním ťuknutím ho vrátíš.", kw: "fotka obrazek nahled vlastni orez oriznout puvodni vratit ostra zvetsit priblizit" },
       { q: "Musí mít video obrázek?", a: "Nemusí, ale hodí se. Když se obrázek nenačte a nic jiného nechybí, aplikace se zeptá, jestli video uložit jako koncept, nebo jako hotové.", kw: "obrazek nahled chybi koncept hotove" },
       { q: "Co znamená „vybavení“ u videa?", a: "Označuje, co je na cvičení potřeba (míče, obruče, švihadla...) — hodí se to hlavně při skládání tréninku, kdy aplikace umí ukázat souhrn všeho vybavení, co si na trénink vzít." },
       { q: "Jak přidám úplně nový štítek nebo vybavení, které ještě neexistuje?", a: "Stačí ho napsat do příslušného pole při úpravě videa a potvrdit — aplikace ho rovnou přidá do nabídky pro příště, není potřeba nic zvlášť zakládat." },
@@ -22406,6 +22690,8 @@ document.getElementById("helpSearchInput").addEventListener("input", (e) => rend
   const CLOSE_TRIGGERS = {
     linkModalBackdrop: "closeLinkModalBtn",
     detailModalBackdrop: "closeDetailModalBtn",
+    orezModalBackdrop: "orezZrusitBtn",
+    fotkaCelaBackdrop: "fotkaCelaZavritBtn",
     textExerciseDetailModalBackdrop: "closeTextExerciseDetailModalBtn",
     folderSidebarBackdrop: "closeFolderSidebarBtn",
     foldersModalBackdrop: "closeFoldersModalBtn",
