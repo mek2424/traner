@@ -879,7 +879,8 @@ main{flex:1;padding:16px;max-width:960px;margin:0 auto;width:100%;min-width:0;}
 .orez-pruhy-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px;}
 .orez-pruhy-row label{margin:0;text-transform:none;font-size:13px;letter-spacing:0;font-weight:500;display:flex;align-items:center;gap:8px;}
 .orez-pruhy-row label i{color:var(--court);}
-#fotkaCelaBackdrop{z-index:645;background:rgba(8,10,12,.94);touch-action:none;overflow:hidden;}
+/* Kolo 39 (Mek: C): krytí 98 % — při 94 % aplikace pod fotkou prosvítala. */
+#fotkaCelaBackdrop{z-index:645;background:rgba(8,10,12,.98);touch-action:none;overflow:hidden;}
 .fotka-cela-zavrit{position:absolute;top:calc(10px + env(safe-area-inset-top));right:10px;z-index:2;width:44px;height:44px;border-radius:50%;
   border:0;background:rgba(0,0,0,.55);color:#fff;font-size:20px;}
 /* Kolo 34: ikona celé obrazovky — stejné tlačítko jako křížek, vlevo od něj. */
@@ -4143,7 +4144,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-11-09 17:51";
+const APP_VERSION = "2026-11-09 17:56";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
