@@ -3125,6 +3125,7 @@ body.dark-mode .seq-group-video-duration{background:var(--paper);color:var(--cou
       <button type="button" class="admin-row" id="spravaEquipReqBtn"><i class="fa-solid fa-toolbox"></i><span class="admin-row-label">Nutné vybavení pro navrhování</span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
       <button type="button" class="admin-row" id="spravaPartsBtn"><i class="fa-solid fa-sliders"></i><span class="admin-row-label">Části tréninku</span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
       <button type="button" class="admin-row" id="openBulkImportBtn"><i class="fa-solid fa-table-list"></i><span class="admin-row-label">Hromadná úprava videí (import)</span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
+      <button type="button" class="admin-row hidden" id="stareNahledyBtn"><i class="fa-solid fa-truck-ramp-box" id="stareNahledyIkona"></i><span class="admin-row-label"><span id="stareNahledyNazev">Přestěhovat staré náhledy</span><span class="admin-row-sub" id="stareNahledyStav"></span></span><i class="fa-solid fa-chevron-right admin-row-chev"></i></button>
     </div>
     <p class="panel-group-title">Nastavení a záloha</p>
     <div class="admin-group">
@@ -4133,7 +4134,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-11-09 13:32";
+const APP_VERSION = "2026-11-09 16:13";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -4405,13 +4406,13 @@ document.getElementById("checkLibrarySizeBtn").addEventListener("click", () => {
 });
 
 /* =========================================================
-   STĚHOVÁNÍ NÁHLEDŮ Z FIRESTORE DO STORAGE — jen pro admina, jen ve vývojářském režimu.
-   Tři tlačítka schválně odděleně, v tomhle pořadí:
-     1. "nanečisto"  — nic nemění, jen spočítá a vypíše, co by se stalo
-     2. "přestěhovat" — nahraje fotky do Storage a v knihovně přepíše "local:ID" na https adresu
-     3. "uklidit Firestore" — až když je jasné, že všechno funguje, smaže starou kolekci
-   Mezi 2 a 3 schválně není spěch: dokud staré dokumenty v sharedThumbnails existují, dá se
-   celá migrace vrátit zpět tím, že se v knihovně adresy přepíšou nazpátek na "local:ID".
+   STĚHOVÁNÍ STARÝCH NÁHLEDŮ Z FIRESTORE DO STORAGE (kolo 36, Mek 9. 11. 2026)
+   Staré náhledy (do kola 32) leží jako text v kolekci sharedThumbnails, v knihovně je po nich
+   „local:ID“, a každé zařízení je při přihlášení stahuje všechny naráz. Admin je ve Správě →
+   Knihovna jedním řádkem přestěhuje do Storage (thumbs/{id}/{čas}.jpg jako nové fotky); originály
+   ve Firestore zůstanou, dokud je druhým klepnutím neuklidí (Mek: B — zálohy fotek ze Storage jsou
+   samostatné kolo, do té doby jsou originály i v záloze). Po úklidu řádek zmizí. Čtení „local:ID“
+   v aplikaci zůstává: obnova ze starší zálohy staré náhledy do Firestore vrací.
    ========================================================= */
 /** Pustí práci po několika naráz — 287 fotek po jedné by trvalo věčnost, všechny naráz by
     prohlížeč i Storage neunesly. */
@@ -4430,11 +4431,132 @@ async function runWithConcurrency(items, limit, worker, onProgress, shouldAbort)
   });
   await Promise.all(workers);
 }
-function listThumbsToMigrate() {
-  return Object.values(state.library)
-    .filter(it => it.thumbnail && it.thumbnail.startsWith(LOCAL_THUMB_PREFIX))
-    .map(it => ({ item: it, dataUrl: state.thumbnails[it.id] || "" }));
+/** Odkazy „local:ID“ v položce: náhled, „Původní“ náhled, náhled u ostré fotky. */
+function lokalniOdkazy(it) {
+  const o = [];
+  if (!it) return o;
+  if (typeof it.thumbnail === "string" && it.thumbnail.startsWith(LOCAL_THUMB_PREFIX)) o.push("thumbnail");
+  if (typeof it.nahledPredchozi === "string" && it.nahledPredchozi.startsWith(LOCAL_THUMB_PREFIX)) o.push("nahledPredchozi");
+  if (it.fotka && typeof it.fotka.nahled === "string" && it.fotka.nahled.startsWith(LOCAL_THUMB_PREFIX)) o.push("fotka.nahled");
+  if (it.fotkaPredchozi && typeof it.fotkaPredchozi.nahled === "string" && it.fotkaPredchozi.nahled.startsWith(LOCAL_THUMB_PREFIX)) o.push("fotkaPredchozi.nahled");
+  return o;
 }
+/** Co jde přestěhovat: položky (i v koši) s odkazem „local:ID“, ke kterému ve Firestore jsou data.
+    Odkaz bez dat přestěhovat nejde — nepočítá se, ať úklid neblokuje (vypíše se do 🐞). */
+function listThumbsToMigrate() {
+  const k = [], bezDat = [];
+  for (const it of Object.values(state.library)) {
+    if (!lokalniOdkazy(it).length) continue;
+    (state.thumbnails[it.id] ? k : bezDat).push(it);
+  }
+  return { k, bezDat };
+}
+/** Dokumenty v sharedThumbnails, na které už v knihovně nic neukazuje — ty smí úklid smazat. */
+function stareNahledyKUklidu() {
+  const odkazovane = new Set(Object.values(state.library).filter(it => lokalniOdkazy(it).length).map(it => it.id));
+  return Object.keys(state.thumbnails).filter(id => !odkazovane.has(id));
+}
+function overObrazek(url) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const t = setTimeout(() => resolve(false), 20000);
+    img.onload = () => { clearTimeout(t); resolve(img.naturalWidth > 0); };
+    img.onerror = () => { clearTimeout(t); resolve(false); };
+    img.src = url;
+  });
+}
+let stareNahledyBezi = false;
+function obnovRadekStarychNahledu(prubeh) {
+  const btn = document.getElementById("stareNahledyBtn");
+  if (!btn) return;
+  const { k } = listThumbsToMigrate();
+  const uklid = k.length ? [] : stareNahledyKUklidu();
+  const rezim = k.length ? "presun" : uklid.length ? "uklid" : "";
+  btn.classList.toggle("hidden", uidCurrent !== ADMIN_UID || (!rezim && !stareNahledyBezi));
+  btn.disabled = stareNahledyBezi;
+  if (prubeh) { document.getElementById("stareNahledyStav").textContent = prubeh; return; }
+  btn.dataset.rezim = rezim;
+  document.getElementById("stareNahledyIkona").className = rezim === "uklid" ? "fa-solid fa-broom" : "fa-solid fa-truck-ramp-box";
+  document.getElementById("stareNahledyNazev").textContent = rezim === "uklid" ? "Uklidit staré náhledy" : "Přestěhovat staré náhledy";
+  document.getElementById("stareNahledyStav").textContent = rezim === "uklid"
+    ? `Přestěhováno · originály zatím ve Firestore (${uklid.length})`
+    : `${k.length} ${czPlural(k.length, "náhled", "náhledy", "náhledů")} ve Firestore`;
+}
+async function prestehujStareNahledy() {
+  const { k, bezDat } = listThumbsToMigrate();
+  if (bezDat.length) logDebug(`[stěhování] ${bezDat.length} odkazů „local:ID“ bez dat ve Firestore (nejde přestěhovat):`, bezDat.map(it => nazevVidea(it)).join(", "));
+  if (!k.length) return;
+  if (!(await confirmDialog(`Přestěhovat ${k.length} ${czPlural(k.length, "starý náhled", "staré náhledy", "starých náhledů")} z Firestore do úložiště fotek? Originály zůstanou, dokud je neuklidíš.`, { title: "Staré náhledy", confirmLabel: "Přestěhovat" }))) return;
+  const uidAtStart = uidCurrent;
+  stareNahledyBezi = true;
+  let ok = 0, chyby = 0;
+  obnovRadekStarychNahledu(`Stěhuji… 0 / ${k.length}`);
+  try {
+    await runWithConcurrency(k.map(it => it.id), 4, async (id) => {
+      if (uidCurrent !== uidAtStart) return;
+      const data = state.thumbnails[id];
+      const it = state.library[id];
+      if (!it || !data || !lokalniOdkazy(it).length) return;
+      let url = "";
+      try {
+        url = await ulozNahledDoStorage(id, data);
+        if (!(await overObrazek(url))) throw new Error("nová adresa se nenačetla");
+        const cil = state.library[id]; // mezitím se mohla vyměnit živou synchronizací
+        if (!cil) return;
+        const local = LOCAL_THUMB_PREFIX + id;
+        if (cil.thumbnail === local) cil.thumbnail = url;
+        if (cil.nahledPredchozi === local) cil.nahledPredchozi = url;
+        if (cil.fotka && cil.fotka.nahled === local) cil.fotka.nahled = url;
+        if (cil.fotkaPredchozi && cil.fotkaPredchozi.nahled === local) cil.fotkaPredchozi.nahled = url;
+        ok++;
+      } catch (e) {
+        chyby++;
+        if (url) smazZeStorage(url); // nahraná, ale nenačitatelná kopie — ať se ve Storage nehromadí
+        logDebug(`[stěhování] „${nazevVidea(it)}“ — nepovedlo se:`, (e && (e.code || e.message)) || e);
+      }
+    }, async (hotovo, celkem) => {
+      obnovRadekStarychNahledu(`Stěhuji… ${hotovo} / ${celkem}`);
+      if (hotovo % 25 === 0 && uidCurrent === uidAtStart) await saveUserData();
+    }, () => uidCurrent !== uidAtStart);
+  } finally {
+    stareNahledyBezi = false;
+  }
+  if (uidCurrent !== uidAtStart) return;
+  const ulozeno = await saveUserData();
+  renderLibrary();
+  obnovRadekStarychNahledu();
+  logDebug(`[stěhování] hotovo: ${ok} z ${k.length}, chyb ${chyby}, uložení knihovny: ${ulozeno ? "úspěch" : "selhalo"}`);
+  if (!ulozeno) toast("Náhledy jsou nahrané, ale knihovnu se nepodařilo uložit — zkus to prosím znovu.", 8000, "err");
+  else if (chyby) toast(`Přestěhováno ${ok} z ${k.length}. ${chyby} se nepovedlo — zkus to znovu, dokončí se jen zbytek.`, 9000, "warn");
+  else toast(`Přestěhováno ${ok} ${czPlural(ok, "náhled", "náhledy", "náhledů")}.`, 6000);
+}
+async function uklidStareNahledy() {
+  const ids = stareNahledyKUklidu();
+  if (!ids.length) return;
+  if (!(await confirmDialog(`Smazat ${ids.length} ${czPlural(ids.length, "starý náhled", "staré náhledy", "starých náhledů")} z Firestore? Přestěhované fotky zůstanou.`, { title: "Uklidit staré náhledy", confirmLabel: "Smazat", danger: true }))) return;
+  stareNahledyBezi = true;
+  let ok = 0, chyby = 0;
+  obnovRadekStarychNahledu(`Mažu… 0 / ${ids.length}`);
+  try {
+    await runWithConcurrency(ids, 8, async (id) => {
+      // pojistka: mezitím na něj mohlo něco začít zase ukazovat (obnova ze zálohy)
+      if (lokalniOdkazy(state.library[id]).length) return;
+      try { await deleteDoc(doc(db, "sharedThumbnails", id)); delete state.thumbnails[id]; ok++; }
+      catch (e) { chyby++; logDebug("[úklid náhledů] smazání selhalo:", id, (e && (e.code || e.message)) || e); }
+    }, (hotovo, celkem) => obnovRadekStarychNahledu(`Mažu… ${hotovo} / ${celkem}`));
+  } finally {
+    stareNahledyBezi = false;
+  }
+  obnovRadekStarychNahledu();
+  logDebug(`[úklid náhledů] smazáno ${ok} z ${ids.length}, chyb ${chyby}`);
+  if (chyby) toast(`Smazáno ${ok} z ${ids.length}. ${chyby} se nepovedlo — zkus to znovu.`, 8000, "warn");
+  else toast(`Uklizeno ${ok} ${czPlural(ok, "starý náhled", "staré náhledy", "starých náhledů")}.`, 6000);
+}
+document.getElementById("stareNahledyBtn").addEventListener("click", () => {
+  if (uidCurrent !== ADMIN_UID || stareNahledyBezi) return;
+  if (document.getElementById("stareNahledyBtn").dataset.rezim === "uklid") uklidStareNahledy();
+  else prestehujStareNahledy();
+});
 
 /** Aplikace zkusí STÁHNOUT obrázek (ne jen ho zobrazit) a převést na data URL — to je jiná,
     přísnější operace než běžné zobrazení, a u některých zdrojů (typicky právě Disk) na ni
@@ -19788,6 +19910,7 @@ function openSpravaModal() {
   updateDriveKeyStatus();
   updateNotifyKeyStatus();
   aktualizujStavAutoZalohy();
+  obnovRadekStarychNahledu(); // kolo 36
   spravaModalBackdrop.classList.remove("hidden");
   resetModalScroll(spravaModalBackdrop);
 }
