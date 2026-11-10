@@ -1227,6 +1227,16 @@ div.tx-mini-foto,span.tx-mini-foto{position:relative;display:block;background-si
 .coach-activity-stat{text-align:center;}
 .coach-activity-stat-num{font-size:16px;font-weight:700;color:var(--ink);}
 .coach-activity-stat-label{font-size:10px;color:var(--ink-faint);}
+/* Kolo 41: karta trenéra je ťukací (otevře jeho tréninky), ikona sešitu = vede deníček. */
+.coach-activity-card[data-coach]{cursor:pointer;}
+.coach-activity-sipka{color:var(--ink-faint);font-size:13px;flex-shrink:0;}
+.coach-activity-denik{color:var(--court);font-size:13px;}
+body.dark-mode .coach-activity-denik{color:var(--chalk);}
+#trenerTreninkyBackdrop{z-index:65;}
+.trener-treninky-hlava{display:flex;align-items:center;gap:10px;min-width:0;}
+.trener-treninky-hlava .coach-activity-avatar{width:32px;height:32px;font-size:12px;}
+#trenerTreninkyList .training-row.v-archivu{opacity:.55;}
+.trener-treninky-prazdno{font-size:12.5px;color:var(--ink-faint);}
 /* confirmDialog/alertDialog/promptDialog (confirmModalBackdrop) se používá jako obecné potvrzovací
    okno odkudkoli v appce — i zevnitř jiných už otevřených oken (např. "Odhlásit na dálku" uvnitř
    Profilu). Musí proto mít vyšší z-index než VŠECHNY ostatní modaly, jinak by (při stejném
@@ -3367,6 +3377,16 @@ body.dark-mode .seq-group-video-duration{background:var(--paper);color:var(--cou
     <div id="adminActivityList" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:10px;padding-bottom:4px;"></div>
   </div>
 </div>
+<!-- Kolo 41: tréninky jednoho trenéra (admin, ťuknutím na kartu v okně Trenéři) -->
+<div id="trenerTreninkyBackdrop" class="modal-backdrop hidden">
+  <div class="modal" style="max-width:640px;max-height:85vh;display:flex;flex-direction:column;">
+    <div class="modal-head">
+      <div class="trener-treninky-hlava"><span id="trenerTreninkyAvatar"></span><h2 style="font-size:20px;" id="trenerTreninkyJmeno"></h2></div>
+      <button class="btn btn-icon btn-ghost" id="closeTrenerTreninkyBtn" aria-label="Zavřít"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="trenerTreninkyList" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px;padding-bottom:4px;"></div>
+  </div>
+</div>
 
 <!-- ===================== MANAGE PARTS MODAL ===================== -->
 <div id="partsModalBackdrop" class="modal-backdrop hidden">
@@ -4144,7 +4164,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-11-09 18:57";
+const APP_VERSION = "2026-11-10 22:50";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -11251,6 +11271,8 @@ document.getElementById("newTrainingBtn").addEventListener("click", () => {
   openEditor(id);
 });
 document.getElementById("backToTrainingsBtn").addEventListener("click", () => {
+  // Kolo 41: přišel z okna s tréninky trenéra (Správa → Trenéři) → vrátí se do něj.
+  if (editorZTreneru && uidCurrent === ADMIN_UID) { switchView("trainings"); vratDoTreninkuTrenera(); return; }
   if (!editorZDeniku || state.denik.zapnuty !== true) { switchView("trainings"); return; }
   // Přišel z Deníčku → vrátí se do něj, na místo, kde četl.
   const y = denikNavratY;
@@ -17408,6 +17430,7 @@ document.getElementById("downloadTrainingPdfBtn").addEventListener("click", () =
 function openEditor(id, volby) {
   currentTrainingId = id;
   editorZDeniku = !!(volby && volby.zDeniku);
+  editorZTreneru = null;   // kolo 41: nastaví ho až okno trenéra, hned po tomhle volání
   switchView("editor");
   const t = state.trainings[id];
   editorReadOnly = t.ownerUid !== uidCurrent;
@@ -20117,28 +20140,35 @@ function timeAgoLabel(ts) {
   if (days < 7) return `před ${days} dny`;
   return new Date(ts).toLocaleDateString("cs-CZ");
 }
+function coachActivityAvatar(r, initials) {
+  return r.avatarUrl
+    ? `<img src="${esc(r.avatarUrl)}" class="coach-activity-avatar" alt="">`
+    : `<div class="coach-activity-avatar coach-activity-avatar-fallback" style="background:${esc(r.colorPrimary)};">${esc(initials)}</div>`;
+}
 function renderCoachActivityCard(r) {
   const initials = (r.name || "?").trim().split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase();
   const isMe = r.uid === uidCurrent;
   const statusChip = r.online ? `<span class="coach-online-chip">Online</span>` : "";
   const subParts = [];
   if (!r.online) subParts.push(`Naposledy viděn ${r.lastSeenAt ? timeAgoLabel(r.lastSeenAt) : "nikdy"}`);
+  // Kolo 41 (Mek 10. 11.): ikona sešitu = trenér vede deníček (jen přepínač z profilu, do zápisů se nečte).
+  const denik = r.denik ? `<i class="fa-solid fa-book-open coach-activity-denik" role="img" aria-label="Vede deníček" title="Vede deníček"></i>` : "";
   return `
-    <div class="coach-activity-card${isMe ? " is-me" : ""}">
+    <div class="coach-activity-card${isMe ? " is-me" : ""}" data-coach="${esc(r.uid)}" role="button" tabindex="0">
       <div class="coach-activity-head">
         <div class="coach-activity-avatar-wrap">
-          ${r.avatarUrl
-            ? `<img src="${esc(r.avatarUrl)}" class="coach-activity-avatar" alt="">`
-            : `<div class="coach-activity-avatar coach-activity-avatar-fallback" style="background:${esc(r.colorPrimary)};">${esc(initials)}</div>`}
+          ${coachActivityAvatar(r, initials)}
           <span class="coach-activity-dot ${r.online ? "on" : ""}"></span>
         </div>
         <div class="coach-activity-info">
           <div class="coach-activity-name-row">
             <span class="coach-activity-name">${esc(isMe ? "Ty" : r.name)}</span>
+            ${denik}
             ${statusChip}
           </div>
           <div class="coach-activity-sub">${esc(subParts.join(" · "))}</div>
         </div>
+        <i class="fa-solid fa-chevron-right coach-activity-sipka" aria-hidden="true"></i>
       </div>
       <div class="coach-activity-stats">
         <div class="coach-activity-stat"><div class="coach-activity-stat-num">${r.trainings}</div><div class="coach-activity-stat-label">tréninky</div></div>
@@ -20174,15 +20204,90 @@ async function renderAdminActivityPanel() {
     const online = !!d.heartbeatAt && (now - d.heartbeatAt) < ONLINE_THRESHOLD_MS;
     return {
       uid, name: d.username || uid, avatarUrl: d.avatarUrl || "", colorPrimary: d.colorPrimary || DEFAULT_COLORS.primary,
-      lastSeenAt: d.lastSeenAt || 0, online, ...s
+      lastSeenAt: d.lastSeenAt || 0, online, denik: d.denikZapnuty === true, ...s
     };
   }));
   rows.sort((a, b) => {
     if (a.online !== b.online) return a.online ? -1 : 1;
     return (b.lastSeenAt || 0) - (a.lastSeenAt || 0);
   });
+  coachActivityRows = new Map(rows.map(r => [r.uid, r]));
   wrap.innerHTML = rows.map(r => renderCoachActivityCard(r)).join("");
 }
+/* ---- Kolo 41 (Mek 10. 11.: A, A, A, C, A): tréninky jednoho trenéra pro admina ----
+   Ťuknutí na kartu v okně Trenéři otevře okno s jeho tréninky, i soukromými (trenéři o tom vědí,
+   Nápověda to říká). Archiv je schovaný pod tlačítkem „Archiv (N)“. Ťuknutí na trénink ho otevře
+   v editoru (cizí jen ke čtení) a Zpět z editoru vrátí do tohohle okna — okna se při otevření
+   editoru jen schovají a pak se zase ukážou (historie Zpět to zvládá, viz setupBackButtonNav).
+   Data nejsou nová: tréninky všech trenérů si aplikace stahuje kvůli Tržišti (ensureOthersTrainingsLoaded). */
+let coachActivityRows = new Map();
+let trenerTreninkyUid = null;
+let trenerTreninkyArchiv = false;
+let editorZTreneru = null;   // uid trenéra, do jehož okna se vrátit z editoru (jinak null)
+async function otevriTreninkyTrenera(uid) {
+  const r = coachActivityRows.get(uid);
+  if (!r) return;
+  if (trenerTreninkyUid !== uid) trenerTreninkyArchiv = false;
+  trenerTreninkyUid = uid;
+  const initials = (r.name || "?").trim().split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase();
+  document.getElementById("trenerTreninkyAvatar").innerHTML = coachActivityAvatar(r, initials);
+  document.getElementById("trenerTreninkyJmeno").textContent = uid === uidCurrent ? "Ty" : r.name;
+  const list = document.getElementById("trenerTreninkyList");
+  list.innerHTML = `<p class="trener-treninky-prazdno">Načítám…</p>`;
+  document.getElementById("trenerTreninkyBackdrop").classList.remove("hidden");
+  try { await ensureOthersTrainingsLoaded(); }
+  catch (e) { list.innerHTML = `<p style="font-size:12.5px;color:var(--danger);">Tréninky se nepodařilo načíst.</p>`; return; }
+  renderTreninkyTrenera();
+}
+function renderTreninkyTrenera() {
+  const list = document.getElementById("trenerTreninkyList");
+  const vse = Object.values(state.trainings).filter(t => t && t.ownerUid === trenerTreninkyUid)
+    .sort((a, b) => (b.dateModified || 0) - (a.dateModified || 0));
+  const aktivni = vse.filter(t => !t.archived), archiv = vse.filter(t => t.archived);
+  const datum = (ts) => { if (!ts) return ""; const d = new Date(ts); return `${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()}`; };
+  const radek = (t) => `
+    <div class="training-row${t.archived ? " v-archivu" : ""}">
+      <span class="focus-stripe" style="background:${focusStripeStyle(t)}"></span>
+      <button class="training-row-main" data-trener-trenink="${esc(t.id)}" style="background:none;border:none;text-align:left;cursor:pointer;padding:0;">
+        <div class="training-row-title">${esc(t.name || "Bez názvu")}<i class="fa-solid ${t.public ? "fa-globe" : "fa-lock"} training-visibility-icon" title="${t.public ? "Na Tržišti" : "Soukromé"}"></i>${t.archived ? '<i class="fa-solid fa-box-archive training-visibility-icon" title="V archivu"></i>' : ""}</div>
+        <div class="training-row-meta">${(t.items || []).length} položek${t.dateModified ? " · upraveno " + datum(t.dateModified) : ""}</div>
+      </button>
+    </div>`;
+  let html = aktivni.map(radek).join("");
+  if (!vse.length) html = `<p class="trener-treninky-prazdno">Zatím žádný trénink.</p>`;
+  if (archiv.length) {
+    html += `<button type="button" class="btn btn-ghost btn-block" id="trenerTreninkyArchivBtn" aria-expanded="${trenerTreninkyArchiv}"><i class="fa-solid fa-box-archive"></i> Archiv (${archiv.length})</button>`;
+    if (trenerTreninkyArchiv) html += archiv.map(radek).join("");
+  }
+  list.innerHTML = html;
+}
+document.getElementById("trenerTreninkyList").addEventListener("click", (e) => {
+  if (e.target.closest("#trenerTreninkyArchivBtn")) { trenerTreninkyArchiv = !trenerTreninkyArchiv; renderTreninkyTrenera(); return; }
+  const b = e.target.closest("[data-trener-trenink]");
+  if (!b || !state.trainings[b.dataset.trenerTrenink]) return;
+  const uid = trenerTreninkyUid;
+  ["trenerTreninkyBackdrop", "adminActivityModalBackdrop", "spravaModalBackdrop"].forEach(id => document.getElementById(id).classList.add("hidden"));
+  openEditor(b.dataset.trenerTrenink);
+  editorZTreneru = uid;
+});
+/** Zpět z editoru otevřeného z okna trenéra: ukáže zase Správu, Trenéry a okno trenéra (obsah zůstal). */
+function vratDoTreninkuTrenera() {
+  editorZTreneru = null;
+  ["spravaModalBackdrop", "adminActivityModalBackdrop", "trenerTreninkyBackdrop"].forEach(id => document.getElementById(id).classList.remove("hidden"));
+  renderTreninkyTrenera();
+}
+document.getElementById("adminActivityList").addEventListener("click", (e) => {
+  const k = e.target.closest("[data-coach]");
+  if (k) otevriTreninkyTrenera(k.dataset.coach);
+});
+document.getElementById("adminActivityList").addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" && e.key !== " ") return;
+  const k = e.target.closest("[data-coach]");
+  if (k) { e.preventDefault(); otevriTreninkyTrenera(k.dataset.coach); }
+});
+document.getElementById("closeTrenerTreninkyBtn").addEventListener("click", () => {
+  document.getElementById("trenerTreninkyBackdrop").classList.add("hidden");
+});
 async function renderMembersRoleList() {
   const wrap = document.getElementById("membersRoleList");
   wrap.innerHTML = `<p style="font-size:12.5px;color:var(--ink-faint);">Načítám…</p>`;
@@ -22881,7 +22986,7 @@ const HELP_DATA = [
       { q: "Jde sdílený odkaz otevřít rovnou v aplikaci?", a: "Ano, na Androidu. Kdo má Trenéra nainstalovaného, může si v telefonu povolit, aby odkazy z Trenéra otevírala rovnou aplikace: Nastavení telefonu → Aplikace → Trenér → Nastavit jako výchozí → Otevřít podporované odkazy, a tam zapnout mek2424.github.io. Názvy se podle telefonu liší. Trénink se pak otevře jako Přehled tréninku přímo v aplikaci, video jako karta videa. Kdo nastavení nemá, uvidí na sdílené stránce tlačítko „Otevřít v Trenérovi“. Na iPhonu tohle zatím nejde, tam zůstává sdílená stránka.", kw: "sdileny odkaz aplikace otevrit primo android nastaveni podporovane odkazy" },
       { q: "Jak sdílím trénink s konkrétním kolegou?", a: "V přehledu tréninků otevři nabídku u tréninku (⋮) a vyber „Sdílet odkazem“ — vygeneruje se odkaz, který jde poslat komukoli, i bez přístupu do aplikace." },
       { q: "Co je Tržiště a jak tam trénink zveřejním?", a: "Tržiště je záložka, kde vidíš tréninky ostatních trenérů, které se rozhodli zveřejnit. Vlastní trénink tam dáš tlačítkem v hlavičce editoru — píše se na něm, jak na tom trénink teď je („Soukromé“ nebo „Na Tržišti“) a vedle toho, co se stane po kliknutí. Aplikace se ještě jednou zeptá, než ho zveřejní nebo zase skryje. Dokud to neuděláš, trénink je jen tvůj a nikdo jiný ho neuvidí.", kw: "trziste zverejnit sdilet soukrome" },
-      { q: "Jaký je rozdíl mezi veřejným a soukromým tréninkem?", a: "Soukromý vidíš jen ty — hodí se i na rozpracované nápady, co ještě nejsou hotové k ukázání. Veřejný (na Tržišti) vidí a může si zkopírovat kdokoli z ostatních trenérů. Rozhodnutí jde kdykoli změnit oběma směry." },
+      { q: "Jaký je rozdíl mezi veřejným a soukromým tréninkem?", a: "Soukromý vidíš jen ty a admin klubu — hodí se i na rozpracované nápady, co ještě nejsou hotové k ukázání. Veřejný (na Tržišti) vidí a může si zkopírovat kdokoli z ostatních trenérů. Rozhodnutí jde kdykoli změnit oběma směry." },
       { q: "Proč mi aplikace nedovolí dát trénink na Tržiště?", a: "Nejspíš nemá žádné zaměření. Tržiště je uspořádané do stejných složek jako tvoje tréninky, takže nezařazený trénink by v nich ostatní nenašli — spadl by do „Bez zaměření“ a nikdo by tam nekoukal. Přiřaď mu aspoň jedno zaměření tlačítkem pod názvem tréninku a tlačítko na Tržiště se odemkne. Když ti žádné zaměření nesedí, napiš adminovi, přidává je jen on.", kw: "nejde zverejnit trziste zamereni zamek" },
       { q: "Co se stane, když si někdo můj trénink z Tržiště zkopíruje?", a: "Vytvoří se mu vlastní kopie (s dovětkem „(kopie)“ v názvu), kterou může dál upravovat nezávisle na tvém originálu — nová kopie je vždy nejdřív soukromá, i když byl originál veřejný." },
       { q: "Jak trénink zkopíruju/naklonuju sám sobě?", a: "V nabídce u tréninku (⋮) je tlačítko „Klonovat“ — funguje stejně u vlastních i cizích tréninků z Tržiště." },
@@ -23031,6 +23136,7 @@ document.getElementById("helpSearchInput").addEventListener("input", (e) => rend
     changePasswordModalBackdrop: "closeChangePasswordModalBtn",
     changeEmailModalBackdrop: "closeChangeEmailModalBtn",
     adminActivityModalBackdrop: "closeAdminActivityModalBtn",
+    trenerTreninkyBackdrop: "closeTrenerTreninkyBtn",
     partsModalBackdrop: "closePartsModalBtn",
     bulkDriveModalBackdrop: "closeBulkDriveModalBtn",
     trashModalBackdrop: "closeTrashModalBtn",
