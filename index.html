@@ -1237,6 +1237,15 @@ body.dark-mode .coach-activity-denik{color:var(--chalk);}
 .trener-treninky-hlava .coach-activity-avatar{width:32px;height:32px;font-size:12px;}
 #trenerTreninkyList .training-row.v-archivu{opacity:.55;}
 .trener-treninky-prazdno{font-size:12.5px;color:var(--ink-faint);}
+/* Kolo 42: počty na Tržišti — ★ oblíbené, ⧉ kopie (jen > 0), 👁 kdo otevřel (autor a admin). */
+.trziste-pocet,.trziste-oko{display:inline-flex;align-items:center;gap:4px;margin-left:10px;color:var(--ink-soft);font-weight:600;white-space:nowrap;}
+.trziste-pocet i,.trziste-oko i{font-size:11px;}
+.trziste-pocet.hvezda i{color:#e5a823;}
+.trziste-oko{padding:1px 8px;border:1px solid var(--line);border-radius:999px;cursor:pointer;}
+.kdo-otevrel-radek{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line);}
+.kdo-otevrel-jmeno{font-weight:600;color:var(--ink);min-width:0;overflow-wrap:anywhere;}
+.kdo-otevrel-datum{color:var(--ink-soft);font-size:13px;white-space:nowrap;}
+.kdo-otevrel-nikdo{font-size:13px;color:var(--ink-faint);margin:4px 0;}
 /* confirmDialog/alertDialog/promptDialog (confirmModalBackdrop) se používá jako obecné potvrzovací
    okno odkudkoli v appce — i zevnitř jiných už otevřených oken (např. "Odhlásit na dálku" uvnitř
    Profilu). Musí proto mít vyšší z-index než VŠECHNY ostatní modaly, jinak by (při stejném
@@ -3377,6 +3386,16 @@ body.dark-mode .seq-group-video-duration{background:var(--paper);color:var(--cou
     <div id="adminActivityList" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:10px;padding-bottom:4px;"></div>
   </div>
 </div>
+<!-- Kolo 42: kdo trénink na Tržišti otevřel (autor u svých, admin u všech) -->
+<div id="kdoOtevrelBackdrop" class="modal-backdrop hidden">
+  <div class="modal" style="max-width:420px;max-height:85vh;display:flex;flex-direction:column;">
+    <div class="modal-head">
+      <h2 style="font-size:20px;">Kdo trénink otevřel</h2>
+      <button class="btn btn-icon btn-ghost" id="closeKdoOtevrelBtn" aria-label="Zavřít"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="kdoOtevrelList" style="overflow-y:auto;flex:1;"></div>
+  </div>
+</div>
 <!-- Kolo 41: tréninky jednoho trenéra (admin, ťuknutím na kartu v okně Trenéři) -->
 <div id="trenerTreninkyBackdrop" class="modal-backdrop hidden">
   <div class="modal" style="max-width:640px;max-height:85vh;display:flex;flex-direction:column;">
@@ -3914,7 +3933,7 @@ import {
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
   doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, collection, collectionGroup, getDocs, onSnapshot,
-  arrayUnion, arrayRemove, addDoc, query, where, orderBy, limit, runTransaction, getDocsFromServer
+  arrayUnion, arrayRemove, addDoc, query, where, orderBy, limit, runTransaction, getDocsFromServer, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 
@@ -4164,7 +4183,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-11-10 23:14";
+const APP_VERSION = "2026-11-13 18:10";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -7102,6 +7121,7 @@ async function openTarget(target) {
   const t = state.trainings[target.id];
   if (!t || !(t.items || []).length) { toast("Tenhle trénink se nepodařilo najít — možná už neexistuje.", 6000, "warn"); return; }
   currentTrainingId = target.id;
+  zaznamenejZobrazeni(t);   // kolo 42: otevření cizího tréninku přes odkaz v aplikaci
   // Kam se trenér dostane, až Přehled zavře (Mekova varianta B): veřejný trénink na Tržiště,
   // kde ho má po ruce ke zkopírování, soukromý do Knihovny — na Tržišti by ho nenašel.
   if (t.public) {
@@ -11288,7 +11308,10 @@ let trainingsTagFilter = new Set();
 let trainingsOwnerFilter = new Set();
 /** Jméno trenéra, jak se ukazuje u tréninku. Bere se z tréninku samotného (ownerLabel),
     protože seznam členů týmu nemusí být načtený a u cizího trenéra ho ani mít nemusíme. */
+/* Kolo 42 (Mek 13. 11.: A): na Tržišti jsou i vlastní veřejné tréninky, ve skupině „Ty“. */
+const jeNaTrzisti = (t) => !!t && !t.archived && !!t.public;
 function trainingOwnerName(uid, list) {
+  if (uid === uidCurrent) return "Ty";
   const t = (list || Object.values(state.trainings)).find(x => x.ownerUid === uid);
   return (t && t.ownerLabel) || "Kolega";
 }
@@ -11604,9 +11627,104 @@ function ensureOthersTrainingsLoaded() {
   })();
   return othersTrainingsPromise;
 }
+/* ---- Kolo 42 (Mek 13. 11.): počty na Tržišti ----
+   Kompromis z debaty: veřejně jen kladné signály — ★ kolik trenérů má trénink v oblíbených a ⧉ kolikrát
+   je zkopírovaný, obojí jen když je víc než 0. Zobrazení (👁 počet různých trenérů, co ho otevřeli, po
+   ťuknutí jména a datum posledního otevření) vidí jen autor u svých a admin u všech (Mek: B, A).
+   - Oblíbené: z profilů (users/{uid}.favoriteTrainings), platí i zpětně. Autor se nepočítá.
+   - Kopie: každá existující kopie. Od kola 42 si kopie pamatuje clonedFromId; starší se přiřadí
+     podle autora a názvu originálu jen tam, kde to sedí jednoznačně (Mek: C).
+   - Zobrazení: kolekce trainingViews/{trainingId} = { uid: čas posledního otevření }. Schválně mimo
+     trénink — zápis do tréninku by spustil funkci onTrainingChange (notifikace adminovi). Každý si
+     smí zapsat jen sám sebe (pravidla). Nepočítá se autor ani otevření ze Správy → Trenéři. */
+let trzisteProfily = null;       // Map uid → { jmeno, oblibene: Set }
+let trzisteZobrazeni = null;     // Map trainingId → { uid: čas }
+let trzistePoctyNacitani = null;
+let trzisteObnovit = false;      // při každém přepnutí na Tržiště se počty načtou znovu (na pozadí)
+let trzisteKopie = new Map();    // trainingId → počet kopií (přepočítá se při každém vykreslení Tržiště)
+const zapsanaZobrazeni = new Set();
+const casMs = (v) => typeof v === "number" ? v : (v && typeof v.toMillis === "function" ? v.toMillis() : 0);
+function nactiPoctyTrziste() {
+  if ((trzisteProfily && !trzisteObnovit) || trzistePoctyNacitani || !uidCurrent) return;
+  trzisteObnovit = false;
+  trzistePoctyNacitani = (async () => {
+    try {
+      const [profily, zobrazeni] = await Promise.all([getDocs(collection(db, "users")), getDocs(collection(db, "trainingViews"))]);
+      const p = new Map();
+      profily.forEach(d => { const x = d.data() || {}; p.set(d.id, { jmeno: x.username || "", oblibene: new Set(Array.isArray(x.favoriteTrainings) ? x.favoriteTrainings : []) }); });
+      const z = new Map();
+      zobrazeni.forEach(d => z.set(d.id, d.data() || {}));
+      zapsanaZobrazeni.forEach(id => { const o = z.get(id) || {}; if (!o[uidCurrent]) o[uidCurrent] = Date.now(); z.set(id, o); });
+      trzisteProfily = p; trzisteZobrazeni = z;
+      if (currentView === "trainings" && trainingsSubTab === "others") renderTrainingsList();
+    } catch (e) {
+      console.error("Počty na Tržišti se nepodařilo načíst:", e);
+      logDebug("[tržiště] počty se nenačetly:", e.code || e.message || e);
+    } finally { trzistePoctyNacitani = null; }
+  })();
+}
+function spocitejKopieTrziste() {
+  const vse = Object.values(state.trainings).filter(Boolean);
+  const podleNazvu = new Map();
+  vse.forEach(t => { const k = t.ownerUid + "\u0000" + (t.name || ""); podleNazvu.set(k, (podleNazvu.get(k) || []).concat(t.id)); });
+  const m = new Map();
+  vse.forEach(t => {
+    if (!t.clonedFromOwnerUid || t.clonedFromOwnerUid === t.ownerUid) return;
+    let id = t.clonedFromId || null;
+    if (!id) { const c = podleNazvu.get(t.clonedFromOwnerUid + "\u0000" + (t.clonedFromName || "")); if (c && c.length === 1) id = c[0]; }
+    if (id) m.set(id, (m.get(id) || 0) + 1);
+  });
+  trzisteKopie = m;
+}
+function trzisteOblibene(t) {
+  if (!trzisteProfily) return 0;
+  let n = 0;
+  trzisteProfily.forEach((p, uid) => {
+    if (uid === t.ownerUid) return;
+    if (uid === uidCurrent ? state.favoriteTrainings.has(t.id) : p.oblibene.has(t.id)) n++;
+  });
+  if (!trzisteProfily.has(uidCurrent) && uidCurrent !== t.ownerUid && state.favoriteTrainings.has(t.id)) n++;
+  return n;
+}
+function trzisteKdoOtevrel(t) {
+  const o = (trzisteZobrazeni && trzisteZobrazeni.get(t.id)) || {};
+  return Object.keys(o).filter(uid => uid !== t.ownerUid && casMs(o[uid]) > 0).map(uid => ({ uid, cas: casMs(o[uid]) })).sort((a, b) => b.cas - a.cas);
+}
+function trzistePoctyHtml(t) {
+  let h = "";
+  const fav = trzisteOblibene(t), kop = trzisteKopie.get(t.id) || 0;
+  if (fav > 0) h += `<span class="trziste-pocet hvezda" title="V oblíbených"><i class="fa-solid fa-star"></i>${fav}</span>`;
+  if (kop > 0) h += `<span class="trziste-pocet" title="Zkopírováno"><i class="fa-regular fa-copy"></i>${kop}</span>`;
+  if (trzisteZobrazeni && (t.ownerUid === uidCurrent || uidCurrent === ADMIN_UID)) {
+    h += `<span class="trziste-oko" role="button" tabindex="0" data-kdo-otevrel="${esc(t.id)}" aria-label="Kdo trénink otevřel" title="Kdo trénink otevřel"><i class="fa-regular fa-eye"></i>${trzisteKdoOtevrel(t).length}</span>`;
+  }
+  return h;
+}
+function zaznamenejZobrazeni(t) {
+  if (!t || !t.id || !uidCurrent || !t.ownerUid || t.ownerUid === uidCurrent || zapsanaZobrazeni.has(t.id)) return;
+  zapsanaZobrazeni.add(t.id);
+  if (trzisteZobrazeni) { const o = trzisteZobrazeni.get(t.id) || {}; o[uidCurrent] = Date.now(); trzisteZobrazeni.set(t.id, o); }
+  setDoc(doc(db, "trainingViews", t.id), { [uidCurrent]: serverTimestamp() }, { merge: true }).catch(e => {
+    console.error("Zobrazení tréninku se nezapsalo:", e);
+    zapsanaZobrazeni.delete(t.id);
+  });
+}
+function otevriKdoOtevrel(id) {
+  const t = state.trainings[id];
+  if (!t) return;
+  const lidi = trzisteKdoOtevrel(t);
+  const datum = (ts) => { const d = new Date(ts); return `${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()}`; };
+  const jmeno = (uid) => uid === uidCurrent ? "Ty" : ((trzisteProfily && trzisteProfily.get(uid) && trzisteProfily.get(uid).jmeno) || "Kolega");
+  document.getElementById("kdoOtevrelList").innerHTML = lidi.length
+    ? lidi.map(x => `<div class="kdo-otevrel-radek"><span class="kdo-otevrel-jmeno">${esc(jmeno(x.uid))}</span><span class="kdo-otevrel-datum">${datum(x.cas)}</span></div>`).join("")
+    : `<p class="kdo-otevrel-nikdo">Zatím ho nikdo neotevřel.</p>`;
+  document.getElementById("kdoOtevrelBackdrop").classList.remove("hidden");
+}
+document.getElementById("closeKdoOtevrelBtn").addEventListener("click", () => document.getElementById("kdoOtevrelBackdrop").classList.add("hidden"));
 document.querySelectorAll(".subtab-btn").forEach(btn => {
   btn.addEventListener("click", async () => {
     trainingsSubTab = btn.dataset.subtab;
+    if (trainingsSubTab === "others") trzisteObnovit = true;   // kolo 42: čerstvé počty
     showingArchivedTrainings = false;
     // Zpátky na dlaždice: v každé záložce jsou jiné počty, takže i jiné pořadí složek.
     openFocusKey = null;
@@ -11658,7 +11776,7 @@ document.getElementById("toggleArchiveViewBtn").addEventListener("click", () => 
   renderTrainingsList();
 });
 
-function renderTrainingRow(t, mine) {
+function renderTrainingRow(t, mine, naTrzisti) {
   const { totalSeconds, hasReps } = calculateTrainingTotalSeconds(t);
   const totalDisplay = hasReps ? '<i class="fa-solid fa-stopwatch"></i> ?' : Math.round(totalSeconds / 60) + " min";
   const isNew = !mine && (t.dateCreated || 0) > sessionBadgeThreshold;
@@ -11670,7 +11788,7 @@ function renderTrainingRow(t, mine) {
       ${mine && trainingSelectMode ? `<button type="button" class="training-select-box ${isSelected ? "checked" : ""}" data-toggle-select="${esc(t.id)}" aria-label="Vybrat">${isSelected ? '<i class="fa-solid fa-check"></i>' : ""}</button>` : ""}
       <button class="training-row-main" data-open="${esc(t.id)}" style="background:none;border:none;text-align:left;cursor:pointer;padding:0;">
         <div class="training-row-title">${isNew ? '<span class="new-badge-inline" title="Nové od posledního přihlášení"></span>' : ""}${esc(t.name)}${mine ? `<i class="fa-solid ${t.public ? "fa-globe" : "fa-lock"} training-visibility-icon" title="${t.public ? "Na Tržišti" : "Soukromé"}"></i>` : ""}</div>
-        <div class="training-row-meta">${t.items.length} položek · ${totalDisplay}</div>
+        <div class="training-row-meta">${t.items.length} položek · ${totalDisplay}${naTrzisti ? trzistePoctyHtml(t) : ""}</div>
       </button>
       <div class="training-row-actions">
         <button type="button" class="training-fav-btn ${oblibeny ? "on" : ""}" data-fav="${esc(t.id)}" aria-label="${oblibeny ? "Odebrat z oblíbených" : "Přidat do oblíbených"}" title="${oblibeny ? "Odebrat z oblíbených" : "Přidat do oblíbených"}">${oblibeny ? "★" : "☆"}</button>
@@ -11733,7 +11851,7 @@ function openTrainingRowMenu(trainingId, anchorBtn) {
     // restoredAt: null — kopie nesmí převzít razítko obnovy ze zdroje, jinak by ji funkce na
     // serveru vzaly za obnovu a o zkopírování by se nikdo nedozvěděl (24. 9. 2026).
     state.trainings[id] = { ...structuredClone(src), id, name: src.name + " (kopie)", dateCreated: Date.now(), dateModified: Date.now(), ownerUid: uidCurrent, ownerLabel: label, archived: false, public: false, visibilityDecided: false,
-      clonedFromOwnerUid: cizi ? src.ownerUid : null, clonedFromName: cizi ? (src.name || "") : null, restoredAt: null };
+      clonedFromOwnerUid: cizi ? src.ownerUid : null, clonedFromName: cizi ? (src.name || "") : null, clonedFromId: cizi ? src.id : null, restoredAt: null };
     scheduleSave();
     renderTrainingsList();
     toast("Naklonováno.");
@@ -11792,7 +11910,7 @@ function openTrainingRowMenu(trainingId, anchorBtn) {
 function renderTrainingsTagFilterRow() {
   const all = Object.values(state.trainings);
   const mineBase = all.filter(t => t.ownerUid === uidCurrent && !!t.archived === showingArchivedTrainings);
-  const othersBase = all.filter(t => t.ownerUid !== uidCurrent && !t.archived && t.public);
+  const othersBase = all.filter(jeNaTrzisti);
   renderFilterChips("trainingsTagFilterRow", tagsUsedInVisibleTrainings(trainingsSubTab === "mine" ? mineBase : othersBase), trainingsTagFilter, renderTrainingsList);
   renderTrainingsOwnerFilterRow(othersBase);
 }
@@ -11915,9 +12033,10 @@ function renderTrainingsList() {
   const all = Object.values(state.trainings);
   const mineAll = all.filter(t => t.ownerUid === uidCurrent);
   const mineBase = mineAll.filter(t => !!t.archived === showingArchivedTrainings).sort((a, b) => (b.dateModified || 0) - (a.dateModified || 0));
-  const othersBase = all.filter(t => t.ownerUid !== uidCurrent && !t.archived && t.public).sort((a, b) => (b.dateModified || 0) - (a.dateModified || 0));
+  const othersBase = all.filter(jeNaTrzisti).sort((a, b) => (b.dateModified || 0) - (a.dateModified || 0));
   const jeMoje = trainingsSubTab === "mine";
   const base = jeMoje ? mineBase : othersBase;
+  if (!jeMoje) { spocitejKopieTrziste(); nactiPoctyTrziste(); }   // kolo 42
 
   renderTrainingsTagFilterRow();
 
@@ -12034,12 +12153,12 @@ function renderTrainingsList() {
     const groups = {};
     vysledek.forEach(t => {
       const key = t.ownerUid;
-      if (!groups[key]) groups[key] = { label: t.ownerLabel || "Kolega", items: [] };
+      if (!groups[key]) groups[key] = { label: key === uidCurrent ? "Ty" : (t.ownerLabel || "Kolega"), items: [] };
       groups[key].items.push(t);
     });
     list.innerHTML = Object.values(groups).map(g => `
       <div class="owner-group-header">${esc(g.label)}</div>
-      ${g.items.map(t => renderTrainingRow(t, false)).join("")}
+      ${g.items.map(t => renderTrainingRow(t, t.ownerUid === uidCurrent, true)).join("")}
     `).join("");
   }
 
@@ -12093,6 +12212,11 @@ function napojTreninkoveRadky(list) {
     else if (favFocusFilter.has(k)) favFocusFilter.delete(k); else favFocusFilter.add(k);
     renderTrainingsList();
   }));
+  // Kolo 42: oko (kdo trénink otevřel) je uvnitř tlačítka řádku — ťuknutí na něj trénink neotevře.
+  list.querySelectorAll("[data-kdo-otevrel]").forEach(b => {
+    b.addEventListener("click", (e) => { e.stopPropagation(); otevriKdoOtevrel(b.dataset.kdoOtevrel); });
+    b.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); otevriKdoOtevrel(b.dataset.kdoOtevrel); } });
+  });
   list.querySelectorAll("[data-open]").forEach(b => b.addEventListener("click", () => openEditor(b.dataset.open)));
   list.querySelectorAll("[data-fav]").forEach(b => b.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -17433,6 +17557,7 @@ function openEditor(id, volby) {
   editorZTreneru = null;   // kolo 41: nastaví ho až okno trenéra, hned po tomhle volání
   switchView("editor");
   const t = state.trainings[id];
+  if (!(volby && volby.zeSpravy)) zaznamenejZobrazeni(t);   // kolo 42: cizí trénink otevřený trenérem
   editorReadOnly = t.ownerUid !== uidCurrent;
   document.getElementById("trainingNameInput").value = t.name;
   document.getElementById("trainingNameInput").disabled = editorReadOnly;
@@ -17500,7 +17625,7 @@ document.getElementById("cloneFromReadOnlyBtn").addEventListener("click", () => 
   const ciziZdroj = src.ownerUid && src.ownerUid !== uidCurrent;
   // restoredAt: null — kopie nepřebírá razítko obnovy (viz klonování z karty).
   state.trainings[id] = { ...structuredClone(src), id, name: src.name + " (kopie)", dateCreated: Date.now(), dateModified: Date.now(), ownerUid: uidCurrent, ownerLabel: label, public: false, visibilityDecided: false,
-    clonedFromOwnerUid: ciziZdroj ? src.ownerUid : null, clonedFromName: ciziZdroj ? (src.name || "") : null, restoredAt: null };
+    clonedFromOwnerUid: ciziZdroj ? src.ownerUid : null, clonedFromName: ciziZdroj ? (src.name || "") : null, clonedFromId: ciziZdroj ? src.id : null, restoredAt: null };
   scheduleSave();
   toast("Naklonováno do tvých tréninků.");
   openEditor(id);
@@ -20267,7 +20392,7 @@ document.getElementById("trenerTreninkyList").addEventListener("click", (e) => {
   if (!b || !state.trainings[b.dataset.trenerTrenink]) return;
   const uid = trenerTreninkyUid;
   ["trenerTreninkyBackdrop", "adminActivityModalBackdrop", "spravaModalBackdrop"].forEach(id => document.getElementById(id).classList.add("hidden"));
-  openEditor(b.dataset.trenerTrenink);
+  openEditor(b.dataset.trenerTrenink, { zeSpravy: true });   // kolo 42: admin ze Správy se do zobrazení nepočítá
   editorZTreneru = uid;
 });
 /** Zpět z editoru otevřeného z okna trenéra: ukáže zase Správu, Trenéry a okno trenéra (obsah zůstal). */
@@ -22987,6 +23112,7 @@ const HELP_DATA = [
       { q: "Jak sdílím trénink s konkrétním kolegou?", a: "V přehledu tréninků otevři nabídku u tréninku (⋮) a vyber „Sdílet odkazem“ — vygeneruje se odkaz, který jde poslat komukoli, i bez přístupu do aplikace." },
       { q: "Co je Tržiště a jak tam trénink zveřejním?", a: "Tržiště je záložka, kde vidíš tréninky ostatních trenérů, které se rozhodli zveřejnit. Vlastní trénink tam dáš tlačítkem v hlavičce editoru — píše se na něm, jak na tom trénink teď je („Soukromé“ nebo „Na Tržišti“) a vedle toho, co se stane po kliknutí. Aplikace se ještě jednou zeptá, než ho zveřejní nebo zase skryje. Dokud to neuděláš, trénink je jen tvůj a nikdo jiný ho neuvidí.", kw: "trziste zverejnit sdilet soukrome" },
       { q: "Jaký je rozdíl mezi veřejným a soukromým tréninkem?", a: "Soukromý vidíš jen ty a admin klubu — hodí se i na rozpracované nápady, co ještě nejsou hotové k ukázání. Veřejný (na Tržišti) vidí a může si zkopírovat kdokoli z ostatních trenérů. Rozhodnutí jde kdykoli změnit oběma směry." },
+      { q: "Co znamenají čísla u tréninků na Tržišti?", a: "★ s číslem říká, kolik trenérů má trénink v oblíbených, ikona kopie, kolikrát si ho někdo zkopíroval. Ukážou se jen tam, kde je číslo větší než nula. Na Tržišti najdeš i svoje veřejné tréninky, ve skupině „Ty“. U nich vidíš navíc oko s počtem trenérů, kteří si trénink otevřeli; po ťuknutí na něj uvidíš, kdo to byl a kdy ho otevřel naposledy. Totéž vidí autor u tvých tréninků — když si otevřeš cizí trénink z Tržiště, autor se to dozví.", kw: "pocty oblibene kopie zkopirovano zobrazeni oko kdo otevrel videl trziste statistika" },
       { q: "Proč mi aplikace nedovolí dát trénink na Tržiště?", a: "Nejspíš nemá žádné zaměření. Tržiště je uspořádané do stejných složek jako tvoje tréninky, takže nezařazený trénink by v nich ostatní nenašli — spadl by do „Bez zaměření“ a nikdo by tam nekoukal. Přiřaď mu aspoň jedno zaměření tlačítkem pod názvem tréninku a tlačítko na Tržiště se odemkne. Když ti žádné zaměření nesedí, napiš adminovi, přidává je jen on.", kw: "nejde zverejnit trziste zamereni zamek" },
       { q: "Co se stane, když si někdo můj trénink z Tržiště zkopíruje?", a: "Vytvoří se mu vlastní kopie (s dovětkem „(kopie)“ v názvu), kterou může dál upravovat nezávisle na tvém originálu — nová kopie je vždy nejdřív soukromá, i když byl originál veřejný." },
       { q: "Jak trénink zkopíruju/naklonuju sám sobě?", a: "V nabídce u tréninku (⋮) je tlačítko „Klonovat“ — funguje stejně u vlastních i cizích tréninků z Tržiště." },
@@ -23137,6 +23263,7 @@ document.getElementById("helpSearchInput").addEventListener("input", (e) => rend
     changeEmailModalBackdrop: "closeChangeEmailModalBtn",
     adminActivityModalBackdrop: "closeAdminActivityModalBtn",
     trenerTreninkyBackdrop: "closeTrenerTreninkyBtn",
+    kdoOtevrelBackdrop: "closeKdoOtevrelBtn",
     partsModalBackdrop: "closePartsModalBtn",
     bulkDriveModalBackdrop: "closeBulkDriveModalBtn",
     trashModalBackdrop: "closeTrashModalBtn",
