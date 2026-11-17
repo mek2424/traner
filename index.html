@@ -4183,7 +4183,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-11-13 19:30";
+const APP_VERSION = "2026-11-17 01:08";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -12486,6 +12486,7 @@ const focusModalBackdrop = document.getElementById("focusModalBackdrop");
 let focusModalTrainingId = null;
 function zavriVyberZamereni() {
   focusModalBackdrop.classList.add("hidden");
+  denikNabidniZmenuZamereni(focusModalTrainingId, focusModalZacatek);   // kolo 43
   // Křížek v řetězu po uložení = "ještě ne" — nic se nepotvrzuje a na Tržiště se
   // aplikace nezeptá. Trénink se tím neztratí, ukládá se průběžně sám.
   focusModalPriUlozeni = false;
@@ -12496,12 +12497,31 @@ focusModalBackdrop.addEventListener("click", (e) => { if (e.target === focusModa
 
 let focusModalPriUlozeni = false;   // true = jsme v řetězu po uložení, za tím čeká otázka na Tržiště
 let focusModalNavrh = [];
+let focusModalZacatek = [];          // kolo 43: zaměření tréninku při otevření okna
+/* Kolo 43 (Mek 17. 11.): zápis v deníčku si pamatuje, jak trénink vypadal při zápisu (snímek), i zaměření.
+   Když trenér zaměření tréninku změní a trénink má v deníčku zápisy s jiným zaměřením, aplikace se
+   po zavření okna se zaměřením zeptá, jestli ho změnit i u nich — jen on ví, jestli zaměření opravuje,
+   nebo trénink opravdu přepracoval. Ptá se jednou za okno, ne po každém ťuknutí. Název, délka
+   a cvičení v zápisech zůstávají, jak byly. */
+async function denikNabidniZmenuZamereni(trainingId, puvodni) {
+  const t = state.trainings[trainingId];
+  if (!t || t.ownerUid !== uidCurrent || state.denik.zapnuty !== true) return;
+  const nove = trainingFocusKeys(t);
+  const stejne = (a, b) => a.length === b.length && a.every(k => b.includes(k));
+  if (stejne(nove, puvodni || [])) return;
+  const zapisy = Object.values(state.denik.zaznamy || {}).filter(z => z && z.trainingId === trainingId && !stejne(Array.isArray(z.zamereni) ? z.zamereni : [], nove));
+  if (!zapisy.length) return;
+  const n = zapisy.length;
+  if (!(await confirmDialog(`Změnit zaměření i u ${n === 1 ? "zápisu" : `${n} zápisů`} v deníčku?`, { title: "Deníček", confirmLabel: "Změnit", cancelLabel: "Nechat" }))) return;
+  zapisy.forEach(z => denikUloz(Object.assign({}, z, { zamereni: nove.slice() })));
+}
 function otevriVyberZamereni(trainingId, opts) {
   const t = state.trainings[trainingId];
   if (!t) return;
   // Pojistka: cizí trénink se nepřeřazuje, i kdyby se sem někdo dostal jinudy.
   if (t.ownerUid !== uidCurrent) { toast("Zaměření cizího tréninku mění jen jeho autor. Když ho chceš jinak, naklonuj si ho k sobě.", 7000, "warn"); return; }
   focusModalTrainingId = trainingId;
+  focusModalZacatek = trainingFocusKeys(t).slice();   // kolo 43: s čím se okno otevřelo
   focusModalPriUlozeni = !!(opts && opts.priUlozeni);
   focusModalNavrh = focusModalPriUlozeni ? navrhniZamereni(t) : [];
   document.getElementById("focusModalSaveActions").classList.toggle("hidden", !focusModalPriUlozeni);
@@ -12594,7 +12614,7 @@ document.getElementById("focusModalContinueBtn").addEventListener("click", () =>
   focusModalBackdrop.classList.add("hidden");
   focusModalPriUlozeni = false;
   scheduleSave();
-  pokracujVeVisibility();
+  denikNabidniZmenuZamereni(focusModalTrainingId, focusModalZacatek).then(pokracujVeVisibility);   // kolo 43
 });
 
 /* ---------- Navigace mezi dlaždicemi a obsahem zaměření ---------- */
@@ -23041,6 +23061,7 @@ const HELP_DATA = [
       { q: "Jak změním datum záznamu?", a: "V Deníčku ťukni na datum na okraji a vyber jiný den; sešit pak nalistuje na stránku, kam se záznam přesunul. Datum není nijak zvýrazněné, aby sešit vypadal jako sešit.", kw: "datum zmenit opravit den spatne datum okraj" },
       { q: "Jak smažu záznam?", a: "V Deníčku ťukni na poznámku toho záznamu a vpravo pod ní na koš; aplikace se nejdřív zeptá. Maže se vždy jeden záznam, samotný trénink zůstává. Hned po zapsání jde zápis taky vzít zpět tlačítkem „Vrátit zpět“ přímo na kartě.", kw: "smazat zaznam kos odstranit vratit zpet" },
       { q: "Jak se z Deníčku dostanu k tréninku?", a: "Ťukni v sešitu na název tréninku — otevře se v editoru a tlačítko „Zpět do deníčku“ tě vrátí na stejné místo. Název není nijak zvýrazněný, aby sešit vypadal jako sešit. U tréninku, který už neexistuje, název odkazem není; záznam i poznámka ale zůstávají.", kw: "nazev odkaz otevrit trenink z denicku editor zpet do denicku" },
+      { q: "Proč má zápis v Deníčku jiné zaměření nebo název než trénink?", a: "Zápis si pamatuje, jak trénink vypadal, když jsi ho zapsal(a) — název, zaměření, délku i cvičení. Když trénink potom upravíš, zápis zůstane, jak byl, aby odpovídal tomu, co jsi tehdy trénoval(a). Výjimka je zaměření: když ho u tréninku změníš, aplikace se zeptá, jestli ho změnit i u zápisů v Deníčku.", kw: "zamereni nazev jiny stary zapis denicek zmena opravit snimek" },
       { q: "Jak uvidím všechna odtrénování jednoho tréninku?", a: "V editoru tréninku ťukni na hlavičku žlutého lepíku („odtrénováno 4× · 9. 10.“). Otevře se Deníček jen s tímto tréninkem — nahoře je místo „Deníček“ jeho název a u záznamů se název neopakuje (ukáže se jen tam, kde se trénink tehdy jmenoval jinak). Upravuje se v něm stejně jako v celém Deníčku. Šipka vlevo nahoře, Esc nebo Zpět v telefonu tě vrátí do editoru.", kw: "vsechna odtrenovani jeden trenink historie filtr editor radek odtrenovano zaznamy" },
       { q: "Co je žlutý lepík v editoru tréninku?", a: "Vzkaz sám sobě pro příště — třeba „kužely na 3 kroky rozběhu“. Lepík má trénink, který máš v Deníčku aspoň jednou odtrénovaný. Nahoře je, kolikrát a kdy naposledy trénink proběhl, a smajlík posledního hodnocení; ťuknutím otevřeš všechna jeho odtrénování. Pod tím je vzkaz posledního odtrénování. Když ho poslední odtrénování nemá, ukáže se vybledle ten předchozí s datem — ťukni na něj a ulož ho (Enter), ať platí dál, nebo ho přepiš. Na telefonu je lepík sbalený na jeden řádek, šipkou nebo ťuknutím na text se rozbalí; na počítači je vlevo nad „Přidat z knihovny“. V aplikaci ho vidíš jen ty.", kw: "lepik zluty vzkaz pro priste pripominka editor sbalit rozbalit papirek" },
       { q: "Jak napíšu nebo změním vzkaz pro příště?", a: "Kdekoli z těchhle míst: hned po tréninku na kartě „Zapsáno“ → „Přidat poznámku“ (pod poznámkou je žluté pole na vzkaz); kdykoli v editoru tréninku ťuknutím na text lepíku; v Deníčku u záznamu — vzkaz je schovaný pod žlutou značkou na okraji pod smajlíkem, ťuknutím ho rozbalíš a dalším ťuknutím na text upravíš. K záznamu bez vzkazu ho v Deníčku přidáš, když píšeš poznámku: žluté tlačítko s plusem vedle koše. Vzkaz má nejvýš 180 znaků (posledních 40 se odpočítává) a je bez formátování. Uloží se sám, když z pole odejdeš, nebo klávesou Enter; Esc psaní zruší. Smazáním celého textu vzkaz zmizí.", kw: "vzkaz pro priste napsat zmenit smazat lepik znacka okraj 180 znaku" },
