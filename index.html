@@ -457,6 +457,97 @@ body.dark-mode .sesit{box-shadow:0 8px 20px rgba(0,0,0,.5);}
 .sesit .ceka h3 em{font-style:normal;white-space:nowrap;}
 .sesit .ceka .obsah h3{overflow-wrap:anywhere;}
 .sesit .ds-prazdno{margin:0 12px 0 calc(var(--oks) + 10px);font:400 var(--v-text)/var(--radek) var(--f-ruka);color:var(--s-tuzka);}
+/* ---------- Kalendář v Deníčku (kolo 44) ----------
+   Tlačítko s kalendářem vedle plusu přepne Deníček ze sešitu na nástěnný kalendář (měsíc = list,
+   šipky nahoru/dolů ho přetočí). Pod ním (od 1000 px vedle něj) je stránka sešitu s výsledky:
+   zápisy vybraného dne, filtru, jinak měsíce. Papír, rukopis a barvy bere ze sešitu (.sesit).
+   Konec sezóny: razítko v kalendáři i v sešitu, v sešitu za ním nalepené vysvědčení sezóny. */
+#denikView.kal-rezim #denikSesit{display:none;}
+#denikView:not(.kal-rezim) #denikKal{display:none;}
+#denikZKal{display:none !important;}
+.btn.kal-on{background:var(--court);border-color:var(--court);color:#fff;}
+#denikFiltrBtn{position:relative;}
+#denikFiltrBtn .kal-pocet{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;border-radius:9px;background:var(--chalk);color:#fff;font:700 11px/18px var(--font-body);padding:0 5px;}
+.kal-filtry{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:var(--shadow);padding:10px;margin:0 0 12px;display:grid;gap:8px;}
+.kal-filtry input[type=search]{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper);color:var(--ink);font-size:15px;margin:0;}
+.kal-vybery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;}
+.kal-vybery select{width:100%;min-width:0;padding:8px 6px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper);color:var(--ink);font:600 13px var(--font-body);margin:0;}
+.kal-vybery select.akt{border-color:var(--court);color:var(--court);}
+.kal-filtry .chip-row{margin:0;}
+.kal-f-dole{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;}
+.kal-f-dole .manage-link{margin:0;}
+.kal-f-dole .kal-zrusit-konec{color:var(--danger);}
+.kal-f-dole .kal-zrusit-filtry{color:var(--ink-faint);margin-left:auto;}
+.kal-telo{display:grid;gap:16px;}
+@media (min-width:1000px){ .kal-telo{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:26px;align-items:start;} }
+.sesit.kal-nastenny{height:auto;background-image:none;border-radius:4px 4px 10px 10px;padding:22px 8px 12px;margin-top:10px;perspective:1400px;}
+.kal-krouzky{position:absolute;left:18px;right:18px;top:-9px;display:flex;justify-content:space-between;pointer-events:none;z-index:4;}
+.kal-krouzky i{width:7px;height:20px;border-radius:4px;background:linear-gradient(90deg,#6b6f78,#c9ccd2 45%,#7d818a);box-shadow:0 1px 2px rgba(0,0,0,.3);}
+.kal-listy{position:relative;}
+.kal-listek{position:relative;transform-origin:50% 0;background:var(--s-papir);}
+.kal-listek.leti{position:absolute;inset:0;z-index:3;pointer-events:none;animation:kalNahoru var(--kal-doba,.55s) cubic-bezier(.45,.05,.55,.95) forwards;box-shadow:0 10px 18px rgba(0,0,0,.18);}
+.kal-listek.pada{animation:kalDolu var(--kal-doba,.55s) cubic-bezier(.45,.05,.55,.95);}
+@keyframes kalNahoru{to{transform:rotateX(-100deg);opacity:.6;}}
+@keyframes kalDolu{from{transform:rotateX(-100deg);opacity:.6;}to{transform:none;opacity:1;}}
+.kal-hlava{display:flex;align-items:center;justify-content:space-between;margin:0 0 6px;}
+.sesit .kal-hlava .li-sipka{position:static;margin:0;}
+.kal-hlava .mesic span{display:inline-block;}
+.kal-dny,.kal-mrizka{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));}
+.kal-dny span{text-align:center;font:400 15px/1 var(--f-ruka);color:var(--s-tuzka);padding:0 0 5px;cursor:default;user-select:none;-webkit-user-select:none;}
+.kal-dny span.vk{color:var(--chalk-dark);}
+.kal-mrizka{border-top:1px solid var(--s-linka);border-left:1px solid var(--s-linka);position:relative;overflow:hidden;}
+.kal-den{position:relative;height:56px;margin:0;border:0;display:flex !important;flex-direction:column;align-items:flex-start;justify-content:flex-start;border-right:1px solid var(--s-linka);border-bottom:1px solid var(--s-linka);border-radius:0;padding:3px 0 0 5px;font:400 17px/1 var(--f-ruka);color:var(--s-inkoust);background:transparent;text-align:left;width:100%;cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;}
+@media (min-width:1000px){ .kal-den{height:64px;font-size:19px;} }
+.kal-den:focus-visible{outline:2px solid var(--s-inkoust);outline-offset:-3px;}
+.kal-den.vikend{background:rgba(31,58,122,.10);}
+.kal-den.vikend .kal-cislo{color:var(--chalk-dark);}
+.kal-den.mimo{background:rgba(31,58,122,.05);}
+.kal-den.mimo .kal-cislo{color:var(--s-tuzka);opacity:.75;}
+.kal-den.mimo.vikend{background:rgba(31,58,122,.08);}
+.kal-cislo{position:relative;z-index:2;display:inline-block;padding:0 1px;}
+.kal-den .kal-sm{position:absolute;right:2px;top:3px;width:17px;height:17px;}
+.kal-den .kal-sm .smajl{width:100%;height:100%;display:block;}
+.kal-fixy{position:absolute;left:4px;right:4px;bottom:4px;display:flex;flex-direction:column;gap:2px;z-index:1;}
+.kal-fixy b{display:block;height:4px;border-radius:3px;transform:rotate(-2deg);}
+.kal-fixy b.slaby{opacity:.22;filter:grayscale(.6);}
+.kal-den .kal-dva{position:absolute;right:3px;top:22px;font:600 12px/1 var(--f-ruka);color:var(--chalk-dark);}
+.kal-den.guma .kal-fixy,.kal-den.guma .kal-sm,.kal-den.guma .kal-dva{opacity:.18;filter:grayscale(1);}
+.kal-den.vyb .kal-cislo::before{content:"";position:absolute;left:-6px;right:-6px;top:-5px;bottom:-4px;border:2px solid var(--s-inkoust);border-radius:52% 48% 55% 45%/50% 55% 45% 50%;transform:rotate(-8deg);opacity:.85;}
+.kal-den.dnes{box-shadow:inset 0 0 0 2.5px var(--chalk);border-radius:3px;}
+.kal-den.po-konci{opacity:.45;}
+.kal-razitko-konec{position:absolute;z-index:3;pointer-events:none;font:400 15px/1 var(--font-display);letter-spacing:.08em;text-transform:uppercase;color:#c0392b;border:2.5px solid #c0392b;border-radius:5px;padding:5px 8px 3px;transform:rotate(-9deg);opacity:.85;white-space:nowrap;background:color-mix(in srgb,var(--s-papir) 55%,transparent);text-align:center;}
+.kal-razitko-konec small{display:block;font-size:12px;letter-spacing:.12em;margin-top:2px;}
+/* stránka s výsledky: stejné linky a okraj jako sešit, listuje se posunem jako sešit */
+.sesit.kal-strana{height:calc(var(--radek)*16.5);}
+@media (min-width:1000px){ .sesit.kal-strana{margin-top:10px;} }
+.kal-strana .sesit-okno{border-radius:inherit;}
+.kal-list{height:100%;padding:var(--pas) 0 var(--radek);column-count:1;column-gap:0;column-fill:auto;orphans:1;widows:1;transition:transform .35s ease;}
+.kal-pas{position:absolute;left:0;right:0;top:0;height:var(--pas);display:flex;align-items:center;z-index:2;}
+.sesit .kal-pas .li-sipka{position:static;margin:0 0 0 calc((var(--oks) - 40px)/2);}
+.sesit .kal-pas .li-sipka.vpravo{margin:0 4px 0 auto;}
+.kal-pas-t{flex:1;text-align:center;font:400 calc(17px*var(--m))/1 var(--f-ruka);color:var(--s-tuzka);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sesit .zapis.kal-zapis{cursor:pointer;}
+.sesit .kal-zapis .kal-vic{color:var(--s-tuzka);cursor:pointer;}
+.sesit .kal-zapis .okraj .dz-vzkaz{color:var(--s-tuzka);}
+.sesit .kal-zapis .ds-lepik{pointer-events:none;}
+.sesit .kal-zapis mark{background:linear-gradient(transparent 35%,rgba(255,226,77,.85) 35%,rgba(255,226,77,.85) 88%,transparent 88%);color:inherit;padding:0 2px;}
+.sesit .kal-sez{height:calc(var(--radek)*2);display:flex;align-items:center;justify-content:center;break-inside:avoid;}
+.sesit .kal-sez span{font:400 16px/1 var(--font-display);letter-spacing:.1em;text-transform:uppercase;color:var(--court-dark);border:2px solid var(--court-dark);border-radius:5px;padding:4px 9px 2px;transform:rotate(-2.2deg);opacity:.88;}
+/* razítko konce sezóny a nalepené vysvědčení v sešitu */
+.sesit .ds-konec{height:calc(var(--radek)*3);margin:0 0 var(--radek);padding:6px 12px 0;text-align:center;break-inside:avoid;}
+.sesit .ds-konec span{display:inline-block;font:400 19px/1 var(--font-display);letter-spacing:.08em;text-transform:uppercase;color:#c0392b;border:2.5px solid #c0392b;border-radius:5px;padding:6px 10px 4px;transform:rotate(-6deg);opacity:.85;}
+.sesit .ds-konec small{display:block;font-size:14px;letter-spacing:.14em;margin-top:2px;}
+.sesit .ds-vysv{break-inside:avoid;position:relative;margin:12px 16px var(--radek) calc(var(--oks) - 6px);background:#FBFAF5;color:#2b3445;border:1px solid #e3dfd2;padding:14px 14px 12px;transform:rotate(-1.2deg);box-shadow:0 6px 12px rgba(0,0,0,.16),0 1px 2px rgba(0,0,0,.1);font:400 calc(19px*var(--m))/1.45 var(--f-ruka);
+  background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 25px,rgba(120,140,170,.18) 25px,rgba(120,140,170,.18) 26px);}
+.sesit .ds-vysv::before,.sesit .ds-vysv::after{content:"";position:absolute;top:-11px;width:70px;height:22px;background:rgba(236,226,190,.75);border-left:1px dashed rgba(0,0,0,.08);border-right:1px dashed rgba(0,0,0,.08);box-shadow:0 1px 2px rgba(0,0,0,.08);}
+.sesit .ds-vysv::before{left:18px;transform:rotate(-8deg);} .sesit .ds-vysv::after{right:18px;transform:rotate(7deg);}
+.sesit .ds-vysv h4{margin:0 0 2px;font:400 22px/1.1 var(--font-display);letter-spacing:.08em;text-transform:uppercase;color:var(--court-dark);}
+.sesit .ds-vysv .vy-pruh{display:flex;height:14px;border-radius:4px;overflow:hidden;margin:7px 0;transform:rotate(-.5deg);}
+.sesit .ds-vysv .vy-leg{display:flex;flex-wrap:wrap;column-gap:9px;font:500 11.5px/22px var(--font-body);color:#6b7280;}
+.sesit .ds-vysv .vy-leg i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;}
+.sesit .ds-vysv .smajl{width:24px;height:24px;vertical-align:-6px;}
+@media (prefers-reduced-motion:reduce){ .kal-listek.leti,.kal-listek.pada{animation:none;} .kal-listek.leti{display:none;} .kal-list{transition:none;} }
+@media (min-width:1000px){ .sesit.kal-nastenny::after,.sesit.kal-strana::after{display:none;} .sesit.kal-strana{background-size:100% 100%,100% auto;} .sesit.kal-strana[data-papir="ctverecky"]{background-size:100% 100%,auto,auto;} }
 /* okno „Dopsat trénink zpětně“ */
 .dd-seznam{max-height:236px;overflow-y:auto;border:1px solid var(--line);border-radius:var(--radius-sm);margin:-6px 0 14px;background:var(--card);}
 .dd-pol{display:flex;align-items:center;gap:10px;width:100%;min-height:46px;padding:7px 12px 7px 8px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--ink);text-align:left;font:600 14px/1.3 var(--font-body);cursor:pointer;}
@@ -2552,6 +2643,8 @@ body.dark-mode .seq-group-video-duration{background:var(--paper);color:var(--cou
         <button class="btn btn-icon btn-ghost" id="denikZpetBtn" aria-label="Zpět na tréninky" title="Zpět na tréninky"><i class="fa-solid fa-arrow-left"></i></button>
         <h2>Deníček</h2>
         <button type="button" class="btn" id="denikDopsatBtn" aria-label="Dopsat trénink zpětně" title="Dopsat trénink zpětně"><i class="fa-solid fa-plus"></i><span> Dopsat trénink</span></button>
+        <button type="button" class="btn btn-icon hidden" id="denikFiltrBtn" aria-label="Filtry" title="Filtry" aria-expanded="false" aria-controls="kalFiltry"><i class="fa-solid fa-filter"></i></button>
+        <button type="button" class="btn btn-icon" id="denikKalBtn" aria-label="Kalendář" title="Kalendář" aria-pressed="false"><i class="fa-regular fa-calendar"></i></button>
         <button class="btn btn-icon" id="denikVzhledBtn" aria-label="Vzhled sešitu" title="Vzhled sešitu" aria-expanded="false" aria-controls="denikVzhled"><i class="fa-solid fa-sliders"></i></button>
       </div>
       <div class="denik-vzhled hidden" id="denikVzhled">
@@ -2561,6 +2654,20 @@ body.dark-mode .seq-group-video-duration{background:var(--paper);color:var(--cou
           <div class="dvz-posuv" title="Velikost písma"><i class="fa-solid fa-font male"></i><input type="range" id="denikVelikost" min="0" max="4" step="1" value="2" aria-label="Velikost písma"><i class="fa-solid fa-font velke"></i></div></div>
         <div class="dvz-r" title="Rychlost listování"><i class="fa-solid fa-book-open"></i><div class="dvz-seg" data-co="rychlost" role="group" aria-label="Rychlost listování"><button type="button" data-h="pomalu">Pomalu</button><button type="button" data-h="stredne">Středně</button><button type="button" data-h="rychle">Rychle</button><button type="button" data-h="vypnuto" title="Bez otáčení listu, stránka se jen prolne">Vypnuto</button></div></div>
       </div>
+      <!-- Kalendář (kolo 44): filtry, nástěnný kalendář a stránka s výsledky. Obsah kreslí renderKal(). -->
+      <div id="denikKal" class="hidden">
+        <div class="kal-filtry hidden" id="kalFiltry">
+          <input type="search" id="kalHledat" placeholder="Hledat trénink…" aria-label="Hledat trénink" autocomplete="off">
+          <div class="kal-vybery"><select id="kalSez" aria-label="Sezóna"></select><select id="kalRok" aria-label="Rok"></select><select id="kalMes" aria-label="Měsíc"></select></div>
+          <div class="chip-row" id="kalZam"></div>
+          <div class="kal-f-dole" id="kalFDole"></div>
+        </div>
+        <div class="kal-telo">
+          <div class="sesit kal-nastenny" id="kalPapir"><div class="kal-krouzky" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="kal-listy" id="kalListy"></div></div>
+          <div class="sesit kal-strana" id="kalStrana"><div class="sesit-okno"><div class="kal-list" id="kalList"></div></div><div class="kal-pas" id="kalPas"></div></div>
+        </div>
+      </div>
+      <div id="denikZKal" class="hidden" aria-hidden="true"></div>
       <div class="sesit" id="denikSesit" data-papir="linky" data-ton="tlumeny" data-pismo="patrick">
         <div class="sesit-pas" id="denikPas"></div>
         <div class="sesit-okno" id="denikOkno"><div class="sesit-list" id="denikList"></div></div>
@@ -4096,10 +4203,12 @@ async function nactiOsobniZnovu() {
   state.favoriteTrainings = treninky;
   state.cueMemory = pametSlucSNeodeslanym(pametZDokumentu(d.cueMemory), pametKZapisu);
   // Čekající tréninky a vzhled sešitu bydlí v profilu taky — z jiného zařízení se mohly změnit.
-  const cekaTed = denikCekaZ(d.denikCeka), vzhledTed = denikVzhledZ(d.denikVzhled);
-  const zmenaDeniku = JSON.stringify(cekaTed) !== JSON.stringify(state.denik.ceka) || JSON.stringify(vzhledTed) !== JSON.stringify(state.denik.vzhled);
+  const cekaTed = denikCekaZ(d.denikCeka), vzhledTed = denikVzhledZ(d.denikVzhled), sezonyTed = kalKonceZ(d.denikSezony);
+  const zmenaDeniku = JSON.stringify(cekaTed) !== JSON.stringify(state.denik.ceka) || JSON.stringify(vzhledTed) !== JSON.stringify(state.denik.vzhled)
+    || JSON.stringify(sezonyTed) !== JSON.stringify(state.denik.sezony || {});
   state.denik.ceka = cekaTed;
   state.denik.vzhled = vzhledTed;
+  state.denik.sezony = sezonyTed;
   if (zmenaDeniku) { denikPouzijVzhled(); denikPoZmene(); }
   // Deníček mohl trenér mezitím zapnout nebo vypnout na jiném zařízení.
   const denikTed = d.denikZapnuty === true ? true : (d.denikZapnuty === false ? false : null);
@@ -6094,7 +6203,7 @@ onAuthStateChanged(auth, async (user) => {
     uidCurrent = null;
     osobniNactenoV = 0;
     dlZavri();
-    state.denik = { zapnuty: null, znamo: false, zaznamy: {}, ceka: {}, vzhled: denikVzhledZ(null) };
+    state.denik = { zapnuty: null, znamo: false, zaznamy: {}, ceka: {}, vzhled: denikVzhledZ(null), sezony: {} };
     denikSesitUprava = null;
     denikKotva = null;
     denikNactenoV = 0;
@@ -6299,7 +6408,7 @@ async function loadUserData() {
   // Deníček (kolo 6): true / false podle profilu, null = ještě se neptalo. „znamo“ říká, že
   // se profil opravdu načetl — bez toho se aplikace na deníček neptá (neví, co trenér odpověděl).
   state.denik = { zapnuty: legacy.denikZapnuty === true ? true : (legacy.denikZapnuty === false ? false : null), znamo: legacyOk, zaznamy: {},
-    ceka: denikCekaZ(legacy.denikCeka), vzhled: denikVzhledZ(legacy.denikVzhled) };
+    ceka: denikCekaZ(legacy.denikCeka), vzhled: denikVzhledZ(legacy.denikVzhled), sezony: kalKonceZ(legacy.denikSezony) };
   denikPouzijVzhled();
   renderDenikVstup();
   osobniNactenoV = legacyOk ? Date.now() : 0;   // od teď smí běžet nactiOsobniZnovu
@@ -7653,7 +7762,7 @@ function switchView(view) {
   // Do filtrovaného Deníčku se z editoru jen odskakuje — prázdný nový trénink se ještě nemaže.
   if (currentView === "editor" && view !== "editor" && !(view === "denik" && denikFiltr)) uklidNedotcenyTrenink();
   if (currentView === "denik" && denikFiltr && view !== "editor") uklidNedotcenyTrenink();
-  if (view !== "denik") { denikFiltr = null; denikVzkazOtevrene.clear(); }
+  if (view !== "denik") { denikFiltr = null; denikVzkazOtevrene.clear(); kalZavriVse(); }
   currentView = view;
   document.querySelectorAll("nav.tabs button").forEach(b => b.classList.toggle("active", b.dataset.view === view));
   document.getElementById("libraryView").classList.toggle("hidden", view !== "library");
@@ -14819,7 +14928,7 @@ const DENIK_VELIKOST_KLIC = "trener.denik.velikost";
 const DENIK_PISMA = { patrick: { rodina: "Patrick Hand", dotaz: "Patrick+Hand", nazev: "Úhledný" }, caveat: { rodina: "Caveat", dotaz: "Caveat:wght@400;700", nazev: "Rychlý" }, kalam: { rodina: "Kalam", dotaz: "Kalam:wght@400;700", nazev: "Fixou" } };
 const DENIK_NACIST_NEJDRIV_PO_MS = 30000;
 const DENIK_DOPSAT_MAX = 60;
-state.denik = { zapnuty: null, znamo: false, zaznamy: {}, ceka: {}, vzhled: denikVzhledZ(null) };
+state.denik = { zapnuty: null, znamo: false, zaznamy: {}, ceka: {}, vzhled: denikVzhledZ(null), sezony: {} };
 
 /* ---- kolo 7: čisté funkce pro sešit a čekající tréninky ---- */
 /** Vzhled sešitu z profilu; cokoli neznámého spadne na výchozí (linkovaný, tlumený, úhledný,
@@ -14951,6 +15060,86 @@ function denikListIndex(listy, mesic) {
   return i === -1 ? listy.length - 1 : i;
 }
 
+/* ---- Sezóny (kolo 44) ----
+   Sezóna = školní rok od 1. 8. do 31. 7. (Mek 20. 11.: automatický konec poslední den v červenci).
+   Trenér ji může ukončit dřív tlačítkem „Ukončit sezónu“ — konec se zapíše ke dni posledního
+   zápisu do profilu (denikSezony: { "2025/26": "2026-06-18" }) a všechno potom už patří do další
+   sezóny. Na konec sezóny navazuje razítko v kalendáři i v sešitu a vysvědčení sezóny. */
+function kalSkolniRok(den) {
+  const r = +String(den).slice(0, 4), m = +String(den).slice(5, 7);
+  const z = m >= 8 ? r : r - 1;
+  return z + "/" + String(z + 1).slice(2);
+}
+function kalDalsiSezona(s) { const z = +s.slice(0, 4) + 1; return z + "/" + String(z + 1).slice(2); }
+/** Konce sezón z profilu → jen platné: klíč „RRRR/RR“, hodnota den uvnitř toho školního roku. */
+function kalKonceZ(v) {
+  const out = {};
+  if (v && typeof v === "object") Object.keys(v).forEach(k => {
+    const d = v[k];
+    if (!/^\d{4}\/\d{2}$/.test(k) || +k.slice(5) !== (+k.slice(0, 4) + 1) % 100) return;
+    if (typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d) && d >= k.slice(0, 4) + "-08-01" && d <= (+k.slice(0, 4) + 1) + "-07-31") out[k] = d;
+  });
+  return out;
+}
+/** Do které sezóny patří den: školní rok, ale po ručně ukončené sezóně už do další. */
+function kalSezona(den, konce) {
+  let s = kalSkolniRok(den);
+  for (let i = 0; i < 3 && konce && konce[s] && den > konce[s]; i++) s = kalDalsiSezona(s);
+  return s;
+}
+/** Poslední den sezóny: ručně zapsaný konec, jinak 31. 7. */
+function kalKonecSezony(s, konce) { return (konce && konce[s]) || (+s.slice(0, 4) + 1) + "-07-31"; }
+/** Je sezóna u konce? Ručně ukončená hned, automaticky až po 31. 7. */
+function kalSezonaSkoncila(s, konce, dnes) { return !!(konce && konce[s]) || dnes > kalKonecSezony(s, konce); }
+/** Zápisy (pole) → { sezona: poslední zápis té sezóny } jen pro sezóny, které skončily. */
+function kalPosledniVSezonach(zaznamy, konce, dnes) {
+  const out = {};
+  Object.values(zaznamy || {}).forEach(z => {
+    if (!z || !/^\d{4}-\d{2}-\d{2}$/.test(z.den || "")) return;
+    const s = kalSezona(z.den, konce);
+    if (!kalSezonaSkoncila(s, konce, dnes)) return;
+    const p = out[s];
+    if (!p || z.den > p.den || (z.den === p.den && (z.cas || 0) > (p.cas || 0))) out[s] = z;
+  });
+  return out;
+}
+/** Vysvědčení sezóny: počet tréninků, zaměření (sestupně), smajlíky a nejčastější trénink. */
+function kalVysvedceniData(zaznamy, s, konce) {
+  const zz = Object.values(zaznamy || {}).filter(z => z && /^\d{4}-\d{2}-\d{2}$/.test(z.den || "") && kalSezona(z.den, konce) === s);
+  const zam = {}, hodn = { dobre: 0, stredne: 0, spatne: 0 }, tr = {};
+  zz.forEach(z => {
+    (z.zamereni || []).forEach(k => { zam[k] = (zam[k] || 0) + 1; });
+    const h = denikHodnoceniZ(z.hodnoceni); if (h) hodn[h]++;
+    const k = z.trainingId || z.nazev || "";
+    if (!tr[k]) tr[k] = { n: 0, nazev: z.nazev || "", den: "" };
+    tr[k].n++;
+    if (z.den >= tr[k].den) { tr[k].den = z.den; if (z.nazev) tr[k].nazev = z.nazev; }
+  });
+  const top = Object.keys(tr).sort((a, b) => tr[b].n - tr[a].n || tr[b].den.localeCompare(tr[a].den))[0];
+  return { pocet: zz.length, zamereni: Object.keys(zam).sort((a, b) => zam[b] - zam[a] || a.localeCompare(b)).map(k => ({ key: k, n: zam[k] })), hodnoceni: hodn,
+    nejcasteji: top && tr[top].n > 1 ? { nazev: tr[top].nazev, n: tr[top].n, trainingId: top } : null };
+}
+/** Bez háčků a velkých písmen; délka textu zůstane stejná (kvůli zvýraznění nalezeného). */
+function kalNorm(s) { return String(s || "").normalize("NFC").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); }
+/** Prostý text poznámky (formátování pryč, řádky za sebou). */
+function kalPoznText(pozn) { return richHasContent(pozn) ? flattenRichHtmlToLines(pozn).map(l => (typeof l === "string" ? l : (l && l.text) || "")).join(" ").replace(/\s+/g, " ").trim() : ""; }
+/** Shoda zápisu s filtrem: hledaný text (název, poznámka, vzkaz) a všechna vybraná zaměření zároveň. */
+function kalShoda(z, f, t) {
+  if (f.text) {
+    const q = kalNorm(f.text.trim());
+    if (q && !kalNorm([z.nazev, t && t.name, kalPoznText(z.pozn), z.vzkaz].filter(Boolean).join(" ")).includes(q)) return false;
+  }
+  for (const k of f.zam || []) if (!(z.zamereni || []).includes(k)) return false;
+  return true;
+}
+/** Období z filtru: sezóna, rok, měsíc (měsíc bez roku = ten měsíc ve všech letech). */
+function kalVObdobi(z, f, konce) {
+  if (f.sez && kalSezona(z.den, konce) !== f.sez) return false;
+  if (f.rok && z.den.slice(0, 4) !== String(f.rok)) return false;
+  if (f.mes && +z.den.slice(5, 7) !== +f.mes) return false;
+  return true;
+}
+
 /** Den v místním čase jako "RRRR-MM-DD" — podle něj se řadí a pozná „dnes“. */
 function denikDen(d) {
   const x = d || new Date();
@@ -15021,7 +15210,7 @@ function denikNactiCerstve() {
 function denikPoZmene() {
   renderDenikVstup();
   if (currentView === "denik") {
-    if (state.denik.zapnuty === true) renderDenik();
+    if (state.denik.zapnuty === true) { if (kalViditelny()) renderKal(true); else renderDenik(); }
     else switchView("trainings");   // deníček se vypnul (profil, jiné zařízení) — obrazovka nemá co ukazovat
   }
   if (currentView === "editor") renderDenikRadek();
@@ -15306,6 +15495,8 @@ function denikHlava() {
   dop.querySelector("span").textContent = denikFiltr ? " Dopsat odtrénování" : " Dopsat trénink";
   dop.setAttribute("aria-label", dt);
   dop.title = dt;
+  document.getElementById("denikKalBtn").classList.toggle("hidden", !!denikFiltr);   // kalendář jen v celém Deníčku (kolo 44)
+  if (kalZeSesitu()) { zpet.setAttribute("aria-label", "Zpět do kalendáře"); zpet.title = "Zpět do kalendáře"; }
 }
 document.getElementById("denikRadek").addEventListener("click", () => { if (state.trainings[currentTrainingId]) denikOtevriFiltr(currentTrainingId); });
 
@@ -15512,6 +15703,7 @@ function denikPouzijVzhled() {
   zvuk.firstElementChild.className = zapnuto ? "fa-solid fa-volume-high" : "fa-solid fa-volume-xmark";
   document.getElementById("denikVelikost").value = denikVelikost;
   if (currentView === "denik") { denikNactiPismo(v.pismo); denikRozvrh(); }
+  if (kalViditelny()) renderKal(true);
 }
 document.getElementById("denikVzhledBtn").addEventListener("click", () => {
   const panel = document.getElementById("denikVzhled"), otevrit = panel.classList.contains("hidden");
@@ -15636,10 +15828,17 @@ function renderDenik() {
     return;
   }
   let html = "";
+  // Kolo 44: pod posledním zápisem ukončené sezóny razítko a nalepené vysvědčení (jen v celém Deníčku).
+  const konceSezon = {};
+  if (!denikFiltr) { const p = kalPosledniVSezonach(state.denik.zaznamy, kalKonce(), denikDen()); Object.keys(p).forEach(s => { konceSezon[p[s].id] = s; }); }
   listy.forEach((l, i) => {
     let prvni = true;
     const tridy = () => { const t = prvni ? " novy-mesic" + (i === 0 ? " prvni-vubec" : "") : ""; prvni = false; return t; };
-    l.zapisy.forEach(x => { html += denikZapisHtml(x.z, x.kolikrat, tridy(), l.mesic); });
+    l.zapisy.forEach(x => {
+      html += denikZapisHtml(x.z, x.kolikrat, tridy(), l.mesic);
+      const s = konceSezon[x.z.id];
+      if (s) html += `<div class="ds-konec" data-mesic="${esc(l.mesic)}"><span>Konec sezóny<small>${esc(s)}</small></span></div>` + denikVysvedceniHtml(s, l.mesic);
+    });
     l.ceka.forEach(c => { html += denikCekaHtml(c, tridy(), l.mesic); });
   });
   list.innerHTML = html;
@@ -15670,7 +15869,7 @@ function denikStranaKurzoru(list, sirka) {
     a nalistuje tam, kam ukazuje kotva (nebo kde se zrovna píše). Volá se po každém překreslení,
     při změně okna, vzhledu i při psaní — stránky samotné láme prohlížeč. */
 function denikRozvrh() {
-  if (currentView !== "denik") return;
+  if (currentView !== "denik" || kalViditelny()) return;
   const sesit = document.getElementById("denikSesit"), list = document.getElementById("denikList"), okno = document.getElementById("denikOkno");
   const R = DENIK_RADKY[denikVelikost];
   sesit.style.setProperty("--radek", R + "px");
@@ -15678,7 +15877,7 @@ function denikRozvrh() {
   sesit.style.height = denikVyskaSesitu(window.innerHeight, sesit.getBoundingClientRect().top + window.scrollY, R) + "px";
   const vid = denikViditelnych(), sirka = list.clientWidth / vid, l0 = list.getBoundingClientRect().left;
   const strana = (x) => Math.max(0, Math.round((x - l0) / sirka));
-  const clanky = [...list.querySelectorAll(".zapis")];
+  const clanky = [...list.querySelectorAll(".zapis, .ds-konec, .ds-vysv")];   // i razítko konce sezóny a vysvědčení (kolo 44)
   const zacatky = clanky.map(c => strana(c.getBoundingClientRect().left));
   denikStran = 0;
   denikMapa = [];
@@ -16209,6 +16408,7 @@ document.getElementById("denikVstupBtn").addEventListener("click", () => {
   denikCekaZrus(denikCekaKUklidu(state.denik.ceka, state.denik.zaznamy, denikDen()), true);
 });
 document.getElementById("denikZpetBtn").addEventListener("click", () => {
+  if (kalZeSesitu()) { document.getElementById("denikKalBtn").click(); return; }   // sešit otevřený z kalendáře → zpět do kalendáře (kolo 44)
   denikHodnZavri();
   denikSesitZavriUpravu(true, true);
   document.getElementById("denikVzhled").classList.add("hidden");
@@ -16216,6 +16416,420 @@ document.getElementById("denikZpetBtn").addEventListener("click", () => {
   if (denikFiltr) { denikFiltrZpet(); return; }
   switchView("trainings");
 });
+
+/* ---- Kalendář v Deníčku (kolo 44) ----
+   #denikKal se ukáže místo sešitu (třída kal-rezim na #denikView). Ťuknutí na zápis pod kalendářem
+   otevře sešit přesně na něm — kalendář přitom zůstává „otevřený“ (je jen schovaný) a navíc se
+   otevře značka #denikZKal; Zpět (šipka, tlačítko v telefonu, Esc) ji zavře a vrátí do kalendáře
+   na stejný měsíc. Obojí hlídá setupBackButtonNav jako ostatní okna. */
+const KAL_POZN_MAX = 40;                  // poznámka ve výsledcích: 40 znaků a „…“, ťuknutím se rozbalí
+const KAL_FILTRY_KLIC = "trener.kalFiltry";  // panel filtrů zůstává otevřený, dokud ho trenér nezavře
+const kal = { mesic: null, vyb: null, text: "", sez: null, rok: "", mes: "", zam: new Set(), rozbalene: new Set(), lepiky: new Set(), strana: 0, stran: 1, nadpis: "" };
+function kalKonce() { return state.denik.sezony || {}; }
+function kalDnes() { return denikDen(); }
+function kalAktualni() { return kalSezona(kalDnes(), kalKonce()); }
+function kalOtevreny() { return !document.getElementById("denikKal").classList.contains("hidden"); }
+function kalZeSesitu() { return !document.getElementById("denikZKal").classList.contains("hidden"); }
+/** Je teď vidět kalendář (ne sešit)? */
+function kalViditelny() { return currentView === "denik" && kalOtevreny() && !kalZeSesitu(); }
+function kalFiltr() { return { text: kal.text, zam: [...kal.zam], sez: kal.sez, rok: kal.rok, mes: kal.mes }; }
+function kalPocetFiltru() { return (kal.text ? 1 : 0) + (kal.zam.size ? 1 : 0) + (kal.rok ? 1 : 0) + (kal.mes ? 1 : 0) + (kal.sez !== kalAktualni() ? 1 : 0); }
+function kalFiltrAktivni() { return kalPocetFiltru() > 0; }
+function kalZaznamy() { return Object.values(state.denik.zaznamy || {}).filter(z => z && /^\d{4}-\d{2}-\d{2}$/.test(z.den || "")); }
+function kalNovejsi(a, b) { return b.den.localeCompare(a.den) || (b.cas || 0) - (a.cas || 0); }
+function kalPosunMesic(m, o) { const r = +m.slice(0, 4), mm = +m.slice(5, 7); const d = new Date(r, mm - 1 + o, 1); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); }
+/** Nejstarší měsíc, kam se dá listovat: první zápis (nejdřív před rokem). */
+function kalNejstarsi() {
+  const prvni = kalZaznamy().map(z => z.den.slice(0, 7)).sort()[0];
+  const rok = kalPosunMesic(kalDnes().slice(0, 7), -12);
+  return prvni && prvni < rok ? prvni : rok;
+}
+/** Po změně období kalendář skočí na nejnovější měsíc, který mu odpovídá; běžící sezóna = dnešek. */
+function kalSkocNaObdobi() {
+  const konce = kalKonce(), f = kalFiltr();
+  if (!kal.mes && !kal.rok) {
+    if (!kal.sez || kal.sez === kalAktualni()) { kal.mesic = kalDnes().slice(0, 7); return; }
+    const v = kalZaznamy().filter(z => kalSezona(z.den, konce) === kal.sez).map(z => z.den).sort();
+    kal.mesic = (v[0] || kal.sez.slice(0, 4) + "-09-01").slice(0, 7);
+    return;
+  }
+  const v = kalZaznamy().filter(z => kalVObdobi(z, f, konce)).map(z => z.den.slice(0, 7)).sort();
+  if (v.length) kal.mesic = v[v.length - 1];
+  else if (kal.mes) kal.mesic = (kal.rok || kalDnes().slice(0, 4)) + "-" + String(kal.mes).padStart(2, "0");
+  else kal.mesic = kal.rok + "-01";
+}
+function kalBarva(k) { return denikBarva((focusByKey(k) || {}).color); }
+
+/* ---- kreslení ---- */
+function kalBunkaHtml(den, mimo, zaDen, konecTady) {
+  const konce = kalKonce(), d = new Date(+den.slice(0, 4), +den.slice(5, 7) - 1, +den.slice(8, 10)), wd = (d.getDay() + 6) % 7;
+  const zz = zaDen[den] || [], f = kalFiltr();
+  const filtrObsahu = !!(kal.text || kal.zam.size);
+  const guma = !mimo && zz.length && filtrObsahu && !zz.some(z => kalShoda(z, f, state.trainings[z.trainingId]));
+  const poKonci = !mimo && konecTady && den > konecTady && kalSezona(den, konce) !== kalSezona(konecTady, konce);
+  const tr = "kal-den" + (mimo ? " mimo" : "") + (wd >= 5 ? " vikend" : "") + (den === kal.vyb ? " vyb" : "") + (guma ? " guma" : "") + (den === kalDnes() ? " dnes" : "") + (poKonci ? " po-konci" : "");
+  let obsah = `<span class="kal-cislo">${d.getDate()}</span>`;
+  if (zz.length && !mimo) {
+    const h = zz.map(z => denikHodnoceniZ(z.hodnoceni)).find(Boolean);
+    if (h) obsah += `<span class="kal-sm">${denikSmajl(h)}</span>`;
+    const zam = [...new Set(zz.flatMap(z => z.zamereni || []))].slice(0, 3);
+    obsah += `<span class="kal-fixy">${(zam.length ? zam : [null]).map(k => `<b class="${kal.zam.size && !kal.zam.has(k) ? "slaby" : ""}" style="background:color-mix(in srgb,${esc(k ? kalBarva(k) : FOCUS_NONE_COLOR)} 75%,var(--s-papir))"></b>`).join("")}</span>`;
+    if (zz.length > 1) obsah += `<span class="kal-dva">${zz.length}×</span>`;
+  }
+  const popis = `${DENIK_DNY[d.getDay()]} ${d.getDate()}. ${d.getMonth() + 1}.${zz.length && !mimo ? ", odtrénováno " + zz.length + "×" : ""}`;
+  return `<button type="button" class="${tr}" data-den="${den}" aria-label="${esc(popis)}"${den === kal.vyb ? ' aria-pressed="true"' : ""}>${obsah}</button>`;
+}
+function kalListekHtml(mesic) {
+  const r = +mesic.slice(0, 4), m = +mesic.slice(5, 7);
+  const posun = (new Date(r, m - 1, 1).getDay() + 6) % 7, dnu = new Date(r, m, 0).getDate();
+  const zaDen = {};
+  kalZaznamy().forEach(z => { (zaDen[z.den] = zaDen[z.den] || []).push(z); });
+  const konce = kalKonce(), dnes = kalDnes();
+  // razítko konce sezóny: u posledního zápisu sezóny, která v tomhle měsíci skončila
+  const posledni = kalPosledniVSezonach(state.denik.zaznamy, konce, dnes);
+  const konecTady = Object.values(posledni).map(z => z.den).find(d => d.slice(0, 7) === mesic) || "";
+  let b = "";
+  for (let i = posun; i > 0; i--) b += kalBunkaHtml(denikDen(new Date(r, m - 1, 1 - i)), true, zaDen, "");
+  for (let d = 1; d <= dnu; d++) b += kalBunkaHtml(denikDen(new Date(r, m - 1, d)), false, zaDen, konecTady);
+  const zbyva = (7 - (posun + dnu) % 7) % 7;
+  for (let i = 1; i <= zbyva; i++) b += kalBunkaHtml(denikDen(new Date(r, m, i)), true, zaDen, "");
+  const nazev = (DENIK_MESICE[m - 1] || "").toLowerCase() + " " + r;
+  return `<div class="kal-listek" data-mesic="${mesic}">
+    <div class="kal-hlava"><button type="button" class="li-sipka" data-kal="starsi" aria-label="Předchozí měsíc"${mesic <= kalNejstarsi() ? " disabled" : ""}><i class="fa-solid fa-chevron-up"></i></button><div class="mesic"><span>${esc(nazev)}</span></div><button type="button" class="li-sipka" data-kal="novejsi" aria-label="Další měsíc"${mesic >= dnes.slice(0, 7) ? " disabled" : ""}><i class="fa-solid fa-chevron-down"></i></button></div>
+    <div class="kal-dny" aria-hidden="true">${["po", "út", "st", "čt", "pá", "so", "ne"].map((x, i) => `<span${i >= 5 ? ' class="vk"' : ""}>${x}</span>`).join("")}</div>
+    <div class="kal-mrizka" data-konec="${konecTady}">${b}</div></div>`;
+}
+function kalRazitkaKonce() {
+  document.querySelectorAll("#kalListy .kal-mrizka").forEach(mr => {
+    mr.querySelectorAll(".kal-razitko-konec").forEach(x => x.remove());
+    const den = mr.dataset.konec, c = den && mr.querySelector(`.kal-den:not(.mimo)[data-den="${den}"]`);
+    if (!c) return;
+    const R = mr.getBoundingClientRect(), C = c.getBoundingClientRect();
+    const s = document.createElement("div");
+    s.className = "kal-razitko-konec";
+    s.innerHTML = `Konec sezóny<small>${esc(kalSezona(den, kalKonce()))}</small>`;
+    mr.appendChild(s);
+    let left = C.right - R.left + 4;
+    if (left + s.offsetWidth > R.width) left = C.left - R.left - s.offsetWidth + 10;
+    s.style.left = Math.max(0, left) + "px";
+    s.style.top = (C.top - R.top + 6) + "px";
+  });
+}
+/** Zvýrazní nalezené slovo v prostém textu (bez háčků i velkých písmen). */
+function kalZvyrazni(text, q) {
+  if (!q) return esc(text);
+  const i = kalNorm(text).indexOf(kalNorm(q));
+  if (i < 0) return esc(text);
+  return esc(text.slice(0, i)) + "<mark>" + esc(text.slice(i, i + q.length)) + "</mark>" + esc(text.slice(i + q.length));
+}
+/** Zápis na stránce s výsledky: jako v sešitu, jen ke čtení. Ťuknutí otevře sešit na něm. */
+function kalZapisHtml(z, q, kolikrat) {
+  const d = new Date(+z.den.slice(0, 4), +z.den.slice(5, 7) - 1, +z.den.slice(8, 10)), t = state.trainings[z.trainingId];
+  const jinyRok = z.den.slice(0, 4) !== kalDnes().slice(0, 4);
+  const h = denikHodnoceniZ(z.hodnoceni), vz = denikVzkazZ(z.vzkaz);
+  const vzOtevreny = vz && (kal.lepiky.has(z.id) || (q && kalNorm(vz).includes(kalNorm(q))));
+  const radku = 2 + (jinyRok ? 1 : 0) + (kolikrat > 1 ? 1 : 0) + (h ? 1 : 0) + (vz ? 1 : 0);
+  const okraj = `<div class="okraj"><b>${d.getDate()}. ${d.getMonth() + 1}.</b><span>${DENIK_DNY[d.getDay()]}</span>${jinyRok ? `<span>${z.den.slice(0, 4)}</span>` : ""}${kolikrat > 1 ? `<span class="dvakrat">${kolikrat}×</span>` : ""}`
+    + (h ? `<span class="dz-hodn" role="img" aria-label="Hodnocení: ${esc(DENIK_HODNOCENI[h].popis)}">${denikSmajl(h)}</span>` : "")
+    + (vz ? `<button type="button" class="dz-vzkaz" data-kal="lepik" aria-expanded="${!!vzOtevreny}" aria-label="Vzkaz pro příště">${denikVzkazZnacka()}</button>` : "") + "</div>";
+  const zam = (z.zamereni || []).map(k => focusByKey(k)).filter(Boolean);
+  const slaby = (k) => kal.zam.size && !kal.zam.has(k);
+  const pruh = zam.length ? "linear-gradient(to right," + zam.map((f, i) => `color-mix(in srgb,${denikBarva(f.color)} ${slaby(f.key) ? 18 : 62}%,var(--s-papir)) ${(i * 100 / zam.length).toFixed(2)}% ${((i + 1) * 100 / zam.length).toFixed(2)}%`).join(",") + ")" : denikPodtrzeni([]);
+  const meta = zam.map(f => `<span${slaby(f.key) ? ' style="opacity:.35"' : ""}><i style="background:${esc(denikBarva(f.color))}"></i>${esc(f.label)}</span>`);
+  if (z.minuty) meta.push(`<span>${meta.length ? "· " : ""}${z.minuty} min</span>`);
+  if (t && t.ownerUid !== uidCurrent) meta.push(`<span>${meta.length ? "· " : ""}od: ${esc(t.ownerLabel || "kolega")}</span>`);
+  const text = kalPoznText(z.pozn);
+  let pozn;
+  if (!text) pozn = '<div class="pozn prazdna">dopsat poznámku…</div>';
+  else if (text.length > KAL_POZN_MAX && !kal.rozbalene.has(z.id) && !(q && kalNorm(text).includes(kalNorm(q)))) pozn = `<div class="pozn" data-kal="rozbal">${esc(text.slice(0, KAL_POZN_MAX).trimEnd())}<span class="kal-vic">…</span></div>`;
+  else pozn = `<div class="pozn">${kalZvyrazni(text, q)}</div>`;
+  const lepik = vzOtevreny ? `<div class="ds-lepik"><div class="lp-papir"><div class="lp-text">${kalZvyrazni(vz, q)}</div></div><span class="lp-roh"></span></div>` : "";
+  return `<article class="zapis kal-zapis" data-id="${esc(z.id)}" tabindex="0" style="min-height:calc(var(--radek)*${radku})">${okraj}<div class="obsah"><h3><span class="dz-nazev" style="background-image:${esc(pruh)}">${kalZvyrazni(z.nazev || (t && t.name) || "Trénink", q)}</span></h3>${meta.length ? `<div class="meta">${meta.join("")}</div>` : ""}${pozn}${lepik}</div></article>`;
+}
+/** Co je na stránce s výsledky: vybraný den, výsledky filtru (po sezónách), jinak měsíc. */
+function kalVysledky() {
+  const konce = kalKonce(), f = kalFiltr(), q = kal.text.trim();
+  const poradi = new Map();
+  { const c = {}; kalZaznamy().sort((a, b) => a.den.localeCompare(b.den) || (a.cas || 0) - (b.cas || 0)).forEach(z => { c[z.trainingId] = (c[z.trainingId] || 0) + 1; poradi.set(z.id, c[z.trainingId]); }); }
+  const zapis = z => kalZapisHtml(z, q, poradi.get(z.id));
+  if (kal.vyb) {
+    const zz = kalZaznamy().filter(z => z.den === kal.vyb).sort((a, b) => (a.cas || 0) - (b.cas || 0));
+    return { nadpis: denikDenText(kal.vyb, kalDnes()), html: zz.length ? zz.map(zapis).join("") : '<p class="ds-prazdno">netrénovalo se</p>' };
+  }
+  if (!kalFiltrAktivni()) {
+    const zz = kalZaznamy().filter(z => z.den.slice(0, 7) === kal.mesic).sort(kalNovejsi);
+    return { nadpis: denikMesicText(kal.mesic + "-01").toLowerCase(), html: zz.length ? zz.map(zapis).join("") : '<p class="ds-prazdno">v tomhle měsíci nic</p>' };
+  }
+  const v = kalZaznamy().filter(z => kalVObdobi(z, f, konce) && kalShoda(z, f, state.trainings[z.trainingId])).sort(kalNovejsi);
+  if (!v.length) return { nadpis: "", html: '<p class="ds-prazdno">nic takového</p>' };
+  let html = "", sez = null;
+  v.forEach(z => { const s = kalSezona(z.den, konce); if (s !== sez) { sez = s; html += `<div class="kal-sez"><span>Sezóna ${esc(s)}</span></div>`; } html += zapis(z); });
+  return { nadpis: "", html };
+}
+function kalNastavPapir(el) {
+  const v = state.denik.vzhled, R = DENIK_RADKY[denikVelikost];
+  el.dataset.papir = v.papir; el.dataset.ton = v.ton; el.dataset.pismo = v.pismo;
+  el.style.setProperty("--radek", R + "px");
+  el.style.setProperty("--m", String(R / 28));
+}
+function renderKalFiltry() {
+  const panel = document.getElementById("kalFiltry"), otevreny = !panel.classList.contains("hidden");
+  const btn = document.getElementById("denikFiltrBtn"), pocet = kalPocetFiltru();
+  btn.classList.toggle("kal-on", otevreny);
+  btn.setAttribute("aria-expanded", otevreny);
+  btn.innerHTML = '<i class="fa-solid fa-filter"></i>' + (pocet && !otevreny ? `<span class="kal-pocet">${pocet}</span>` : "");
+  if (!otevreny) return;
+  const konce = kalKonce(), zz = kalZaznamy(), akt = kalAktualni();
+  const sezony = [...new Set(zz.map(z => kalSezona(z.den, konce)).concat([akt]))].sort().reverse();
+  const roky = [...new Set(zz.map(z => z.den.slice(0, 4)).concat([kalDnes().slice(0, 4)]))].sort().reverse();
+  const opt = (v, t, sel) => `<option value="${esc(v)}"${sel ? " selected" : ""}>${esc(t)}</option>`;
+  const hl = document.getElementById("kalHledat");
+  if (hl.value !== kal.text && document.activeElement !== hl) hl.value = kal.text;
+  const sez = document.getElementById("kalSez"), rok = document.getElementById("kalRok"), mes = document.getElementById("kalMes");
+  sez.innerHTML = opt("", "Sezóny", !kal.sez) + sezony.map(s => opt(s, s, kal.sez === s)).join("");
+  rok.innerHTML = opt("", "Roky", !kal.rok) + roky.map(r => opt(r, r, kal.rok === r)).join("");
+  mes.innerHTML = opt("", "Měsíce", !kal.mes) + [8, 9, 10, 11, 12, 1, 2, 3, 4, 5, 6, 7].map(m => opt(String(m), DENIK_MESICE[m - 1], +kal.mes === m)).join("");
+  sez.classList.toggle("akt", kal.sez !== akt); rok.classList.toggle("akt", !!kal.rok); mes.classList.toggle("akt", !!kal.mes);
+  const zam = state.trainingFocus || [];
+  document.getElementById("kalZam").innerHTML = `<button type="button" class="chip${kal.zam.size ? "" : " active"}" data-kal-zam="">Vše</button>`
+    + zam.map(f => `<button type="button" class="chip${kal.zam.has(f.key) ? " active" : ""}" data-kal-zam="${esc(f.key)}" aria-pressed="${kal.zam.has(f.key)}"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${esc(denikBarva(f.color))};margin-right:5px;"></span>${esc(f.label)}</button>`).join("");
+  // Ukončit / zrušit konec sezóny
+  let sezBtn = "";
+  const vybrana = kal.sez || "";
+  const posledniUkoncena = Object.keys(konce).sort().pop();
+  if (vybrana && konce[vybrana] && vybrana === posledniUkoncena) {
+    sezBtn = `<button type="button" class="manage-link kal-zrusit-konec" data-kal="zrusit-konec"><i class="fa-solid fa-rotate-left"></i> Zrušit konec sezóny ${esc(vybrana)}</button>`;
+  } else if (vybrana === akt && zz.some(z => kalSezona(z.den, konce) === akt)) {
+    sezBtn = `<button type="button" class="manage-link" data-kal="ukoncit"><i class="fa-solid fa-stamp"></i> Ukončit sezónu ${esc(akt)}</button>`;
+  }
+  document.getElementById("kalFDole").innerHTML = sezBtn + (pocet ? '<button type="button" class="manage-link kal-zrusit-filtry" data-kal="zrusit-filtry"><i class="fa-solid fa-xmark"></i> Zrušit filtry</button>' : "");
+}
+/** Překreslí kalendář; drzStranu = stránka s výsledky zůstane, kde byla (jinak na začátek). */
+function renderKal(drzStranu) {
+  if (!kalViditelny()) return;
+  if (!kal.mesic) kal.mesic = kalDnes().slice(0, 7);
+  if (kal.sez === null) kal.sez = kalAktualni();
+  renderKalFiltry();
+  const papir = document.getElementById("kalPapir"), strana = document.getElementById("kalStrana");
+  kalNastavPapir(papir); kalNastavPapir(strana);
+  denikNactiPismo(state.denik.vzhled.pismo);
+  document.getElementById("kalListy").innerHTML = kalListekHtml(kal.mesic);
+  kalRazitkaKonce();
+  const v = kalVysledky();
+  document.getElementById("kalList").innerHTML = v.html;
+  kal.nadpis = v.nadpis;
+  // výška stránky: na počítači jako kalendář vedle, na telefonu 15 řádků textu
+  const R = DENIK_RADKY[denikVelikost];
+  const siroko = window.matchMedia("(min-width:1000px)").matches;
+  strana.style.height = (siroko ? Math.max(10 * R, Math.floor(papir.offsetHeight / R) * R) : 16.5 * R) + "px";
+  kalStrankuj(drzStranu ? kal.strana : 0);
+}
+/** Spočítá stránky (podle polohy posledního kusu textu, jako sešit) a nalistuje. */
+function kalStrankuj(cil) {
+  const list = document.getElementById("kalList");
+  const sirka = list.clientWidth;
+  if (!sirka) return;
+  list.style.transition = "none";
+  list.style.transform = "";
+  const l0 = list.getBoundingClientRect().left;
+  const strana = (x) => Math.max(0, Math.floor((x - l0 + 1) / sirka));
+  // razítko sezóny nesmí zůstat samo na konci stránky
+  list.querySelectorAll(".kal-sez").forEach(sz => {
+    const nx = sz.nextElementSibling;
+    if (nx && strana(nx.getBoundingClientRect().left) !== strana(sz.getBoundingClientRect().left)) sz.style.breakBefore = "column";
+  });
+  let posl = 0;
+  list.querySelectorAll(".zapis, .kal-sez, .ds-prazdno").forEach(c => { for (const r of c.getClientRects()) posl = Math.max(posl, strana(r.left)); });
+  kal.stran = posl + 1;
+  kal.strana = Math.max(0, Math.min(cil || 0, kal.stran - 1));
+  kalUkazStranu();
+  requestAnimationFrame(() => { list.style.transition = ""; });
+}
+function kalUkazStranu() {
+  const list = document.getElementById("kalList"), sirka = list.clientWidth;
+  list.style.transform = kal.strana ? `translateX(${-kal.strana * sirka}px)` : "";
+  list.dataset.strana = kal.strana;
+  list.dataset.stran = kal.stran;
+  document.getElementById("kalPas").innerHTML = `<button type="button" class="li-sipka vlevo" data-kal="str-" aria-label="Předchozí stránka"${kal.strana > 0 ? "" : " disabled"}><i class="fa-solid fa-chevron-left"></i></button><span class="kal-pas-t">${esc(kal.nadpis || "")}</span><button type="button" class="li-sipka vpravo" data-kal="str+" aria-label="Další stránka"${kal.strana + 1 < kal.stran ? "" : " disabled"}><i class="fa-solid fa-chevron-right"></i></button>`;
+}
+/** Přetočí list kalendáře (o = +1 další měsíc: starý list odletí nahoru; −1: předchozí spadne shora). */
+function kalOtoc(o) {
+  const stary = document.querySelector("#kalListy .kal-listek");
+  const kopie = stary && stary.cloneNode(true);
+  kal.mesic = kalPosunMesic(kal.mesic, o);
+  kal.vyb = null;
+  renderKal();
+  denikZvuk("list");
+  const doby = DENIK_RYCHLOSTI[state.denik.vzhled.rychlost];
+  if (!doby) return;
+  const ly = document.getElementById("kalListy");
+  ly.style.setProperty("--kal-doba", doby[0] / 1000 + "s");
+  if (o > 0 && kopie) {
+    kopie.classList.add("leti");
+    kopie.querySelectorAll(".kal-razitko-konec").forEach(x => x.remove());
+    ly.appendChild(kopie);
+    setTimeout(() => kopie.remove(), doby[0] + 40);
+  } else {
+    const novy = ly.querySelector(".kal-listek");
+    if (novy) { novy.classList.add("pada"); setTimeout(() => novy.classList.remove("pada"), doby[0] + 40); }
+  }
+}
+/* ---- otevření, zavření, sešit z kalendáře ---- */
+function kalOtevri() {
+  if (denikFiltr) return;
+  denikHodnZavri();
+  denikSesitZavriUpravu(true, true);
+  document.getElementById("denikVzhled").classList.add("hidden");
+  document.getElementById("denikVzhledBtn").setAttribute("aria-expanded", "false");
+  kal.mesic = kal.mesic || kalDnes().slice(0, 7);
+  document.getElementById("denikKal").classList.remove("hidden");
+  kalRezim();
+  window.scrollTo(0, 0);
+}
+/** Přepne obrazovku podle stavu: kalendář, nebo sešit (i ten otevřený z kalendáře). */
+function kalRezim() {
+  const kalVidet = kalOtevreny() && !kalZeSesitu();
+  document.getElementById("denikView").classList.toggle("kal-rezim", kalVidet);
+  const kb = document.getElementById("denikKalBtn");
+  kb.classList.toggle("kal-on", kalVidet);
+  kb.setAttribute("aria-pressed", kalVidet);
+  const kt = kalVidet ? "Zpět do sešitu" : "Kalendář";
+  kb.setAttribute("aria-label", kt); kb.title = kt;
+  document.getElementById("denikFiltrBtn").classList.toggle("hidden", !kalVidet);
+  denikHlava();
+  if (kalVidet) renderKal(true);
+  else if (currentView === "denik") renderDenik();
+}
+/** Zavře kalendář i sešit otevřený z něj (odchod z Deníčku). */
+function kalZavriVse() {
+  document.getElementById("denikZKal").classList.add("hidden");
+  document.getElementById("denikKal").classList.add("hidden");
+  document.getElementById("denikView").classList.remove("kal-rezim");
+  document.getElementById("denikFiltrBtn").classList.add("hidden");
+  const kb = document.getElementById("denikKalBtn");
+  kb.classList.remove("kal-on"); kb.setAttribute("aria-pressed", "false"); kb.setAttribute("aria-label", "Kalendář"); kb.title = "Kalendář";
+}
+/** Ťuknutí na zápis pod kalendářem: sešit nalistovaný na něm; Zpět vrátí do kalendáře. */
+function kalOtevriZapis(id) {
+  if (!state.denik.zaznamy[id]) return;
+  denikKotva = { id, posun: 0 };
+  document.getElementById("denikZKal").classList.remove("hidden");
+  denikZvuk("list");
+  kalRezim();
+  window.scrollTo(0, 0);
+}
+document.getElementById("denikKalBtn").addEventListener("click", () => {
+  if (kalZeSesitu()) { denikSesitZavriUpravu(true, true); document.getElementById("denikZKal").classList.add("hidden"); kalRezim(); return; }
+  if (kalOtevreny()) { document.getElementById("denikKal").classList.add("hidden"); denikKotva = null; kalRezim(); return; }
+  kalOtevri();
+});
+document.getElementById("denikFiltrBtn").addEventListener("click", () => {
+  const p = document.getElementById("kalFiltry"), otevrit = p.classList.contains("hidden");
+  p.classList.toggle("hidden", !otevrit);
+  try { localStorage.setItem(KAL_FILTRY_KLIC, otevrit ? "1" : "0"); } catch (e) {}
+  renderKal(true);
+});
+(() => { try { if (localStorage.getItem(KAL_FILTRY_KLIC) === "1") document.getElementById("kalFiltry").classList.remove("hidden"); } catch (e) {} })();
+document.getElementById("kalHledat").addEventListener("input", (e) => { kal.text = e.target.value; kal.vyb = null; renderKal(); });
+document.getElementById("kalFiltry").addEventListener("change", (e) => {
+  const id = e.target.id;
+  if (id === "kalSez") { kal.sez = e.target.value; kal.rok = ""; }
+  else if (id === "kalRok") { kal.rok = e.target.value; if (kal.rok) kal.sez = ""; }
+  else if (id === "kalMes") { kal.mes = e.target.value; if (kal.mes && !kal.rok) kal.sez = ""; }
+  else return;
+  kal.vyb = null;
+  kalSkocNaObdobi();
+  renderKal();
+});
+document.getElementById("kalFiltry").addEventListener("click", (e) => {
+  const zb = e.target.closest("[data-kal-zam]");
+  if (zb) {
+    const k = zb.dataset.kalZam;
+    if (!k) kal.zam.clear(); else if (kal.zam.has(k)) kal.zam.delete(k); else kal.zam.add(k);
+    kal.vyb = null; renderKal(); return;
+  }
+  const b = e.target.closest("[data-kal]");
+  if (!b) return;
+  if (b.dataset.kal === "zrusit-filtry") {
+    kal.text = ""; kal.zam.clear(); kal.rok = ""; kal.mes = ""; kal.sez = kalAktualni(); kal.vyb = null;
+    document.getElementById("kalHledat").value = "";
+    kalSkocNaObdobi(); renderKal(); return;
+  }
+  if (b.dataset.kal === "ukoncit") { kalUkoncitSezonu(); return; }
+  if (b.dataset.kal === "zrusit-konec") { kalZrusitKonec(kal.sez); return; }
+});
+function kalUlozKonce(nove, puvodni, hlaska, vratitHlaska) {
+  state.denik.sezony = nove;
+  denikPoZmene();
+  updateDoc(doc(db, "users", uidCurrent), { denikSezony: nove }).then(() => {
+    toast(hlaska, 6000, "ok", { text: "Vrátit", fn: () => kalUlozKonce(puvodni, nove, vratitHlaska, hlaska) });
+  }).catch(e => {
+    console.error("Konec sezóny se neuložil:", e);
+    state.denik.sezony = puvodni;
+    denikPoZmene();
+    toast("Konec sezóny se neuložil. Zkontroluj připojení.", 6000, "err");
+  });
+}
+async function kalUkoncitSezonu() {
+  const konce = kalKonce(), s = kalAktualni();
+  const posl = kalZaznamy().filter(z => kalSezona(z.den, konce) === s).map(z => z.den).sort().pop();
+  if (!posl) return;
+  const d = new Date(+posl.slice(0, 4), +posl.slice(5, 7) - 1, +posl.slice(8, 10));
+  const ok = await confirmDialog(`Ukončit sezónu ${s} k ${d.getDate()}. ${d.getMonth() + 1}.?`, { title: "Konec sezóny", confirmLabel: "Ukončit" });
+  if (!ok) return;
+  const nove = Object.assign({}, konce, { [s]: posl });
+  kal.sez = s;
+  kalUlozKonce(nove, konce, `Sezóna ${s} ukončená.`, `Konec sezóny ${s} zrušený.`);
+}
+function kalZrusitKonec(s) {
+  const konce = kalKonce();
+  if (!s || !konce[s]) return;
+  const nove = Object.assign({}, konce);
+  delete nove[s];
+  kalUlozKonce(nove, konce, `Konec sezóny ${s} zrušený.`, `Sezóna ${s} ukončená.`);
+}
+document.getElementById("denikKal").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-kal]");
+  const a = b && b.dataset.kal;
+  if (a === "starsi" || a === "novejsi") { kalOtoc(a === "novejsi" ? 1 : -1); return; }
+  if (a === "str-" || a === "str+") {
+    kal.strana = Math.max(0, Math.min(kal.stran - 1, kal.strana + (a === "str+" ? 1 : -1)));
+    kalUkazStranu(); denikZvuk("list"); return;
+  }
+  const clanek = e.target.closest(".kal-zapis");
+  if (a === "lepik" && clanek) { const id = clanek.dataset.id; if (kal.lepiky.has(id)) kal.lepiky.delete(id); else kal.lepiky.add(id); renderKal(true); return; }
+  if (a === "rozbal" && clanek) { kal.rozbalene.add(clanek.dataset.id); renderKal(true); return; }
+  if (clanek) { kalOtevriZapis(clanek.dataset.id); return; }
+  const den = e.target.closest(".kal-den");
+  if (den) {
+    const d = den.dataset.den;
+    if (den.classList.contains("mimo")) { kal.mesic = d.slice(0, 7); kal.vyb = d; renderKal(); return; }
+    kal.vyb = kal.vyb === d ? null : d;
+    renderKal();
+    if (kal.vyb && !window.matchMedia("(min-width:1000px)").matches) {
+      const st = document.getElementById("kalStrana").getBoundingClientRect();
+      if (st.bottom > window.innerHeight) window.scrollBy({ top: Math.min(st.top - 70, st.bottom - window.innerHeight + 12), behavior: "smooth" });
+    }
+  }
+});
+document.getElementById("denikKal").addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" && e.key !== " ") return;
+  const c = e.target.closest && e.target.closest(".kal-zapis");
+  if (c && e.target === c) { e.preventDefault(); kalOtevriZapis(c.dataset.id); }
+});
+let kalSirka = window.innerWidth;
+window.addEventListener("resize", () => { if (kalViditelny() && window.innerWidth !== kalSirka) { kalSirka = window.innerWidth; renderKal(true); } });
+
+/* ---- konec sezóny a vysvědčení v sešitu ---- */
+function denikVysvedceniHtml(s, mesic) {
+  const v = kalVysvedceniData(state.denik.zaznamy, s, kalKonce());
+  const zam = v.zamereni.map(x => ({ f: focusByKey(x.key), n: x.n })).filter(x => x.f);
+  const H = DENIK_HODNOCENI_PORADI.filter(k => v.hodnoceni[k]).map(k => `${denikSmajl(k)} ${v.hodnoceni[k]}×`).join(" &nbsp; ");
+  return `<div class="ds-vysv" data-mesic="${esc(mesic)}"><h4>Vysvědčení sezóny ${esc(s)}</h4><div>${v.pocet} ${v.pocet === 1 ? "trénink" : v.pocet >= 2 && v.pocet <= 4 ? "tréninky" : "tréninků"}</div>`
+    + (zam.length ? `<div class="vy-pruh">${zam.map(x => `<span style="flex:${x.n};background:color-mix(in srgb,${esc(denikBarva(x.f.color))} 75%,#FBFAF5)"></span>`).join("")}</div><div class="vy-leg">${zam.map(x => `<span><i style="background:${esc(denikBarva(x.f.color))}"></i>${esc(x.f.label)} ${x.n}×</span>`).join("")}</div>` : "")
+    + (H ? `<div>${H}</div>` : "")
+    + (v.nejcasteji ? `<div>nejčastěji: ${esc(v.nejcasteji.nazev || "Trénink")} (${v.nejcasteji.n}×)</div>` : "") + "</div>";
+}
 
 /* ---- Dopsat trénink zpětně ---- */
 let ddVybrany = null;
@@ -23076,6 +23690,9 @@ const HELP_DATA = [
       { q: "Jak zapíšu, že trénink proběhl?", a: "Když odejdeš z Přehledu tréninku, sjede shora na deset vteřin karta „Odtrénováno dnes?“. Ťukni na „Ano, odtrénováno“ a je zapsáno; hned potom můžeš jedním ze tří smajlíků označit, jak se trénink povedl, a ťuknout na „Přidat poznámku“ a napsat, jak to šlo, a pod to do žlutého pole krátký vzkaz pro příště. Když ses na plán jen díval(a), nedělej nic — karta sama zmizí a nic se nezapíše. Křížkem ji zavřeš hned. Trénink, který už dnes zapsaný máš, se znovu neptá.", kw: "odtrenovano dnes lista karta ano poznamka prehled zacit trenovat smajlik hodnoceni povedl" },
       { q: "Kde najdu všechno odtrénované pohromadě?", a: "V Deníčku. Na záložce Tréninky je vpravo nahoře oranžové tlačítko s knihou (vidí ho jen ten, kdo si deníček vede). Otevře sešit na poslední popsané stránce. Píše se do něj jako do opravdového: od nejstaršího tréninku po nejnovější, každý měsíc začíná na nové stránce razítkem. Na okraji je datum, vedle název podtržený barvami zaměření a pod ním tvoje poznámka. Číslo „2ד na okraji znamená, že jsi ten trénink odtrénoval(a) podruhé.", kw: "denicek sesit obrazovka kniha tlacitko vsechno pohromade prehled odtrenovanych dvoustrana poradi nejstarsi" },
       { q: "Jak v Deníčku listuju?", a: "Šipkami v horních rozích sešitu: doleva je o stránku zpět (starší), doprava dál (novější). Na telefonu stačí táhnout prstem po sešitu do strany, na počítači fungují šipky na klávesnici. Sešit má vždy výšku okna a neroluje se; dlouhý měsíc prostě pokračuje na dalších stránkách a nahoře je tužkou napsané, který měsíc čteš. Na počítači se otáčí celá dvoustrana.", kw: "listovat listovani mesic stranka sipky swipe tahnout prstem starsi novejsi otocit stranku rolovat" },
+      { q: "Jak funguje kalendář v Deníčku?", a: "V Deníčku ťukni nahoře na tlačítko s kalendářem (vedle plusu). Místo sešitu se ukáže nástěnný kalendář: barevné čárky v okénku dne jsou zaměření odtrénovaných tréninků, smajlík je hodnocení a číslo (2×) znamená, že se ten den trénovalo víckrát. Šipkami nahoru a dolů otáčíš měsíce. Ťukni na den a pod kalendářem (na počítači vedle něj) uvidíš jeho zápisy; ťuknutí na zápis otevře sešit přesně na něm a Zpět tě vrátí do kalendáře. Do sešitu se vrátíš stejným tlačítkem s kalendářem.", kw: "kalendar mesic den prehled orientace zapisy tlacitko kalendar nastenny" },
+      { q: "Jak v Deníčku najdu starší trénink nebo poznámku?", a: "V kalendáři ťukni na tlačítko s trychtýřem. Otevře se hledání a filtry a zůstanou otevřené, dokud je stejným tlačítkem nezavřeš. Hledá se v názvu tréninku, v poznámkách i ve vzkazech (háčky ani velká písmena nevadí). Vybrat jde sezónu, rok a měsíc — měsíc bez roku najde třeba všechna září ve všech sezónách — a zaměření (u víc zaměření najednou jen zápisy, které mají všechna). Dny, které filtru neodpovídají, v kalendáři vyblednou, a pod kalendářem jsou všechny nalezené zápisy po sezónách. Číslo na tlačítku ukazuje, kolik filtrů máš zapnutých; „Zrušit filtry“ je vypne.", kw: "hledat najit filtr filtry sezona rok mesic zamereni starsi trenink poznamka vzkaz porovnat minula sezona" },
+      { q: "Jak ukončím sezónu a co je vysvědčení?", a: "Sezóna je školní rok a sama končí 31. 7. Když chceš skončit dřív (třeba po posledním tréninku v červnu), otevři v kalendáři filtry a ťukni na „Ukončit sezónu“. Konec se zapíše ke dni posledního zápisu a všechno potom už patří do další sezóny, i letní soustředění. Pod posledním zápisem sezóny se v sešitu objeví razítko „Konec sezóny“ a nalepené vysvědčení: kolik tréninků jsi odtrénoval(a), jaká zaměření, kolikrát který smajlík a nejčastější trénink. Razítko je i v kalendáři. Omylem ukončenou sezónu vrátíš tlačítkem „Vrátit“ v hlášce, nebo později v kalendáři ve filtrech: vyber tu sezónu a ťukni na „Zrušit konec sezóny“.", kw: "sezona ukoncit sezonu konec sezony skolni rok vysvedceni razitko statistika souhrn cervenec" },
       { q: "Karta zmizela dřív, než jsem stihl(a) odpovědět. Co teď?", a: "Nic se neztratilo. Trénink, u kterého jsi otevřel(a) Přehled a neodpověděl(a), si aplikace poznamená: na tlačítku Deníčku se rozsvítí oranžová tečka a v Deníčku je za posledním záznamem tužkou řádek „… odtrénováno?“. Ťukni na „Ano“ a je zapsáno i se správným datem, nebo na „Ne“ a řádek zmizí. Platí to i tehdy, když jsi telefon zamkl(a) přímo v Přehledu a karta vůbec nevyjela. Po týdnu řádek zmizí sám.", kw: "zmizela nestihl tecka ceka potvrzeni odtrenovano otaznik tuzkou" },
       { q: "Co znamená oranžová tečka na tlačítku Deníčku?", a: "Že aspoň jeden trénink čeká na tvoji odpověď, jestli proběhl. Otevři Deníček a u řádku psaného tužkou ťukni na „Ano“ nebo „Ne“. Kdo nechce odpovídat, nemusí — řádek i tečka po týdnu zmizí. Křížek na kartě „Odtrénováno dnes?“ znamená „ne“ a tečku nerozsvítí.", kw: "tecka oranzova ceka potvrzeni ikona denicek" },
       { q: "Jak dopíšu trénink zpětně?", a: "V Deníčku ťukni nahoře na „Dopsat trénink“ (na telefonu je to tlačítko s plusem), vyber trénink (jde hledat podle názvu; při hledání se nabídnou i tréninky z Tržiště), nastav den a případně připiš poznámku. Sešit pak nalistuje na stránku, kde záznam je. Druhá cesta vede z editoru tréninku: ťukni na hlavičku žlutého lepíku („odtrénováno 4× · 9. 10.“; u tréninku, který ještě neproběhl, na řádek „Zatím neodtrénováno“) a v Deníčku tohoto tréninku na „Dopsat odtrénování“ (na telefonu plus) — trénink už je vybraný, nastavíš jen den a poznámku.", kw: "dopsat zpetne minuly tyden pridat odtrenovani datum plus" },
@@ -23287,7 +23904,7 @@ document.getElementById("helpSearchInput").addEventListener("input", (e) => rend
      vlezeš dovnitř složky a čekáš, že tě Zpět / Escape vrátí na dlaždice, ne rovnou z appky.
      Tím, že se sem přidá, funguje obojí bez jediného řádku nové logiky — schová se přes
      svoje vlastní tlačítko Zpět (viz CLOSE_TRIGGERS). */
-  const TRACKED_SELECTOR = ".modal-backdrop, #trainingModeView, #overviewView, #editorView, #denikView, #focusHead";
+  const TRACKED_SELECTOR = ".modal-backdrop, #trainingModeView, #overviewView, #editorView, #denikView, #denikKal, #denikZKal, #focusHead";
   // Mapování otevřeného okna -> jeho vlastní zavírací tlačítko. Appka radši "klikne" na
   // existující tlačítko (ať se spustí i případné vedlejší účinky zavření), než aby okno
   // zavírala natvrdo sama. Prázdná hodnota = okno záměrně nemá zavírací tlačítko (viz
@@ -23338,6 +23955,8 @@ document.getElementById("helpSearchInput").addEventListener("input", (e) => rend
     equipReqModalBackdrop: "closeEquipReqModalBtn",
     denikDopsatBackdrop: "closeDenikDopsatBtn",
     denikView: "denikZpetBtn",
+    denikKal: "denikKalBtn",
+    denikZKal: "denikKalBtn",
     trainingModeView: "tmExitBtn",
     overviewView: "ovBackBtn",
     editorView: "backToTrainingsBtn",
