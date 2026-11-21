@@ -429,6 +429,9 @@ body.dark-mode .sesit{box-shadow:0 8px 20px rgba(0,0,0,.5);}
 .ot-plocha{position:absolute;left:0;width:100%;}
 .sesit .ot-strana{position:absolute;top:0;left:0;overflow:hidden;}
 .ot-snimek{position:absolute;top:0;height:100%;}
+.ot-prehod{position:absolute;left:0;top:0;z-index:3;pointer-events:none;transform:matrix(0,1,1,0,0,0);transform-origin:0 0;}
+.sesit .kal-listy .ot-strana{background-image:none;}
+.kal-ot-snimek{position:absolute;left:0;top:0;transform:matrix(0,1,1,0,0,0);transform-origin:0 0;}
 .ot-chlopen-obal{position:absolute;inset:0;filter:drop-shadow(0 2px 7px rgba(0,0,0,.28));}
 .sesit .ot-chlopen{transform-origin:0 0;}
 .ot-lesk,.ot-stin{position:absolute;left:0;top:0;height:300%;transform-origin:0 0;pointer-events:none;}
@@ -480,15 +483,12 @@ body.dark-mode .sesit{box-shadow:0 8px 20px rgba(0,0,0,.5);}
 .kal-f-dole .kal-zrusit-filtry{color:var(--ink-faint);margin-left:auto;}
 .kal-telo{display:grid;gap:16px;}
 @media (min-width:1000px){ .kal-telo{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:26px;align-items:start;} }
-.sesit.kal-nastenny{height:auto;background-image:none;border-radius:4px 4px 10px 10px;padding:22px 8px 12px;margin-top:10px;perspective:1400px;}
+.sesit.kal-nastenny{height:auto;background-image:none;border-radius:4px 4px 10px 10px;padding:22px 8px 12px;margin-top:10px;}
 .kal-krouzky{position:absolute;left:18px;right:18px;top:-9px;display:flex;justify-content:space-between;pointer-events:none;z-index:4;}
 .kal-krouzky i{width:7px;height:20px;border-radius:4px;background:linear-gradient(90deg,#6b6f78,#c9ccd2 45%,#7d818a);box-shadow:0 1px 2px rgba(0,0,0,.3);}
 .kal-listy{position:relative;}
-.kal-listek{position:relative;transform-origin:50% 0;background:var(--s-papir);}
-.kal-listek.leti{position:absolute;inset:0;z-index:3;pointer-events:none;animation:kalNahoru var(--kal-doba,.55s) cubic-bezier(.45,.05,.55,.95) forwards;box-shadow:0 10px 18px rgba(0,0,0,.18);}
-.kal-listek.pada{animation:kalDolu var(--kal-doba,.55s) cubic-bezier(.45,.05,.55,.95);}
-@keyframes kalNahoru{to{transform:rotateX(-100deg);opacity:.6;}}
-@keyframes kalDolu{from{transform:rotateX(-100deg);opacity:.6;}to{transform:none;opacity:1;}}
+.kal-listek{position:relative;background:var(--s-papir);}
+.kal-listek.prolni,.kal-list.prolni{animation:dsProlni .22s ease-out;}
 .kal-hlava{display:flex;align-items:center;justify-content:space-between;margin:0 0 6px;}
 .sesit .kal-hlava .li-sipka{position:static;margin:0;}
 .kal-hlava .mesic span{display:inline-block;}
@@ -521,7 +521,7 @@ body.dark-mode .sesit{box-shadow:0 8px 20px rgba(0,0,0,.5);}
 .sesit.kal-strana{height:calc(var(--radek)*16.5);}
 @media (min-width:1000px){ .sesit.kal-strana{margin-top:10px;} }
 .kal-strana .sesit-okno{border-radius:inherit;}
-.kal-list{height:100%;padding:var(--pas) 0 var(--radek);column-count:1;column-gap:0;column-fill:auto;orphans:1;widows:1;transition:transform .35s ease;}
+.kal-list{height:100%;padding:var(--pas) 0 var(--radek);column-count:1;column-gap:0;column-fill:auto;orphans:1;widows:1;}
 .kal-pas{position:absolute;left:0;right:0;top:0;height:var(--pas);display:flex;align-items:center;z-index:2;}
 .sesit .kal-pas .li-sipka{position:static;margin:0 0 0 calc((var(--oks) - 40px)/2);}
 .sesit .kal-pas .li-sipka.vpravo{margin:0 4px 0 auto;}
@@ -546,7 +546,6 @@ body.dark-mode .sesit{box-shadow:0 8px 20px rgba(0,0,0,.5);}
 .sesit .ds-vysv .vy-leg{display:flex;flex-wrap:wrap;column-gap:9px;font:500 11.5px/22px var(--font-body);color:#6b7280;}
 .sesit .ds-vysv .vy-leg i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;}
 .sesit .ds-vysv .smajl{width:24px;height:24px;vertical-align:-6px;}
-@media (prefers-reduced-motion:reduce){ .kal-listek.leti,.kal-listek.pada{animation:none;} .kal-listek.leti{display:none;} .kal-list{transition:none;} }
 @media (min-width:1000px){ .sesit.kal-nastenny::after,.sesit.kal-strana::after{display:none;} .sesit.kal-strana{background-size:100% 100%,100% auto;} .sesit.kal-strana[data-papir="ctverecky"]{background-size:100% 100%,auto,auto;} }
 /* okno „Dopsat trénink zpětně“ */
 .dd-seznam{max-height:236px;overflow-y:auto;border:1px solid var(--line);border-radius:var(--radius-sm);margin:-6px 0 14px;background:var(--card);}
@@ -16113,14 +16112,6 @@ function denikListuj(smer) {
     }
     return f;
   };
-  const NAD = 120;   // kolik místa nad sešitem smí list zabrat
-  const vrstva = document.createElement("div");
-  vrstva.className = "ot-vrstva";
-  vrstva.style.top = -NAD + "px";
-  const plocha = document.createElement("div");
-  plocha.className = "ot-plocha";
-  plocha.style.cssText = `top:${NAD}px;height:${H}px;`;
-  vrstva.appendChild(plocha);
   // Na počítači se otáčí pravá stránka doleva (dál) nebo levá doprava (zpět), přes hřbet.
   // Na telefonu se list vždy otáčí doleva přes levý okraj; zpět = stejný pohyb pozpátku
   // (předchozí list se vrátí a přikryje současný).
@@ -16142,6 +16133,22 @@ function denikListuj(smer) {
     predni = strana(0);
     chlopen = strana(0, true);
   }
+  denikOtocAnim({ koren: sesit, W, H, predni, chlopen, lezi, dvoj, dal, ms, nad: 120, poKonci: () => { denikOtaceni = false; } });
+}
+/** Animace otočení listu ohnutým rohem (kolo 12; od kola 44 i pro stránku s výsledky a kalendář).
+    koren = papír (.sesit), do kterého se vloží vrstva; W × H = jedna stránka; predni / chlopen / lezi
+    = stránky .ot-strana (lezi smí chybět); dvoj = dvoustrana (na počítači v sešitu), dal = dopředu.
+    nad = kolik místa nad papírem smí list zabrat; poKonci se zavolá, až list dopadne. */
+function denikOtocAnim(o) {
+  const { koren, W, H, predni, chlopen, lezi, dvoj, dal, ms } = o;
+  const NAD = o.nad || 0;
+  const vrstva = document.createElement("div");
+  vrstva.className = "ot-vrstva";
+  vrstva.style.top = -NAD + "px";
+  const plocha = document.createElement("div");
+  plocha.className = "ot-plocha";
+  plocha.style.cssText = `top:${NAD}px;height:${H}px;`;
+  vrstva.appendChild(plocha);
   const sG = dvoj && !dal ? -1 : 1;            // osa u: od hřbetu směrem k volnému okraji listu
   const hr = dvoj ? W : 0;                     // hřbet na ose x sešitu
   const odkud = dvoj ? (dal ? W : 0) : 0;      // levý okraj otáčené stránky
@@ -16163,7 +16170,16 @@ function denikListuj(smer) {
   stinObal.appendChild(stin);
   if (lezi) plocha.appendChild(lezi);
   plocha.append(predni, stinObal, chlObal);
-  sesit.appendChild(vrstva);
+  // prehod (kalendář, kolo 44): celé otáčení se překlopí přes úhlopříčku — hřbet je pak nahoře
+  // a list se zvedá za pravý dolní roh přes horní okraj. Obsah stránek se překlápí zpátky sám.
+  let obal = null;
+  if (o.prehod) {
+    obal = document.createElement("div");
+    obal.className = "ot-prehod";
+    obal.style.cssText = `width:${W}px;height:${H}px;`;
+    obal.appendChild(vrstva);
+    koren.appendChild(obal);
+  } else koren.appendChild(vrstva);
 
   // Geometrie v souřadnicích otáčené stránky: u = vzdálenost od hřbetu (0..W), y shora (0..H).
   // Spodní roh O = (W, H) se obloukem přesouvá do P; ohyb je osa úsečky OP. Co leží za ohybem
@@ -16189,7 +16205,7 @@ function denikListuj(smer) {
   const naPredni = (p) => [hr + sG * p[0] - odkud, p[1]];
   const t0 = performance.now();
   let hotovo = false;
-  const konec = () => { if (hotovo) return; hotovo = true; vrstva.remove(); denikOtaceni = false; };
+  const konec = () => { if (hotovo) return; hotovo = true; vrstva.remove(); if (obal) obal.remove(); if (o.poKonci) o.poKonci(); };
   const krok = (ted) => {
     if (hotovo) return;
     const t = Math.min(1, (ted - t0) / ms);
@@ -16491,7 +16507,7 @@ function kalListekHtml(mesic) {
   let b = "";
   for (let i = posun; i > 0; i--) b += kalBunkaHtml(denikDen(new Date(r, m - 1, 1 - i)), true, zaDen, "");
   for (let d = 1; d <= dnu; d++) b += kalBunkaHtml(denikDen(new Date(r, m - 1, d)), false, zaDen, konecTady);
-  const zbyva = (7 - (posun + dnu) % 7) % 7;
+  const zbyva = 42 - posun - dnu;   // vždy šest řádků, ať list při otáčení nemění výšku
   for (let i = 1; i <= zbyva; i++) b += kalBunkaHtml(denikDen(new Date(r, m, i)), true, zaDen, "");
   const nazev = (DENIK_MESICE[m - 1] || "").toLowerCase() + " " + r;
   return `<div class="kal-listek" data-mesic="${mesic}">
@@ -16629,7 +16645,6 @@ function kalStrankuj(cil) {
   const list = document.getElementById("kalList");
   const sirka = list.clientWidth;
   if (!sirka) return;
-  list.style.transition = "none";
   list.style.transform = "";
   const l0 = list.getBoundingClientRect().left;
   const strana = (x) => Math.max(0, Math.floor((x - l0 + 1) / sirka));
@@ -16643,7 +16658,6 @@ function kalStrankuj(cil) {
   kal.stran = posl + 1;
   kal.strana = Math.max(0, Math.min(cil || 0, kal.stran - 1));
   kalUkazStranu();
-  requestAnimationFrame(() => { list.style.transition = ""; });
 }
 function kalUkazStranu() {
   const list = document.getElementById("kalList"), sirka = list.clientWidth;
@@ -16652,27 +16666,73 @@ function kalUkazStranu() {
   list.dataset.stran = kal.stran;
   document.getElementById("kalPas").innerHTML = `<button type="button" class="li-sipka vlevo" data-kal="str-" aria-label="Předchozí stránka"${kal.strana > 0 ? "" : " disabled"}><i class="fa-solid fa-chevron-left"></i></button><span class="kal-pas-t">${esc(kal.nadpis || "")}</span><button type="button" class="li-sipka vpravo" data-kal="str+" aria-label="Další stránka"${kal.strana + 1 < kal.stran ? "" : " disabled"}><i class="fa-solid fa-chevron-right"></i></button>`;
 }
-/** Přetočí list kalendáře (o = +1 další měsíc: starý list odletí nahoru; −1: předchozí spadne shora). */
-function kalOtoc(o) {
-  const stary = document.querySelector("#kalListy .kal-listek");
-  const kopie = stary && stary.cloneNode(true);
-  kal.mesic = kalPosunMesic(kal.mesic, o);
-  kal.vyb = null;
-  renderKal();
-  denikZvuk("list");
+/* Otáčení listů (Mek 21. 11.): stránka s výsledky se otáčí stejně jako sešit na telefonu, list
+   kalendáře stejně, jen pootočeně — přes kroužkovou vazbu nahoru, za pravý dolní roh. Rychlost
+   a vypnutí podle Vzhledu sešitu; „Vypnuto“ a omezené animace v systému = jen prolnutí. */
+let kalOtaceni = false;
+function kalDobyOtaceni() {
+  const klid = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const doby = DENIK_RYCHLOSTI[state.denik.vzhled.rychlost];
-  if (!doby) return;
-  const ly = document.getElementById("kalListy");
-  ly.style.setProperty("--kal-doba", doby[0] / 1000 + "s");
-  if (o > 0 && kopie) {
-    kopie.classList.add("leti");
-    kopie.querySelectorAll(".kal-razitko-konec").forEach(x => x.remove());
-    ly.appendChild(kopie);
-    setTimeout(() => kopie.remove(), doby[0] + 40);
-  } else {
-    const novy = ly.querySelector(".kal-listek");
-    if (novy) { novy.classList.add("pada"); setTimeout(() => novy.classList.remove("pada"), doby[0] + 40); }
+  return klid ? null : doby;
+}
+function kalProlni(el) { el.classList.remove("prolni"); void el.offsetWidth; el.classList.add("prolni"); }
+/** Prázdný list papíru (rub) nebo kopie obsahu (bez id a šipek) o rozměrech W × H. */
+function kalOtStrana(W, H, obsah) {
+  const f = document.createElement("div");
+  f.className = "ot-strana";
+  f.style.cssText = `width:${W}px;height:${H}px;`;
+  if (obsah) {
+    obsah.querySelectorAll("[id]").forEach(e => e.removeAttribute("id"));
+    obsah.querySelectorAll(".li-sipka").forEach(e => e.remove());
+    f.appendChild(obsah);
   }
+  return f;
+}
+/** Stránka s výsledky o stránku dál (o = +1) nebo zpět (−1). */
+function kalListuj(o) {
+  const cil = kal.strana + o;
+  if (kalOtaceni || cil < 0 || cil >= kal.stran) return;
+  denikZvuk("list");
+  const doby = kalDobyOtaceni(), el = document.getElementById("kalStrana");
+  if (!doby) { kal.strana = cil; kalUkazStranu(); kalProlni(document.getElementById("kalList")); return; }
+  kalOtaceni = true;
+  const W = el.clientWidth, H = el.clientHeight;
+  const snimek = () => {
+    const s = document.createElement("div");
+    s.className = "ot-snimek";
+    s.style.cssText = `width:${W}px;left:0;`;
+    s.append(document.getElementById("kalPas").cloneNode(true), el.querySelector(".sesit-okno").cloneNode(true));
+    return kalOtStrana(W, H, s);
+  };
+  const dal = o > 0;
+  let predni, chlopen, lezi = null;
+  if (dal) { predni = snimek(); kal.strana = cil; kalUkazStranu(); chlopen = kalOtStrana(W, H); }
+  else { lezi = snimek(); lezi.style.left = "0px"; kal.strana = cil; kalUkazStranu(); predni = snimek(); chlopen = kalOtStrana(W, H); }
+  denikOtocAnim({ koren: el, W, H, predni, chlopen, lezi, dvoj: false, dal, ms: doby[1], nad: 60, poKonci: () => { kalOtaceni = false; } });
+}
+/** Přetočí list kalendáře (o = +1 další měsíc: list odletí nahoru přes vazbu; −1: předchozí se vrátí shora). */
+function kalOtoc(o) {
+  if (kalOtaceni) return;
+  const ly = document.getElementById("kalListy");
+  const doby = kalDobyOtaceni();
+  denikZvuk("list");
+  if (!doby) { kal.mesic = kalPosunMesic(kal.mesic, o); kal.vyb = null; renderKal(); kalProlni(ly.querySelector(".kal-listek")); return; }
+  const Wc = ly.clientWidth, Hc = ly.clientHeight;
+  // Otáčí se v překlopených souřadnicích: šířka listu je výška kalendáře a naopak.
+  const snimek = () => {
+    const s = document.createElement("div");
+    s.className = "kal-ot-snimek";
+    s.style.cssText = `width:${Wc}px;height:${Hc}px;`;
+    s.appendChild(ly.querySelector(".kal-listek").cloneNode(true));
+    return kalOtStrana(Hc, Wc, s);
+  };
+  const dal = o > 0;
+  const prekresli = () => { kal.mesic = kalPosunMesic(kal.mesic, o); kal.vyb = null; renderKal(); };
+  let predni, chlopen, lezi = null;
+  kalOtaceni = true;
+  if (dal) { predni = snimek(); prekresli(); chlopen = kalOtStrana(Hc, Wc); }
+  else { lezi = snimek(); lezi.style.left = "0px"; prekresli(); predni = snimek(); chlopen = kalOtStrana(Hc, Wc); }
+  denikOtocAnim({ koren: ly, W: Hc, H: Wc, predni, chlopen, lezi, dvoj: false, dal, ms: doby[1], nad: 0, prehod: true, poKonci: () => { kalOtaceni = false; } });
 }
 /* ---- otevření, zavření, sešit z kalendáře ---- */
 function kalOtevri() {
@@ -16792,10 +16852,7 @@ document.getElementById("denikKal").addEventListener("click", (e) => {
   const b = e.target.closest("[data-kal]");
   const a = b && b.dataset.kal;
   if (a === "starsi" || a === "novejsi") { kalOtoc(a === "novejsi" ? 1 : -1); return; }
-  if (a === "str-" || a === "str+") {
-    kal.strana = Math.max(0, Math.min(kal.stran - 1, kal.strana + (a === "str+" ? 1 : -1)));
-    kalUkazStranu(); denikZvuk("list"); return;
-  }
+  if (a === "str-" || a === "str+") { kalListuj(a === "str+" ? 1 : -1); return; }
   const clanek = e.target.closest(".kal-zapis");
   if (a === "lepik" && clanek) { const id = clanek.dataset.id; if (kal.lepiky.has(id)) kal.lepiky.delete(id); else kal.lepiky.add(id); renderKal(true); return; }
   if (a === "rozbal" && clanek) { kal.rozbalene.add(clanek.dataset.id); renderKal(true); return; }
