@@ -16677,13 +16677,13 @@ function kalDobyOtaceni() {
 }
 function kalProlni(el) { el.classList.remove("prolni"); void el.offsetWidth; el.classList.add("prolni"); }
 /** Prázdný list papíru (rub) nebo kopie obsahu (bez id a šipek) o rozměrech W × H. */
-function kalOtStrana(W, H, obsah) {
+function kalOtStrana(W, H, obsah, sSipkami) {
   const f = document.createElement("div");
   f.className = "ot-strana";
   f.style.cssText = `width:${W}px;height:${H}px;`;
   if (obsah) {
     obsah.querySelectorAll("[id]").forEach(e => e.removeAttribute("id"));
-    obsah.querySelectorAll(".li-sipka").forEach(e => e.remove());
+    if (!sSipkami) obsah.querySelectorAll(".li-sipka").forEach(e => { e.style.visibility = "hidden"; });   // místo zůstane, ať nic neposkočí
     f.appendChild(obsah);
   }
   return f;
@@ -16710,7 +16710,8 @@ function kalListuj(o) {
   else { lezi = snimek(); lezi.style.left = "0px"; kal.strana = cil; kalUkazStranu(); predni = snimek(); chlopen = kalOtStrana(W, H); }
   denikOtocAnim({ koren: el, W, H, predni, chlopen, lezi, dvoj: false, dal, ms: doby[1], nad: 60, poKonci: () => { kalOtaceni = false; } });
 }
-/** Přetočí list kalendáře (o = +1 další měsíc: list odletí nahoru přes vazbu; −1: předchozí se vrátí shora). */
+/** Přetočí list kalendáře. Šipka nahoru (o = −1, předchozí měsíc): list odletí nahoru přes vazbu;
+    šipka dolů (o = +1, další měsíc): list se vrátí shora (Mek 21. 11.: směr podle šipek). */
 function kalOtoc(o) {
   if (kalOtaceni) return;
   const ly = document.getElementById("kalListy");
@@ -16724,9 +16725,9 @@ function kalOtoc(o) {
     s.className = "kal-ot-snimek";
     s.style.cssText = `width:${Wc}px;height:${Hc}px;`;
     s.appendChild(ly.querySelector(".kal-listek").cloneNode(true));
-    return kalOtStrana(Hc, Wc, s);
+    return kalOtStrana(Hc, Wc, s, true);   // šipky zůstanou i na otáčeném listu, ať po dopadu nic neproblikne
   };
-  const dal = o > 0;
+  const dal = o < 0;
   const prekresli = () => { kal.mesic = kalPosunMesic(kal.mesic, o); kal.vyb = null; renderKal(); };
   let predni, chlopen, lezi = null;
   kalOtaceni = true;
