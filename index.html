@@ -492,6 +492,30 @@ body.dark-mode .sesit{box-shadow:0 8px 20px rgba(0,0,0,.5);}
 .kal-hlava{display:flex;align-items:center;justify-content:space-between;margin:0 0 6px;}
 .sesit .kal-hlava .li-sipka{position:static;margin:0;}
 .kal-hlava .mesic span{display:inline-block;}
+/* Kolo 46: razítko je tlačítko — přepíná měsíc a celou sezónu. Dokud na něj trenér poprvé neťukne,
+   jednou za 7 s krátce „otiskne“ (Mek 22. 11.: probliknutí místo popisku). */
+.kal-hlava button.mesic{border:0;background:none;padding:0;margin:0;cursor:pointer;color:inherit;font:inherit;-webkit-tap-highlight-color:transparent;}
+.kal-hlava button.mesic:focus-visible span{outline:2px solid var(--s-inkoust);outline-offset:2px;}
+.kal-hlava button.mesic.blik span{animation:kalBlik 7s ease-in-out 1.5s infinite;}
+@keyframes kalBlik{0%,86%,100%{background:transparent;transform:rotate(-2.2deg) scale(1);}90%{background:rgba(51,153,51,.2);transform:rotate(-2.2deg) scale(1.06);}94%{background:rgba(51,153,51,.08);transform:rotate(-2.2deg) scale(1);}}
+@media (prefers-reduced-motion:reduce){ .kal-hlava button.mesic.blik span{animation:none;} }
+#kalListy{touch-action:pan-x pan-y;}   /* sevření prstů nad kalendářem přepíná sezónu, ne lupu prohlížeče */
+/* přehled sezóny: 12 malých měsíců (telefon 3 vedle sebe, počítač 4) */
+.kal-rok{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 8px;padding:2px 2px 4px;}
+@media (min-width:1000px){ .kal-rok{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px 12px;} }
+.kal-mini{position:relative;cursor:pointer;border-radius:4px;padding:2px;-webkit-tap-highlight-color:transparent;}
+.kal-mini:focus-visible{outline:2px solid var(--s-inkoust);outline-offset:1px;}
+.kal-mini h4{font:400 calc(17px*var(--m,1))/1 var(--f-ruka);color:var(--s-inkoust);margin:0 0 3px 2px;}
+.kal-mm{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;}
+.kal-md{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font:400 9px/1 var(--f-ruka);color:var(--s-tuzka);border-radius:2px;min-width:0;}
+@media (min-width:1000px){ .kal-md{font-size:12px;} .kal-mini .kal-md[data-den]:hover{box-shadow:inset 0 0 0 1px var(--s-inkoust);} }
+.kal-md.vk{color:var(--chalk-dark);}
+.kal-md.tr{color:var(--s-inkoust);font-weight:700;}
+.kal-md.x{visibility:hidden;}
+.kal-md.mimo{opacity:.35;}
+.kal-md.dnes{box-shadow:inset 0 0 0 1.5px var(--chalk);}
+.kal-md.guma{opacity:.25;filter:grayscale(1);}
+.kal-mini-konec{position:absolute;right:-2px;bottom:6px;font:400 12px/1 var(--font-display);letter-spacing:.08em;text-transform:uppercase;color:#c0392b;border:2px solid #c0392b;border-radius:4px;padding:3px 4px 1px;transform:rotate(-10deg);background:color-mix(in srgb,var(--s-papir) 75%,transparent);pointer-events:none;white-space:nowrap;z-index:2;}
 .kal-dny,.kal-mrizka{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));}
 .kal-dny span{text-align:center;font:400 15px/1 var(--f-ruka);color:var(--s-tuzka);padding:0 0 5px;cursor:default;user-select:none;-webkit-user-select:none;}
 .kal-dny span.vk{color:var(--chalk-dark);}
@@ -4297,7 +4321,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-11-22 17:54";
+const APP_VERSION = "2026-11-22 19:02";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -16508,8 +16532,19 @@ document.getElementById("denikZpetBtn").addEventListener("click", () => {
    na stejný měsíc. Obojí hlídá setupBackButtonNav jako ostatní okna. */
 const KAL_POZN_MAX = 40;                  // poznámka ve výsledcích: 40 znaků a „…“, ťuknutím se rozbalí
 const KAL_FILTRY_KLIC = "trener.kalFiltry";  // panel filtrů zůstává otevřený, dokud ho trenér nezavře
-const kal = { mesic: null, vyb: null, text: "", sez: null, rok: "", mes: "", zam: new Set(), rozbalene: new Set(), lepiky: new Set(), strana: 0, stran: 1, nadpis: "" };
+const KAL_REZIM_KLIC = "trener.kalRezim";     // kolo 46: měsíc / sezóna — kalendář se otevře v tom, co bylo naposledy
+const KAL_RAZITKO_KLIC = "trener.kalRazitko"; // kolo 46: "1" = trenér už na razítko ťukl, dál neproblikává
+const kal = { rezim: (() => { try { return localStorage.getItem(KAL_REZIM_KLIC) === "sezona" ? "sezona" : "mesic"; } catch (e) { return "mesic"; } })(), mesic: null, vyb: null, text: "", sez: null, rok: "", mes: "", zam: new Set(), rozbalene: new Set(), lepiky: new Set(), strana: 0, stran: 1, nadpis: "" };
 function kalKonce() { return state.denik.sezony || {}; }
+function kalJeSezona() { return kal.rezim === "sezona"; }
+function kalPredchoziSezona(s) { const z = +s.slice(0, 4) - 1; return z + "/" + String(z + 1).slice(2); }
+/** Která sezóna je v přehledu: z filtru Sezóna, jinak ta, kam patří zobrazený měsíc. */
+function kalSezZobr() { return kal.sez || kalSezona((kal.mesic || kalDnes().slice(0, 7)) + "-01", kalKonce()); }
+function kalNejstarsiSezona() { return kalSezona(kalNejstarsi() + "-01", kalKonce()); }
+function kalRazitkoZnam() { try { return localStorage.getItem(KAL_RAZITKO_KLIC) === "1"; } catch (e) { return true; } }
+function kalRazitkoHtml(text) {
+  return `<button type="button" class="mesic${kalRazitkoZnam() ? "" : " blik"}" data-kal="rezim" aria-label="${kalJeSezona() ? "Zpět na měsíc" : "Celá sezóna"}"><span>${esc(text)}</span></button>`;
+}
 function kalDnes() { return denikDen(); }
 function kalAktualni() { return kalSezona(kalDnes(), kalKonce()); }
 function kalOtevreny() { return !document.getElementById("denikKal").classList.contains("hidden"); }
@@ -16579,9 +16614,71 @@ function kalListekHtml(mesic) {
   for (let i = 1; i <= zbyva; i++) b += kalBunkaHtml(denikDen(new Date(r, m, i)), true, zaDen, "");
   const nazev = (DENIK_MESICE[m - 1] || "").toLowerCase() + " " + r;
   return `<div class="kal-listek" data-mesic="${mesic}">
-    <div class="kal-hlava"><button type="button" class="li-sipka" data-kal="starsi" aria-label="Předchozí měsíc"${mesic <= kalNejstarsi() ? " disabled" : ""}><i class="fa-solid fa-chevron-up"></i></button><div class="mesic"><span>${esc(nazev)}</span></div><button type="button" class="li-sipka" data-kal="novejsi" aria-label="Další měsíc"${mesic >= dnes.slice(0, 7) ? " disabled" : ""}><i class="fa-solid fa-chevron-down"></i></button></div>
+    <div class="kal-hlava"><button type="button" class="li-sipka" data-kal="starsi" aria-label="Předchozí měsíc"${mesic <= kalNejstarsi() ? " disabled" : ""}><i class="fa-solid fa-chevron-up"></i></button>${kalRazitkoHtml(nazev)}<button type="button" class="li-sipka" data-kal="novejsi" aria-label="Další měsíc"${mesic >= dnes.slice(0, 7) ? " disabled" : ""}><i class="fa-solid fa-chevron-down"></i></button></div>
     <div class="kal-dny" aria-hidden="true">${["po", "út", "st", "čt", "pá", "so", "ne"].map((x, i) => `<span${i >= 5 ? ' class="vk"' : ""}>${x}</span>`).join("")}</div>
     <div class="kal-mrizka" data-konec="${konecTady}">${b}</div></div>`;
+}
+/** Kolo 46 (Mek 22. 11.): přehled sezóny — 12 malých měsíců (srpen–červenec), den s tréninkem podbarvený
+    barvami zaměření (víc zaměření = šikmé pruhy), čísla dní zůstávají. Dny mimo sezónu a v budoucnu
+    vybledlé, u posledního zápisu ukončené sezóny razítko. Zápisy sezóny z doby před 1. 8. (po ručním
+    konci předchozí sezóny) přidají své měsíce na začátek. Každý měsíc má 6 řádků, ať list při otáčení
+    nemění výšku. */
+function kalRokHtml(s) {
+  const konce = kalKonce(), dnes = kalDnes(), f = kalFiltr(), fs = Object.assign({}, f, { sez: s });
+  const zaDen = {};
+  kalZaznamy().forEach(z => { (zaDen[z.den] = zaDen[z.den] || []).push(z); });
+  const r0 = +s.slice(0, 4);
+  let mesice = [];
+  for (let i = 0; i < 12; i++) mesice.push(denikDen(new Date(r0, 7 + i, 1)).slice(0, 7));
+  const drive = [...new Set(kalZaznamy().filter(z => z.den < mesice[0] + "-01" && kalSezona(z.den, konce) === s).map(z => z.den.slice(0, 7)))].sort();
+  mesice = drive.concat(mesice);
+  const posl = kalPosledniVSezonach(state.denik.zaznamy, konce, dnes)[s];
+  const filtrObsahu = !!(kal.text || kal.zam.size);
+  const mini = (mesic) => {
+    const r = +mesic.slice(0, 4), m = +mesic.slice(5, 7);
+    const posun = (new Date(r, m - 1, 1).getDay() + 6) % 7, dnu = new Date(r, m, 0).getDate();
+    let b = "";
+    for (let i = 0; i < 42; i++) {
+      const dd = i - posun + 1;
+      if (dd < 1 || dd > dnu) { b += '<span class="kal-md x"></span>'; continue; }
+      const den = mesic + "-" + String(dd).padStart(2, "0");
+      const mimo = den > dnes || kalSezona(den, konce) !== s;
+      const zz = mimo ? [] : (zaDen[den] || []);
+      let tr = "kal-md" + (i % 7 >= 5 ? " vk" : "") + (den === dnes ? " dnes" : "") + (mimo ? " mimo" : ""), styl = "";
+      if (zz.length) {
+        const sedi = zz.some(z => kalVObdobi(z, fs, konce) && (!filtrObsahu || kalShoda(z, f, state.trainings[z.trainingId])));
+        tr += " tr" + (sedi ? "" : " guma");
+        const zam = [...new Set(zz.flatMap(z => z.zamereni || []))].slice(0, 3);
+        const barvy = (zam.length ? zam : [null]).map(k => `color-mix(in srgb,${k ? kalBarva(k) : FOCUS_NONE_COLOR} ${kal.zam.size && !kal.zam.has(k) ? 22 : 75}%,var(--s-papir))`);
+        styl = barvy.length === 1 ? "background:" + barvy[0]
+          : "background:linear-gradient(135deg," + barvy.map((c, j) => `${c} ${(j * 100 / barvy.length).toFixed(1)}% ${((j + 1) * 100 / barvy.length).toFixed(1)}%`).join(",") + ")";
+      }
+      b += `<span class="${tr}" data-den="${den}"${styl ? ` style="${esc(styl)}"` : ""}>${dd}</span>`;
+    }
+    const konec = posl && posl.den.slice(0, 7) === mesic ? '<span class="kal-mini-konec">Konec sezóny</span>' : "";
+    return `<div class="kal-mini" role="button" tabindex="0" data-kal="mini" data-mesic="${mesic}" aria-label="${esc(DENIK_MESICE[m - 1] + " " + r)}"><h4>${esc(DENIK_MESICE[m - 1])}</h4><div class="kal-mm">${b}</div>${konec}</div>`;
+  };
+  return `<div class="kal-listek kal-sezona" data-sezona="${esc(s)}">
+    <div class="kal-hlava"><button type="button" class="li-sipka" data-kal="starsi" aria-label="Předchozí sezóna"${s <= kalNejstarsiSezona() ? " disabled" : ""}><i class="fa-solid fa-chevron-up"></i></button>${kalRazitkoHtml("sezóna " + s)}<button type="button" class="li-sipka" data-kal="novejsi" aria-label="Další sezóna"${s >= kalAktualni() ? " disabled" : ""}><i class="fa-solid fa-chevron-down"></i></button></div>
+    <div class="kal-rok">${mesice.map(mini).join("")}</div></div>`;
+}
+/** Kolo 46: přepnutí měsíc ↔ sezóna (razítko, sevření prstů, ťuknutí na malý měsíc). */
+function kalPrepniRezim(rezim, bezSkoku) {
+  if (kalOtaceni || rezim === kal.rezim) return;
+  if (rezim === "sezona") kal.vyb = null;
+  else if (!bezSkoku && kalSezona(kal.mesic + "-01", kalKonce()) !== kalSezZobr()) kalSkocNaObdobi();
+  kal.rezim = rezim;
+  try { localStorage.setItem(KAL_REZIM_KLIC, rezim); } catch (e) {}
+  denikZvuk("list");
+  renderKal();
+  const l = document.querySelector("#kalListy .kal-listek");
+  if (l) kalProlni(l);
+}
+/** O měsíc / o sezónu dál (o = +1) nebo zpět (−1). V sezóně se mění filtr Sezóna. */
+function kalPosun(o) {
+  if (kalJeSezona()) { const s = kalSezZobr(); kal.sez = o > 0 ? kalDalsiSezona(s) : kalPredchoziSezona(s); kal.rok = ""; }
+  else kal.mesic = kalPosunMesic(kal.mesic, o);
+  kal.vyb = null;
 }
 function kalRazitkaKonce() {
   document.querySelectorAll("#kalListy .kal-mrizka").forEach(mr => {
@@ -16640,6 +16737,11 @@ function kalVysledky() {
     const zz = kalZaznamy().filter(z => z.den === kal.vyb).sort((a, b) => (a.cas || 0) - (b.cas || 0));
     return { nadpis: denikDenText(kal.vyb, kalDnes()), html: zz.length ? zz.map(zapis).join("") : '<p class="ds-prazdno">netrénovalo se</p>' };
   }
+  if (kalJeSezona()) {   // kolo 46: přehled sezóny — všechny zápisy sezóny (s hledáním a zaměřením)
+    const s = kalSezZobr(), fs = Object.assign({}, f, { sez: s });
+    const zz = kalZaznamy().filter(z => kalVObdobi(z, fs, konce) && kalShoda(z, f, state.trainings[z.trainingId])).sort(kalNovejsi);
+    return { nadpis: "sezóna " + s, html: zz.length ? zz.map(zapis).join("") : '<p class="ds-prazdno">v téhle sezóně nic</p>' };
+  }
   if (!kalFiltrAktivni()) {
     const zz = kalZaznamy().filter(z => z.den.slice(0, 7) === kal.mesic).sort(kalNovejsi);
     return { nadpis: denikMesicText(kal.mesic + "-01").toLowerCase(), html: zz.length ? zz.map(zapis).join("") : '<p class="ds-prazdno">v tomhle měsíci nic</p>' };
@@ -16697,7 +16799,7 @@ function renderKal(drzStranu) {
   const papir = document.getElementById("kalPapir"), strana = document.getElementById("kalStrana");
   kalNastavPapir(papir); kalNastavPapir(strana);
   denikNactiPismo(state.denik.vzhled.pismo);
-  document.getElementById("kalListy").innerHTML = kalListekHtml(kal.mesic);
+  document.getElementById("kalListy").innerHTML = kalJeSezona() ? kalRokHtml(kalSezZobr()) : kalListekHtml(kal.mesic);
   kalRazitkaKonce();
   const v = kalVysledky();
   document.getElementById("kalList").innerHTML = v.html;
@@ -16785,7 +16887,7 @@ function kalOtoc(o) {
   const ly = document.getElementById("kalListy");
   const doby = kalDobyOtaceni();
   denikZvuk("list");
-  if (!doby) { kal.mesic = kalPosunMesic(kal.mesic, o); kal.vyb = null; renderKal(); kalProlni(ly.querySelector(".kal-listek")); return; }
+  if (!doby) { kalPosun(o); renderKal(); kalProlni(ly.querySelector(".kal-listek")); return; }
   const Wc = ly.clientWidth, Hc = ly.clientHeight;
   // Otáčí se v překlopených souřadnicích: šířka listu je výška kalendáře a naopak.
   const snimek = () => {
@@ -16796,7 +16898,7 @@ function kalOtoc(o) {
     return kalOtStrana(Hc, Wc, s, true);   // šipky zůstanou i na otáčeném listu, ať po dopadu nic neproblikne
   };
   const dal = o < 0;
-  const prekresli = () => { kal.mesic = kalPosunMesic(kal.mesic, o); kal.vyb = null; renderKal(); };
+  const prekresli = () => { kalPosun(o); renderKal(); };
   let predni, chlopen, lezi = null;
   kalOtaceni = true;
   if (dal) { predni = snimek(); prekresli(); chlopen = kalOtStrana(Hc, Wc); }
@@ -16921,6 +17023,18 @@ document.getElementById("denikKal").addEventListener("click", (e) => {
   const b = e.target.closest("[data-kal]");
   const a = b && b.dataset.kal;
   if (a === "starsi" || a === "novejsi") { kalOtoc(a === "novejsi" ? 1 : -1); return; }
+  if (a === "rezim") {
+    try { localStorage.setItem(KAL_RAZITKO_KLIC, "1"); } catch (err) {}
+    kalPrepniRezim(kalJeSezona() ? "mesic" : "sezona");
+    return;
+  }
+  if (a === "mini") {   // kolo 46: telefon — měsíc; počítač — ťuknutí na den otevře měsíc s vybraným dnem
+    const d = e.target.closest(".kal-md[data-den]");
+    kal.mesic = b.dataset.mesic;
+    kal.vyb = d && window.matchMedia("(min-width:1000px)").matches ? d.dataset.den : null;
+    kalPrepniRezim("mesic", true);
+    return;
+  }
   if (a === "str-" || a === "str+") { kalListuj(a === "str+" ? 1 : -1); return; }
   const clanek = e.target.closest(".kal-zapis");
   if (a === "lepik" && clanek) { const id = clanek.dataset.id; if (kal.lepiky.has(id)) kal.lepiky.delete(id); else kal.lepiky.add(id); renderKal(true); return; }
@@ -16941,8 +17055,27 @@ document.getElementById("denikKal").addEventListener("click", (e) => {
 document.getElementById("denikKal").addEventListener("keydown", (e) => {
   if (e.key !== "Enter" && e.key !== " ") return;
   const c = e.target.closest && e.target.closest(".kal-zapis");
-  if (c && e.target === c) { e.preventDefault(); kalOtevriZapis(c.dataset.id); }
+  if (c && e.target === c) { e.preventDefault(); kalOtevriZapis(c.dataset.id); return; }
+  const m = e.target.closest && e.target.closest(".kal-mini");
+  if (m && e.target === m) { e.preventDefault(); m.click(); }
 });
+/* Kolo 46: sevření dvou prstů nad kalendářem = celá sezóna, roztažení = zpátky na měsíc. */
+let kalStisk = null;
+{
+  const ly = document.getElementById("kalListy");
+  const vzdal = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  ly.addEventListener("touchstart", (e) => { kalStisk = e.touches.length === 2 ? { d0: vzdal(e.touches), d: null } : (e.touches.length > 2 ? null : kalStisk); }, { passive: true });
+  ly.addEventListener("touchmove", (e) => { if (kalStisk && e.touches.length === 2) kalStisk.d = vzdal(e.touches); }, { passive: true });
+  ly.addEventListener("touchend", () => {
+    const s = kalStisk;
+    kalStisk = null;
+    if (!s || s.d == null || !s.d0) return;
+    const p = s.d / s.d0;
+    if (p < 0.75 && !kalJeSezona()) kalPrepniRezim("sezona");
+    else if (p > 1.33 && kalJeSezona()) kalPrepniRezim("mesic");
+  }, { passive: true });
+  ly.addEventListener("touchcancel", () => { kalStisk = null; }, { passive: true });
+}
 let kalSirka = window.innerWidth;
 window.addEventListener("resize", () => { if (kalViditelny() && window.innerWidth !== kalSirka) { kalSirka = window.innerWidth; renderKal(true); } });
 
@@ -23842,7 +23975,8 @@ const HELP_DATA = [
       { q: "Jak zapíšu, že trénink proběhl?", a: "Když odejdeš z Přehledu tréninku, sjede shora na deset vteřin karta „Odtrénováno dnes?“. Ťukni na „Ano, odtrénováno“ a je zapsáno; hned potom můžeš jedním ze tří smajlíků označit, jak se trénink povedl, a ťuknout na „Přidat poznámku“ a napsat, jak to šlo, a pod to do žlutého pole krátký vzkaz pro příště. Když ses na plán jen díval(a), nedělej nic — karta sama zmizí a nic se nezapíše. Křížkem ji zavřeš hned. Trénink, který už dnes zapsaný máš, se znovu neptá.", kw: "odtrenovano dnes lista karta ano poznamka prehled zacit trenovat smajlik hodnoceni povedl" },
       { q: "Kde najdu všechno odtrénované pohromadě?", a: "V Deníčku. Na záložce Tréninky je vpravo nahoře oranžové tlačítko s knihou (vidí ho jen ten, kdo si deníček vede). Otevře sešit na poslední popsané stránce. Píše se do něj jako do opravdového: od nejstaršího tréninku po nejnovější, každý měsíc začíná na nové stránce razítkem. Na okraji je datum, vedle název podtržený barvami zaměření a pod ním tvoje poznámka. Číslo „2ד na okraji znamená, že jsi ten trénink odtrénoval(a) podruhé.", kw: "denicek sesit obrazovka kniha tlacitko vsechno pohromade prehled odtrenovanych dvoustrana poradi nejstarsi" },
       { q: "Jak v Deníčku listuju?", a: "Šipkami v horních rozích sešitu: doleva je o stránku zpět (starší), doprava dál (novější). Na telefonu stačí táhnout prstem po sešitu do strany, na počítači fungují šipky na klávesnici. Sešit má vždy výšku okna a neroluje se; dlouhý měsíc prostě pokračuje na dalších stránkách a nahoře je tužkou napsané, který měsíc čteš. Na počítači se otáčí celá dvoustrana.", kw: "listovat listovani mesic stranka sipky swipe tahnout prstem starsi novejsi otocit stranku rolovat" },
-      { q: "Jak funguje kalendář v Deníčku?", a: "V Deníčku ťukni nahoře na tlačítko s kalendářem (vedle plusu). Místo sešitu se ukáže nástěnný kalendář: barevné čárky v okénku dne jsou zaměření odtrénovaných tréninků, smajlík je hodnocení a číslo (2×) znamená, že se ten den trénovalo víckrát. Šipkami nahoru a dolů otáčíš měsíce. Ťukni na den a pod kalendářem (na počítači vedle něj) uvidíš jeho zápisy; ťuknutí na zápis otevře sešit přesně na něm a Zpět tě vrátí do kalendáře. Do sešitu se vrátíš stejným tlačítkem s kalendářem.", kw: "kalendar mesic den prehled orientace zapisy tlacitko kalendar nastenny" },
+      { q: "Jak funguje kalendář v Deníčku?", a: "V Deníčku ťukni nahoře na tlačítko s kalendářem (vedle plusu). Místo sešitu se ukáže nástěnný kalendář: barevné čárky v okénku dne jsou zaměření odtrénovaných tréninků, smajlík je hodnocení a číslo (2×) znamená, že se ten den trénovalo víckrát. Šipkami nahoru a dolů otáčíš měsíce. Ťukni na den a pod kalendářem (na počítači vedle něj) uvidíš jeho zápisy; ťuknutí na zápis otevře sešit přesně na něm a Zpět tě vrátí do kalendáře. Ťuknutím na razítko s názvem měsíce uvidíš celou sezónu. Do sešitu se vrátíš stejným tlačítkem s kalendářem.", kw: "kalendar mesic den prehled orientace zapisy tlacitko kalendar nastenny" },
+      { q: "Jak uvidím celou sezónu?", a: "V kalendáři ťukni na razítko s názvem měsíce nahoře (dokud to jednou neuděláš, občas problikne) — nebo na telefonu nad kalendářem sevři dva prsty k sobě. Ukáže se celá sezóna od srpna do července: dny s tréninkem jsou podbarvené barvami zaměření, dnešek je v oranžovém rámečku a pod kalendářem jsou všechny zápisy sezóny. Šipkami nahoru a dolů přecházíš mezi sezónami. Ťuknutím na měsíc se otevře jeho list (na počítači ťukni rovnou na den a uvidíš i jeho zápisy). Zpátky na měsíc ťukni znovu na razítko, nebo prsty roztáhni. Kalendář se příště otevře v tom, co jsi měl(a) naposledy. Hledání a zaměření z filtrů platí i tady.", kw: "sezona cela sezona rok rocni prehled kalendar razitko seviti prsty zoom skolni rok" },
       { q: "Jak v Deníčku najdu starší trénink nebo poznámku?", a: "V kalendáři ťukni na tlačítko s trychtýřem. Otevře se hledání a filtry a zůstanou otevřené, dokud je stejným tlačítkem nezavřeš. Hledá se v názvu tréninku, v poznámkách i ve vzkazech (háčky ani velká písmena nevadí). Vybrat jde sezónu, rok a měsíc — měsíc bez roku najde třeba všechna září ve všech sezónách — a zaměření (u víc zaměření najednou jen zápisy, které mají všechna). Dny, které filtru neodpovídají, v kalendáři vyblednou, a pod kalendářem jsou všechny nalezené zápisy po sezónách. Číslo na tlačítku ukazuje, kolik filtrů máš zapnutých; „Zrušit filtry“ je vypne.", kw: "hledat najit filtr filtry sezona rok mesic zamereni starsi trenink poznamka vzkaz porovnat minula sezona" },
       { q: "Jak ukončím sezónu a co je vysvědčení?", a: "Sezóna je školní rok a sama končí 31. 7. Když chceš skončit dřív (třeba po posledním tréninku v červnu), otevři v kalendáři filtry a ťukni na „Ukončit sezónu“. Konec se zapíše ke dni posledního zápisu a všechno potom už patří do další sezóny, i letní soustředění. Pod posledním zápisem sezóny se v sešitu objeví razítko „Konec sezóny“ a nalepené vysvědčení: kolik tréninků jsi odtrénoval(a), jaká zaměření, kolikrát který smajlík a nejčastější trénink. Razítko je i v kalendáři. Omylem ukončenou sezónu vrátíš tlačítkem „Vrátit“ v hlášce, nebo později v kalendáři ve filtrech: vyber tu sezónu a ťukni na „Zrušit konec sezóny“.", kw: "sezona ukoncit sezonu konec sezony skolni rok vysvedceni razitko statistika souhrn cervenec" },
       { q: "Karta zmizela dřív, než jsem stihl(a) odpovědět. Co teď?", a: "Nic se neztratilo. Trénink, u kterého jsi otevřel(a) Přehled a neodpověděl(a), si aplikace poznamená: na tlačítku Deníčku se rozsvítí oranžová tečka a v Deníčku je za posledním záznamem tužkou řádek „… odtrénováno?“. Ťukni na „Ano“ a je zapsáno i se správným datem, nebo na „Ne“ a řádek zmizí. Platí to i tehdy, když jsi telefon zamkl(a) přímo v Přehledu a karta vůbec nevyjela. Po týdnu řádek zmizí sám.", kw: "zmizela nestihl tecka ceka potvrzeni odtrenovano otaznik tuzkou" },
