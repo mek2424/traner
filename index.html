@@ -5111,6 +5111,12 @@ const RTE_STRIP_ENTIRELY = new Set(["SCRIPT", "STYLE", "IFRAME", "OBJECT", "EMBE
 // se to vzalo za starý čistý text a znaky "<b>" by se escapovaly — místo tučného písma by se
 // pak doslova zobrazilo "<b>text</b>".
 const RICH_HTML_SNIFF_RE = new RegExp(`<\\/?(${[...RTE_ALLOWED_TAGS].join("|")})[ >]`, "i");
+// Kolo 47: pevná mezera („&nbsp;“). Prohlížeč ji v poli uloží za mezeru na konci textu (klávesnice
+// telefonu ji za slovo přidá sama) nebo za dvě mezery za sebou. Pole bez jediné značky se dřív bralo
+// za starý čistý text a „&nbsp;“ se ukázalo doslova — a po další úpravě se tak i uložilo („&amp;nbsp;“).
+// Teď se pevná mezera pozná a už pokažený text se při zobrazení spraví (do databáze až s další úpravou).
+const NBSP_ENTITA_RE = /&(?:nbsp|amp|lt|gt);/i;   // pole bez značek, ale s entitou = HTML z pole (&, <, > i pevná mezera)
+const NBSP_POKAZENA_RE = /&(?:amp;)+nbsp;/gi;
 function sanitizeRichHtml(html) {
   const tmp = document.createElement("div");
   tmp.innerHTML = html || "";
@@ -5133,11 +5139,11 @@ function sanitizeRichHtml(html) {
 }
 function richValueToHtml(raw) {
   if (!raw) return "";
-  const looksLikeRichHtml = RICH_HTML_SNIFF_RE.test(raw);
+  const looksLikeRichHtml = RICH_HTML_SNIFF_RE.test(raw) || NBSP_ENTITA_RE.test(raw);   // kolo 47
   const asHtml = looksLikeRichHtml
     ? raw
     : String(raw).split(/\r?\n/).map(line => `<p>${esc(line)}</p>`).join("");
-  return sanitizeRichHtml(asHtml);
+  return sanitizeRichHtml(asHtml.replace(NBSP_POKAZENA_RE, "&nbsp;"));   // kolo 47: doslovné „&nbsp;“ → mezera
 }
 function richHasContent(raw) {
   if (!raw) return false;
@@ -21539,7 +21545,7 @@ async function nactiDenikTrenera(u) {
 }
 /** Začátek poznámky jako prostý text (do okna obnovy u vlastních záznamů). */
 function obnovaUkazkaPoznamky(html) {
-  const t = String(html || "").replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+  const t = String(html || "").replace(/<[^>]*>/g, " ").replace(NBSP_POKAZENA_RE, " ").replace(/&nbsp;/g, " ").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
   return t.length > 70 ? t.slice(0, 70) + "…" : t;
 }
