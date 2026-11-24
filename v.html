@@ -223,6 +223,8 @@ function applyDriveFallbackSize(wrap, item, opts) {
 }
 /** Beze změny portováno z t.html — stejné platformy, stejné chování (u YouTube je timestamp
     skutečné spuštění v čase přes "start=", ne jen textová poznámka). */
+/** Kolo 48: odkaz na cvičení z Trenérovy tabulky (přehrávač na GitHub Pages, cvičení zabalené za #t=). */
+function jeOdkazTabulky(url) { return /^https:\/\/mek2424\.github\.io\/coach-board\/(index\.html)?#t=\d+\.[\w-]+$/.test(url || ""); }
 function renderEmbedHtml(item, opts) {
   opts = opts || {};
   const muted = !!opts.muted;
@@ -248,6 +250,10 @@ function renderEmbedHtml(item, opts) {
   }
   if (item.platform === "instagram" && item.videoId) {
     return `<iframe class="embed" src="https://www.instagram.com/p/${esc(item.videoId)}/embed" allowfullscreen></iframe>`;
+  }
+  // Kolo 48: Trenérova tabulka – živý přehrávač cvičení (data jsou přímo v odkazu); jiné adresy se do rámečku nepustí
+  if (item.platform === "tabulka" && jeOdkazTabulky(item.url)) {
+    return `<iframe class="embed" src="${esc(item.url)}" allow="autoplay; fullscreen" allowfullscreen></iframe>`;
   }
   if (item.platform === "tiktok" && item.videoId) {
     return `<iframe class="embed" src="https://www.tiktok.com/player/v1/${esc(item.videoId)}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
@@ -291,6 +297,7 @@ const PLATFORM_DIRECT_LINK_LABELS = {
   drive: `<i class="fa-brands fa-google-drive"></i> Disk`,
   instagram: `<i class="fa-brands fa-instagram"></i> Instagram`,
   tiktok: `<i class="fa-brands fa-tiktok"></i> TikTok`,
+  tabulka: `<i class="fa-solid fa-chalkboard"></i> Tabulka`, // Kolo 48
   youtube: `<i class="fa-brands fa-youtube"></i> YouTube`,
   file: `<i class="fa-solid fa-up-right-from-square"></i> video`
 };

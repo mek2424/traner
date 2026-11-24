@@ -835,6 +835,7 @@ const PLATFORM_DIRECT_LINK_LABELS = {
   drive: `<i class="fa-brands fa-google-drive"></i> Disk`,
   instagram: `<i class="fa-brands fa-instagram"></i> Instagram`,
   tiktok: `<i class="fa-brands fa-tiktok"></i> TikTok`,
+  tabulka: `<i class="fa-solid fa-chalkboard"></i> Tabulka`, // Kolo 48
   youtube: `<i class="fa-brands fa-youtube"></i> YouTube`,
   file: `<i class="fa-solid fa-up-right-from-square"></i> video`
 };
@@ -918,6 +919,8 @@ function applyDriveFallbackSize(wrap, item, opts) {
   wrap.style.height = Math.min(base, Math.round(window.innerHeight * ((opts.maxVh || 70) / 100))) + "px";
 }
 
+/** Kolo 48: odkaz na cvičení z Trenérovy tabulky (přehrávač na GitHub Pages, cvičení zabalené za #t=). */
+function jeOdkazTabulky(url) { return /^https:\/\/mek2424\.github\.io\/coach-board\/(index\.html)?#t=\d+\.[\w-]+$/.test(url || ""); }
 function renderEmbedHtml(item, opts) {
   opts = opts || {};
   const muted = !!opts.muted;
@@ -943,6 +946,10 @@ function renderEmbedHtml(item, opts) {
   }
   if (item.platform === "instagram" && item.videoId) {
     return `<iframe class="embed" src="https://www.instagram.com/p/${esc(item.videoId)}/embed" allowfullscreen></iframe>`;
+  }
+  // Kolo 48: Trenérova tabulka – živý přehrávač cvičení (data jsou přímo v odkazu); jiné adresy se do rámečku nepustí
+  if (item.platform === "tabulka" && jeOdkazTabulky(item.url)) {
+    return `<iframe class="embed" src="${esc(item.url)}" allow="autoplay; fullscreen" allowfullscreen></iframe>`;
   }
   if (item.platform === "tiktok" && item.videoId) {
     return `<iframe class="embed" src="https://www.tiktok.com/player/v1/${esc(item.videoId)}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
@@ -2428,6 +2435,10 @@ function ukazkaEmbedHtml(lib) {
   }
   if (lib.platform === "facebook") {
     return `<iframe class="embed" src="https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(lib.url)}&show_text=false&autoplay=true&mute=true" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+  }
+  // Kolo 48: ukázka z Tabulky se spustí sama (?auto) a hraje dokola (opakování má přehrávač zapnuté)
+  if (lib.platform === "tabulka" && jeOdkazTabulky(lib.url)) {
+    return `<iframe class="embed" src="${esc(lib.url.replace("#", "?auto=1#"))}" allow="autoplay; fullscreen" allowfullscreen></iframe>`;
   }
   if (lib.platform === "tiktok" && lib.videoId) {
     return `<iframe class="embed" src="https://www.tiktok.com/player/v1/${esc(lib.videoId)}?autoplay=1&loop=1&muted=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
