@@ -4321,7 +4321,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-11-24 10:12";
+const APP_VERSION = "2026-11-24 22:02";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -5761,6 +5761,14 @@ function detectPlatform(url) {
 }
 /** Kolo 48: cvičení z odkazu Trenérovy tabulky (za #t= je cvičení jako JSON, deflate + base64url).
     Kolo 49: vrací název i vybavení (odkazy z Tabulky od verze 34 ho nesou s názvy z Trenéra). */
+/** Kolo 50: obrázky kroků z Trenérovy tabulky (tlačítko Do Trenéra) – jen pro tentýž odkaz a nejvýš 2 hodiny staré. */
+function nahledyZTabulky(url) {
+  try {
+    const d = JSON.parse(localStorage.getItem("trenerova-tabulka:pro-trenera") || "null");
+    if (!d || d.url !== url || !(Date.now() - d.cas < 2 * 3600 * 1000) || !Array.isArray(d.nahledy)) return [];
+    return d.nahledy.filter((x) => typeof x === "string" && x.startsWith("data:image/"));
+  } catch { return []; }
+}
 async function dataZTabulky(url) {
   try {
     const m = String(url).match(/#t=\d+\.([\w-]+)$/); if (!m || !window.DecompressionStream) return { nazev: "", vybaveni: [] };
@@ -9084,7 +9092,12 @@ async function fetchLinkMeta() {
     if (nazev && !document.getElementById("linkTitle").value) document.getElementById("linkTitle").value = nazev;
     // Kolo 49: vybavení z Tabulky se doplní k už vybranému (nic se neodebírá)
     if (vybaveni.length) { vybaveni.forEach((t) => { if (!formEquip.includes(t)) formEquip.push(t); }); renderEquipPills(); }
-    toast("Tabulka: náhled nahraj ručně (Obrázek 1. kroku).", 2600, "warn");
+    // Kolo 50: náhledy z kroků, které poslala Tabulka (Do Trenéra); 1. krok rovnou vybraný
+    const nahledy = nahledyZTabulky(url);
+    if (nahledy.length) {
+      renderThumbSuggestions(nahledy);
+      document.querySelector("#thumbSuggestions [data-thumb-url]")?.click();
+    } else toast("Tabulka: náhled nahraj ručně (Obrázek 1. kroku).", 2600, "warn");
   } else if (platform === "file") {
     toast("Zkouším z videa vyfotit náhledy…", 4000, "progress");
     const frames = await captureVideoFrameThumbnails(url);
