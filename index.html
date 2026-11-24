@@ -5759,14 +5759,16 @@ function detectPlatform(url) {
     return "other";
   } catch { return "other"; }
 }
-/** Kolo 48: název cvičení z odkazu Trenérovy tabulky (za #t= je cvičení jako JSON, deflate + base64url). */
-async function nazevZTabulky(url) {
+/** Kolo 48: cvičení z odkazu Trenérovy tabulky (za #t= je cvičení jako JSON, deflate + base64url).
+    Kolo 49: vrací název i vybavení (odkazy z Tabulky od verze 34 ho nesou s názvy z Trenéra). */
+async function dataZTabulky(url) {
   try {
-    const m = String(url).match(/#t=\d+\.([\w-]+)$/); if (!m || !window.DecompressionStream) return "";
+    const m = String(url).match(/#t=\d+\.([\w-]+)$/); if (!m || !window.DecompressionStream) return { nazev: "", vybaveni: [] };
     const b = Uint8Array.from(atob(m[1].replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
     const t = await new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream("deflate"))).text();
-    return String(JSON.parse(t).nazev || "").trim();
-  } catch { return ""; }
+    const c = JSON.parse(t);
+    return { nazev: String(c.nazev || "").trim(), vybaveni: Array.isArray(c.vybaveni) ? c.vybaveni.map((x) => String(x).trim()).filter(Boolean) : [] };
+  } catch { return { nazev: "", vybaveni: [] }; }
 }
 function extractInstagramId(url) {
   const m = url.match(/instagram\.com\/(?:p|reel|tv)\/([\w-]+)/);
@@ -9078,8 +9080,10 @@ async function fetchLinkMeta() {
     // Kolo 48: cvičení z Trenérovy tabulky – název je v odkazu, tvar 16 : 9, náhled (Obrázek 1. kroku) se nahraje ručně
     document.getElementById("thumbPreview").dataset.videoId = "";
     document.getElementById("linkAspectRatio").value = "16/9";
-    const nazev = await nazevZTabulky(url);
+    const { nazev, vybaveni } = await dataZTabulky(url);
     if (nazev && !document.getElementById("linkTitle").value) document.getElementById("linkTitle").value = nazev;
+    // Kolo 49: vybavení z Tabulky se doplní k už vybranému (nic se neodebírá)
+    if (vybaveni.length) { vybaveni.forEach((t) => { if (!formEquip.includes(t)) formEquip.push(t); }); renderEquipPills(); }
     toast("Tabulka: náhled nahraj ručně (Obrázek 1. kroku).", 2600, "warn");
   } else if (platform === "file") {
     toast("Zkouším z videa vyfotit náhledy…", 4000, "progress");
