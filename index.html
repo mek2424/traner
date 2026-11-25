@@ -4321,7 +4321,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-11-24 22:02";
+const APP_VERSION = "2026-11-25 11:55";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -8498,9 +8498,12 @@ function openCardContextMenu(itemId, anchorBtn) {
   menu.className = "card-context-menu";
   // Ukázka pro hráčky (kolo 18) se do tréninku samostatně nepřidává — připojuje se ke cvičení.
   const pridatDoTreninku = jeVUkazkach(item) ? "" : `<button type="button" data-act="add-to-training"><i class="fa-solid fa-list-check"></i> Přidat do tréninku</button>`;
+  // Kolo 51: cvičení z Trenérovy tabulky jde otevřít v Tabulce jako upravitelná kopie (jen s odkazem z Tabulky)
+  const upravitVTabulce = item.platform === "tabulka" && jeOdkazTabulky(item.url) ? `<button type="button" data-act="tabulka"><i class="fa-solid fa-pen-ruler"></i> Upravit v Tabulce</button>` : "";
   menu.innerHTML = isEditor() ? `
     <button type="button" data-act="fav"><i class="fa-solid fa-star"></i> ${isFavoriteVideo(itemId) ? "Odebrat z oblíbených" : "Přidat do oblíbených"}</button>
     <button type="button" data-act="edit"><i class="fa-solid fa-pen"></i> Upravit</button>
+    ${upravitVTabulce}
     <button type="button" data-act="share"><i class="fa-solid fa-share-nodes"></i> ${isVideoShareActive(item) ? "Spravovat sdílení" : "Sdílet odkazem"}</button>
     ${pridatDoTreninku}
     <button type="button" data-act="move"><i class="fa-solid fa-folder"></i> Přesunout do složky</button>
@@ -8508,6 +8511,7 @@ function openCardContextMenu(itemId, anchorBtn) {
     <button type="button" class="danger" data-act="delete"><i class="fa-solid fa-trash"></i> Smazat</button>
   ` : `
     <button type="button" data-act="fav"><i class="fa-solid fa-star"></i> ${isFavoriteVideo(itemId) ? "Odebrat z oblíbených" : "Přidat do oblíbených"}</button>
+    ${upravitVTabulce}
     ${pridatDoTreninku}
   `;
   document.body.appendChild(menu);
@@ -8522,6 +8526,11 @@ function openCardContextMenu(itemId, anchorBtn) {
     oblibenaAnimace(itemId);
   });
   menu.querySelector("[data-act='edit']")?.addEventListener("click", () => { closeCardContextMenu(); openLinkModal(itemId); });
+  menu.querySelector("[data-act='tabulka']")?.addEventListener("click", () => { // Kolo 51
+    closeCardContextMenu();
+    const u = item.url.replace("#", "?upravit=1#");
+    if (!window.open(u, "_blank")) location.href = u;
+  });
   menu.querySelector("[data-act='share']")?.addEventListener("click", () => {
     closeCardContextMenu();
     if (!isVideoShareActive(item)) {
