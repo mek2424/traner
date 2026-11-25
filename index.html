@@ -4321,7 +4321,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-11-25 11:55";
+const APP_VERSION = "2026-11-25 13:03";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -8528,6 +8528,12 @@ function openCardContextMenu(itemId, anchorBtn) {
   menu.querySelector("[data-act='edit']")?.addEventListener("click", () => { closeCardContextMenu(); openLinkModal(itemId); });
   menu.querySelector("[data-act='tabulka']")?.addEventListener("click", () => { // Kolo 51
     closeCardContextMenu();
+    // Kolo 52 (164A): na Androidu kopii převezme aplikace Trenérova tabulka ze společného úložiště (stejná adresa webu)
+    if (/Android/i.test(navigator.userAgent)) {
+      try { localStorage.setItem("trenerova-tabulka:kopie", JSON.stringify({ url: item.url, cas: Date.now() })); } catch {}
+      toast("Otevři aplikaci Trenérova tabulka, kopie se v ní načte sama.", 5000);
+      return;
+    }
     const u = item.url.replace("#", "?upravit=1#");
     if (!window.open(u, "_blank")) location.href = u;
   });
