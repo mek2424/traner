@@ -2102,6 +2102,8 @@ body.dark-mode .ghost-ico.src-yt{color:#E06B66;}
 .seq-mode-toggle button{padding:4px 9px;font-size:11px;background:var(--paper);border:none;color:var(--ink-soft);white-space:nowrap;}
 .seq-mode-toggle button.active{background:var(--court);color:#fff;}
 .seq-reps-input{width:90px;border:1px solid var(--line);background:var(--paper);border-radius:var(--radius-sm);padding:3px 6px;font-size:11px;}
+.seq-odhad-vysl{font-size:11.5px;font-weight:700;color:var(--chalk);align-self:center;white-space:nowrap;}
+.seq-odhad-vysl:empty{display:none;}
 .seq-estimate-wrap{display:inline-flex;align-items:center;gap:5px;background:var(--paper);border:1px dashed var(--ink-faint);border-radius:var(--radius-sm);padding:3px 8px;flex-shrink:0;}
 .seq-estimate-wrap i{color:var(--ink-faint);font-size:10.5px;}
 .seq-estimate-input{width:46px;border:none;background:none;font-size:11px;color:var(--ink-soft);padding:0;text-align:center;-moz-appearance:textfield;}
@@ -13289,7 +13291,9 @@ function renderTrainingModeItemClassic() {
 
     if ((row.mode || "time") === "reps") {
       if (v && v.reps) { repsDisplay.textContent = v.reps; repsDisplay.classList.remove("hidden"); }
-      setTimerMode("reps");
+      const odhadS = tmOdhadSekundy();   // kolo 48: s odhadem odpočet jako vodítko
+      if (odhadS != null) { setTimerMode("time"); trainingModeSeconds = Math.max(1, odhadS); updateTrainingModeTimerDisplay(); startTrainingModeTimer(); }
+      else setTimerMode("reps");
     } else {
       setTimerMode("time");
       const durUnit = v ? (v.durationUnit || "min") : "min";
@@ -13335,7 +13339,9 @@ function renderTrainingModeItemClassic() {
 
   if ((row.mode || "time") === "reps") {
     if (row.reps) { repsDisplay.textContent = row.reps; repsDisplay.classList.remove("hidden"); }
-    setTimerMode("reps");
+    const odhadS = tmOdhadSekundy();   // kolo 48: s odhadem odpočet jako vodítko
+    if (odhadS != null) { setTimerMode("time"); trainingModeSeconds = Math.max(1, odhadS); updateTrainingModeTimerDisplay(); startTrainingModeTimer(); }
+    else setTimerMode("reps");
   } else {
     setTimerMode("time");
     trainingModeSeconds = Math.max(1, valueToSeconds(row.duration || 1, row.durationUnit || "min"));
@@ -13354,6 +13360,52 @@ function valueToSeconds(value, unit) {
 }
 function getSeriesPauseSeconds(row) {
   return valueToSeconds(row.seriesPause != null ? row.seriesPause : 30, row.seriesPauseUnit || "s");
+}
+
+/* Kolo 48: délka položky se počítá JEN tady — rowDuration (celkový čas, časy karet, Přehled, osa
+   prezentace), PDF i zobrazení odhadu u cviků na opakování berou délku série odsud, ať se nikde
+   nepočítá po svém. Pauza se počítá jen MEZI sériemi (série − 1). */
+/** Délka jednoho člena (nebo samostatné položky) za jednu sérii; u opakování bez odhadu null. */
+function delkaClena(isReps, x) {
+  if (x.isBreak || !isReps) return valueToSeconds(x.duration != null ? x.duration : 1, x.durationUnit || "min");
+  return x.estimate != null && x.estimate > 0 ? valueToSeconds(x.estimate, x.estimateUnit || "min") : null;
+}
+/** Jedna série položky: známý součet, počet členů bez odhadu, série a pauza mezi nimi. */
+function delkaSerie(row) {
+  const isReps = (row.mode || "time") === "reps";
+  let perSeries = 0, chybi = 0;
+  (row.isGroup ? (row.videos || []) : [row]).forEach(x => { const s = delkaClena(isReps, x); if (s == null) chybi++; else perSeries += s; });
+  const seriesCount = row.seriesCount || 1;
+  return { isReps, perSeries, chybi, seriesCount, pauza: seriesCount > 1 ? getSeriesPauseSeconds(row) : 0 };
+}
+function delkaCelkem(d, perSeries) { return perSeries * d.seriesCount + (d.seriesCount - 1) * d.pauza; }
+/** Odhad délky cviku/skupiny na opakování → { seconds, perSeries, seriesCount } — null, když
+    položka není na opakování nebo některý odhad chybí (pak se nic nevymýšlí). Stanoviště ne:
+    čas tam nese celý blok. */
+function repsOdhad(row) {
+  if (!row || (row.mode || "time") !== "reps" || row.isStations || row.stanoviste || row.part === "prestavka") return null;
+  const d = delkaSerie(row);
+  if (d.chybi || !d.perSeries) return null;
+  return { seconds: delkaCelkem(d, d.perSeries), perSeries: d.perSeries, seriesCount: d.seriesCount };
+}
+/** „~16 min“ — zaokrouhleno na celé minuty, nejméně ~1 min. */
+function odhadMinText(sec) { return "~" + Math.max(1, Math.round(sec / 60)) + " min"; }
+function delkaSerieText(sec) {
+  if (sec < 60) return Math.round(sec) + " s";
+  const m = Math.floor(sec / 60), s = Math.round(sec % 60);
+  return s ? `${m} min ${s} s` : `${m} min`;
+}
+/** „(3× 5 min)“; u jedné série nic. */
+function odhadRozpadText(o) { return o && o.seriesCount > 1 ? `(${o.seriesCount}× ${delkaSerieText(o.perSeries)})` : ""; }
+/** „~16 min (3× 5 min)“, u jedné série „~5 min“. */
+function odhadText(o) { if (!o) return ""; const r = odhadRozpadText(o); return odhadMinText(o.seconds) + (r ? " " + r : ""); }
+/** Prezentace: odhad právě běžící série (u skupiny aktuálního člena) — null = cvik bez odpočtu. */
+function tmOdhadSekundy() {
+  if (trainingModeInSeriesPause) return null;
+  const row = trainingModeItems[trainingModeIndex];
+  if (!row || (row.mode || "time") !== "reps" || row.isStations || row.part === "prestavka") return null;
+  if (row.isGroup) { const v = (row.videos || [])[trainingModeGroupVideoIndex]; return v && !v.isBreak ? delkaClena(true, v) : null; }
+  return delkaClena(true, row);
 }
 function renderSeriesPause() {
   const row = trainingModeItems[trainingModeIndex];
@@ -13426,10 +13478,16 @@ function startTrainingModeTimer() {
   trainingModeInterval = setInterval(() => {
     trainingModeSeconds--;
     updateTrainingModeTimerDisplay();
-    if (trainingModeSeconds === 0 && trainingModeSkin !== "faze" && "vibrate" in navigator) { try { navigator.vibrate(400); } catch {} }
+    const jenOdhad = tmOdhadSekundy() != null;   // kolo 48: odhad série jen vodítko — žádný zvuk ani vibrace
+    if (trainingModeSeconds === 0 && !jenOdhad && trainingModeSkin !== "faze" && "vibrate" in navigator) { try { navigator.vibrate(400); } catch {} }
     // Fáze cvičení: zvuk (jen jednou, při první nule) + vibrace (opakovaně po 3 min, dokud
     // se to neodklikne) — viz fazeFireAlert a poznámky v claude/trener-treninkovy-rezim.md.
-    if (trainingModeSkin === "faze" && trainingModeSeconds <= 0 && trainingModeSeconds % 180 === 0) {
+    // Přesah odhadu bez upozornění — osu (červený přesah) jen překreslit: hned po nule a pak po minutě.
+    if (trainingModeSkin === "faze" && jenOdhad && trainingModeSeconds < 0 && (trainingModeSeconds + 1) % 60 === 0) {
+      const osa = document.getElementById("tmfAxis");
+      if (osa) osa.innerHTML = fazeBuildAxisHtml();
+    }
+    if (trainingModeSkin === "faze" && !jenOdhad && trainingModeSeconds <= 0 && trainingModeSeconds % 180 === 0) {
       fazeFireAlert(trainingModeSeconds === 0);
     }
     stanHlidejKolo();
@@ -13451,6 +13509,8 @@ document.getElementById("tmTimerReset").addEventListener("click", () => {
     trainingModeSeconds = Math.max(1, getSeriesPauseSeconds(row));
   } else if (row.part === "prestavka") {
     trainingModeSeconds = Math.max(1, valueToSeconds(row.duration || 1, row.durationUnit || "min"));
+  } else if (tmOdhadSekundy() != null) {   // kolo 48: cvik na opakování s odhadem
+    trainingModeSeconds = Math.max(1, tmOdhadSekundy());
   } else if (row.isGroup) {
     const v = row.videos[trainingModeGroupVideoIndex];
     trainingModeSeconds = Math.max(1, valueToSeconds(v && v.duration != null ? v.duration : 1, v ? (v.durationUnit || "min") : "min"));
@@ -13660,8 +13720,9 @@ function exportTrainingAsText(t) {
   const { totalSeconds, hasReps } = calculateTrainingTotalSeconds(t);
   lines.push(hasReps ? "Celkem: nejde spočítat přesně (obsahuje položku na opakování)" : `Celkem: ${Math.round(totalSeconds / 60)} min`);
   lines.push("");
-  const fmtDuration = (row) => (row.mode || "time") === "reps"
-    ? (row.reps || "")
+  // Kolo 48: odhad jen u samostatného cviku (členové skupiny ho nemají — délka patří skupině).
+  const fmtDuration = (row, clen) => (row.mode || "time") === "reps"
+    ? [row.reps || "", clen ? "" : odhadText(repsOdhad(row))].filter(Boolean).join(" · ")
     : `${row.duration != null ? row.duration : 1} ${(row.durationUnit || "min") === "s" ? "s" : "min"}`;
   hlavniPolozky(t.items).forEach((row, i) => {
     if (row.part === "prestavka") {
@@ -13689,14 +13750,14 @@ function exportTrainingAsText(t) {
       return;
     }
     if (row.isGroup) {
-      lines.push(`${i + 1}. [${part ? part.label : "?"}] ${row.name || "Skupina"}`);
+      lines.push(`${i + 1}. [${part ? part.label : "?"}] ${row.name || "Skupina"}${repsOdhad(row) ? ` — ${odhadText(repsOdhad(row))}` : ""}`);
       (row.videos || []).forEach((v, vi) => {
         if (v.isBreak) {
           lines.push(`   ${vi + 1}) — ${v.label || "Přestávka"} (${v.duration != null ? v.duration : 1} ${(v.durationUnit || "min") === "s" ? "s" : "min"}) —`);
           return;
         }
         const title = v.isText ? (v.title || "(bez názvu)") : (state.library[v.videoId] ? nazevVidea(state.library[v.videoId]) : "(video smazáno z knihovny)");
-        lines.push(`   ${vi + 1}) ${title} — ${fmtDuration(Object.assign({ mode: row.mode }, v))}`);
+        lines.push(`   ${vi + 1}) ${title} — ${fmtDuration(Object.assign({ mode: row.mode }, v), true)}`);
         if (v.cue) lines.push(`      Cue: ${v.cue}`);
         if (v.note) pushPoznamkaLines(lines, "      ", v.note);
       });
@@ -13929,32 +13990,9 @@ function rowDuration(row, vlastni) {
   if (row.part === "prestavka") {
     return { seconds: valueToSeconds(row.duration != null ? row.duration : 1, row.durationUnit || "min"), known: true };
   }
-  const isReps = (row.mode || "time") === "reps";
-  let perSeries = 0;
-  let known = true;
-  if (row.isGroup) {
-    (row.videos || []).forEach(v => {
-      if (v.isBreak || !isReps) {
-        perSeries += valueToSeconds(v.duration != null ? v.duration : 1, v.durationUnit || "min");
-      } else if (v.estimate != null && v.estimate > 0) {
-        perSeries += valueToSeconds(v.estimate, v.estimateUnit || "min");
-      } else {
-        perSeries += REPS_FALLBACK_SECONDS;
-        known = false;
-      }
-    });
-  } else if (!isReps) {
-    perSeries = valueToSeconds(row.duration != null ? row.duration : 1, row.durationUnit || "min");
-  } else if (row.estimate != null && row.estimate > 0) {
-    perSeries = valueToSeconds(row.estimate, row.estimateUnit || "min");
-  } else {
-    perSeries = REPS_FALLBACK_SECONDS;
-    known = false;
-  }
-  const seriesCount = row.seriesCount || 1;
-  const seconds = perSeries * seriesCount
-    + (seriesCount > 1 ? (seriesCount - 1) * getSeriesPauseSeconds(row) : 0);
-  return { seconds, known };
+  // Kolo 48: délka série ze sdíleného delkaSerie; chybějícímu odhadu se dosadí náhradní číslo.
+  const d = delkaSerie(row);
+  return { seconds: delkaCelkem(d, d.perSeries + d.chybi * REPS_FALLBACK_SECONDS), known: !d.chybi };
 }
 /** Cvik na počet opakování žádný odpočet nemá — starý vzhled u něj schová celou lištu
     s časovačem (setTimerMode("reps") výš) a renderTrainingModeItemClassic ho ani nespustí,
@@ -13964,7 +14002,7 @@ function fazeIsRepsEntry(entry) {
   if (trainingModeInSeriesPause) return false;
   if (entry && entry.isBreak) return false;
   const row = trainingModeItems[trainingModeIndex];
-  return !!row && (row.mode || "time") === "reps";
+  return !!row && (row.mode || "time") === "reps" && tmOdhadSekundy() == null;   // kolo 48: s odhadem se odpočítává
 }
 let tmfNoCountdown = false; // aktuální položka je na počet opakování (viz fazeApplyTimerChrome)
 /** Spodní lišta podle toho, jestli je co odpočítávat: u cviku na opakování zmizí pauza, reset
@@ -14296,6 +14334,7 @@ function renderFazeRun(main, entry) {
     <div class="tmf-run-title">${esc(entry.title)}</div>
     ${bigHtml}
     ${(!isReps && entry.reps) ? `<div class="tmf-reps-chip">${esc(entry.reps)}</div>` : ""}
+    ${!isReps && tmOdhadSekundy() != null && repsOdhad(trainingModeItems[trainingModeIndex]) ? `<div class="tmf-odhad" style="font-family:var(--font-body);font-size:clamp(13px,2.6vh,19px);color:#4A5564;margin-top:2px;">odhad ${esc(odhadText(repsOdhad(trainingModeItems[trainingModeIndex])))}</div>` : ""}
     ${entry.cue ? `<div class="tmf-cue-line"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M4 4.5h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-9.5L6 22v-4.5H4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2z" fill="var(--chalk)"/></svg>${esc(entry.cue)}</div>` : ""}
     ${richHasContent(entry.note) ? `<div class="tmf-note-line">${richValueToHtml(entry.note)}</div>` : ""}`;
 }
@@ -14816,7 +14855,7 @@ function ovCardHtml(row) {
     return `<div class="ov-card ov-group" data-itemid="${esc(row.itemId)}">
       <div class="ov-top">
         <span class="ov-gname">${esc(row.name || "Skupina")}</span>
-        ${series > 1 ? `<span class="ov-series">${series} série</span>` : ""}
+        ${series > 1 ? `<span class="ov-series">${repsOdhad(row) ? esc(odhadRozpadText(repsOdhad(row))) : series + " série"}</span>` : ""}
       </div>
       <div class="ov-members">${(row.videos || []).map(v => ovMemberHtml(row, v)).join("")}</div>
       ${row.cue ? `<div class="ov-cue"><i class="fa-solid fa-comment"></i>${esc(row.cue)}</div>` : ""}
@@ -14831,6 +14870,7 @@ function ovCardHtml(row) {
       <span class="ov-title">${esc(title)}</span>
       ${ovUkazkaBtnHtml(row)}
       ${isReps ? `<span class="ov-dur ov-reps">${esc(row.reps || "opakování")}</span>` : ""}
+      ${isReps && odhadRozpadText(repsOdhad(row)) ? `<span class="ov-dur ov-odhad">${esc(odhadRozpadText(repsOdhad(row)))}</span>` : ""}
     </div>
     ${row.cue ? `<div class="ov-cue"><i class="fa-solid fa-comment"></i>${esc(row.cue)}</div>` : ""}
     ${ovNoteHtml(row.poznamka)}
@@ -14862,9 +14902,9 @@ function ovGearChipHtml(g) {
 /** Ryska na časové pásce. Čas je HRANICE mezi cviky, takže konec jednoho a začátek dalšího je
     jedno číslo. Pod ryskou je plánovaná délka bloku, který za ní začíná. Bez zadaného začátku
     tréninku se hodina nepíše a zůstanou jen délky — páska dál nese pořadí a trvání. */
-function ovTickHtml(offsetSeconds, blockSeconds) {
+function ovTickHtml(offsetSeconds, blockSeconds, odhad) {
   const time = ovStartSeconds == null ? "" : pdfFmtClock((ovStartSeconds + offsetSeconds) % 86400);
-  return `<div class="ov-tick"><i></i>${time ? `<b>${esc(time)}</b>` : ""}${blockSeconds != null ? `<small>${esc(ovMinText(blockSeconds))}</small>` : ""}</div>`;
+  return `<div class="ov-tick"><i></i>${time ? `<b>${esc(time)}</b>` : ""}${blockSeconds != null ? `<small>${esc(odhad ? odhadMinText(blockSeconds) : ovMinText(blockSeconds))}</small>` : ""}</div>`;
 }
 /** Časy se schválně sčítají z rowDuration().seconds — stejně, jako se kreslí osa v prezentaci,
     aby obě zobrazení říkala to samé. NE přes computeRowClockTimes: to od první položky
@@ -14898,7 +14938,7 @@ function renderOverview() {
       }
       const seconds = rowDuration(row).seconds;
       // Kolo 45: starší zápis Deníčku zná jen seznam cvičení, ne jejich délky — páska nese jen pořadí.
-      html += ovTickHtml(acc, ovJenSeznam() ? null : seconds) + ovCardHtml(row);
+      html += ovTickHtml(acc, ovJenSeznam() ? null : seconds, !!repsOdhad(row)) + ovCardHtml(row);
       acc += seconds;
     } catch (e) {
       logDebug("[přehled] položka se nevykreslila:", (row && row.itemId) || "?", (e && e.message) || e);
@@ -17987,6 +18027,12 @@ function pdfFmtShortDuration(seconds) {
   const rounded = Math.round(mins * 10) / 10;
   return rounded + " min";
 }
+/** Štítky cviku na opakování pod počtem opakování (kolo 48): odhad „~16 min“ a rozpad „(3× 5 min)“
+    zvlášť, ať se vejdou do úzkého sloupce; bez odhadu jen „3× série“. */
+function pdfRepsStitky(ri) {
+  if (ri.odhad) return [odhadMinText(ri.odhad.seconds), odhadRozpadText(ri.odhad)].filter(Boolean);
+  return ri.seriesCount > 1 ? [`${ri.seriesCount}× série`] : [];
+}
 function pdfFormatDurCell(entry) {
   if (entry.repsLabel != null) return entry.repsLabel || "-";
   if (entry.seconds == null) return "";
@@ -17994,15 +18040,18 @@ function pdfFormatDurCell(entry) {
 }
 /** Štítek pod celkovým časem (série × doba jedné série / pauza mezi sériemi) — kreslí se
     zarovnaný doprava k danému okraji, ať sedí přesně pod celkovým časem v pravém sloupci. */
-function pdfDrawPill(doc, rightX, y, label, fillHex, fs) {
+function pdfDrawPill(doc, rightX, y, label, fillHex, fs, maxW) {
   doc.setFont("LibSans", "bold"); doc.setFontSize(fs);
-  const w = doc.getTextWidth(label) + 3.6;
   const h = pdfLineHeight(fs) + 1.6;
+  // Kolo 48: s maxW se dlouhý štítek (rozpad odhadu „(3× 1 min 30 s)“) zmenší, ať nevyleze ze sloupce.
+  let tfs = fs;
+  if (maxW && doc.getTextWidth(label) + 3.6 > maxW) { tfs = fs * (maxW - 3.6) / doc.getTextWidth(label); doc.setFontSize(tfs); }
+  const w = doc.getTextWidth(label) + 3.6;
   const x = rightX - w;
   pdfSetFill(doc, fillHex);
   doc.roundedRect(x, y, w, h, h / 2, h / 2, "F");
   doc.setTextColor(255, 255, 255);
-  doc.text(label, x + w / 2, y + h / 2 + fs * 0.15, { align: "center" });
+  doc.text(label, x + w / 2, y + h / 2 + tfs * 0.15, { align: "center" });
   return h;
 }
 function pdfFmtClock(totalSeconds) {
@@ -18073,7 +18122,9 @@ function pdfLayoutEntry(doc, entry, fs, cols, withClock) {
   // štítky nezaříznou o spodní okraj řádku.
   const pillFs = Math.max(5.5, fs - 3.2);
   const pillH = pdfLineHeight(pillFs) + 1.6;
-  const durBlockH = (entry.seriesInfo || entry.repsSeriesInfo) ? (pdfLineHeight(fs) + 2.2 + pillH * 2 + 1.4) : 0;
+  const pocetStitku = entry.seriesInfo ? 2
+    : entry.repsSeriesInfo ? pdfRepsStitky(entry.repsSeriesInfo).length + (entry.repsSeriesInfo.seriesCount > 1 ? 1 : 0) : 0;
+  const durBlockH = pocetStitku ? (pdfLineHeight(fs) + 2.2 + pillH * pocetStitku + 1.4 * (pocetStitku - 1)) : 0;
 
   const bodyH = Math.max(contentH, cueColH, pdfLineHeight(titleSize) + badgeExtra, durBlockH);
   return {
@@ -18203,10 +18254,11 @@ function pdfDrawEntry(doc, entry, layout, x, y, cols, withClock, timeLabel, durL
   if (entry.repsSeriesInfo) {
     const rightEdge = durColX + cols.dur - 2.2;
     let py = y + layout.padY + pdfLineHeight(layout.fs) + 2.2;
-    const seriesLabel = `${entry.repsSeriesInfo.seriesCount}× série`;
-    py += pdfDrawPill(doc, rightEdge, py, seriesLabel, "#C74F1E", layout.pillFs) + 1.4;
-    const pauseLabel = `pauza ${pdfFmtShortDuration(entry.repsSeriesInfo.pauseSeconds)}`;
-    pdfDrawPill(doc, rightEdge, py, pauseLabel, "#339933", layout.pillFs);
+    pdfRepsStitky(entry.repsSeriesInfo).forEach(stitek => { py += pdfDrawPill(doc, rightEdge, py, stitek, "#C74F1E", layout.pillFs, cols.dur - 2.8) + 1.4; });
+    if (entry.repsSeriesInfo.seriesCount > 1) {
+      const pauseLabel = `pauza ${pdfFmtShortDuration(entry.repsSeriesInfo.pauseSeconds)}`;
+      pdfDrawPill(doc, rightEdge, py, pauseLabel, "#339933", layout.pillFs);
+    }
   }
 
   if (entry.kind === "groupHead") {
@@ -18272,7 +18324,9 @@ function buildPdfEntries(t) {
       const videos = row.videos || [];
       const isReps = (row.mode || "time") === "reps";
       let membersShownSeconds = 0;
-      entries.push({ kind: "groupHead", part, title: row.name || "Skupina", cue: row.cue || "", note: row.poznamka || "" });
+      const odhadSk = repsOdhad(row);   // kolo 48: odhad celé skupiny jen když ho mají všichni členové
+      entries.push({ kind: "groupHead", part, title: row.name || "Skupina", cue: row.cue || "", note: row.poznamka || "",
+        repsSeriesInfo: odhadSk ? { seriesCount, pauseSeconds, odhad: odhadSk } : null });
       videos.forEach((v, vi) => {
         if (v.isBreak) {
           const brkSeconds = valueToSeconds(v.duration != null ? v.duration : 1, v.durationUnit || "min");
@@ -18286,9 +18340,7 @@ function buildPdfEntries(t) {
           return;
         }
         const lib = v.isText ? null : state.library[v.videoId];
-        const seconds = isReps
-          ? (v.estimate != null && v.estimate > 0 ? valueToSeconds(v.estimate, v.estimateUnit || "min") : null)
-          : valueToSeconds(v.duration != null ? v.duration : 1, v.durationUnit || "min");
+        const seconds = delkaClena(isReps, v);   // kolo 48: sdílený výpočet
         if (seconds) membersShownSeconds += seconds;
         entries.push({
           kind: "groupVideo", part,
@@ -18307,15 +18359,16 @@ function buildPdfEntries(t) {
       return;
     }
     const lib = row.isText ? null : state.library[row.videoId];
-    const isReps = (row.mode || "time") === "reps";
-    const baseSeconds = isReps
-      ? (row.estimate != null && row.estimate > 0 ? valueToSeconds(row.estimate, row.estimateUnit || "min") : null)
-      : valueToSeconds(row.duration != null ? row.duration : 1, row.durationUnit || "min");
-    const seriesCount = row.seriesCount || 1;
+    // Kolo 48: délka série ze sdíleného delkaSerie (dřív se tu počítala po svém).
+    const d = delkaSerie(row);
+    const isReps = d.isReps;
+    const baseSeconds = d.chybi ? null : d.perSeries;
+    const seriesCount = d.seriesCount;
     const pauseSeconds = getSeriesPauseSeconds(row);
     // Zobrazená doba v PDF (sloupec ROZMEZÍ) musí počítat s celým cvičením — tedy i s víc sériemi
     // a pauzami mezi nimi (plank 1 min × 2 série s 30s pauzou = 2:30, ne jen 1 min).
-    const totalSeconds = baseSeconds == null ? null : (baseSeconds * seriesCount + (seriesCount > 1 ? (seriesCount - 1) * pauseSeconds : 0));
+    const totalSeconds = baseSeconds == null ? null : delkaCelkem(d, baseSeconds);
+    const odhad = repsOdhad(row);
     entries.push({
       kind: "video", part,
       title: row.isText ? (row.title || "(bez názvu)") : (lib ? nazevVidea(lib) : "(video smazáno z knihovny)"),
@@ -18324,11 +18377,11 @@ function buildPdfEntries(t) {
       cue: row.cue || "", note: row.poznamka || "",
       equipment: row.isText ? (row.equipment || []) : [...new Set([...((lib && lib.equipment) || []), ...(row.extraEquipment || [])])],
       seconds: totalSeconds, repsLabel: isReps ? (row.reps || "") : null,
-      // U časových cviků se pod celkovým časem rozepisuje i čas jedné série (odhad u cviků na
-      // opakování je jen tichá pomůcka pro hodiny/součty, nikdy by se neměl objevit jako
-      // vypsaný čas v PDF — u nich se místo toho ukáže jen počet sérií, bez žádného času).
+      // U časových cviků se pod celkovým časem rozepisuje i čas jedné série. Kolo 48 (Mek 1B):
+      // u cviku na opakování zůstává nahoře počet opakování a pod ním štítky s odhadem
+      // („~16 min“, „(3× 5 min)“); bez odhadu jako dřív jen počet sérií.
       seriesInfo: (!isReps && baseSeconds != null && seriesCount > 1) ? { baseSeconds, seriesCount, pauseSeconds } : null,
-      repsSeriesInfo: (isReps && seriesCount > 1) ? { seriesCount, pauseSeconds } : null
+      repsSeriesInfo: (isReps && (seriesCount > 1 || odhad)) ? { seriesCount, pauseSeconds, odhad } : null
     });
   });
   return entries;
@@ -19585,6 +19638,11 @@ function updateClockBadges() {
   updateTotalBadge();
   const t = state.trainings[currentTrainingId];
   if (!t) return;
+  // Kolo 48: „= ~16 min“ u cviku/skupiny na opakování (mění se s odhadem, sériemi i pauzou).
+  document.querySelectorAll("#sequenceList [data-odhad-itemid]").forEach(el => {
+    const o = repsOdhad((t.items || []).find(r => r.itemId === el.dataset.odhadItemid));
+    el.textContent = o ? "= " + odhadMinText(o.seconds) : "";
+  });
   const showClock = !!(state.profile && state.profile.trainingStartTime);
   const clockTimes = showClock ? computeRowClockTimes(t, timeInputToSeconds(state.profile.trainingStartTime)) : null;
   document.querySelectorAll("#sequenceList .seq-item[data-itemid]").forEach(el => {
@@ -19667,6 +19725,7 @@ function renderModeSeriesControls(row, dis, extraHtml) {
         <label>Pauza <input type="number" min="0" value="${row.seriesPause != null ? row.seriesPause : 30}" data-field="seriesPause" data-itemid="${esc(row.itemId)}" style="width:56px;" ${dis}></label>
         ${renderTimeUnitSelect("seriesPauseUnit", row.itemId, row.seriesPauseUnit, "s", dis)}
       </div>` : ""}
+      ${mode === "reps" && !row.stanoviste ? `<span class="seq-odhad-vysl" data-odhad-itemid="${esc(row.itemId)}">${repsOdhad(row) ? "= " + odhadMinText(repsOdhad(row).seconds) : ""}</span>` : ""}
       ${extraHtml || ""}
     </div>`;
 }
@@ -24063,7 +24122,8 @@ const HELP_DATA = [
       { q: "Vloží návrh do tréninku i přestávky?", a: "Ne, přestávky si přidej sám tlačítkem „Přidat přestávku“. Jedno cvičení v návrhu trvá nejvýš 20 minut a časy jsou po pěti minutách — uprav si je podle sebe.", kw: "prestavky delka cviceni minuty navrh" }
     ]},
     { title: "Nastavení cvičení v tréninku", icon: "fa-solid fa-sliders", qa: [
-      { q: "Jak nastavím čas nebo počet opakování u cvičení?", a: "U každé položky přepínáš mezi režimem Čas a Opakování — podle toho pak zadáváš buď dobu trvání, nebo počet opakování." },
+      { q: "Jak nastavím čas nebo počet opakování u cvičení?", a: "U každé položky přepínáš mezi režimem Čas a Opakování — podle toho pak zadáváš buď dobu trvání, nebo počet opakování. U Opakování můžeš vedle (přesýpací hodiny) vyplnit i odhad, kolik trvá jedna série. Aplikace pak ukáže délku celého cviku, třeba „= ~16 min“." },
+      { q: "Co znamená „~16 min (3× 5 min)“ u cviku na opakování?", a: "Je to odhad délky celého cviku: odhad jedné série krát počet sérií plus pauzy mezi sériemi (3× 5 min + 2× 30 s ≈ 16 min). Vlnovka říká, že jde o odhad. Ukáže se v PDF, na sdílené stránce, v Přehledu tréninku, v prezentaci i v editoru. Když odhad nevyplníš, délka se neukáže a cvik se nezapočítá do celkového času. U skupiny se délka ukáže, jen když mají odhad všechna cvičení ve skupině.", kw: "odhad delka opakovani serie vlnovka priblizne minuty" },
       { q: "Co jsou série a jak funguje pauza mezi nimi?", a: "Série znamená, že se stejné cvičení zopakuje víckrát za sebou (např. 3×) s automatickou pauzou mezi jednotlivými koly — nastavuje se to u dané položky nebo skupiny." },
       { q: "Jak přidám poznámku nebo instrukci ke cvičení?", a: "U položky rozklikni „Cue a poznámka“ — cue je krátký pokyn, co hráčům říct nahlas, poznámka je prostor pro delší vysvětlení, co si má trenér pamatovat." },
       { q: "Co je „cue“ a čím se liší od poznámky?", a: "Cue je krátká věta, kterou trenér řekne nahlas hráčům přímo při cvičení (např. „ruce nahoru“). Poznámka je delší text jen pro trenéra samotného — třeba na co si dát pozor při vedení cvičení. Liší se i tím, jak si je aplikace pamatuje: cue sama, poznámku jen když ji připíchneš špendlíkem.", kw: "cue vs poznamka" },
@@ -24133,7 +24193,7 @@ const HELP_DATA = [
       { q: "Co udělá „Spustit prezentaci“?", a: "Spustí celoobrazovkovou prezentaci na vedení tréninku naživo, od prvního cviku. Na telefonu si sama vynutí otočení na šířku — na tabletu a počítači se to netýká.", kw: "prezentace fullscreen otoceni sirka" },
       { q: "Co znamenají ty tři pilulky nahoře?", a: "Zadání, Průběh a Konec jsou tři pohledy na to samé cvičení a přepínají se ťuknutím, ne časem. Zadání ukazuje, co se cvičí, Průběh velký časovač, Konec to, co bude následovat." },
       { q: "Jak funguje časovač?", a: "Odpočítává nastavenou dobu cvičení. Tlačítko pauzy ho zastaví a zase spustí, kolečko se šipkou ho nastaví znovu od začátku. Když čas vyprší, jednou zazní gong, telefon zavibruje (jen na Androidu) a přes celou obrazovku naskočí oranžové upozornění PŘESAH s časem, který běží dál nahoru — po návratu k telefonu hned vidíš, o kolik jsi přetáhl. Ťuknutím ho schováš a čas přetahu běží dál. Každé další 3 minuty přetahu se upozornění vrátí i s vibrací (gong už ne), dokud nepřejdeš na další cvičení nebo časovač nezastavíš.", kw: "presah prestah gong zvuk vibrace oranzova" },
-      { q: "Co když je cvičení na počet opakování?", a: "Místo časovače se ukáže počet opakování — odpočet se u takového cviku vůbec nespouští. Na další cvik se přepne tlačítkem, stejně jako u času." },
+      { q: "Co když je cvičení na počet opakování?", a: "Ukáže se počet opakování. Když má cvik vyplněný odhad délky série, běží odpočet podle odhadu — jen jako vodítko: po doběhnutí nic nezazvoní, čas jen pokračuje do plusu. Bez odhadu se odpočet vůbec nespouští. Na další cvik se přepne tlačítkem, stejně jako u času." },
       { q: "Co znamená ten přerušovaný rámeček kolem cvičení?", a: "Že cvik patří do skupiny nebo se opakuje v sériích. Zelené obdélníky vpravo dole jsou členi skupiny a ukazují, kolikátý zrovna běží; oranžové vlevo dole počítají série.", kw: "ramecek skupina serie obdelniky" },
       { q: "K čemu slouží karta „Následuje“?", a: "Ve fázi Konec ukáže, co přijde po aktuálním cvičení, i s nářadím, co je na to potřeba — ať se stihneš připravit dřív, než cvičení skončí." },
       { q: "Jak se v prezentaci zobrazí textové cvičení nebo nefunkční video?", a: "Místo přehrávače se ukáže popis cvičení; u nefunkčního videa navíc odkaz, kterým jde zkusit otevřít původní zdroj. Ovládání je jinak úplně stejné jako u videí." }
