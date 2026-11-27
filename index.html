@@ -1230,6 +1230,8 @@ body.dark-mode .tx-thumb,html.dark-mode-preload body .tx-thumb{--tx-bg:#2A323D;-
 .card-thumb .wm{position:absolute;left:50%;bottom:9px;transform:translateX(-50%);height:15%;min-height:11px;opacity:.9;pointer-events:none;z-index:2;line-height:0;}
 .card-thumb .wm .wm-svg{height:100%;width:auto;display:block;}
 .card-thumb .platform-badge,.card-thumb .card-fav-btn{z-index:5;}
+/* Kolo 53 (190A): bílá ikona Trenérovy tabulky v odznaku zdroje */
+.ikona-tabulka{display:inline-block;width:1.15em;height:1.15em;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='3' y='1.6' width='9.6' height='13.6' rx='1.4' fill='none' stroke='%23000' stroke-width='1.4'/%3E%3Cpath d='M0 8.6h16' stroke='%23000' stroke-width='1.2'/%3E%3Cpath d='M6.3 12.8Q6.3 7.4 9.8 5.4' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round'/%3E%3Cpath d='M8.6 3.3L12.6 2.6 11.3 6.6Z' fill='%23000' stroke='%23000' stroke-width='.6' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='3' y='1.6' width='9.6' height='13.6' rx='1.4' fill='none' stroke='%23000' stroke-width='1.4'/%3E%3Cpath d='M0 8.6h16' stroke='%23000' stroke-width='1.2'/%3E%3Cpath d='M6.3 12.8Q6.3 7.4 9.8 5.4' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round'/%3E%3Cpath d='M8.6 3.3L12.6 2.6 11.3 6.6Z' fill='%23000' stroke='%23000' stroke-width='.6' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;}
 .grid.list-mode .card-thumb .wm,.grid.list-mode .card-thumb.foto::after{display:none;}
 div.tx-mini-ph,span.tx-mini-ph{position:relative;overflow:hidden;display:block;padding:0;}
 .tx-mini-ph > svg.tx-thumb{position:absolute;inset:0;}
@@ -4321,7 +4323,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-11-25 13:03";
+const APP_VERSION = "2026-11-27 11:02";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -8058,7 +8060,7 @@ function getFilteredLibraryItems() {
   return items.sort(sorters[sortMode] || sorters["date-desc"]);
 }
 
-const PLATFORM_ICONS = { youtube: "fa-brands fa-youtube", facebook: "fa-brands fa-facebook", drive: "fa-brands fa-google-drive", instagram: "fa-brands fa-instagram", tiktok: "fa-brands fa-tiktok", file: "fa-solid fa-film", other: "fa-solid fa-link" };
+const PLATFORM_ICONS = { youtube: "fa-brands fa-youtube", facebook: "fa-brands fa-facebook", drive: "fa-brands fa-google-drive", instagram: "fa-brands fa-instagram", tiktok: "fa-brands fa-tiktok", tabulka: "ikona-tabulka", file: "fa-solid fa-film", other: "fa-solid fa-link" }; // Kolo 53: tabulka
 // Dřívější NO_THUMB_HTML (zelený přechod s klapkou „Bez náhledu“) nahradil 8. 10. 2026
 // zástupný obrázek VIDEO / TEXT — viz zastupnyObrazekHtml.
 /** Vrátí hotové HTML pro "prázdný stav" (kolečko s ikonou + nadpis + text) — používá se pro
