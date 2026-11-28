@@ -4325,7 +4325,7 @@ function videoZeServeru(data) {
   delete v.lastEditedAt;
   return v;
 }
-const APP_VERSION = "2026-11-28 14:26";
+const APP_VERSION = "2026-11-28 13:36";
 document.getElementById("appVersionLabel").textContent = APP_VERSION;
 /* Font pro PDF export (Liberation Sans, ořezaný na Latin + Latin Extended-A kvůli velikosti souboru) — jsPDF vestavěné fonty neumí českou diakritiku s háčky. */
 /* Font pro PDF export bydlí v samostatném souboru pdf-fonts.js a načte se až při prvním
@@ -24066,6 +24066,16 @@ const HELP_DATA = [
     { title: "Sdílení jednoho videa mimo aplikaci", icon: "fa-solid fa-share-nodes", qa: [
       { q: "Jak pošlu odkaz na jedno konkrétní video někomu, kdo nemá do aplikace přístup?", a: "V nabídce u karty videa (⋮) je možnost „Sdílet“ — vygeneruje odkaz na samostatnou stránku s tímhle jedním videem, který jde poslat komukoli." },
       { q: "Co přesně ten člověk uvidí?", a: "Jen to jedno video s popisem — bez přihlašování a bez přístupu ke zbytku knihovny nebo tréninků." }
+    ]},
+    // Kolo 54 (199A): spolupráce s Trenérovou tabulkou
+    { title: "Cvičení z Trenérovy tabulky", icon: "ikona-tabulka", qa: [
+      { q: "Co je cvičení z Trenérovy tabulky?", a: "Animace cvičení nakreslená v aplikaci Trenérova tabulka – hřiště, hráčky, míč, šipky a kroky, které se postupně přehrají. Není to nahrané video: celé cvičení je uložené přímo v odkazu a kreslí se živě, takže nic nezabírá místo a funguje, dokud funguje odkaz. Na kartě v knihovně ho poznáš podle bílé ikony Tabulky (deska se šipkou) v kroužku vpravo dole.", kw: "tabulka trenerova animace odkaz ikona deska kreslene cviceni" },
+      { q: "Jak dostanu cvičení z Tabulky do Trenéra?", a: "V Tabulce otevři menu ☰ a dej „Poslat do Trenéra“. Na Androidu se otevře nabídka Sdílet – vyber v ní Trenér. Jinde (počítač, iPad, iPhone) se Trenér otevře v nové kartě rovnou s formulářem nového videa. Název cvičení a vybavení se vyplní samy (vybavení se jen přidá k tomu, co už je vybrané), tvar je 16 : 9. Ty doplníš složku a štítky a uložíš. Druhá cesta: v Tabulce dej „Kopírovat odkaz pro Trenéra“ a odkaz vlož v Trenérovi při přidávání videa, stejně jako odkaz z YouTube.", kw: "tabulka poslat do trenera pridat cviceni odkaz kopirovat sdilet" },
+      { q: "Odkud se vezme náhled cvičení z Tabulky?", a: "Když cvičení pošleš z Tabulky („Poslat do Trenéra“ nebo „Kopírovat odkaz pro Trenéra“) a Trenéra otevřeš na stejném zařízení a v tomtéž prohlížeči nejpozději do dvou hodin, nabídne formulář tři náhledy z kroků cvičení – první, prostřední a poslední krok – a první rovnou vybere. Jinak se žádný náhled nenabídne a nahraješ ho ručně, třeba obrázek kroku stažený v Tabulce (☰ → Stáhnout obrázek kroku).", kw: "tabulka nahled z kroku obrazek kroku navrh nahledu" },
+      { q: "Jak ovládám přehrávač cvičení z Tabulky?", a: "Velké tlačítko uprostřed cvičení spustí. Dole je lišta jako u videa: přehrát/pozastavit, průběh s čárkami kroků (dá se po něm klepnout nebo táhnout), čas, Opakovat dokola, přepínač 3D / Plán a celá obrazovka. Ve 3D je vpravo nahoře ikona kamery – otevře natočení, sklon a přiblížení pohledu. Když pohled změníš, objeví se v liště tlačítko „Výchozí pohled“, které ho vrátí tak, jak ho autor uložil.", kw: "tabulka prehravac ovladani 3d plan opakovat cela obrazovka kamera vychozi pohled" },
+      { q: "Proč je polovina hřiště na šířku otočená bokem?", a: "Cvičení na polovině hřiště je v Plánu vysoké a na širokém displeji by bylo malé. Proto se v přehrávači na šířku (telefon otočený, celá obrazovka) polovina otočí bokem: síť je svisle vpravo, stejně jako u levé poloviny celého hřiště. Čísla hráček zůstávají rovně. Na výšku a ve 3D zůstává pohled se sítí nahoře.", kw: "tabulka polovina hriste otocena bokem sirka cela obrazovka" },
+      { q: "Jak se cvičení z Tabulky chová v Tréninkovém režimu?", a: "Spustí se samo a hraje pořád dokola, ať ho máš na hřišti pořád na očích. Zastavit ho můžeš kdykoli tlačítkem v liště přehrávače.", kw: "tabulka treninkovy rezim auto dokola opakovani" },
+      { q: "Jak cvičení z Tabulky upravím?", a: "V nabídce u karty (⋮) dej „Upravit v Tabulce“. Jinde (počítač, iPad, iPhone) se cvičení otevře v Tabulce v nové kartě jako upravitelná kopie (s hláškou „Kopie z Trenéra“). Na Androidu Trenér ukáže hlášku „Otevři aplikaci Trenérova tabulka, kopie se v ní načte sama.“ – otevři Tabulku do 15 minut. Cvičení v Trenérovi se tím nezmění: po úpravě ho z Tabulky pošli znovu („Kopírovat odkaz pro Trenéra“) a v Trenérovi u karty dej Upravit a vlož nový odkaz.", kw: "tabulka upravit v tabulce kopie zmenit cviceni android aplikace" }
     ]}
   ]},
   { group: "Tréninky", blocks: [
